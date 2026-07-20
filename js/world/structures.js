@@ -66,20 +66,30 @@ export function buildStarterStructures() {
   npcs.push({ id: 'tam', x: -13, y: F, z: 10 });
 
   // ---- Pond (fishing) ----------------------------------------------------
-  for (let x = -5; x <= 5; x++) for (let z = 13; z <= 23; z++) {
-    const d = Math.hypot(x - 0, z - 18);
-    if (d <= 4.5) {
+  // A sunken basin ringed by a step-down sand ledge: step off the plateau onto
+  // the ledge (one block down, level with the water surface at y=30) and cast
+  // straight into the pond.
+  for (let x = -7; x <= 7; x++) for (let z = 11; z <= 25; z++) {
+    const d = Math.hypot(x, z - 18);
+    if (d <= 4.2) {
+      // water basin — floor at y=26, water fills to y=29, surface at y=30
       set(x, 26, z, B.sand);
       for (let y = 27; y <= 29; y++) set(x, y, z, B.water);
-      set(x, GROUND, z, B.air);
+      set(x, GROUND, z, B.air); set(x, F, z, B.air);
     } else if (d <= 5.6) {
+      // step-down fishing ledge: sand top at y=30, one step below the plateau
+      set(x, 29, z, B.sand);
+      set(x, GROUND, z, B.air); set(x, F, z, B.air);
+    } else if (d <= 6.5) {
+      // plateau lip you step down from, with a few reeds
       set(x, GROUND, z, B.sand);
       if ((x * 7 + z * 13) % 5 === 0) set(x, F, z, B.reed);
     }
   }
-  // spots sit at the pond's edge so you fish from the bank
-  nodes.push({ type: 'fishing_spot', x: 4, y: 29, z: 18 });
-  nodes.push({ type: 'fishing_spot', x: -3, y: 29, z: 15 });
+  // spots sit in the water, an easy cast from the ledge
+  nodes.push({ type: 'fishing_spot', x: 3, y: 29, z: 18 });
+  nodes.push({ type: 'fishing_spot', x: -2, y: 29, z: 16 });
+  nodes.push({ type: 'fishing_spot', x: 0, y: 29, z: 21 });
 
   // ---- Farm --------------------------------------------------------------
   for (let x = -18; x <= -10; x++) for (let z = 16; z <= 22; z++) set(x, GROUND, z, B.farmland);

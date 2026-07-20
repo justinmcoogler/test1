@@ -858,6 +858,7 @@ class Game {
     }
     const p = this.player;
     if (this.autoGatherNode) {
+      this.ui.setPrompt(null); // arrived — no longer "Walking…"
       const node = this.autoGatherNode;
       const st = this.world.nodeState(node.id);
       const d = Math.hypot(node.x + 0.5 - p.x, node.z + 0.5 - p.z);
@@ -877,6 +878,7 @@ class Game {
       return;
     }
     if (this.autoBreak) {
+      this.ui.setPrompt(null); // arrived — no longer "Walking…"
       const b = this.autoBreak;
       const id = this.world.getBlock(b.x, b.y, b.z);
       const def = BLOCKS[id];
@@ -1580,6 +1582,10 @@ class Game {
   onPlayerDeath() {
     this.combatRS.disengageAll();
     this.controls.enabled = false;
+    // stop any click-to-move / map travel so it doesn't resume on respawn
+    this.cancelClassicActions();
+    this.travelDest = null;
+    this.controls.worldMove = null;
     this.touch?.hide();
     const lost = Math.floor(this.inventory.coins * 0.1);
     if (lost > 0) this.inventory.remove('coin', lost);
@@ -1591,6 +1597,10 @@ class Game {
     $('death-screen').classList.add('hidden');
     const [sx, sy, sz] = this.world.markers.spawn;
     this.player.respawnAt(sx + 0.5, this.world.surfaceAt(sx, sz) + 1, sz + 0.5);
+    // clear stale movement so you don't auto-walk away from the spawn point
+    this.cancelClassicActions();
+    this.travelDest = null;
+    this.controls.worldMove = null;
     this.controls.enabled = true;
     this.touch?.show();
     this.saveGame();

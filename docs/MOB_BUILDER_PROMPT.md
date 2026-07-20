@@ -1,18 +1,34 @@
-# Prompt: build Emberveil creatures (copy-paste everything below the line)
+# Prompt: build Emberveil creatures (for ChatGPT)
 
-Give this prompt to any AI model (or artist/tool) to produce creature files
-that drop straight into the game's `mobs/` folder. It bakes in the game's
-Minecraft-style proportion rules so new creatures match the built-ins.
+Paste everything below the line into **ChatGPT** (a model that can both write
+files and generate images — GPT-4o / o-series with image tools). It will
+produce a creature's model JSON **and** paint its texture PNG, then hand you
+both as a downloadable zip. Then: **upload that zip back to Claude**, and
+Claude will pull the JSON + PNG out, drop them into the game's `mobs/` folder,
+and spawn the creature.
+
+The workflow:
+1. Paste the prompt below into ChatGPT, filling in the creature at the end.
+2. ChatGPT generates the texture PNG with its image tool and writes the JSON
+   that references it, then packages both into `your_mob.zip`.
+3. Download the zip and upload it here to Claude — Claude wires it in and
+   rebuilds the game.
 
 ---
 
-You are building a creature for **Emberveil**, a voxel sandbox RPG. Output a
-single JSON file in the `emberveil-mob` format, version 1. Its skin must be a
-**detailed painted texture atlas** (see the texture section) — never flat
-solid colors. If you can generate images, embed the painted PNG in
-`texture.dataUri`. If you cannot, output the JSON with a placeholder texture
-and, after it, a copy-paste image-generation prompt for the skin (Path B
-below). Output the JSON first with no prose or markdown fences before it.
+You are building a creature for **Emberveil**, a voxel sandbox RPG. Produce
+**two files and package them in a downloadable .zip**:
+
+1. `<id>.png` — the creature's **painted texture atlas**, generated with your
+   image tool (detailed pixel art, never flat colors — see the texture
+   section).
+2. `<id>.json` — the model in `emberveil-mob` format, version 1, whose
+   `texture` field is `{ "file": "<id>.png" }` (reference the PNG by filename,
+   same base name as the JSON).
+
+Use the **same `<id>`** (snake_case, the mob's id) for both filenames and zip
+as `<id>.zip`. Do the image first, then write the JSON so its `uv` rects match
+where you actually painted each face. Give me the zip as a download link.
 
 ## Art style — follow these proportion rules exactly
 
@@ -63,10 +79,8 @@ head = 0.5×0.5×0.5 units).
     { "id": "head", "parent": "body", "pivot": [0, 0.4, 0.2], "boxes": [ ... ] }
   ],
   "texture": {
-    // EITHER an embedded image (any size up to 1024×1024):
-    "dataUri": "data:image/png;base64,....",
-    "width": 64, "height": 64
-    // OR raw pixels: "rgbaBase64": "...", width+height required
+    "file": "ember_hare.png",   // the PNG you painted, same base name as this JSON
+    "width": 256, "height": 256 // the atlas's pixel dimensions (must match the PNG)
   },
   "animations": {
     "idle":   { "length": 3.0, "parts": { "head": { "rotate": [[0, [0,-8,0]], [1.5, [0,8,0]], [3.0, [0,-8,0]]] } } },
@@ -151,65 +165,47 @@ So: pick the smallest power-of-two atlas that fits your unwrap at 64 texels
 per block (usually 128², 256², or 512²), set `texture.width`/`height` to it,
 and reference face rects in those pixel coordinates.
 
-**Painting guidance (this is where quality comes from):**
-- Start each face from the base color, then add a directional light pass:
-  lighten the top edge, darken the bottom and the seams between boxes.
-- Add the creature's material: short fur streaks, overlapping scale rows,
-  cracked-stone speckle, woven cloth, wet-clay mottling, glowing runes.
-- Paint the face carefully — eyes with a highlight, nostrils, a mouth line,
-  a brow ridge. This is the first thing players read.
+## Generate the texture PNG with your image tool
+
+Do **not** hand-code flat colors — paint a real atlas image and save it as
+`<id>.png`. Steps:
+
+1. Compute the atlas size + face layout from the math above (usually 128²,
+   256², or 512² — keep it ≤ 512²).
+2. Lay the faces out on a **predictable labeled grid** so your `uv` rects can
+   point at exactly where each face is painted. A simple, reliable layout:
+   pick a cell size (e.g. 32 or 64 px), reserve one cell per box face, and
+   fill left-to-right, top-to-bottom — head faces first, then body, limbs,
+   details. Keep a note of which cell holds which face.
+3. Generate the image with this description (adapt the brackets):
+
+   > Pixel-art texture atlas for a voxel game creature, flat orthographic, no
+   > perspective, no background, hard-edged pixels (not anti-aliased),
+   > [WIDTH]×[HEIGHT]. An unwrapped Minecraft-style mob skin as a grid of
+   > labeled panels: [LIST FACES — "head-front, head-top, head-sides, body-
+   > top, body-sides, wing, leg, tail"]. Creature: [MATERIALS + COLORS +
+   > MARKINGS — e.g. "russet chicken feathers, lighter belly, bright red comb,
+   > yellow-orange beak, scaly yellow legs; short feather strokes, soft top-lit
+   > shading, darker in the seams"]. Paint eyes with a white highlight on the
+   > head-front panel. Cohesive 8–12 colour palette, crisp pixels, subtle
+   > dithering on large flat areas.
+
+4. Save it as `<id>.png`. In the JSON, set `texture` to
+   `{ "file": "<id>.png", "width": W, "height": H }` and write every box's
+   `uv` rects `[x, y, w, h]` in that PNG's pixel coordinates, matching the
+   cells you painted.
+5. Put `<id>.png` and `<id>.json` together in `<id>.zip` and give it as a
+   download.
+
+## Painting guidance (this is where quality comes from)
+
+- Start each face from the base color, then a directional light pass: lighten
+  the top edge, darken the bottom and the seams between boxes.
+- Add the creature's material: fur streaks, scale rows, cracked-stone speckle,
+  woven cloth, wet-clay mottling, glowing runes.
+- Paint the face: eyes with a highlight, nostrils, a mouth line, a brow ridge.
 - Dither or gradient large flat areas so they don't look plastic; keep edges
-  crisp (this is pixel art, not a smooth render).
-- Keep a consistent palette (6–12 colors) so it reads as one creature.
-
-## How to actually make the texture with image generation
-
-Do **not** hand-code flat colors. Produce a real painted atlas image. Pick
-whichever path fits the tool you're using:
-
-**Path A — you can generate images directly (e.g. an image-capable model).**
-1. Compute the atlas size + face layout from the math above.
-2. Generate one square pixel-art texture atlas at that size. Lay the faces out
-   on a predictable grid and *label the regions in your own reasoning* so the
-   `uv` rects you write match where you painted each face.
-3. Export as PNG, base64-encode it, and put it in `texture.dataUri` with the
-   matching `width`/`height`. Write every box's `uv` rects to point at the
-   regions you painted.
-
-**Path B — you generate the JSON but a separate tool makes the image**
-(e.g. ChatGPT/DALL·E/Midjourney, or Stable Diffusion). Output the JSON with a
-**placeholder** `texture` and, after the JSON, a ready-to-paste image prompt.
-Then the human generates the PNG and swaps it in. Use a **uniform grid** so
-the regions are predictable no matter what the generator returns — e.g. for a
-256×256 atlas, reserve a 64×64 cell per major face and map each box face to
-its cell.
-
-Copy-paste image-generation prompt template (fill the brackets):
-
-> Pixel-art texture atlas for a voxel game creature, flat orthographic, no
-> perspective, no background, hard-edged pixels (not smooth/anti-aliased),
-> [WIDTH]×[HEIGHT] pixels. It is an unwrapped Minecraft-style mob skin laid
-> out as a grid of labeled panels: [LIST PANELS — e.g. "head-front, head-top,
-> head-sides, body-top, body-sides, wing, leg, tail"]. Creature: [DESCRIBE
-> materials + colors + markings — e.g. "russet chicken feathers with lighter
-> belly, a bright red comb, a yellow-orange beak and scaly yellow legs; short
-> feather strokes, soft top-lit shading, darker in the seams"]. Paint eyes
-> with a white highlight on the head-front panel. Cohesive 8–12 colour
-> palette. Crisp pixels, subtle dithering on large areas.
-
-Then convert the PNG to a data URI and paste it into `texture.dataUri`
-(any of these work):
-
-```bash
-# terminal
-printf 'data:image/png;base64,'; base64 -w0 skin.png
-# or Node
-node -e "console.log('data:image/png;base64,'+require('fs').readFileSync('skin.png').toString('base64'))"
-```
-
-**Last-resort fallback only:** if no image is possible at all, give every box
-a tiny flat `uv` rect and rely on `color` tints — but expect a flat, blocky
-look. The format is built for painted atlases; use one.
+  crisp (pixel art, not a smooth render). Keep a 6–12 colour palette.
 
 Creature to build: **[DESCRIBE YOUR CREATURE HERE — name, size, biome,
 temperament, and its visual hooks: silhouette, materials, colors, face,
