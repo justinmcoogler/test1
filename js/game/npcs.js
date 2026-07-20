@@ -1,32 +1,52 @@
 // NPCs: models, dialogue trees, shop stock. Dialogue actions hook into quests.
+// Every villager shares the player's blocky-humanoid skeleton (16px grid,
+// head 8×8×8, torso 8×12×4, limbs 4×12×4) so people all read as one species.
+// Box order matters: legs ×2, torso, arm L, arm R, head, then accessories.
+const HPX = 1.8 / 32;
+const hb = (fx, fy, fz, w, h, d, color) => ({ x: fx * HPX, y: fy * HPX, z: fz * HPX, w: w * HPX, h: h * HPX, d: d * HPX, color });
+function humanoid({ skin, top, sleeves, bottom }, extras = []) {
+  return [
+    hb(-4, 0, -2, 4, 12, 4, bottom),   // 0 left leg
+    hb(0, 0, -2, 4, 12, 4, bottom),    // 1 right leg
+    hb(-4, 12, -2, 8, 12, 4, top),     // 2 torso
+    hb(-8, 12, -2, 4, 12, 4, sleeves), // 3 left arm
+    hb(4, 12, -2, 4, 12, 4, sleeves),  // 4 right arm
+    hb(-4, 24, -4, 8, 8, 8, skin),     // 5 head (face applied by the renderer)
+    ...extras,
+  ];
+}
+// standard rig part indices for humanoid NPCs (extras ride with the body,
+// except indices listed in headExtra which follow the head)
+export const NPC_RIG = { legL: 0, legR: 1, torso: 2, armL: 3, armR: 4, head: 5 };
+
 export const NPC_DEFS = {
   maren: {
     label: 'Elder Maren',
     role: 'Guide of Brookhollow',
-    model: [
-      { x: -0.18, y: 0, z: -0.1, w: 0.16, h: 0.55, d: 0.2, color: [0.35, 0.3, 0.45] },
-      { x: 0.02, y: 0, z: -0.1, w: 0.16, h: 0.55, d: 0.2, color: [0.35, 0.3, 0.45] },
-      { x: -0.25, y: 0.55, z: -0.125, w: 0.5, h: 0.65, d: 0.25, color: [0.5, 0.42, 0.62] },
-      { x: -0.36, y: 0.6, z: -0.1, w: 0.11, h: 0.55, d: 0.2, color: [0.45, 0.38, 0.56] },
-      { x: 0.25, y: 0.6, z: -0.1, w: 0.11, h: 0.55, d: 0.2, color: [0.45, 0.38, 0.56] },
-      { x: -0.16, y: 1.2, z: -0.16, w: 0.32, h: 0.32, d: 0.32, color: [0.85, 0.72, 0.6] },
-      { x: -0.16, y: 1.52, z: -0.16, w: 0.32, h: 0.1, d: 0.32, color: [0.8, 0.8, 0.85] },
-      { x: 0.3, y: 0.3, z: -0.04, w: 0.08, h: 1.3, d: 0.08, color: [0.55, 0.42, 0.28] },
-    ],
+    model: humanoid(
+      { skin: [0.85, 0.72, 0.6], top: [0.5, 0.42, 0.62], sleeves: [0.45, 0.38, 0.56], bottom: [0.35, 0.3, 0.45] },
+      [
+        hb(-4.4, 31.5, -4.4, 8.8, 2.5, 8.8, [0.85, 0.85, 0.9]),  // 6 silver hair
+        hb(-4.4, 12, -2.4, 8.8, 13, 1, [0.42, 0.35, 0.55]),      // 7 robe front
+        hb(6, 0, 1, 1.5, 26, 1.5, [0.55, 0.42, 0.28]),           // 8 walking staff
+        hb(5.5, 26, 0.5, 2.5, 2.5, 2.5, [0.6, 0.85, 0.9]),       // 9 staff crystal
+      ]
+    ),
+    headExtra: [6],
     dialogue: 'maren_root',
   },
   tam: {
     label: 'Merchant Tam',
     role: 'General goods',
-    model: [
-      { x: -0.18, y: 0, z: -0.1, w: 0.16, h: 0.5, d: 0.2, color: [0.3, 0.34, 0.3] },
-      { x: 0.02, y: 0, z: -0.1, w: 0.16, h: 0.5, d: 0.2, color: [0.3, 0.34, 0.3] },
-      { x: -0.27, y: 0.5, z: -0.14, w: 0.54, h: 0.6, d: 0.28, color: [0.7, 0.5, 0.3] },
-      { x: -0.38, y: 0.55, z: -0.1, w: 0.11, h: 0.5, d: 0.2, color: [0.62, 0.44, 0.26] },
-      { x: 0.27, y: 0.55, z: -0.1, w: 0.11, h: 0.5, d: 0.2, color: [0.62, 0.44, 0.26] },
-      { x: -0.16, y: 1.1, z: -0.16, w: 0.32, h: 0.32, d: 0.32, color: [0.8, 0.66, 0.52] },
-      { x: -0.2, y: 1.42, z: -0.2, w: 0.4, h: 0.12, d: 0.4, color: [0.5, 0.36, 0.2] },
-    ],
+    model: humanoid(
+      { skin: [0.8, 0.66, 0.52], top: [0.7, 0.5, 0.3], sleeves: [0.62, 0.44, 0.26], bottom: [0.3, 0.34, 0.3] },
+      [
+        hb(-5.5, 31, -5.5, 11, 2, 11, [0.5, 0.36, 0.2]),         // 6 hat brim
+        hb(-3.5, 33, -3.5, 7, 3, 7, [0.55, 0.4, 0.22]),          // 7 hat top
+        hb(-4.4, 13, -2.4, 8.8, 6, 1, [0.85, 0.78, 0.6]),        // 8 apron
+      ]
+    ),
+    headExtra: [6, 7],
     dialogue: 'tam_root',
     shop: {
       sells: [
@@ -57,17 +77,16 @@ export const NPC_DEFS = {
 NPC_DEFS.sylla = {
   label: 'Warden Sylla',
   role: 'Keeper of the Frostwatch',
-  model: [
-    { x: -0.18, y: 0, z: -0.1, w: 0.16, h: 0.55, d: 0.2, color: [0.28, 0.3, 0.38] },
-    { x: 0.02, y: 0, z: -0.1, w: 0.16, h: 0.55, d: 0.2, color: [0.28, 0.3, 0.38] },
-    { x: -0.26, y: 0.55, z: -0.13, w: 0.52, h: 0.62, d: 0.26, color: [0.75, 0.78, 0.85] }, // fur cloak
-    { x: -0.37, y: 0.6, z: -0.1, w: 0.11, h: 0.52, d: 0.2, color: [0.65, 0.68, 0.76] },
-    { x: 0.26, y: 0.6, z: -0.1, w: 0.11, h: 0.52, d: 0.2, color: [0.65, 0.68, 0.76] },
-    { x: -0.16, y: 1.17, z: -0.16, w: 0.32, h: 0.32, d: 0.32, color: [0.78, 0.64, 0.52] },
-    { x: -0.2, y: 1.49, z: -0.2, w: 0.4, h: 0.14, d: 0.4, color: [0.85, 0.88, 0.94] },  // fur hood
-    { x: 0.3, y: 0.2, z: -0.04, w: 0.07, h: 1.6, d: 0.07, color: [0.5, 0.4, 0.3] },     // spear haft
-    { x: 0.285, y: 1.8, z: -0.055, w: 0.1, h: 0.22, d: 0.1, color: [0.85, 0.9, 0.98] }, // spear head
-  ],
+  model: humanoid(
+    { skin: [0.78, 0.64, 0.52], top: [0.75, 0.78, 0.85], sleeves: [0.65, 0.68, 0.76], bottom: [0.28, 0.3, 0.38] },
+    [
+      hb(-4.5, 30.5, -4.5, 9, 3.5, 9, [0.88, 0.9, 0.95]),      // 6 fur hood
+      hb(-4.4, 12, -2.4, 8.8, 12.5, 1, [0.68, 0.72, 0.8]),     // 7 cloak front
+      hb(6, 0, 1, 1.3, 30, 1.3, [0.5, 0.4, 0.3]),              // 8 spear haft
+      hb(5.6, 30, 0.6, 2, 4, 2, [0.85, 0.9, 0.98]),            // 9 spear head
+    ]
+  ),
+  headExtra: [6],
   dialogue: 'sylla_root',
 };
 

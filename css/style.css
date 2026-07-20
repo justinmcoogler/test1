@@ -13,7 +13,7 @@
   --mana: #5b8dd9;
   --good: #6cbf5a;
   --bad: #d9534f;
-  --font: 'Jersey 15', 'Segoe UI', system-ui, sans-serif;
+  --font: 'VT323', 'Segoe UI', system-ui, sans-serif;
 }
 :root.colorblind {
   --hp: #d55e00;
@@ -86,6 +86,7 @@ body.classic-cam #crosshair { display: none; }
 .vital-bar.hp .vital-fill { background: var(--hp); }
 .vital-bar.energy .vital-fill { background: var(--energy); }
 .vital-bar.mana .vital-fill { background: var(--mana); }
+.vital-bar.breath .vital-fill { background: #6ac8e8; }
 .vital-bar span {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-size: calc(11px * var(--text-scale)); text-shadow: 1px 1px 1px #000; letter-spacing: 0.5px;

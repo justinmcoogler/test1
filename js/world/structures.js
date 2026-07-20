@@ -77,8 +77,9 @@ export function buildStarterStructures() {
       if ((x * 7 + z * 13) % 5 === 0) set(x, F, z, B.reed);
     }
   }
-  nodes.push({ type: 'fishing_spot', x: 0, y: 29, z: 18 });
-  nodes.push({ type: 'fishing_spot', x: 2, y: 29, z: 16 });
+  // spots sit at the pond's edge so you fish from the bank
+  nodes.push({ type: 'fishing_spot', x: 4, y: 29, z: 18 });
+  nodes.push({ type: 'fishing_spot', x: -3, y: 29, z: 15 });
 
   // ---- Farm --------------------------------------------------------------
   for (let x = -18; x <= -10; x++) for (let z = 16; z <= 22; z++) set(x, GROUND, z, B.farmland);

@@ -22,6 +22,8 @@ export class Player {
     this.maxHp = 40; this.hp = 40;
     this.maxEnergy = 100; this.energy = 100;
     this.maxMana = 20; this.mana = 20;
+    this.maxAir = 12; this.air = 12;   // seconds of breath underwater
+    this.headUnder = false;
     this.sprinting = false;
     this.fallStartVy = 0;
     this.dead = false;
@@ -38,8 +40,27 @@ export class Player {
     dt = Math.min(dt, 0.05);
 
     // water state from waist position
+    const wasInWater = this.inWater;
     this.inWater = world.isWater(Math.floor(this.x), Math.floor(this.y + 0.9), Math.floor(this.z));
     const feetWater = world.isWater(Math.floor(this.x), Math.floor(this.y + 0.1), Math.floor(this.z));
+    if (this.inWater && !wasInWater && this.vy < -2) emit('splash', { x: this.x, y: this.y + 0.6, z: this.z });
+
+    // breath: drain while the head is submerged, drown when it runs out
+    this.headUnder = world.isWater(Math.floor(this.x), Math.floor(this.y + 1.55), Math.floor(this.z));
+    if (this.headUnder) {
+      this.air -= dt;
+      if (this.air <= 0) {
+        this.air = 0;
+        this._drownT = (this._drownT || 0) + dt;
+        if (this._drownT >= 1) {
+          this._drownT = 0;
+          this.damage(3, 'drowning');
+        }
+      }
+    } else {
+      this.air = Math.min(this.maxAir, this.air + dt * 3);
+      this._drownT = 0;
+    }
 
     // --- movement intent ---
     let dx, dz;

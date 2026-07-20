@@ -7,7 +7,9 @@ import { QUESTS } from '../game/quests.js';
 import { NPC_DEFS, DIALOGUES } from '../game/npcs.js';
 import { STATUS_INFO, ABILITIES } from '../game/combat.js';
 import { RS_STYLES } from '../game/combatrs.js';
-import { tileIconDataURL } from '../gfx/textures.js';
+import { tileIconDataURL, getAtlasCanvas, faceUV } from '../gfx/textures.js';
+import { B, BLOCKS } from '../world/blocks.js';
+import { WORLD_H } from '../world/worldgen.js';
 import { icon, itemIcon, skillIcon } from '../gfx/icons.js';
 import { CHUNK } from '../world/worldgen.js';
 import { on, emit } from '../core/events.js';
@@ -216,6 +218,19 @@ export class UI {
     $('energy-text').textContent = `EN ${Math.floor(p.energy)}`;
     $('mana-fill').style.width = `${(p.mana / p.maxMana) * 100}%`;
     $('mana-text').textContent = `MP ${Math.floor(p.mana)}/${p.maxMana}`;
+    // breath bar only surfaces while diving (or catching your breath)
+    let bb = $('breath-bar');
+    if (p.air < p.maxAir - 0.05) {
+      if (!bb) {
+        bb = document.createElement('div');
+        bb.id = 'breath-bar';
+        bb.className = 'vital-bar breath';
+        bb.innerHTML = '<div class="vital-fill" id="breath-fill"></div><span id="breath-text"></span>';
+        $('vitals').appendChild(bb);
+      }
+      $('breath-fill').style.width = `${(p.air / p.maxAir) * 100}%`;
+      $('breath-text').textContent = p.air <= 0 ? 'DROWNING!' : `AIR ${Math.ceil(p.air)}`;
+    } else if (bb) bb.remove();
   }
 
   renderHotbar() {
@@ -299,7 +314,7 @@ export class UI {
     const canvas = $('compass');
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = "14px 'Jersey 15', sans-serif";
+    ctx.font = "15px 'VT323', monospace";
     ctx.textAlign = 'center';
     const dirs = [['N', 0], ['E', Math.PI / 2], ['S', Math.PI], ['W', -Math.PI / 2]];
     // heading: yaw 0 → -Z (north)
@@ -337,38 +352,89 @@ export class UI {
     }
   }
 
+  // average top-tile color per block id, sampled from the procedural atlas —
+  // so the map shows the same materials the world renders
+  blockMapColors() {
+    if (this._mapColors) return this._mapColors;
+    const atlas = getAtlasCanvas();
+    const actx = atlas.getContext('2d');
+    this._mapColors = BLOCKS.map((def) => {
+      if (!def || def.name === 'air') return null;
+      const uv = faceUV(def, 'top');
+      const x = Math.round(uv.u0 * atlas.width), y = Math.round(uv.v0 * atlas.height);
+      const w = Math.max(1, Math.round((uv.u1 - uv.u0) * atlas.width));
+      const h = Math.max(1, Math.round((uv.v1 - uv.v0) * atlas.height));
+      const data = actx.getImageData(x, y, w, h).data;
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let i = 0; i < data.length; i += 16) {
+        if (data[i + 3] < 40) continue;
+        r += data[i]; g += data[i + 1]; b += data[i + 2]; n++;
+      }
+      return n ? [r / n, g / n, b / n] : [120, 120, 120];
+    });
+    return this._mapColors;
+  }
+
+  // A chunk's map tile: real top-down blocks (trees, paths, buildings, water)
+  // for loaded chunks; the terrain generator's guess for unloaded ones.
   chunkTileCanvas(cx, cz) {
     const key = `${cx},${cz}`;
-    let t = this.minimapTiles.get(key);
-    if (t) return t;
-    const gen = this.game.world.gen;
+    const world = this.game.world;
+    const chunk = world.getChunk(cx, cz);
+    const stamp = chunk ? (chunk.mapStamp || 0) : -1;
+    const cached = this.minimapTiles.get(key);
+    if (cached && cached.stamp === stamp && cached.live === !!chunk) return cached.canvas;
     const c = document.createElement('canvas');
     c.width = CHUNK; c.height = CHUNK;
     const ctx = c.getContext('2d');
     const img = ctx.createImageData(CHUNK, CHUNK);
-    for (let lz = 0; lz < CHUNK; lz++) {
-      for (let lx = 0; lx < CHUNK; lx++) {
-        const wx = cx * CHUNK + lx, wz = cz * CHUNK + lz;
-        const h = gen.heightAt(wx, wz);
-        const biome = gen.biomeAt(wx, wz);
-        let rgb;
-        if (h <= 28) rgb = [52, 88, 148];
-        else if (biome.surface === 'sand') rgb = [214, 196, 138];
-        else if (biome.surface === 'snow_grass') rgb = [222, 230, 236];
-        else if (biome.surface === 'stone') rgb = [128, 130, 134];
-        else if (biome.surface === 'ashen_soil') rgb = [90, 84, 80];
-        else if (biome.surface === 'corrupt_soil') rgb = [92, 70, 104];
-        else rgb = [86, 140, 70];
-        const shade = 0.75 + ((h - 24) / 36) * 0.5;
-        const i = (lz * CHUNK + lx) * 4;
-        img.data[i] = rgb[0] * shade;
-        img.data[i + 1] = rgb[1] * shade;
-        img.data[i + 2] = rgb[2] * shade;
-        img.data[i + 3] = 255;
+    if (chunk) {
+      const colors = this.blockMapColors();
+      for (let lz = 0; lz < CHUNK; lz++) {
+        for (let lx = 0; lx < CHUNK; lx++) {
+          const wx = cx * CHUNK + lx, wz = cz * CHUNK + lz;
+          let rgb = [16, 20, 26], topY = 0;
+          for (let y = WORLD_H - 1; y >= 0; y--) {
+            const id = world.getBlock(wx, y, wz);
+            if (id === B.air) continue;
+            rgb = colors[id] || [120, 120, 120];
+            topY = y;
+            break;
+          }
+          const shade = 0.72 + ((topY - 24) / 36) * 0.5;
+          const i = (lz * CHUNK + lx) * 4;
+          img.data[i] = rgb[0] * shade;
+          img.data[i + 1] = rgb[1] * shade;
+          img.data[i + 2] = rgb[2] * shade;
+          img.data[i + 3] = 255;
+        }
+      }
+    } else {
+      const gen = world.gen;
+      for (let lz = 0; lz < CHUNK; lz++) {
+        for (let lx = 0; lx < CHUNK; lx++) {
+          const wx = cx * CHUNK + lx, wz = cz * CHUNK + lz;
+          const h = gen.heightAt(wx, wz);
+          const biome = gen.biomeAt(wx, wz);
+          let rgb;
+          if (h <= 28) rgb = [52, 88, 148];
+          else if (biome.surface === 'sand') rgb = [214, 196, 138];
+          else if (biome.surface === 'snow_grass') rgb = [222, 230, 236];
+          else if (biome.surface === 'stone') rgb = [128, 130, 134];
+          else if (biome.surface === 'ashen_soil') rgb = [90, 84, 80];
+          else if (biome.surface === 'corrupt_soil') rgb = [92, 70, 104];
+          else rgb = [86, 140, 70];
+          const shade = 0.75 + ((h - 24) / 36) * 0.5;
+          const i = (lz * CHUNK + lx) * 4;
+          img.data[i] = rgb[0] * shade;
+          img.data[i + 1] = rgb[1] * shade;
+          img.data[i + 2] = rgb[2] * shade;
+          img.data[i + 3] = 255;
+        }
       }
     }
     ctx.putImageData(img, 0, 0);
-    this.minimapTiles.set(key, c);
+    this.minimapTiles.set(key, { canvas: c, stamp, live: !!chunk });
     return c;
   }
 

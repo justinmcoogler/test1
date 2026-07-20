@@ -202,6 +202,31 @@ try {
   });
   check('alpha phase summons pack wolves', phase.summonCount >= 2 && phase.enraged, JSON.stringify(phase));
 
+  // ---- 9.5 Water: breath drains underwater, drowning hurts, recovery ----
+  const water = await g(() => {
+    const game = window.__game;
+    const p = game.player;
+    p.x = 0.5; p.z = 18.5; p.y = 26; // pond bottom, head under
+    p.vx = p.vy = p.vz = 0;
+    p.air = 2;
+    return { maxAir: p.maxAir };
+  });
+  await page.waitForTimeout(4500);
+  const drown = await g(() => {
+    const p = window.__game.player;
+    return { air: +p.air.toFixed(1), headUnder: p.headUnder, hp: p.hp };
+  });
+  await g(() => {
+    const p = window.__game.player;
+    p.x = 6.5; p.z = 6.5; // back on the square
+    p.y = (window.__game.world.groundNear(6, 6, 31) ?? 31) + 0.02;
+  });
+  await page.waitForTimeout(1200);
+  const surfaced = await g(() => ({ air: window.__game.player.air, hp: window.__game.player.hp }));
+  check('head underwater drains air and drowns', drown.headUnder && drown.air === 0 && drown.hp < 40, JSON.stringify(drown));
+  check('air recovers on the surface', surfaced.air > 2, `air ${surfaced.air.toFixed(1)}`);
+  await g(() => { const p = window.__game.player; p.hp = p.maxHp; });
+
   // ---- 10. QoL: town storage + xp toggle ----
   const qol = await g(() => {
     const game = window.__game;

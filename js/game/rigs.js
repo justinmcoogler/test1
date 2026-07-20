@@ -46,14 +46,21 @@ export function buildRig(type, def) {
   };
   const headIdx = boxes.findIndex((b) => b.texFront);
 
+  // models can declare their head boxes explicitly (def.headBoxes = indices);
+  // otherwise geometry heuristics find the head + face furniture
+  const takeHead = () => {
+    if (def.headBoxes) return take((b, i) => def.headBoxes.includes(i));
+    return take((b, i) => i === headIdx);
+  };
+
   if (rig === 'quadruped' || rig === 'pecker') {
     // legs: small boxes standing on the ground
-    const legs = take((b) => b.y <= 0.02 && b.h <= 0.6 && b.w <= 0.25);
-    const head = take((b, i) => i === headIdx);
+    const legs = take((b) => b.y <= 0.02 && b.h <= 0.75 && b.w <= 0.34);
+    const head = takeHead();
     // face furniture (snout/horns/beak) rides with the head
     const hz = head.length ? cz(head[0]) : 99;
-    const snout = take((b) => Math.abs(cx(b)) <= 0.5 && cz(b) >= hz && b.h <= 0.45);
-    const tail = take((b) => cz(b) < -0.4 && b.w <= 0.17);
+    const snout = def.headBoxes ? [] : take((b) => Math.abs(cx(b)) <= 0.5 && cz(b) >= hz && b.h <= 0.45);
+    const tail = take((b) => cz(b) < -0.4 && b.w <= 0.28 && b.h <= 0.3);
     const body = take(() => true);
     parts.push({ id: 'body', pivot: [0, 0.35, 0], boxes: body, tex: def.skin });
     legs.forEach((b, i) => {
@@ -82,8 +89,9 @@ export function buildRig(type, def) {
     A('body', 'walk', 'translate', [[0, [0, 0.03, 0]], [0.18, [0, 0, 0]], [0.35, [0, 0.03, 0]], [0.52, [0, 0, 0]], [0.7, [0, 0.03, 0]]]);
     A('body', 'attack', 'translate', [[0, [0, 0, 0]], [0.15, [0, 0.02, 0.14]], [0.5, [0, 0, 0]]]);
   } else if (rig === 'biped') {
-    const arms = take((b) => Math.abs(cx(b)) >= 0.4 && b.h >= 0.6 && b.w <= 0.55);
-    const head = take((b, i) => i === headIdx);
+    const arms = take((b) => Math.abs(cx(b)) >= 0.35 && b.h >= 0.28 && b.w <= 0.55 && b.y > 0.05);
+    const legs = take((b) => b.y <= 0.02 && b.h <= 0.75 && b.w <= 0.45);
+    const head = takeHead();
     const body = take(() => true);
     parts.push({ id: 'body', pivot: [0, 0.4, 0], boxes: body, tex: def.skin });
     arms.forEach((b, i) => {
@@ -92,6 +100,11 @@ export function buildRig(type, def) {
       A(id, 'idle', 'rotate', swing(3.2, left ? 2.5 : -2.5));
       A(id, 'walk', 'rotate', left ? swing(0.7, 18) : swing(0.7, -18));
       A(id, 'attack', 'rotate', [[0, [0, 0, 0]], [0.12, [-100, 0, 0]], [0.3, [30, 0, 0]], [0.5, [0, 0, 0]]]);
+    });
+    legs.forEach((b, i) => {
+      const id = `bleg${i}`, left = cx(b) < 0;
+      parts.push({ id, pivot: [cx(b), b.y + b.h, cz(b)], boxes: [b], tex: def.skin });
+      A(id, 'walk', 'rotate', left ? swing(0.7, 22) : swing(0.7, -22));
     });
     if (head.length) {
       const hb = head[0];
@@ -113,7 +126,7 @@ export function buildRig(type, def) {
     A('body', 'attack', 'rotate', [[0, [0, 0, 0]], [0.14, [-14, 0, 0]], [0.5, [0, 0, 0]]]);
     anims.walk.length = 1.1;
   } else if (rig === 'hopper') {
-    const head = take((b, i) => i === headIdx);
+    const head = takeHead();
     const body = take(() => true);
     parts.push({ id: 'body', pivot: [0, 0.2, 0], boxes: body, tex: def.skin });
     if (head.length) {
@@ -127,10 +140,10 @@ export function buildRig(type, def) {
     anims.walk.length = 0.5;
     A('body', 'attack', 'translate', [[0, [0, 0, 0]], [0.13, [0, 0.1, 0.25]], [0.5, [0, 0, 0]]]);
   } else if (rig === 'scamper' || rig === 'slither') {
-    const head = take((b, i) => i === headIdx);
+    const head = takeHead();
     // whiskers/nose move with the head
     const hz2 = head.length ? cz(head[0]) : 99;
-    const snout = take((b) => cz(b) > hz2 && b.h <= 0.3);
+    const snout = def.headBoxes ? [] : take((b) => cz(b) > hz2 && b.h <= 0.3);
     const tail = take((b) => cz(b) < -0.4 && b.w <= 0.14);
     const body = take(() => true);
     parts.push({ id: 'body', pivot: [0, 0.15, 0], boxes: body, tex: def.skin });
@@ -202,6 +215,17 @@ export function playerAnimations() {
       parts: {
         arm_r: { rotate: [[0, [-10, 0, 0]], [0.12, [-125, 0, -8]], [0.3, [-15, 0, 0]], [0.45, [0, 0, 0]]] },
         body: { rotate: [[0, [0, 0, 0]], [0.12, [0, -8, 0]], [0.3, [0, 5, 0]], [0.45, [0, 0, 0]]] },
+      },
+    },
+    swim: {
+      length: 1.0,
+      parts: {
+        arm_l: { rotate: [[0, [-170, 0, -12]], [0.5, [-30, 0, -12]], [1.0, [-170, 0, -12]]] },
+        arm_r: { rotate: [[0, [-30, 0, 12]], [0.5, [-170, 0, 12]], [1.0, [-30, 0, 12]]] },
+        leg_l: { rotate: [[0, [18, 0, 0]], [0.25, [-18, 0, 0]], [0.5, [18, 0, 0]], [0.75, [-18, 0, 0]], [1.0, [18, 0, 0]]] },
+        leg_r: { rotate: [[0, [-18, 0, 0]], [0.25, [18, 0, 0]], [0.5, [-18, 0, 0]], [0.75, [18, 0, 0]], [1.0, [-18, 0, 0]]] },
+        body: { rotate: [[0, [12, 0, 3]], [0.5, [12, 0, -3]], [1.0, [12, 0, 3]]] },
+        head: { rotate: [[0, [-14, 0, 0]], [1.0, [-14, 0, 0]]] },
       },
     },
   };

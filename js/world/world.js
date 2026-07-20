@@ -105,8 +105,12 @@ export class World {
             const def = NODE_TYPES[n.type];
             if (hash2(this.seed + 907 + def.xp * 7, wx, wz) >= n.d) continue;
             if (def.kind === 'water') {
+              // fishing spots hug the shoreline: deep enough to fish, with
+              // dry land on at least one neighboring column to stand on
               if (h < SEA - 1 && blocks[lidx(lx, SEA, lz)] === B.water) {
-                chunk.nodes.push({ type: n.type, x: wx, y: SEA, z: wz });
+                const shore = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+                  .some(([dx, dz]) => gen.heightAt(wx + dx, wz + dz) >= SEA);
+                if (shore) chunk.nodes.push({ type: n.type, x: wx, y: SEA, z: wz });
               }
             } else if (above === B.air && surfId !== B.water) {
               chunk.nodes.push({ type: n.type, x: wx, y: h + 1, z: wz });
@@ -225,6 +229,7 @@ export class World {
     const idx = lidx(x - cx * CHUNK, y, z - cz * CHUNK);
     if (c.blocks[idx] === id && !record) return;
     c.blocks[idx] = id;
+    c.mapStamp = (c.mapStamp || 0) + 1; // invalidates cached map tiles
     if (record) {
       if (!this.editedBlocks.has(k)) this.editedBlocks.set(k, new Map());
       this.editedBlocks.get(k).set(idx, id);

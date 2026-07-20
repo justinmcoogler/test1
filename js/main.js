@@ -137,10 +137,22 @@ class Game {
       else this.renderer.registerModel(type, def.model, def.skin);
     }
     for (const [id, def] of Object.entries(NPC_DEFS)) {
-      // NPC heads get a face; bodies read as cloth
-      const head = def.model.find((b) => b.h <= 0.35 && b.w >= 0.3 && b.w === b.d);
-      if (head && !head.texFront) head.texFront = 'skin_face';
-      this.renderer.registerModel(`npc_${id}`, def.model, 'skin_cloth');
+      // villagers share the player skeleton: rig the standard box layout
+      // (legs 0-1, torso 2, arms 3-4, head 5, extras) into animated parts
+      const PX = 1.8 / 32;
+      const m = def.model;
+      if (!m[5].texFront) m[5].texFront = 'skin_face';
+      const headIdx = new Set([5, ...(def.headExtra || [])]);
+      const limbIdx = new Set([0, 1, 3, 4]);
+      const parts = [
+        { id: 'body', pivot: [0, 12 * PX, 0], boxes: m.filter((b, i) => !headIdx.has(i) && !limbIdx.has(i)), tex: 'skin_cloth' },
+        { id: 'leg_l', pivot: [-2 * PX, 12 * PX, 0], boxes: [m[0]], tex: 'skin_cloth' },
+        { id: 'leg_r', pivot: [2 * PX, 12 * PX, 0], boxes: [m[1]], tex: 'skin_cloth' },
+        { id: 'arm_l', pivot: [-6 * PX, 23 * PX, 0], boxes: [m[3]], tex: 'skin_cloth' },
+        { id: 'arm_r', pivot: [6 * PX, 23 * PX, 0], boxes: [m[4]], tex: 'skin_cloth' },
+        { id: 'head', pivot: [0, 24 * PX, 0], boxes: m.filter((b, i) => headIdx.has(i)), tex: 'skin_solid' },
+      ];
+      this.renderer.registerAnimatedModel(`npc_${id}`, parts, { idle: playerAnimations().idle });
     }
     this.playerModelVersion = 0;
     this.registerPlayerModel();
@@ -266,6 +278,10 @@ class Game {
       // your own swing animation
       this.playerAttackT = 0.45;
       this.playerAttackStart = this.world.time;
+    });
+    on('splash', ({ x, y, z }) => {
+      this.renderer.spawnParticles(x, y, z, [0.55, 0.7, 0.95], 14, 3, 0.6, 0.1);
+      SFX.splash();
     });
     on('playerDied', () => this.onPlayerDeath());
     on('playerDamaged', () => {
@@ -1610,6 +1626,7 @@ class Game {
       return evaluatePose(model, 'attack', (t * 1.15) % 0.45); // chopping/mining swing
     }
     const speed = Math.hypot(this.player.vx, this.player.vz);
+    if (this.player.inWater && speed > 0.5 && model.animations.swim) return evaluatePose(model, 'swim', t);
     if (speed > 0.7 && model.animations.walk) return evaluatePose(model, 'walk', t);
     return evaluatePose(model, 'idle', t);
   }
@@ -1679,7 +1696,12 @@ class Game {
       }
     }
     for (const npc of this.world.structure.npcs) {
-      out.push({ model: `npc_${npc.id}`, x: npc.x + 0.5, y: npc.y, z: npc.z + 0.5, yaw: Math.atan2(this.player.x - npc.x, this.player.z - npc.z), tint: [0, 0, 0] });
+      const model = this.renderer.modelCache.get(`npc_${npc.id}`);
+      out.push({
+        model: `npc_${npc.id}`, x: npc.x + 0.5, y: npc.y, z: npc.z + 0.5,
+        yaw: Math.atan2(this.player.x - npc.x, this.player.z - npc.z), tint: [0, 0, 0],
+        pose: model?.animated ? evaluatePose(model, 'idle', this.world.time + (npc.x % 7)) : null,
+      });
     }
     return out;
   }

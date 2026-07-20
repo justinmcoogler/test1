@@ -40,6 +40,10 @@ export class Controls {
           const p = canvas.requestPointerLock?.();
           p?.catch?.(() => emit('pointerLockFailed'));
         } catch { emit('pointerLockFailed'); }
+        // no capture (embedded pages, denied permission): drag-to-look still
+        // works, and holding the button still gathers/mines
+        if (e.button === 0) { this.leftDown = true; this._fpDrag = true; }
+        if (e.button === 2) { this.rightDown = true; emit('rightClick'); }
         return;
       }
       if (e.button === 0) this.leftDown = true;
@@ -48,6 +52,7 @@ export class Controls {
     document.addEventListener('mouseup', (e) => {
       if (e.button === 0) {
         this.leftDown = false;
+        this._fpDrag = false;
         // a left-drag orbited the camera — swallow the click it would produce
         if (this._leftDrag?.moved) this.suppressNextClick = true;
         this._leftDrag = null;
@@ -74,7 +79,11 @@ export class Controls {
         if (this.orbitDragging) { this.orbitDX += e.movementX; this.orbitDY += e.movementY; }
         return;
       }
-      if (!this.pointerLocked) return;
+      if (!this.pointerLocked) {
+        // drag-to-look fallback when the mouse can't be captured
+        if (this._fpDrag) { this.mouseDX += e.movementX; this.mouseDY += e.movementY; }
+        return;
+      }
       this.mouseDX += e.movementX;
       this.mouseDY += e.movementY;
     });
