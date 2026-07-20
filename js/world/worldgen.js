@@ -11,6 +11,11 @@ export const CHUNK = 16;
 export const WORLD_H = 64;
 export const SEA = 28;
 
+// The Frostwatch frontier camp: a second hand-built site far out in forced
+// tundra. Terrain, biome and danger tier are pinned around it so the camp
+// exists on every seed.
+export const FROST_CAMP = { x: 560, z: -120, ground: 33 };
+
 export const BIOMES = {
   greenwood_plains: {
     label: 'Greenwood Plains', tier: 0,
@@ -18,7 +23,7 @@ export const BIOMES = {
     trees: [{ type: 'tree_fernwood', density: 0.012 }],
     plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'wildflower', d: 0.012 }],
     nodes: [{ type: 'herb_patch', d: 0.004 }, { type: 'berry_bush', d: 0.003 }],
-    enemies: [{ type: 'mudback_boar', d: 0.0022 }, { type: 'thicket_sprite', d: 0.0015 }],
+    enemies: [{ type: 'mudback_boar', d: 0.0022 }, { type: 'thicket_sprite', d: 0.0015 }, { type: 'duskwing', d: 0.0014 }],
   },
   ancient_forest: {
     label: 'Ancient Forest', tier: 0,
@@ -26,7 +31,7 @@ export const BIOMES = {
     trees: [{ type: 'tree_fernwood', density: 0.05 }, { type: 'tree_silverbark', density: 0.012 }],
     plants: [{ block: 'tall_grass', d: 0.03 }, { block: 'mushroom_cap', d: 0.01 }],
     nodes: [{ type: 'herb_patch', d: 0.006 }, { type: 'berry_bush', d: 0.004 }],
-    enemies: [{ type: 'thicket_sprite', d: 0.003 }, { type: 'moss_lurker', d: 0.0018 }],
+    enemies: [{ type: 'thicket_sprite', d: 0.003 }, { type: 'moss_lurker', d: 0.0018 }, { type: 'duskwing', d: 0.0018 }],
   },
   misty_wetlands: {
     label: 'Misty Wetlands', tier: 1,
@@ -58,7 +63,7 @@ export const BIOMES = {
     trees: [{ type: 'tree_emberpine', density: 0.01 }],
     plants: [],
     nodes: [{ type: 'ore_iron', d: 0.004 }, { type: 'ore_silver', d: 0.002 }],
-    enemies: [{ type: 'frostmaw_wolf', d: 0.003 }, { type: 'rime_shade', d: 0.0015 }],
+    enemies: [{ type: 'frostmaw_wolf', d: 0.003, pack: [2, 3] }, { type: 'rime_shade', d: 0.0015 }],
   },
   volcanic_wastes: {
     label: 'Volcanic Wastes', tier: 3,
@@ -123,6 +128,16 @@ export class WorldGen {
         h = lerp(h, 30, t2);
       }
     }
+    // Frostwatch plateau: the frontier camp gets the same treatment
+    const df = Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z);
+    if (df < 70) {
+      const t = smoothstep(clamp(1 - df / 70, 0, 1));
+      h = lerp(h, FROST_CAMP.ground + 0.2 + hills * 1.4, t);
+      if (df < 26) {
+        const t2 = smoothstep(clamp((26 - df) / 8, 0, 1));
+        h = lerp(h, FROST_CAMP.ground, t2);
+      }
+    }
     return clamp(Math.floor(h), 4, WORLD_H - 6);
   }
 
@@ -131,6 +146,7 @@ export class WorldGen {
 
   // Distance rings decide danger tier; noise jitters the ring edges organic.
   tierAt(x, z) {
+    if (Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z) < 100) return 2;
     const d = Math.hypot(x, z) + (fbm2(this.seed + 88, x * 0.01, z * 0.01, 2) - 0.5) * 120;
     if (d < 260) return 0;
     if (d < 520) return 1;
@@ -144,6 +160,8 @@ export class WorldGen {
     const m = this.moistureAt(x, z);
     const tier = this.tierAt(x, z);
 
+    // forced tundra ring around the Frostwatch camp (every seed)
+    if (Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z) < 90) return BIOMES.frostbound_tundra;
     if (h <= SEA + 1 && tier >= 1) return BIOMES.coastal_shores;
     if (tier === 0) {
       return m > 0.56 ? BIOMES.ancient_forest : BIOMES.greenwood_plains;
@@ -165,6 +183,7 @@ export class WorldGen {
     if (y < 4 || y > WORLD_H - 12) return false;
     const d = Math.hypot(x, z);
     if (d < 46) return false; // keep the settlement's underground intact for the hand-built mine
+    if (Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z) < 30) return false; // solid ground under the camp
     const n = valueNoise3(this.seed + 99, x * 0.06, y * 0.09, z * 0.06);
     const n2 = valueNoise3(this.seed + 111, x * 0.045, y * 0.07, z * 0.045);
     return n > 0.68 && n2 > 0.55;

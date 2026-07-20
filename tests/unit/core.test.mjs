@@ -152,8 +152,10 @@ test('every enemy is fully defined', () => {
 test('starter structures: chests/npcs/nodes/spawns are valid', () => {
   const s = buildStarterStructures();
   assert.ok(s.edits.size > 500, 'settlement should be substantial');
-  assert.equal(s.npcs.length, 2);
+  assert.equal(s.npcs.length, 3); // Maren, Tam, and Warden Sylla at the Frostwatch
+  assert.ok(s.npcs.some((n) => n.id === 'sylla'));
   assert.ok(s.spawns.some((sp) => sp.type === 'rootbound_golem' && sp.boss));
+  assert.ok(s.spawns.some((sp) => sp.type === 'rimehowl_alpha' && sp.boss));
   assert.ok(s.nodes.filter((n) => n.type.startsWith('ore_')).length >= 5);
   assert.ok(s.nodes.some((n) => n.type === 'fishing_spot'));
   for (const n of s.nodes) assert.ok(NODE_TYPES[n.type], `unknown node ${n.type}`);

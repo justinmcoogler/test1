@@ -1,7 +1,7 @@
 // Chunked voxel world: generation, block access, player edits, resource
 // node lifecycle (deplete/respawn), chest storage, raycasting, persistence.
 import { B, BLOCKS, isSolid } from './blocks.js';
-import { CHUNK, WORLD_H, SEA, WorldGen, undergroundNodeCandidates } from './worldgen.js';
+import { CHUNK, WORLD_H, SEA, FROST_CAMP, WorldGen, undergroundNodeCandidates } from './worldgen.js';
 import { buildStarterStructures, indexEditsByChunk } from './structures.js';
 import { NODE_TYPES, nodeBlocks, nodeCells } from '../game/nodes.js';
 import { hash2, hash3 } from '../core/rng.js';
@@ -11,6 +11,8 @@ const SLAB_BLOCKS = new Set();
 export function initSlabSet() {
   for (const name of ['stump', 'dig_mound', 'anvil_block', 'campfire']) SLAB_BLOCKS.add(B[name]);
 }
+
+export const DAY_LEN = 480; // seconds per full day/night cycle
 
 export const chunkKey = (cx, cz) => `${cx},${cz}`;
 export const cellKey = (x, y, z) => `${x},${y},${z}`;
@@ -28,6 +30,7 @@ export class World {
     this.depletedWatch = new Set();   // nodeIds waiting to respawn (loaded chunks)
     this.chestContents = new Map();   // chestId → [{item,qty}]
     this.chestMeta = new Map();       // chestId → def (incl. requiresBossDead)
+    this.crops = new Map();           // "x,y,z" → ripeAt (player-planted crops)
     this.time = 0;                    // world-time seconds, persisted
     this.dirtyChunks = new Set();     // chunk keys needing remesh
 
@@ -71,6 +74,7 @@ export class World {
         const wx = cx * CHUNK + lx, wz = cz * CHUNK + lz;
         const d0 = Math.hypot(wx, wz);
         if (d0 < 38) continue;
+        if (Math.hypot(wx - FROST_CAMP.x, wz - FROST_CAMP.z) < 26) continue; // camp stays hand-built
         const h = chunk.surfaceH[lz * CHUNK + lx];
         const surfId = blocks[lidx(lx, h, lz)];
         const biome = gen.biomeAt(wx, wz);
@@ -110,11 +114,16 @@ export class World {
             break;
           }
         }
-        // enemy spawn points
+        // enemy spawn points (packs place several creatures on one point)
         if (d0 > 60 && above === B.air && surfId !== B.water) {
           for (const e of biome.enemies) {
             if (hash2(this.seed + 911 + e.type.length * 31, wx, wz) < e.d) {
-              chunk.spawns.push({ id: `sp:${wx},${wz}`, type: e.type, x: wx, y: h + 1, z: wz });
+              const n = e.pack
+                ? e.pack[0] + Math.floor(hash2(this.seed + 913, wx, wz) * (e.pack[1] - e.pack[0] + 1))
+                : 1;
+              for (let i = 0; i < n; i++) {
+                chunk.spawns.push({ id: `sp:${wx},${wz}${i ? ':' + i : ''}`, type: e.type, x: wx, y: h + 1, z: wz });
+              }
               break;
             }
           }
@@ -228,6 +237,20 @@ export class World {
     if (lz === CHUNK - 1) this.dirtyChunks.add(chunkKey(cx, cz + 1));
   }
 
+  // ---- Day/night clock ---------------------------------------------------
+  dayPhase() { return (this.time % DAY_LEN) / DAY_LEN; }
+
+  // 1 at noon, 0.25 deep night, with dusk/dawn ramps
+  daylight() {
+    const t = this.dayPhase();
+    if (t < 0.42) return 1;
+    if (t < 0.52) return 1 - ((t - 0.42) / 0.10) * 0.75;
+    if (t < 0.90) return 0.25;
+    return 0.25 + ((t - 0.90) / 0.10) * 0.75;
+  }
+
+  isNight() { return this.daylight() < 0.55; }
+
   surfaceAt(x, z) {
     for (let y = WORLD_H - 1; y > 0; y--) {
       const id = this.getBlock(x, y, z);
@@ -303,8 +326,27 @@ export class World {
     }
   }
 
+  // ---- Player farming ----------------------------------------------------
+  plantCrop(x, y, z) {
+    this.setBlock(x, y, z, B.crop_young, true);
+    this.crops.set(cellKey(x, y, z), this.time + 120); // ~2 min to ripen
+  }
+
   update(dt) {
     this.time += dt;
+    // planted crops ripen on a slow tick
+    if ((this._cropTick = (this._cropTick || 0) + dt) > 1) {
+      this._cropTick = 0;
+      for (const [k, ripeAt] of this.crops) {
+        if (ripeAt > this.time) continue;
+        const [x, y, z] = k.split(',').map(Number);
+        if (this.getBlock(x, y, z) === B.crop_young) {
+          this.setBlock(x, y, z, B.crop_ripe, true);
+          emit('cropRipened', { x, y, z });
+        }
+        this.crops.delete(k); // grown (or was broken early) — either way done
+      }
+    }
     if (this.depletedWatch.size) {
       for (const id of [...this.depletedWatch]) {
         const st = this.nodeStates.get(id);
@@ -413,7 +455,9 @@ export class World {
     }
     const chests = {};
     for (const [id, c] of this.chestContents) chests[id] = c;
-    return { seed: this.seed, time: Math.round(this.time), edits, nodeStates, chests };
+    const crops = {};
+    for (const [k, at] of this.crops) crops[k] = Math.round(at);
+    return { seed: this.seed, time: Math.round(this.time), edits, nodeStates, chests, crops };
   }
 
   deserialize(data) {
@@ -428,6 +472,8 @@ export class World {
     for (const [id, [ready, respawnAt, remaining]] of Object.entries(data.nodeStates || {})) {
       this.nodeStates.set(id, { state: ready ? 'ready' : 'depleted', respawnAt, remaining });
     }
+    this.crops.clear();
+    for (const [k, at] of Object.entries(data.crops || {})) this.crops.set(k, at);
     this.chestContents.clear();
     for (const [id, c] of Object.entries(data.chests || {})) {
       this.chestContents.set(id, c);

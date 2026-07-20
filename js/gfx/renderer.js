@@ -1,6 +1,6 @@
 // Renderer: camera, chunk meshes, entities, overlays, particles.
 import {
-  createGL, compileProgram, WORLD_VS, WORLD_FS, COLOR_VS, COLOR_FS,
+  createGL, compileProgram, WORLD_VS, WORLD_FS, TERRAIN_FS, COLOR_VS, COLOR_FS,
   uploadWorldMesh, uploadColorMesh, deleteMesh, createAtlasTexture,
 } from './gl.js';
 import { meshChunk } from './mesher.js';
@@ -12,14 +12,17 @@ import {
 import { getAtlasCanvas, tileUV } from './textures.js';
 
 const DAY_FOG = [0.62, 0.76, 0.88];
+const NIGHT_FOG = [0.045, 0.06, 0.12];
 const CAVE_FOG = [0.05, 0.06, 0.08];
 
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
     const gl = (this.gl = createGL(canvas));
+    this.terrainProg = compileProgram(gl, WORLD_VS, TERRAIN_FS);
     this.worldProg = compileProgram(gl, WORLD_VS, WORLD_FS);
     this.colorProg = compileProgram(gl, COLOR_VS, COLOR_FS);
+    this.daylight = 1; // 0.25 night … 1 noon, driven by the world clock
     this.atlasTex = createAtlasTexture(gl, getAtlasCanvas());
     this.chunkMeshes = new Map(); // chunkKey → {opaque, cutout, water}
     this.modelCache = new Map();  // modelName → mesh
@@ -218,10 +221,17 @@ export class Renderer {
     const gl = this.gl;
     this.time += opts.dt || 0.016;
     this.updateParticles(opts.dt || 0.016);
+    // sky fog follows the day/night clock, then blends toward cave darkness
+    const dayMix = Math.max(0, Math.min(1, (this.daylight - 0.25) / 0.75));
+    const skyFog = [
+      NIGHT_FOG[0] + (DAY_FOG[0] - NIGHT_FOG[0]) * dayMix,
+      NIGHT_FOG[1] + (DAY_FOG[1] - NIGHT_FOG[1]) * dayMix,
+      NIGHT_FOG[2] + (DAY_FOG[2] - NIGHT_FOG[2]) * dayMix,
+    ];
     const fog = [
-      DAY_FOG[0] + (CAVE_FOG[0] - DAY_FOG[0]) * this.fogMix,
-      DAY_FOG[1] + (CAVE_FOG[1] - DAY_FOG[1]) * this.fogMix,
-      DAY_FOG[2] + (CAVE_FOG[2] - DAY_FOG[2]) * this.fogMix,
+      skyFog[0] + (CAVE_FOG[0] - skyFog[0]) * this.fogMix,
+      skyFog[1] + (CAVE_FOG[1] - skyFog[1]) * this.fogMix,
+      skyFog[2] + (CAVE_FOG[2] - skyFog[2]) * this.fogMix,
     ];
     gl.clearColor(fog[0], fog[1], fog[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -229,20 +239,20 @@ export class Renderer {
     const fogFar = this.renderDistance * CHUNK * 0.95;
     const fogNear = fogFar * 0.55;
 
-    // --- world passes ---
-    const wp = this.worldProg;
-    gl.useProgram(wp.prog);
-    gl.uniformMatrix4fv(wp.uniforms.uPV, false, this.pv);
-    gl.uniformMatrix4fv(wp.uniforms.uModel, false, mat4Identity(this.tmp));
-    gl.uniform3fv(wp.uniforms.uCamPos, this.camPos);
-    gl.uniform3fv(wp.uniforms.uFogColor, fog);
-    gl.uniform1f(wp.uniforms.uFogNear, fogNear);
-    gl.uniform1f(wp.uniforms.uFogFar, fogFar);
-    gl.uniform1f(wp.uniforms.uOpacity, 1);
-    gl.uniform3f(wp.uniforms.uTint, 0, 0, 0);
+    // --- world passes (terrain program: sky/block light channels) ---
+    const tp = this.terrainProg;
+    gl.useProgram(tp.prog);
+    gl.uniformMatrix4fv(tp.uniforms.uPV, false, this.pv);
+    gl.uniformMatrix4fv(tp.uniforms.uModel, false, mat4Identity(this.tmp));
+    gl.uniform3fv(tp.uniforms.uCamPos, this.camPos);
+    gl.uniform3fv(tp.uniforms.uFogColor, fog);
+    gl.uniform1f(tp.uniforms.uFogNear, fogNear);
+    gl.uniform1f(tp.uniforms.uFogFar, fogFar);
+    gl.uniform1f(tp.uniforms.uOpacity, 1);
+    gl.uniform1f(tp.uniforms.uDaylight, this.daylight);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
-    gl.uniform1i(wp.uniforms.uAtlas, 0);
+    gl.uniform1i(tp.uniforms.uAtlas, 0);
 
     const pcx = Math.floor(this.camPos[0] / CHUNK), pcz = Math.floor(this.camPos[2] / CHUNK);
     const visible = [];
@@ -254,14 +264,14 @@ export class Renderer {
       visible.push(m);
     }
 
-    gl.uniform1f(wp.uniforms.uCutout, 0);
+    gl.uniform1f(tp.uniforms.uCutout, 0);
     for (const m of visible) {
       if (!m.opaque) continue;
       gl.bindVertexArray(m.opaque.vao);
       gl.drawElements(gl.TRIANGLES, m.opaque.count, gl.UNSIGNED_INT, 0);
     }
 
-    gl.uniform1f(wp.uniforms.uCutout, 1);
+    gl.uniform1f(tp.uniforms.uCutout, 1);
     gl.disable(gl.CULL_FACE);
     for (const m of visible) {
       if (!m.cutout) continue;
@@ -270,7 +280,19 @@ export class Renderer {
     }
     gl.enable(gl.CULL_FACE);
 
-    // --- entities (textured skins via the world program) ---
+    // --- entities (textured skins via the entity program) ---
+    const wp = this.worldProg;
+    gl.useProgram(wp.prog);
+    gl.uniformMatrix4fv(wp.uniforms.uPV, false, this.pv);
+    gl.uniform3fv(wp.uniforms.uCamPos, this.camPos);
+    gl.uniform3fv(wp.uniforms.uFogColor, fog);
+    gl.uniform1f(wp.uniforms.uFogNear, fogNear);
+    gl.uniform1f(wp.uniforms.uFogFar, fogFar);
+    gl.uniform1f(wp.uniforms.uOpacity, 1);
+    gl.uniform1f(wp.uniforms.uCutout, 0);
+    gl.uniform1i(wp.uniforms.uAtlas, 0);
+    gl.uniform3f(wp.uniforms.uTint, 0, 0, 0);
+    const ambient = Math.max(0.35, this.daylight);
     const baseMat = new Float32Array(16);
     const partMat = new Float32Array(16);
     for (const e of opts.entities || []) {
@@ -283,6 +305,7 @@ export class Renderer {
       baseMat[8] = sy * s; baseMat[9] = 0; baseMat[10] = cy * s; baseMat[11] = 0;
       baseMat[12] = e.x; baseMat[13] = e.y; baseMat[14] = e.z; baseMat[15] = 1;
       gl.uniform3f(wp.uniforms.uTint, ...(e.tint || [0, 0, 0]));
+      gl.uniform1f(wp.uniforms.uLightMult, e.light ?? ambient);
       if (model.animated) {
         if (model.texture) gl.bindTexture(gl.TEXTURE_2D, model.texture);
         for (const part of model.parts) {
@@ -316,20 +339,20 @@ export class Renderer {
     gl.uniform1f(cp.uniforms.uOpacity, 1);
     gl.uniform3f(cp.uniforms.uTint, 0, 0, 0);
 
-    // --- water (transparent) ---
-    gl.useProgram(wp.prog);
+    // --- water (transparent, terrain program) ---
+    gl.useProgram(tp.prog);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
     gl.disable(gl.CULL_FACE);
-    gl.uniform1f(wp.uniforms.uCutout, 0);
-    gl.uniform1f(wp.uniforms.uOpacity, 0.78);
+    gl.uniform1f(tp.uniforms.uCutout, 0);
+    gl.uniform1f(tp.uniforms.uOpacity, 0.78);
     for (const m of visible) {
       if (!m.water) continue;
       gl.bindVertexArray(m.water.vao);
       gl.drawElements(gl.TRIANGLES, m.water.count, gl.UNSIGNED_INT, 0);
     }
-    gl.uniform1f(wp.uniforms.uOpacity, 1);
+    gl.uniform1f(tp.uniforms.uOpacity, 1);
 
     // --- overlays: tile highlights, selection box, particles, markers ---
     gl.useProgram(cp.prog);

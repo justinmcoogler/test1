@@ -7,10 +7,10 @@
 const RIGS = {
   practice_dummy: 'sway',
   mudback_boar: 'quadruped', craghorn_ram: 'quadruped',
-  dune_stalker: 'quadruped', frostmaw_wolf: 'quadruped',
+  dune_stalker: 'quadruped', frostmaw_wolf: 'quadruped', rimehowl_alpha: 'quadruped',
   gloomrat: 'scamper', root_creeper: 'scamper', sunscale_serpent: 'slither',
   thicket_sprite: 'floater', marsh_wisp: 'floater', rime_shade: 'floater',
-  hollow_watcher: 'floater',
+  hollow_watcher: 'floater', duskwing: 'floater',
   cinder_imp: 'hopper', rootling: 'hopper',
   moss_lurker: 'lumberer', shell_snapper: 'lumberer',
   bog_shambler: 'biped', magma_hulk: 'biped', blight_horror: 'biped',
@@ -48,12 +48,12 @@ export function buildRig(type, def) {
 
   if (rig === 'quadruped' || rig === 'pecker') {
     // legs: small boxes standing on the ground
-    const legs = take((b) => b.y <= 0.02 && b.h <= 0.5 && b.w <= 0.25);
+    const legs = take((b) => b.y <= 0.02 && b.h <= 0.6 && b.w <= 0.25);
     const head = take((b, i) => i === headIdx);
     // face furniture (snout/horns/beak) rides with the head
     const hz = head.length ? cz(head[0]) : 99;
     const snout = take((b) => Math.abs(cx(b)) <= 0.5 && cz(b) >= hz && b.h <= 0.45);
-    const tail = take((b) => cz(b) < -0.4 && b.w <= 0.14);
+    const tail = take((b) => cz(b) < -0.4 && b.w <= 0.17);
     const body = take(() => true);
     parts.push({ id: 'body', pivot: [0, 0.35, 0], boxes: body, tex: def.skin });
     legs.forEach((b, i) => {

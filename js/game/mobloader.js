@@ -51,6 +51,17 @@ export function parseMobFile(json) {
   for (const b of json.spawn?.biomes || []) {
     if (!BIOMES[b]) fail(id, `spawn references unknown biome "${b}"`);
   }
+  const sp = json.spawn || {};
+  if (sp.packSize !== undefined) {
+    if (!Array.isArray(sp.packSize) || sp.packSize.length !== 2 ||
+        sp.packSize.some((v) => !Number.isInteger(v) || v < 1 || v > 4) || sp.packSize[0] > sp.packSize[1]) {
+      fail(id, 'spawn.packSize must be [min,max] integers between 1 and 4');
+    }
+  }
+  if (sp.nightOnly !== undefined && typeof sp.nightOnly !== 'boolean') fail(id, 'spawn.nightOnly must be a boolean');
+  if (stats.shinyChance !== undefined && !(stats.shinyChance >= 0 && stats.shinyChance <= 0.2)) {
+    fail(id, 'stats.shinyChance must be between 0 and 0.2');
+  }
   for (const [name, anim] of Object.entries(json.animations || {})) {
     if (!(anim.length > 0)) fail(id, `animation "${name}" needs length > 0 seconds`);
     for (const [pid, ch] of Object.entries(anim.parts || {})) {
@@ -160,6 +171,8 @@ export async function registerMob(game, json) {
     drops: (mob.drops || []).map((d) => ({ item: d.item, qty: d.qty || [1, 1], chance: d.chance ?? 1 })),
     desc: s.desc || 'A custom creature of the veil.',
     recommend: s.recommend || '',
+    nocturnal: !!mob.spawn?.nightOnly,
+    shinyChance: s.shinyChance,
     model: parts.flatMap((p) => p.boxes), // static fallback (tactical placement etc.)
     skin: 'skin_solid',
     custom: true,
@@ -174,7 +187,7 @@ export function injectSpawnRules(json) {
   for (const biome of mob.spawn?.biomes || []) {
     const list = BIOMES[biome].enemies;
     if (!list.some((e) => e.type === mob.id)) {
-      list.push({ type: mob.id, d: mob.spawn.density ?? 0.002 });
+      list.push({ type: mob.id, d: mob.spawn.density ?? 0.002, pack: mob.spawn.packSize });
     }
   }
 }

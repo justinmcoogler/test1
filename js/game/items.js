@@ -97,6 +97,9 @@ tool('crude_shovel', 'Crude Shovel', 'shovel', 1, 1.0, 60);
 tool('bronze_shovel', 'Bronze Shovel', 'shovel', 2, 1.5, 180);
 tool('fishing_rod', 'Willow Rod', 'rod', 1, 1.0, 80);
 tool('reinforced_rod', 'Reinforced Rod', 'rod', 2, 1.4, 220);
+tool('crude_hoe', 'Crude Hoe', 'hoe', 1, 1.0, 60);
+tool('bronze_hoe', 'Bronze Hoe', 'hoe', 2, 1.5, 180);
+it('grain_seeds', 'Grain Seeds', { desc: 'Plant on tilled farmland (right-click). Ripens in a few minutes.' });
 
 // ---- weapons ----
 // wclass: melee|ranged|magic. atk = base power, acc, spd (initiative), crit %
@@ -110,6 +113,7 @@ weapon('boneshard_spear', 'Boneshard Spear', 'melee', { atk: 8, acc: 9, spd: 2, 
 weapon('thornwood_bow', 'Thornwood Bow', 'ranged', { atk: 5, acc: 8, spd: 1, crit: 7, range: 6, dur: 160 }, 'Fires slivers of hardened thorn.');
 weapon('recurve_silverbow', 'Silverbark Recurve', 'ranged', { atk: 9, acc: 10, spd: 1, crit: 9, range: 7, dur: 320 }, 'Silent, springy, deadly at distance.');
 weapon('ember_staff', 'Ember Staff', 'magic', { atk: 6, acc: 7, spd: 0, crit: 5, range: 5, dur: 240 }, 'A staff warm to the touch.');
+weapon('frostbrand_blade', 'Frostbrand Blade', 'melee', { atk: 12, acc: 8, spd: 1, crit: 8, dur: 420 }, 'Torn from the Rimehowl den. Cold enough to burn.');
 
 // ---- armor ----
 // slot: head|body|legs|hands|feet|off. stats trade off armor/evasion/speed/etc.

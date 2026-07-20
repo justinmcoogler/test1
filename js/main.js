@@ -28,7 +28,7 @@ import { clamp } from './core/math.js';
 import {
   loadSettings, saveSettings, listSlots, saveSlot, loadSlot, deleteSlot, NUM_SLOTS,
 } from './game/save.js';
-import { initAudio, setVolumes, SFX } from './core/audio.js';
+import { initAudio, setVolumes, setMusicMood, setNightAmbience, SFX } from './core/audio.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -407,11 +407,13 @@ class Game {
         const aggro = this.enemyMgr.checkAggro(p);
         if (aggro) this.startCombat(aggro);
       } else {
-        // classic combat is multi-engagement: everything hostile in range piles on
+        // classic combat is multi-engagement: everything hostile in range piles on.
+        // Hostiles grow bolder in the dark.
+        const aggroMult = this.world.isNight() ? 1.5 : 1;
         for (const e of this.enemyMgr.entities.values()) {
           if (e.rsEngaged || e.def.behavior !== 'aggressive' || !e.def.aggroRange) continue;
           const d = Math.hypot(p.x - e.x, p.z - e.z);
-          if (d < e.def.aggroRange && Math.abs(p.y - e.y) < 3) this.combatRS.engage(e);
+          if (d < e.def.aggroRange * aggroMult && Math.abs(p.y - e.y) < 3) this.combatRS.engage(e);
         }
       }
     }
@@ -442,6 +444,15 @@ class Game {
     if (this.autosaveTimer <= 0 && !this.combat.active && !p.dead) {
       this.autosaveTimer = 45;
       this.saveGame();
+    }
+
+    // day/night clock drives sky light, fog and the music mood
+    this.renderer.daylight = this.world.daylight();
+    if ((this._moodTick = (this._moodTick || 0) + dt) > 1) {
+      this._moodTick = 0;
+      const night = this.world.isNight();
+      setMusicMood(this.combatRS.active || this.combat.active ? 'combat' : night ? 'night' : 'day');
+      setNightAmbience(night && !p.dead);
     }
 
     // fog: underground darkening
@@ -732,6 +743,12 @@ class Game {
       return;
     }
     const bdef = BLOCKS[hit.id];
+    // planted crops harvest on a plain click, like nodes
+    if (bdef && (bdef.name === 'crop_ripe' || bdef.name === 'crop_young') && !isBreak) {
+      this.pendingInteract = { kind: 'break', x: hit.x, y: hit.y, z: hit.z, range: 3.2 };
+      this.walkTo(hit.x + 0.5, hit.z + 0.5, 12);
+      return;
+    }
     const stations = ['workbench', 'furnace', 'anvil_block', 'campfire', 'alchemy_table', 'loom_block', 'enchant_altar', 'construction_bench'];
     if (bdef && (stations.includes(bdef.name) || bdef.name === 'chest_block') && !isBreak) {
       this.pendingInteract = { kind: bdef.name === 'chest_block' ? 'chest' : 'station', x: hit.x, y: hit.y, z: hit.z, range: 3.2 };
@@ -1174,6 +1191,19 @@ class Game {
     this.renderer.spawnParticles(x + 0.5, y + 0.5, z + 0.5, [0.5, 0.45, 0.4], 10, 3, 0.6);
     SFX.breakBlock();
     if (def.drops) this.inventory.add(def.drops, 1);
+    // player-planted crops: harvest (ripe) or recover the seed (young)
+    if (def.name === 'crop_ripe' || def.name === 'crop_young') {
+      this.world.crops.delete(`${x},${y},${z}`);
+      if (def.name === 'crop_ripe') {
+        this.inventory.add('grainsheaf', 1 + (Math.random() < 0.5 ? 1 : 0));
+        if (Math.random() < 0.65) this.inventory.add('grain_seeds', 1 + (Math.random() < 0.3 ? 1 : 0));
+        if (Math.random() < 0.03) this.inventory.add('golden_grain', 1);
+        this.skills.addXp('farming', 22);
+      } else {
+        this.inventory.add('grain_seeds', 1);
+      }
+    }
+    if (def.name === 'tall_grass' && Math.random() < 0.25) this.inventory.add('grain_seeds', 1);
     if (def.tool === 'pickaxe') this.skills.addXp('mining', 3);
     if (def.tool === 'axe' && def.name !== 'workbench') this.skills.addXp('woodcutting', 2);
     if (this._breakTool) this.inventory.damageTool(this._breakTool, 1);
@@ -1215,6 +1245,34 @@ class Game {
     if (!hit || hit.node) return;
     const sel = this.inventory.selectedStack();
     const def = sel ? ITEMS[sel.item] : null;
+    // hoe: till grass/dirt into farmland
+    if (def?.tool === 'hoe') {
+      const above = this.world.getBlock(hit.x, hit.y + 1, hit.z);
+      if ((hit.id === B.grass || hit.id === B.dirt) && above === B.air && !this.world.nodeAt(hit.x, hit.y + 1, hit.z)) {
+        this.world.setBlock(hit.x, hit.y, hit.z, B.farmland, true);
+        this.inventory.damageTool(sel, 1);
+        this.skills.addXp('farming', 3);
+        this.renderer.spawnParticles(hit.x + 0.5, hit.y + 1.1, hit.z + 0.5, [0.5, 0.38, 0.22], 6, 2, 0.4);
+        SFX.dig();
+      } else {
+        this.warnGather('till' + hit.x + hit.z, 'You can only till open grass or dirt.');
+      }
+      return;
+    }
+    // seeds: plant on tilled farmland
+    if (sel?.item === 'grain_seeds') {
+      const px2 = hit.x, py2 = hit.y + 1, pz2 = hit.z;
+      if (hit.id === B.farmland && this.world.getBlock(px2, py2, pz2) === B.air && !this.world.nodeAt(px2, py2, pz2)) {
+        this.world.plantCrop(px2, py2, pz2);
+        this.inventory.removeSlot(this.inventory.selected, 1);
+        this.skills.addXp('farming', 5);
+        emit('cropPlanted', { x: px2, y: py2, z: pz2 });
+        SFX.place();
+      } else {
+        this.warnGather('plant' + hit.x + hit.z, 'Seeds need open, tilled farmland (use a hoe first).');
+      }
+      return;
+    }
     if (!def?.block) return;
     const px = hit.x + hit.face[0], py = hit.y + hit.face[1], pz = hit.z + hit.face[2];
     if (py < 1 || py >= WORLD_H) return;
@@ -1365,10 +1423,12 @@ class Game {
   onCombatEnd(e) {
     if (e.rs) {
       // classic-mode kill: no arena teardown, just world-state consequences
-      if (e.types?.includes('rootbound_golem')) {
-        this.flags.boss_rootbound = true;
-        this.ui.toast('The Rootgrave falls silent…', 'gold');
-        SFX.victory();
+      for (const [type, info] of Object.entries(BOSS_FLAGS)) {
+        if (e.types?.includes(type)) {
+          this.flags[info.flag] = true;
+          this.ui.toast(info.toast, 'gold');
+          SFX.victory();
+        }
       }
       this.autosaveTimer = Math.min(this.autosaveTimer, 3);
       return;
@@ -1603,7 +1663,8 @@ class Game {
         if (d > 40) continue;
         const model = this.renderer.modelCache.get(e.type);
         out.push({
-          model: e.type, x: e.x, y: e.y, z: e.z, yaw: e.yaw, tint: [0, 0, 0],
+          model: e.type, x: e.x, y: e.y, z: e.z, yaw: e.yaw,
+          tint: e.shiny ? [0.3, 0.24, 0.02] : [0, 0, 0], // gilded shimmer
           pose: this.poseFor(e, model, dt),
         });
       }
@@ -1688,10 +1749,10 @@ class Game {
         const isTarget = this.combatRS.target === e;
         labels.push({
           x: e.x, y: e.y + 1.6, z: e.z,
-          name: `${isTarget ? '> ' : ''}${e.def.label}`,
+          name: `${isTarget ? '> ' : ''}${e.shiny ? 'Shiny ' : ''}${e.def.label}`,
           sub: e.rsEngaged ? 'fighting you' : e.def.behavior === 'aggressive' ? 'hostile' : e.def.behavior === 'defensive' ? 'wary' : 'harmless',
           hpFrac: e.hp < e.def.hp || e.rsEngaged ? e.hp / e.def.hp : null,
-          color: e.def.boss ? '#e2b13c' : e.def.behavior === 'aggressive' || e.rsEngaged ? '#ff9a8a' : '#d8e2c8',
+          color: e.shiny ? '#ffd76a' : e.def.boss ? '#e2b13c' : e.def.behavior === 'aggressive' || e.rsEngaged ? '#ff9a8a' : '#d8e2c8',
         });
       }
     }
@@ -1742,7 +1803,13 @@ function gatherVerb(def) {
   return { tree: 'Chop', ore: 'Mine', plant: 'Gather', water: 'Fish', ground: 'Excavate', farm: 'Harvest' }[def.kind] || 'Gather';
 }
 
-const TOOL_NAMES = { axe: 'an axe', pickaxe: 'a pickaxe', shovel: 'a shovel', rod: 'a fishing rod' };
+const TOOL_NAMES = { axe: 'an axe', pickaxe: 'a pickaxe', shovel: 'a shovel', rod: 'a fishing rod', hoe: 'a hoe' };
+
+// world-state consequences of boss kills (classic combat path)
+const BOSS_FLAGS = {
+  rootbound_golem: { flag: 'boss_rootbound', toast: 'The Rootgrave falls silent…' },
+  rimehowl_alpha: { flag: 'boss_rimehowl', toast: 'The Rimehowl Alpha is slain — the frontier can breathe.' },
+};
 
 function normAngle(a) {
   while (a > Math.PI) a -= 2 * Math.PI;

@@ -51,6 +51,31 @@ void main() {
   vDist = distance(wp.xyz, uCamPos);
 }`;
 
+// Terrain: vLight carries (skyLight, blockLight, –). Sky light follows the
+// day/night clock; block light (torches, lava, crystals) does not.
+export const TERRAIN_FS = `#version 300 es
+precision highp float;
+in vec2 vUV;
+in vec3 vLight;
+in float vDist;
+uniform sampler2D uAtlas;
+uniform vec3 uFogColor;
+uniform float uFogNear;
+uniform float uFogFar;
+uniform float uCutout;   // 1 → discard transparent texels
+uniform float uOpacity;
+uniform float uDaylight; // 0.25 night … 1 noon
+out vec4 fragColor;
+void main() {
+  vec4 tex = texture(uAtlas, vUV);
+  if (uCutout > 0.5 && tex.a < 0.5) discard;
+  float light = max(max(vLight.r * uDaylight, vLight.g), 0.05);
+  vec3 col = clamp(tex.rgb * light, 0.0, 1.0);
+  float fog = clamp((vDist - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
+  fragColor = vec4(mix(col, uFogColor, fog), tex.a * uOpacity);
+}`;
+
+// Entities: vLight is an RGB color; uLightMult applies the ambient level.
 export const WORLD_FS = `#version 300 es
 precision highp float;
 in vec2 vUV;
@@ -62,12 +87,13 @@ uniform float uFogNear;
 uniform float uFogFar;
 uniform float uCutout;   // 1 → discard transparent texels
 uniform float uOpacity;
+uniform float uLightMult;
 uniform vec3 uTint;      // additive flash (damage/telegraph) for entities
 out vec4 fragColor;
 void main() {
   vec4 tex = texture(uAtlas, vUV);
   if (uCutout > 0.5 && tex.a < 0.5) discard;
-  vec3 col = clamp(tex.rgb * vLight + uTint, 0.0, 1.0);
+  vec3 col = clamp(tex.rgb * vLight * uLightMult + uTint, 0.0, 1.0);
   float fog = clamp((vDist - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
   fragColor = vec4(mix(col, uFogColor, fog), tex.a * uOpacity);
 }`;

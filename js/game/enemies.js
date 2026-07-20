@@ -326,6 +326,26 @@ export const ENEMY_TYPES = {
       box(0, 0.1, 0.55, 0.3, 0.25, 0.25, [0.6, 0.62, 0.5]),
     ]),
   },
+  duskwing: {
+    label: 'Duskwing', behavior: 'aggressive', tier: 1, nocturnal: true,
+    hp: 20, atk: 7, acc: 66, evasion: 24, armor: 0, speed: 9, moveRange: 5,
+    abilities: [], element: 'shadow', weak: ['fire'], resist: [],
+    xp: 48, huntXp: 30, respawn: 160, aggroRange: 7,
+    drops: [
+      { item: 'sinew', qty: [1, 2], chance: 0.8 },
+      { item: 'old_coin', qty: [1, 2], chance: 0.4 },
+    ],
+    desc: 'A leather-winged shriek in the dark. It fades with the dawn.',
+    recommend: 'It only hunts at night. Torchlight helps you see it coming.',
+    model: M([
+      box(0, 0.5, 0, 0.3, 0.3, 0.4, [0.24, 0.2, 0.3]),
+      box(0, 0.62, 0.22, 0.2, 0.18, 0.14, [0.3, 0.25, 0.36]),
+      box(-0.08, 0.8, 0.2, 0.06, 0.12, 0.06, [0.3, 0.25, 0.36]),
+      box(0.08, 0.8, 0.2, 0.06, 0.12, 0.06, [0.3, 0.25, 0.36]),
+      box(-0.5, 0.66, 0, 0.7, 0.06, 0.34, [0.32, 0.26, 0.4]),
+      box(0.5, 0.66, 0, 0.7, 0.06, 0.34, [0.32, 0.26, 0.4]),
+    ]),
+  },
   rootling: {
     label: 'Rootling', behavior: 'aggressive', tier: 0,
     hp: 8, atk: 3, acc: 55, evasion: 10, armor: 0, speed: 5, moveRange: 3,
@@ -337,6 +357,32 @@ export const ENEMY_TYPES = {
     model: M([
       box(0, 0, 0, 0.35, 0.4, 0.35, [0.4, 0.3, 0.2]),
       box(0, 0.4, 0, 0.25, 0.2, 0.25, [0.35, 0.5, 0.25]),
+    ]),
+  },
+  rimehowl_alpha: {
+    label: 'Rimehowl Alpha', behavior: 'aggressive', tier: 2, boss: true,
+    hp: 170, atk: 16, acc: 70, evasion: 14, armor: 4, speed: 8, moveRange: 4,
+    abilities: ['chill_bite'], element: 'ice', weak: ['fire'], resist: ['ice'],
+    phases: [{ at: 0.5, summon: ['frostmaw_wolf', 'frostmaw_wolf'], banner: 'The Alpha howls — the pack answers!' }],
+    xp: 900, respawn: 900, aggroRange: 7,
+    drops: [
+      { item: 'cured_hide', qty: [2, 3], chance: 1 },
+      { item: 'sinew', qty: [2, 4], chance: 1 },
+      { item: 'veilcrystal', qty: [1, 2], chance: 0.6 },
+    ],
+    desc: 'The great white terror of the frontier: an alpha grown huge and cruel on a decade of winters.',
+    recommend: 'Dodge the leaping slam. Fire and fur-lined armor. Do not fight it alone at night.',
+    model: M([
+      box(0, 0.55, 0, 0.8, 0.75, 1.7, [0.88, 0.9, 0.95]),
+      box(0, 0.95, 0.9, 0.55, 0.5, 0.6, [0.92, 0.94, 0.98]),
+      box(0, 0.98, 1.28, 0.24, 0.24, 0.3, [0.82, 0.85, 0.92]),   // muzzle
+      box(-0.18, 1.45, 0.92, 0.14, 0.2, 0.1, [0.85, 0.88, 0.94]), // ears
+      box(0.18, 1.45, 0.92, 0.14, 0.2, 0.1, [0.85, 0.88, 0.94]),
+      box(0, 0.62, -1.05, 0.16, 0.16, 0.6, [0.8, 0.84, 0.9]),
+      box(-0.28, 0, 0.55, 0.2, 0.55, 0.2, [0.78, 0.81, 0.88]),
+      box(0.28, 0, 0.55, 0.2, 0.55, 0.2, [0.78, 0.81, 0.88]),
+      box(-0.28, 0, -0.55, 0.2, 0.55, 0.2, [0.78, 0.81, 0.88]),
+      box(0.28, 0, -0.55, 0.2, 0.55, 0.2, [0.78, 0.81, 0.88]),
     ]),
   },
   rootbound_golem: {
@@ -377,12 +423,13 @@ const SKINS = {
   frostmaw_wolf: 'skin_fur', rime_shade: 'skin_glow', cinder_imp: 'skin_scales',
   magma_hulk: 'skin_stone', blight_horror: 'skin_bark', hollow_watcher: 'skin_glow',
   shell_snapper: 'skin_scales', rootling: 'skin_bark', rootbound_golem: 'skin_stone',
+  duskwing: 'skin_hide', rimehowl_alpha: 'skin_fur',
 };
 const HEAD_BOX = {
   mudback_boar: 2, gloomrat: 1, frostmaw_wolf: 1, craghorn_ram: 1, rootbound_golem: 1,
   dune_stalker: 1, practice_dummy: 2, moss_lurker: 1, bog_shambler: 1, stone_pecker: 1,
   cinder_imp: 1, magma_hulk: 1, blight_horror: 1, rootling: 1,
-  sunscale_serpent: 1, rime_shade: 1,
+  sunscale_serpent: 1, rime_shade: 1, duskwing: 1, rimehowl_alpha: 1,
 };
 for (const [type, def] of Object.entries(ENEMY_TYPES)) {
   def.skin = SKINS[type] || 'skin_hide';
@@ -402,6 +449,7 @@ export class EnemyManager {
   // sync live entities with loaded chunks
   refresh() {
     const seen = new Set();
+    const night = this.world.isNight?.() ?? false;
     for (const [, chunk] of this.world.chunks) {
       for (const sp of chunk.spawns) {
         seen.add(sp.id);
@@ -410,6 +458,7 @@ export class EnemyManager {
         if (killedAt !== undefined && killedAt > this.world.time) continue;
         const def = ENEMY_TYPES[sp.type];
         if (!def || def.noOverworld) continue;
+        if (def.nocturnal && !night) continue; // night creatures wait for dark
         this.killed.delete(sp.id);
         this.entities.set(sp.id, {
           id: sp.id, type: sp.type, def,
@@ -419,12 +468,20 @@ export class EnemyManager {
           hp: def.hp,
           wanderT: Math.random() * 4,
           boss: !!sp.boss,
+          // rare gilded variant: worth far more when hunted
+          shiny: !sp.boss && !def.boss && Math.random() < (def.shinyChance ?? 0.015),
         });
       }
     }
     for (const id of [...this.entities.keys()]) {
       const e = this.entities.get(id);
       if (!seen.has(id) && !e.transient) this.entities.delete(id);
+    }
+    // nocturnal creatures fade at dawn (unless mid-fight)
+    if (!night) {
+      for (const [id, e] of [...this.entities]) {
+        if (e.def.nocturnal && !e.rsEngaged && !e.transient) this.entities.delete(id);
+      }
     }
   }
 

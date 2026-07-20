@@ -6,7 +6,7 @@
   "scripts": {
     "serve": "node tests/server.mjs 8080",
     "test": "node --test tests/unit/*.test.mjs",
-    "test:e2e": "node tests/smoke.mjs && node tests/gameplay.mjs && node tests/boss.mjs && node tests/mobile.mjs && node tests/rscombat.mjs && node tests/classicview.mjs && node tests/mobformat.mjs",
+    "test:e2e": "node tests/smoke.mjs && node tests/gameplay.mjs && node tests/boss.mjs && node tests/mobile.mjs && node tests/rscombat.mjs && node tests/classicview.mjs && node tests/mobformat.mjs && node tests/features.mjs",
     "test:all": "npm test && npm run test:e2e",
     "build": "node tools/build-single.mjs"
   },
@@ -18,9 +18,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@fontsource/pixelify-sans": "^5.3.0",
     "@playwright/test": "^1.61.1",
     "esbuild": "^0.28.1"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@fontsource/jersey-15": "^5.3.0"
+  }
 }

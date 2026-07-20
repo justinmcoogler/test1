@@ -132,7 +132,12 @@ missing states fall back to `idle`, then to a static pose.
 
 ```json
 "drops": [ { "item": "sinew", "qty": [1, 2], "chance": 0.8 } ],
-"spawn": { "biomes": ["greenwood_plains", "ancient_forest"], "density": 0.0012 }
+"spawn": {
+  "biomes": ["greenwood_plains", "ancient_forest"],
+  "density": 0.0012,
+  "nightOnly": false,      // optional: spawns only after dark, fades at dawn
+  "packSize": [2, 3]       // optional: spawn in groups of min..max (1-4)
+}
 ```
 
 - `item` must be an existing item id (see `js/game/items.js`).
@@ -140,6 +145,8 @@ missing states fall back to `idle`, then to a static pose.
 - Valid biomes: `greenwood_plains`, `ancient_forest`, `misty_wetlands`,
   `rocky_highlands`, `sunbaked_badlands`, `frostbound_tundra`,
   `volcanic_wastes`, `corrupted_wilds`, `coastal_shores`.
+- `stats.shinyChance` (0–0.2, default 0.015) controls the rare gilded
+  variant: golden shimmer, double drops, triple coins, double XP.
 
 ## Validation
 

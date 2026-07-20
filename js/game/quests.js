@@ -100,6 +100,54 @@ export const QUESTS = [
     turnInCost: [{ item: 'clay_lump', qty: 4 }],
     rewards: { coins: 30, xp: [['mining', 30]] },
   },
+  {
+    id: 'q_sowing', giver: 'tam', name: 'Seed Money', requires: 'q_clay',
+    intro: `Grain sells, friend — steady as sunrise. Get yourself a hoe, rake open a patch of ground, put three seeds in it, and bring me the sheaves when they ripen. I even stock seeds, if the grass gives you none.`,
+    outro: `Golden and heavy — that's the good stuff. Here: a proper bronze hoe, so you'll plant twice as fine.`,
+    stages: [
+      { type: 'craft', item: 'crude_hoe', count: 1, text: 'Craft a Crude Hoe at the Workbench' },
+      { type: 'plant', count: 3, text: 'Till soil (right-click with the hoe) and plant 3 Grain Seeds' },
+      { type: 'collect', item: 'grainsheaf', count: 3, text: 'Harvest 3 Grainsheaves once the crops ripen' },
+      { type: 'talk', npc: 'tam', text: 'Deliver the grain to Tam' },
+    ],
+    turnInCost: [{ item: 'grainsheaf', qty: 3 }],
+    rewards: { coins: 45, items: [{ item: 'bronze_hoe', qty: 1 }], xp: [['farming', 120]] },
+  },
+  // ---- the Frostwatch chain (opens after the Rootgrave falls) -------------
+  {
+    id: 'q_frontier', giver: 'maren', name: 'The Long Road North',
+    requires: 'q_rootgrave',
+    intro: `With the Rootgrave quiet, I can finally answer Warden Sylla's letters. She keeps the Frostwatch — a camp far to the east, where the snow starts and the wolves grow bold. Follow the rising sun past the highlands until the grass goes white, and report to her. Pack food. Pack torches. Come back to us.`,
+    outro: `Maren's seal, is it? Then you're the capable pair of hands she promised. Good — I'll use them.`,
+    stages: [
+      { type: 'reach', marker: 'frostwatch', radius: 14, text: 'Travel far east to the Frostwatch camp (follow the trail dots)' },
+      { type: 'talk', npc: 'sylla', text: 'Report to Warden Sylla' },
+    ],
+    rewards: { coins: 60, items: [{ item: 'travel_biscuit', qty: 3 }], xp: [['tactics', 120]] },
+  },
+  {
+    id: 'q_wolfcull', giver: 'sylla', name: 'Thin the Pack',
+    requires: 'q_frontier',
+    intro: `The alpha in the old ruin breeds them faster than winter can starve them. Cull three frostmaw wolves — the den lies just north of camp, but you'll find them roaming the whole tundra. Watch for the pack: where you see one, two more are watching you.`,
+    outro: `Three pelts' worth of quiet. You fight well for a lowlander. Rest by the fire — then we talk about the alpha itself.`,
+    stages: [
+      { type: 'defeat', enemy: 'frostmaw_wolf', count: 3, text: 'Defeat 3 Frostmaw Wolves near the Frostwatch' },
+      { type: 'talk', npc: 'sylla', text: 'Report back to Warden Sylla' },
+    ],
+    rewards: { coins: 90, items: [{ item: 'cured_hide', qty: 2 }], xp: [['defense', 150], ['hunting', 100]] },
+  },
+  {
+    id: 'q_rimehowl', giver: 'sylla', name: 'The Rimehowl Alpha',
+    requires: 'q_wolfcull',
+    intro: `Now the hard part. The alpha is old, huge, and clever — it took the ruin ring north of camp for a den and it does not share. Kill it, take whatever the den hoards, and the frontier sleeps easier for a season. When it howls, the pack comes: drop the adds fast or they'll bury you.`,
+    outro: `I heard the howl cut short from here. The Frostwatch owes you, deep-delver — wear that blade with pride, and tell Maren her faith was well spent.`,
+    stages: [
+      { type: 'defeat', enemy: 'rimehowl_alpha', count: 1, text: 'Slay the Rimehowl Alpha in the den north of camp' },
+      { type: 'chest', id: 'rimehowl_chest', text: 'Claim the den hoard' },
+      { type: 'talk', npc: 'sylla', text: 'Report to Warden Sylla' },
+    ],
+    rewards: { coins: 250, xp: [['strength', 220], ['vitality', 160], ['tactics', 120]] },
+  },
 ];
 
 export class QuestLog {
@@ -116,6 +164,7 @@ export class QuestLog {
       on('itemGained', () => this.checkCollect()),
       on('crafted', ({ item }) => this.progressType('craft', (st) => st.item === item)),
       on('blockPlaced', () => this.progressType('place', () => true)),
+      on('cropPlanted', () => this.progressType('plant', () => true)),
       on('cooked', () => this.progressType('cook', () => true)),
       on('equippedWeapon', () => this.progressType('equip', () => true, true)),
       on('combatEnd', (e) => {
@@ -286,16 +335,22 @@ export class QuestLog {
     if (!stage) return null;
     if (stage.type === 'reach' && markers[stage.marker]) return { pos: markers[stage.marker], label: q.name };
     if (stage.type === 'talk') {
-      const npcPos = stage.npc === 'maren' ? markers.cottage : markers.stall;
+      const npcPos = stage.npc === 'maren' ? markers.cottage : stage.npc === 'sylla' ? markers.frostwatch : markers.stall;
       return { pos: npcPos, label: q.name };
     }
     if (stage.type === 'defeat' && stage.enemy === 'rootbound_golem') return { pos: markers.bossHall, label: q.name };
     if (stage.type === 'defeat' && stage.enemy === 'gloomrat') return { pos: markers.dungeonAntechamber, label: q.name };
     if (stage.type === 'defeat' && stage.enemy === 'mudback_boar') return { pos: markers.meadow, label: q.name };
+    if (stage.type === 'defeat' && (stage.enemy === 'frostmaw_wolf' || stage.enemy === 'rimehowl_alpha')) {
+      return { pos: markers.wolfDen, label: q.name };
+    }
+    if (stage.type === 'chest' && stage.id === 'rimehowl_chest') return { pos: markers.wolfDen, label: q.name };
     if (stage.type === 'chest') return { pos: markers.bossHall, label: q.name };
     if (stage.type === 'collect' && ['copper_ore_chunk', 'tin_ore_chunk'].includes(stage.item)) return { pos: markers.mineChamber, label: q.name };
     if (stage.type === 'collect' && stage.item === 'fernwood_log') return { pos: markers.grove, label: q.name };
     if (stage.type === 'collect' && stage.item === 'silverfin') return { pos: markers.pond, label: q.name };
+    if (stage.type === 'plant' || (stage.type === 'collect' && stage.item === 'grainsheaf')) return { pos: markers.farm, label: q.name };
+    if (stage.type === 'craft') return { pos: markers.workshop, label: q.name };
     return null;
   }
 

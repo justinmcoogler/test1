@@ -194,19 +194,21 @@ export class CombatRS {
   }
 
   updateBoss(e, st, dist, dt) {
-    // phase trigger: summon rootlings at half health
-    if (!st.phase && e.hp <= e.def.hp / 2) {
+    // phase trigger: enrage + summon adds at the health threshold
+    const phase = e.def.phases?.[0];
+    if (phase && !st.phase && e.hp <= e.def.hp * (phase.at ?? 0.5)) {
       st.phase = 1;
       e.enraged = true;
-      emit('combatBanner', 'The golem groans — roots burst from the floor!');
-      for (let i = 0; i < 2; i++) {
+      if (phase.banner) emit('combatBanner', phase.banner);
+      for (const type of phase.summon || []) {
+        const def = ENEMY_TYPES[type];
+        if (!def) continue;
         const ang = Math.random() * Math.PI * 2;
         const sx = e.x + Math.cos(ang) * 2, sz = e.z + Math.sin(ang) * 2;
         const gy = this.game.world.groundNear(Math.floor(sx), Math.floor(sz), e.y) ?? e.y;
         const id = `summon:${Math.floor(Math.random() * 1e9)}`;
-        const def = ENEMY_TYPES.rootling;
         const ent = {
-          id, type: 'rootling', def,
+          id, type, def,
           x: sx, y: gy, z: sz, homeX: sx, homeZ: sz,
           yaw: 0, hp: def.hp, wanderT: 99, transient: true,
         };
@@ -224,7 +226,7 @@ export class CombatRS {
         cx: Math.floor(p.x), cy: Math.round(p.y), cz: Math.floor(p.z),
         radius: 1.6, power: 1.7,
       };
-      emit('rsLog', 'The ground trembles beneath you — MOVE!');
+      emit('rsLog', 'A crushing blow is coming — MOVE!');
     }
   }
 
@@ -338,27 +340,28 @@ export class CombatRS {
   kill(entity) {
     const { skills, inventory, enemyMgr } = this.game;
     const def = entity.def;
-    emit('rsLog', `You defeat the ${def.label}!`);
+    const shinyMult = entity.shiny ? 2 : 1;
+    emit('rsLog', entity.shiny ? `You fell the SHINY ${def.label} — what a prize!` : `You defeat the ${def.label}!`);
     // kill bonus xp to the active style
-    const bonus = (def.xp || 10) * 0.6;
+    const bonus = (def.xp || 10) * 0.6 * shinyMult;
     const stats = this.playerStats(RS_STYLES[this.style], null);
     if (this.style === 'balanced') {
       skills.addXp('strength', bonus / 2);
       skills.addXp('defense', bonus / 2);
     } else skills.addXp(this.style === 'defensive' ? 'defense' : stats.skill, bonus);
-    skills.addXp('vitality', (def.xp || 10) * 0.25);
-    skills.addXp('tactics', (def.xp || 10) * 0.15);
-    if (def.huntXp) skills.addXp('hunting', def.huntXp);
-    // loot
+    skills.addXp('vitality', (def.xp || 10) * 0.25 * shinyMult);
+    skills.addXp('tactics', (def.xp || 10) * 0.15 * shinyMult);
+    if (def.huntXp) skills.addXp('hunting', def.huntXp * shinyMult);
+    // loot (shiny creatures drop double and pay triple coin)
     const loot = [];
     for (const d of def.drops || []) {
       if (Math.random() < d.chance) {
-        const qty = d.qty[0] + Math.floor(Math.random() * (d.qty[1] - d.qty[0] + 1));
+        const qty = (d.qty[0] + Math.floor(Math.random() * (d.qty[1] - d.qty[0] + 1))) * shinyMult;
         inventory.add(d.item, qty);
         loot.push({ item: d.item, qty });
       }
     }
-    const coins = Math.round((5 + (def.tier || 0) * 12) * (0.7 + Math.random() * 0.6));
+    const coins = Math.round((5 + (def.tier || 0) * 12) * (0.7 + Math.random() * 0.6) * (entity.shiny ? 3 : 1));
     inventory.add('coin', coins);
     this.engaged.delete(entity.id);
     if (this.target === entity) {

@@ -15,6 +15,23 @@ import { SFX } from '../core/audio.js';
 
 const $ = (id) => document.getElementById(id);
 
+// hover tooltip text: name, category, stat line, flavor
+function itemTitle(itemId) {
+  const def = ITEMS[itemId];
+  if (!def) return '';
+  const stat = ['atk', 'acc', 'crit', 'armor', 'evasion', 'speed', 'magic', 'magicResist', 'mana', 'hp', 'block', 'heal', 'energy']
+    .filter((k) => def[k]).map((k) => `${k} ${def[k] > 0 ? '+' : ''}${def[k]}`).join(' · ');
+  const bits = [def.label];
+  if (def.type === 'tool') bits.push(`${def.tool}, tier ${def.tier}`);
+  else if (def.type === 'weapon') bits.push(`${def.wclass} weapon`);
+  else if (def.type === 'armor' || def.type === 'accessory' || def.type === 'utility') bits.push(`${def.type} (${def.slot})`);
+  else if (def.type !== 'material') bits.push(def.type);
+  if (stat) bits.push(stat);
+  if (def.gather) bits.push(`+${Math.round(def.gather * 100)}% gathering`);
+  if (def.desc) bits.push(def.desc);
+  return bits.join('\n');
+}
+
 function itemIconHTML(itemId, size = null) {
   const def = ITEMS[itemId];
   if (!def) return '?';
@@ -81,7 +98,7 @@ export class UI {
       if (this.chestId) this.renderWindowBody();
     });
     on('xpGained', ({ skill, amount }) => {
-      this.toast(`+${amount} ${SKILL_DEFS[skill].label} XP`, 'xp');
+      if (g.settings.xpToasts !== false) this.toast(`+${amount} ${SKILL_DEFS[skill].label} XP`, 'xp');
       if (this.currentWindow === 'skills') this.renderWindowBody();
     });
     on('levelUp', ({ skill, level }) => {
@@ -227,6 +244,7 @@ export class UI {
       const el = bar.children[i];
       const s = inv.slots[i];
       el.classList.toggle('selected', inv.selected === i);
+      el.title = s ? itemTitle(s.item) : '';
       let html = `<span class="key">${i + 1}</span>`;
       if (s) {
         const def = ITEMS[s.item];
@@ -281,7 +299,7 @@ export class UI {
     const canvas = $('compass');
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = "13px 'Pixelify Sans', sans-serif";
+    ctx.font = "14px 'Jersey 15', sans-serif";
     ctx.textAlign = 'center';
     const dirs = [['N', 0], ['E', Math.PI / 2], ['S', Math.PI], ['W', -Math.PI / 2]];
     // heading: yaw 0 → -Z (north)
@@ -303,6 +321,20 @@ export class UI {
     ctx.lineTo(canvas.width / 2, 7);
     ctx.closePath();
     ctx.fill();
+    // time of day: sun (day) or moon (night) at the compass edge
+    const w = this.game.world;
+    const night = w.isNight();
+    const cx3 = canvas.width - 13, cy3 = 13;
+    ctx.fillStyle = night ? '#c8d2e8' : '#ffd76a';
+    ctx.beginPath();
+    ctx.arc(cx3, cy3, 5, 0, Math.PI * 2);
+    ctx.fill();
+    if (night) { // crescent
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.beginPath();
+      ctx.arc(cx3 - 3, cy3 - 1, 4.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   chunkTileCanvas(cx, cz) {
@@ -453,7 +485,7 @@ export class UI {
     for (let i = 0; i < INV_SIZE; i++) {
       const s = inv.slots[i];
       const def = s ? ITEMS[s.item] : null;
-      grid += `<div class="inv-slot ${i < HOTBAR_SIZE ? 'hotbar-mark' : ''} ${this.selectedInvSlot === i ? 'selected' : ''}" data-idx="${i}" title="${def ? def.label : ''}">
+      grid += `<div class="inv-slot ${i < HOTBAR_SIZE ? 'hotbar-mark' : ''} ${this.selectedInvSlot === i ? 'selected' : ''}" data-idx="${i}" title="${s ? itemTitle(s.item).replace(/"/g, '&quot;') : ''}">
         ${s ? itemIconHTML(s.item) : ''}
         ${s && s.qty > 1 ? `<span class="qty">${s.qty}</span>` : ''}
         ${s && s.dur != null && def.dur ? `<span class="dur"><div style="width:${(s.dur / def.dur) * 100}%"></div></span>` : ''}
@@ -464,7 +496,7 @@ export class UI {
       const e = inv.equipment[slot];
       equip += `<div class="equip-row">
         <span class="eq-label">${EQUIP_LABELS[slot]}</span>
-        <div class="eq-slot" data-eq="${slot}" title="${e ? ITEMS[e.item].label : 'Empty'}">${e ? itemIconHTML(e.item) : ''}</div>
+        <div class="eq-slot" data-eq="${slot}" title="${e ? itemTitle(e.item).replace(/"/g, '&quot;') : 'Empty'}">${e ? itemIconHTML(e.item) : ''}</div>
         <span class="eq-item">${e ? ITEMS[e.item].label : '—'}</span>
       </div>`;
     }
@@ -743,6 +775,7 @@ export class UI {
       ${row('UI scale', range('uiScale', 0.7, 1.6, 0.05))}
       ${row('Text size', range('textScale', 0.8, 1.5, 0.05))}
       ${row('Quest trail — guide dots toward your objective', check('questTrail'))}
+      ${row('XP popups on skill gains', check('xpToasts'))}
       ${row('Reduced motion', check('reducedMotion'))}
       ${row('Screen shake', check('screenShake'))}
       ${row('Colorblind-friendly colors', check('colorblind'))}
@@ -951,29 +984,41 @@ export class UI {
   buildQuestHub(npcId) {
     const ql = this.game.quests;
     const options = [];
-    for (const q of QUESTS.filter((q) => q.giver === npcId)) {
+    // quests offered here, plus any quest whose final report is to this NPC
+    // (chains can start in Brookhollow and end at the frontier)
+    for (const q of QUESTS) {
       if (ql.readyToTurnIn(q, npcId)) {
         options.push({ label: `${q.name} (turn in!)`, action: `turnIn:${q.id}`, cls: 'quest-ready' });
-      } else if (ql.isAvailable(q)) {
+      } else if (q.giver === npcId && ql.isAvailable(q)) {
         options.push({ label: `Quest: ${q.name}`, action: `startQuest:${q.id}`, cls: 'quest-offer' });
       }
     }
+    const HUB_TEXT = {
+      maren: {
+        offer: "There is work that would suit you, if you're willing.",
+        idle: 'The valley provides for the diligent. Explore, practice your crafts — and stay clear of the deep wilds until you\'re ready.',
+      },
+      tam: {
+        offer: 'Matter of fact, I could use a hand.',
+        idle: 'Nothing today. Coin talks though — bring me goods!',
+      },
+      sylla: {
+        offer: 'As it happens, the Frostwatch is short-handed. Always.',
+        idle: 'Keep your fire fed and your back to a wall. That\'s all the work there is out here.',
+      },
+    };
     const activeHere = ql.activeFrom(npcId).filter((q) => !ql.readyToTurnIn(q, npcId));
     let text;
     if (options.length) {
-      text = npcId === 'maren'
-        ? 'There is work that would suit you, if you\'re willing.'
-        : 'Matter of fact, I could use a hand.';
+      text = HUB_TEXT[npcId]?.offer || 'I could use a hand.';
     } else if (activeHere.length) {
       const q = activeHere[0];
       const stage = ql.currentStage(q);
       text = `How goes it? ${stage ? `You were going to: ${stage.text.toLowerCase()}` : ''}`;
     } else {
-      text = npcId === 'maren'
-        ? 'The valley provides for the diligent. Explore, practice your crafts — and stay clear of the deep wilds until you\'re ready.'
-        : 'Nothing today. Coin talks though — bring me goods!';
+      text = HUB_TEXT[npcId]?.idle || 'Nothing today.';
     }
-    options.push({ label: 'Back.', next: npcId === 'maren' ? 'maren_root' : 'tam_root' });
+    options.push({ label: 'Back.', next: `${npcId}_root` });
     return { text, options };
   }
 

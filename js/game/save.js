@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS = {
   leftHanded: false,
   tapToInteract: true,
   questTrail: true,      // guide dots on the ground toward the tracked objective
+  xpToasts: true,        // "+12 Mining XP" popups
   sfxVolume: 0.7,
   musicVolume: 0.35,
   shadows: true,

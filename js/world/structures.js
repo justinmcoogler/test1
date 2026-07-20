@@ -96,6 +96,10 @@ export function buildStarterStructures() {
     nodes.push({ type, x, y: F, z, meta: { h: 5 } });
   }
 
+  // ---- Town storage (shared stash by the spawn square) -------------------
+  set(4, F, 4, B.chest_block);
+  chests.push({ id: 'town_storage', x: 4, y: F, z: 4, loot: [] });
+
   // ---- Training yard -----------------------------------------------------
   for (let x = 8; x <= 16; x++) for (let z = 8; z <= 16; z++) set(x, GROUND, z, B.gravel);
   spawns.push({ id: 'dummy1', type: 'practice_dummy', x: 12, y: F, z: 12, fixed: true });
@@ -199,8 +203,75 @@ export function buildStarterStructures() {
   nodes.push({ type: 'crystal_node', x: 19, y: 13, z: -79 });
   nodes.push({ type: 'dig_site', x: 28, y: 13, z: -73 });
 
+  // ---- Frostwatch: frontier camp in the forced-tundra ring ---------------
+  // Terrain is pinned flat at ground 33 within r<26 of (560,-120) by worldgen.
+  {
+    const CX = 560, CZ = -120;
+    const G2 = 33, F2 = G2 + 1;
+    // cleared gravel yard + central campfire
+    for (let x = CX - 6; x <= CX + 6; x++) for (let z = CZ - 5; z <= CZ + 5; z++) {
+      if ((x + z) % 3 === 0) set(x, G2, z, B.gravel);
+    }
+    set(CX, F2, CZ, B.campfire);
+    for (const [tx, tz] of [[CX - 6, CZ - 5], [CX + 6, CZ - 5], [CX - 6, CZ + 5], [CX + 6, CZ + 5]]) {
+      set(tx, F2, tz, B.torch_post);
+    }
+    // warden's lean-to
+    box(CX - 6, G2, CZ + 2, CX - 2, G2, CZ + 5, B.planks);
+    for (const [px, pz] of [[CX - 6, CZ + 2], [CX - 2, CZ + 2], [CX - 6, CZ + 5], [CX - 2, CZ + 5]]) {
+      box(px, F2, pz, px, F2 + 2, pz, B.emberpine_log);
+    }
+    box(CX - 6, F2 + 3, CZ + 2, CX - 2, F2 + 3, CZ + 5, B.thatch);
+    set(CX - 5, F2, CZ + 4, B.chest_block);
+    chests.push({
+      id: 'frostwatch_chest', x: CX - 5, y: F2, z: CZ + 4,
+      loot: [{ item: 'travel_biscuit', qty: 3 }, { item: 'torch_item', qty: 4 }],
+    });
+    npcs.push({ id: 'sylla', x: CX - 4, y: F2, z: CZ + 1 });
+    // field forge
+    box(CX + 3, G2, CZ + 2, CX + 6, G2, CZ + 4, B.stone_brick);
+    set(CX + 4, F2, CZ + 3, B.furnace);
+    set(CX + 5, F2, CZ + 3, B.anvil_block);
+    set(CX + 3, F2, CZ + 2, B.workbench);
+    set(CX + 6, F2, CZ + 4, B.campfire);
+
+    // ---- the Rimehowl den: a broken ring of ancient stone, north of camp --
+    const DZ = CZ - 16; // z = -136, fully inside the pinned-flat zone
+    for (let a = 0; a < 24; a++) {
+      const ang = (a / 24) * Math.PI * 2;
+      const rx = CX + Math.round(Math.cos(ang) * 8);
+      const rz = DZ + Math.round(Math.sin(ang) * 8);
+      if (a % 5 === 0) continue; // broken gaps
+      const hgt = a % 3 === 0 ? 3 : a % 2 === 0 ? 2 : 1;
+      box(rx, F2, rz, rx, F2 + hgt - 1, rz, a % 4 === 0 ? B.mossy_ruin : B.ruin_brick);
+    }
+    // snow-dusted floor + bones of old kills
+    for (let x = CX - 6; x <= CX + 6; x++) for (let z = DZ - 6; z <= DZ + 6; z++) {
+      if (Math.hypot(x - CX, z - DZ) <= 7 && (x * 5 + z * 11) % 4 === 0) set(x, G2, z, B.snow_grass);
+    }
+    spawns.push({ id: 'boss_rimehowl', type: 'rimehowl_alpha', x: CX, y: F2, z: DZ, fixed: true, boss: true });
+    spawns.push({ id: 'den_wolf1', type: 'frostmaw_wolf', x: CX - 5, y: F2, z: DZ + 4, fixed: true });
+    spawns.push({ id: 'den_wolf2', type: 'frostmaw_wolf', x: CX + 5, y: F2, z: DZ - 3, fixed: true });
+    spawns.push({ id: 'den_shade1', type: 'rime_shade', x: CX + 4, y: F2, z: DZ + 5, fixed: true });
+    set(CX - 3, F2, DZ - 6, B.chest_block);
+    chests.push({
+      id: 'rimehowl_chest', x: CX - 3, y: F2, z: DZ - 6, requiresBossDead: 'boss_rimehowl',
+      loot: [
+        { item: 'frostbrand_blade', qty: 1 }, { item: 'coin', qty: 250 },
+        { item: 'veilcrystal', qty: 2 }, { item: 'relic_fragment', qty: 2 },
+        { item: 'flawless_veilcrystal', qty: 1 },
+      ],
+    });
+    // ore for the trip out
+    nodes.push({ type: 'ore_silver', x: CX + 9, y: F2, z: CZ + 8 });
+    nodes.push({ type: 'ore_iron', x: CX - 9, y: F2, z: CZ + 9 });
+    nodes.push({ type: 'tree_emberpine', x: CX + 10, y: F2, z: CZ - 4, meta: { h: 6 } });
+  }
+
   const markers = {
     spawn: [6, F, 6],
+    frostwatch: [556, 34, -119],
+    wolfDen: [560, 34, -136],
     cottage: [-12, F, -7],
     workshop: [12, F, -12],
     stall: [-13, F, 9],

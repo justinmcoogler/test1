@@ -38,6 +38,7 @@ export const NPC_DEFS = {
         { item: 'fishing_rod', price: 20 },
         { item: 'crude_shovel', price: 14 },
         { item: 'torch_item', price: 3 },
+        { item: 'grain_seeds', price: 4 },
         { item: 'minor_healing_tonic', price: 14 },
       ],
       // Merchant pays roughly 40% of a fair market value
@@ -46,11 +47,28 @@ export const NPC_DEFS = {
         copper_ore_chunk: 3, tin_ore_chunk: 3, iron_ore_chunk: 6, silver_ore_chunk: 12,
         silverfin: 3, mudwhisker: 5, duskeel: 10, boar_haunch: 3, boarhide: 3,
         bitterleaf: 2, springroot: 2, tartberries: 1, pottery_shard: 4, old_coin: 6,
-        bone_needle: 5, rough_gem: 15, amber_resin: 8, clay_lump: 2, grainsheaf: 2,
+        bone_needle: 5, rough_gem: 15, amber_resin: 8, clay_lump: 2, grainsheaf: 2, golden_grain: 20,
         bronze_bar: 10, iron_bar: 18, relic_fragment: 20,
       },
     },
   },
+};
+
+NPC_DEFS.sylla = {
+  label: 'Warden Sylla',
+  role: 'Keeper of the Frostwatch',
+  model: [
+    { x: -0.18, y: 0, z: -0.1, w: 0.16, h: 0.55, d: 0.2, color: [0.28, 0.3, 0.38] },
+    { x: 0.02, y: 0, z: -0.1, w: 0.16, h: 0.55, d: 0.2, color: [0.28, 0.3, 0.38] },
+    { x: -0.26, y: 0.55, z: -0.13, w: 0.52, h: 0.62, d: 0.26, color: [0.75, 0.78, 0.85] }, // fur cloak
+    { x: -0.37, y: 0.6, z: -0.1, w: 0.11, h: 0.52, d: 0.2, color: [0.65, 0.68, 0.76] },
+    { x: 0.26, y: 0.6, z: -0.1, w: 0.11, h: 0.52, d: 0.2, color: [0.65, 0.68, 0.76] },
+    { x: -0.16, y: 1.17, z: -0.16, w: 0.32, h: 0.32, d: 0.32, color: [0.78, 0.64, 0.52] },
+    { x: -0.2, y: 1.49, z: -0.2, w: 0.4, h: 0.14, d: 0.4, color: [0.85, 0.88, 0.94] },  // fur hood
+    { x: 0.3, y: 0.2, z: -0.04, w: 0.07, h: 1.6, d: 0.07, color: [0.5, 0.4, 0.3] },     // spear haft
+    { x: 0.285, y: 1.8, z: -0.055, w: 0.1, h: 0.22, d: 0.1, color: [0.85, 0.9, 0.98] }, // spear head
+  ],
+  dialogue: 'sylla_root',
 };
 
 // Dialogue graph. Options can carry action tags read by main.js:
@@ -92,4 +110,22 @@ export const DIALOGUES = {
     ],
   },
   tam_work: { speaker: 'tam', dynamic: 'tam' },
+  sylla_root: {
+    speaker: 'sylla',
+    text: () => `Hold there — oh. You're the one Maren wrote about. Welcome to the Frostwatch, such as it is: one fire, one forge, and a great deal of wind. The wolves out here answer to something bigger. Mind the den north of camp.`,
+    options: [
+      { label: 'What is this place?', next: 'sylla_about' },
+      { label: 'Need a hand with anything?', next: 'sylla_hub' },
+      { label: 'Stay warm.', action: 'close' },
+    ],
+  },
+  sylla_about: {
+    speaker: 'sylla',
+    text: () => `The Frostwatch is the valley's tripwire. Anything that comes down from the deep tundra passes us first. Lately the passing has gone one way — wolves, more every week, drawn in by the big alpha that took the old ruin. Use the forge if you need it; that's what it's for.`,
+    options: [
+      { label: 'Need a hand with anything?', next: 'sylla_hub' },
+      { label: 'Stay warm.', action: 'close' },
+    ],
+  },
+  sylla_hub: { speaker: 'sylla', dynamic: 'sylla' },
 };

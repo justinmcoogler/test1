@@ -13,7 +13,7 @@
   --mana: #5b8dd9;
   --good: #6cbf5a;
   --bad: #d9534f;
-  --font: 'Pixelify Sans', 'Segoe UI', system-ui, sans-serif;
+  --font: 'Jersey 15', 'Segoe UI', system-ui, sans-serif;
 }
 :root.colorblind {
   --hp: #d55e00;

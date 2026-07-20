@@ -36,6 +36,53 @@ class MeshBuilder {
   }
 }
 
+// Block-light flood fill: BFS from emissive blocks (torches, lava, crystals)
+// over a chunk + margin region. Decay per step keeps a torch radius ~8.
+const LIGHT_MARGIN = 8;
+const LIGHT_DECAY = 0.115;
+
+function computeBlockLight(get) {
+  const M = LIGHT_MARGIN;
+  const EX = CHUNK + 2 * M, EZ = CHUNK + 2 * M;
+  const idx = (x, y, z) => ((y * EZ) + (z + M)) * EX + (x + M);
+  const light = new Float32Array(EX * WORLD_H * EZ);
+  const queue = [];
+  for (let y = 1; y < WORLD_H; y++) {
+    for (let z = -M; z < CHUNK + M; z++) {
+      for (let x = -M; x < CHUNK + M; x++) {
+        const id = get(x, y, z);
+        if (id === B.air) continue;
+        const em = BLOCKS[id].emissive;
+        if (em > 0) {
+          const i = idx(x, y, z);
+          light[i] = em;
+          queue.push(x, y, z, em);
+        }
+      }
+    }
+  }
+  // BFS through non-opaque cells
+  for (let q = 0; q < queue.length; q += 4) {
+    const x = queue[q], y = queue[q + 1], z = queue[q + 2];
+    const nl = queue[q + 3] - LIGHT_DECAY;
+    if (nl <= 0.05) continue;
+    for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
+      const nx = x + dx, ny = y + dy, nz = z + dz;
+      if (nx < -M || nx >= CHUNK + M || nz < -M || nz >= CHUNK + M || ny < 1 || ny >= WORLD_H) continue;
+      const i = idx(nx, ny, nz);
+      if (light[i] >= nl) continue;
+      const id = get(nx, ny, nz);
+      if (id !== B.air && isOpaque(id)) continue;
+      light[i] = nl;
+      queue.push(nx, ny, nz, nl);
+    }
+  }
+  return (x, y, z) => {
+    if (x < -M || x >= CHUNK + M || z < -M || z >= CHUNK + M || y < 0 || y >= WORLD_H) return 0;
+    return light[idx(x, y, z)];
+  };
+}
+
 export function meshChunk(world, cx, cz) {
   const opaque = new MeshBuilder();
   const cutout = new MeshBuilder();
@@ -62,6 +109,7 @@ export function meshChunk(world, cx, cz) {
     if (y >= top) return 1;
     return Math.max(0.42, 1 - (top - y) * 0.1);
   };
+  const blockAt = computeBlockLight(get);
   const occludes = (x, y, z) => {
     const id = get(x, y, z);
     return id !== B.air && isOpaque(id);
@@ -76,20 +124,23 @@ export function meshChunk(world, cx, cz) {
         const wx = ox + x, wz = oz + z; // world-space position for geometry
 
         if (def.shape === 'cross') {
-          addCross(cutout, def, wx, y, wz, skyAt(x, y, z));
+          addCross(cutout, def, wx, y, wz, skyAt(x, y, z), Math.max(blockAt(x, y, z), def.emissive));
           continue;
         }
         if (def.shape === 'liquid') {
           // top face only when air above; sides against air
           const em = def.emissive;
           if (get(x, y + 1, z) === B.air) {
-            addLiquidTop(water, def, wx, y, wz, Math.max(skyAt(x, y + 1, z), em));
+            addLiquidTop(water, def, wx, y, wz, skyAt(x, y + 1, z), Math.max(blockAt(x, y + 1, z), em));
           }
           for (let f = 2; f < 6; f++) {
             const face = FACES[f];
             const n = get(x + face.n[0], y, z + face.n[2]);
             // side quads stop at 0.88 to meet the lowered water surface exactly
-            if (n === B.air) addFace(water, def, face, wx, y, wz, Math.max(skyAt(x + face.n[0], y, z + face.n[2]), em), () => 0, 1, 0.88);
+            if (n === B.air) {
+              addFace(water, def, face, wx, y, wz, skyAt(x + face.n[0], y, z + face.n[2]),
+                Math.max(blockAt(x + face.n[0], y, z + face.n[2]), em), () => 0, 1, 0.88);
+            }
           }
           continue;
         }
@@ -103,9 +154,10 @@ export function meshChunk(world, cx, cz) {
             if (isOpaque(nid)) continue;                    // hidden by opaque neighbor
             if (!def.opaque && nid === id) continue;        // skip same-type transparent faces
           }
-          const sky = Math.max(skyAt(nx, ny, nz), def.emissive);
+          const sky = skyAt(nx, ny, nz);
+          const blk = Math.max(blockAt(nx, ny, nz), def.emissive);
           const aoFn = (corner) => vertexAO(occludes, x, y, z, face, corner);
-          addFace(target, def, face, wx, y, wz, sky, aoFn, 1, isSlab ? 0.6 : 1);
+          addFace(target, def, face, wx, y, wz, sky, blk, aoFn, 1, isSlab ? 0.6 : 1);
         }
       }
     }
@@ -132,7 +184,9 @@ function vertexAO(occludes, x, y, z, face, cornerIdx) {
   return occ * 0.16;
 }
 
-function addFace(builder, def, face, x, y, z, sky, aoFn, alpha = 1, hScale = 1) {
+// Vertex light layout for terrain: (skyLight, blockLight, –). The terrain
+// shader resolves final light = max(sky × daylight, block).
+function addFace(builder, def, face, x, y, z, sky, blk, aoFn, alpha = 1, hScale = 1) {
   const uv = faceUV(def, face.n[1] === 1 ? 'top' : face.n[1] === -1 ? 'bottom' : 'side');
   const p = [];
   const uvs = [];
@@ -149,17 +203,18 @@ function addFace(builder, def, face, x, y, z, sky, aoFn, alpha = 1, hScale = 1) 
     else { uu = c[0]; vv = 1 - cy; }
     uvs.push([uv.u0 + (uv.u1 - uv.u0) * uu, uv.v0 + (uv.v1 - uv.v0) * vv]);
     const ao = aoFn(i);
-    const l = Math.max(0.08, face.b * sky * (1 - ao));
-    light.push([l, l, l]);
+    const sl = Math.max(0.08, face.b * sky * (1 - ao));
+    const bl = face.b * blk * (1 - ao);
+    light.push([sl, bl, sl]);
   }
   builder.quad(p, uvs, light);
 }
 
-function addLiquidTop(builder, def, x, y, z, sky) {
+function addLiquidTop(builder, def, x, y, z, sky, blk) {
   const uv = faceUV(def, 'top');
   const h = 0.88;
-  const l = Math.max(0.15, sky);
-  const light = [[l, l, l], [l, l, l], [l, l, l], [l, l, l]];
+  const sl = Math.max(0.15, sky);
+  const light = [[sl, blk, sl], [sl, blk, sl], [sl, blk, sl], [sl, blk, sl]];
   builder.quad(
     [[x, y + h, z + 1], [x + 1, y + h, z + 1], [x + 1, y + h, z], [x, y + h, z]],
     [[uv.u0, uv.v1], [uv.u1, uv.v1], [uv.u1, uv.v0], [uv.u0, uv.v0]],
@@ -173,10 +228,11 @@ function addLiquidTop(builder, def, x, y, z, sky) {
   );
 }
 
-function addCross(builder, def, x, y, z, sky) {
+function addCross(builder, def, x, y, z, sky, blk) {
   const uv = faceUV(def, 'side');
   const l = Math.max(0.12, sky * (0.9 + def.emissive));
-  const light = [[l, l, l], [l, l, l], [l, l, l], [l, l, l]];
+  const bl = Math.max(blk, def.emissive);
+  const light = [[l, bl, l], [l, bl, l], [l, bl, l], [l, bl, l]];
   const a = 0.15, b = 0.85;
   const quads = [
     [[x + a, y, z + a], [x + b, y, z + b], [x + b, y + 1, z + b], [x + a, y + 1, z + a]],

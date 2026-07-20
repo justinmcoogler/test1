@@ -38,6 +38,15 @@ const SHAPES = {
     p(2, 8, 2, 2, '#c9cdd6'); p(5, 8, 2, 2, '#c9cdd6'); p(8, 8, 2, 2, '#c9cdd6');
     p(12, 4, 3, 5, '#8a6a3a');
   },
+  hoe(p, head = '#c9cdd6', handle = '#8a6a3a') {
+    p(7, 5, 2, 10, handle);
+    p(4, 3, 6, 2, head); p(4, 5, 2, 3, head);
+  },
+  seeds(p) {
+    p(4, 9, 3, 3, '#c9a86a'); p(9, 8, 3, 3, '#b8945a'); p(6, 12, 3, 3, '#d8b47a');
+    p(5, 10, 1, 1, '#8a6a3a'); p(10, 9, 1, 1, '#8a6a3a'); p(7, 13, 1, 1, '#8a6a3a');
+    p(6, 3, 4, 4, '#7fb069'); p(7, 2, 2, 2, '#8aa03a');
+  },
   needle(p) {
     p(4, 11, 2, 2, '#e8e2d0'); p(6, 9, 2, 2, '#e8e2d0'); p(8, 7, 2, 2, '#e8e2d0');
     p(10, 5, 2, 2, '#e8e2d0'); p(12, 3, 1, 2, '#e8e2d0');
@@ -475,10 +484,13 @@ const DEFS = {
   it_iron_pickaxe: ['pickaxe', '#d7dbe2'],
   it_crude_shovel: ['shovel', '#8f9298'], it_bronze_shovel: ['shovel', '#c88a3f'],
   it_fishing_rod: ['rod'], it_reinforced_rod: ['rod', '#5a4326'],
+  it_crude_hoe: ['hoe', '#8f9298'], it_bronze_hoe: ['hoe', '#c88a3f'],
+  it_grain_seeds: ['seeds'],
   it_wooden_cudgel: ['club'], it_bronze_blade: ['sword', '#e0b06a'],
   it_iron_blade: ['sword'], it_boneshard_spear: ['spear'],
   it_thornwood_bow: ['bow'], it_recurve_silverbow: ['bow', '#c5d6dd'],
   it_ember_staff: ['staff'],
+  it_frostbrand_blade: ['sword', '#9be8ff'],
   it_hide_cap: ['cap'], it_hide_jerkin: ['chestplate', '#8a5a34'],
   it_hide_leggings: ['leggings', '#8a5a34'], it_hide_gloves: ['gloves'],
   it_hide_boots: ['boots'], it_bronze_helm: ['helmet'],
