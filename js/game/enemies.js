@@ -392,13 +392,15 @@ export class EnemyManager {
       }
     }
     for (const id of [...this.entities.keys()]) {
-      if (!seen.has(id)) this.entities.delete(id);
+      const e = this.entities.get(id);
+      if (!seen.has(id) && !e.transient) this.entities.delete(id);
     }
   }
 
   update(dt, player, inCombat) {
     for (const e of this.entities.values()) {
       if (e.def.moveRange === 0) continue; // stationary (dummy)
+      if (e.rsEngaged) continue;           // classic combat drives these
       e.wanderT -= dt;
       if (e.wanderT <= 0) {
         e.wanderT = 2 + Math.random() * 5;
@@ -413,9 +415,9 @@ export class EnemyManager {
         if (d > 0.2) {
           const sp = 1.1 * dt;
           const nx = e.x + (dx / d) * sp, nz = e.z + (dz / d) * sp;
-          const gy = this.world.surfaceAt(Math.floor(nx), Math.floor(nz));
-          if (Math.abs(gy + 1 - e.y) <= 1.5) {
-            e.x = nx; e.z = nz; e.y = gy + 1;
+          const gy = this.world.groundNear(Math.floor(nx), Math.floor(nz), e.y);
+          if (gy !== null && Math.abs(gy - e.y) <= 1.5) {
+            e.x = nx; e.z = nz; e.y = gy;
             e.yaw = Math.atan2(dx, dz);
           } else {
             e.targetX = undefined;

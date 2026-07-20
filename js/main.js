@@ -14,6 +14,7 @@ import { ITEMS } from './game/items.js';
 import { QuestLog } from './game/quests.js';
 import { EnemyManager, ENEMY_TYPES } from './game/enemies.js';
 import { Combat } from './game/combat.js';
+import { CombatRS } from './game/combatrs.js';
 import { NPC_DEFS } from './game/npcs.js';
 import { UI } from './ui/ui.js';
 import { hashSeed } from './core/rng.js';
@@ -40,6 +41,9 @@ class Game {
     this.quests = new QuestLog(this.inventory);
     this.enemyMgr = new EnemyManager(this.world);
     this.combat = new Combat(this);
+    this.combatRS = new CombatRS(this);
+    this.hitsplats = [];
+    this.splatId = 0;
     this.controls = new Controls(this.canvas, this.settings);
     this.touch = isTouchDevice() ? new TouchControls(this.controls, this.settings) : null;
     this.ui = new UI(this);
@@ -259,6 +263,16 @@ class Game {
     this.enemyMgr.refresh();
     this.enemyMgr.update(dt, p, this.combat.active);
     this.combat.update(dt);
+    this.combatRS.update(dt);
+    // age out hitsplats
+    for (let i = this.hitsplats.length - 1; i >= 0; i--) {
+      this.hitsplats[i].life -= dt;
+      if (this.hitsplats[i].life <= 0) this.hitsplats.splice(i, 1);
+    }
+    if ((this.rsCdTick = (this.rsCdTick || 0) + dt) > 0.25) {
+      this.rsCdTick = 0;
+      this.ui.refreshRSCooldowns();
+    }
 
     // aggro check
     if (!this.combat.active && !p.dead && !this.dialogueOpen && !this.ui.currentWindow && !this.disableAggro) {
@@ -304,7 +318,7 @@ class Game {
     this.renderer.draw(this.world, {
       dt,
       entities: this.collectEntities(dt),
-      tiles: this.combat.active ? this.ui.getCombatTiles() : [],
+      tiles: this.combat.active ? this.ui.getCombatTiles() : this.combatRS.telegraphTiles(),
       selection: this.currentSelection,
       markers: this.collectMarkers(),
     });
@@ -317,6 +331,7 @@ class Game {
       this.ui.drawMinimap();
     }
     this.updateWorldLabels();
+    this.ui.updateHitsplats(this.hitsplats);
   }
 
   // ---------------------------------------------------------------- chunks
@@ -418,6 +433,16 @@ class Game {
       }
     }
     this.ui.setPrompt(prompt);
+
+    // classic combat: no skilling while creatures are on you
+    if (this.combatRS.active) {
+      if (this.controls.primaryHeld && enemyNear) this.startCombat(enemyNear); // switch target
+      this.ui.setPrompt(enemyNear && enemyNear !== this.combatRS.target ? `Click: switch target to ${enemyNear.def.label}` : null);
+      this.ui.setGatherProgress(null);
+      this.gather = null;
+      this.breaking = null;
+      return;
+    }
 
     // primary action (hold): gather node / attack enemy / break block
     if (this.controls.primaryHeld) {
@@ -605,7 +630,7 @@ class Game {
   }
 
   onSecondary() {
-    if (this.combat.active || this.player.dead || this.dialogueOpen || this.ui.currentWindow) return;
+    if (this.combat.active || this.combatRS.active || this.player.dead || this.dialogueOpen || this.ui.currentWindow) return;
     // interactables first
     if (this.tryInteract(true)) return;
     // place block
@@ -634,7 +659,7 @@ class Game {
   }
 
   tryInteract(silent = false) {
-    if (this.combat.active || this.player.dead) return false;
+    if (this.combat.active || this.combatRS.active || this.player.dead) return false;
     const npc = this.npcInFront();
     if (npc) {
       this.quests.talkedTo(npc.id);
@@ -666,7 +691,7 @@ class Game {
   }
 
   onTapInteract() {
-    if (this.combat.active) return; // combat taps handled by canvas click
+    if (this.combat.active) return; // tactical taps handled by canvas click
     if (this.dialogueOpen || this.ui.currentWindow) return;
     const enemy = this.enemyInFront();
     if (enemy) { this.startCombat(enemy); return; }
@@ -688,7 +713,10 @@ class Game {
       return;
     }
     if (def.type !== 'food' && def.type !== 'potion') return;
-    if (def.heal) this.player.heal(def.heal);
+    if (def.heal) {
+      this.player.heal(def.heal);
+      if (this.combatRS.active) this.addHitsplat(this.player.x, this.player.y + 2.1, this.player.z, `+${def.heal}`, '#6cbf5a');
+    }
     if (def.energy) this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + def.energy);
     if (def.mana) this.player.mana = Math.min(this.player.maxMana, this.player.mana + def.mana);
     this.inventory.removeSlot(slotIdx, 1);
@@ -714,11 +742,23 @@ class Game {
 
   // ---------------------------------------------------------------- combat glue
   startCombat(enemyEntity) {
+    if (!this.settings.tacticalCombat) {
+      this.combatRS.engage(enemyEntity, true);
+      return;
+    }
     if (this.combat.active) return;
     const group = this.enemyMgr.nearbyGroup(enemyEntity.x, enemyEntity.z, 5)
       .filter((e) => e.def.behavior !== 'passive' || e === enemyEntity)
       .slice(0, 4);
     this.combat.start(group, enemyEntity.x, enemyEntity.z);
+  }
+
+  addHitsplat(x, y, z, text, color) {
+    this.hitsplats.push({
+      id: this.splatId++, x, y, z, text, color,
+      jx: (Math.random() - 0.5) * 26, life: 1.0,
+    });
+    if (this.hitsplats.length > 24) this.hitsplats.shift();
   }
 
   onCombatStart() {
@@ -745,7 +785,18 @@ class Game {
     SFX.swing();
   }
 
-  onCombatEnd({ result }) {
+  onCombatEnd(e) {
+    if (e.rs) {
+      // classic-mode kill: no arena teardown, just world-state consequences
+      if (e.types?.includes('rootbound_golem')) {
+        this.flags.boss_rootbound = true;
+        this.ui.toast('🏆 The Rootgrave falls silent…', 'gold');
+        SFX.victory();
+      }
+      this.autosaveTimer = Math.min(this.autosaveTimer, 3);
+      return;
+    }
+    const { result } = e;
     this.ui.hideCombat();
     document.body.classList.remove('in-combat');
     this.combatCam = null;
@@ -851,6 +902,7 @@ class Game {
   }
 
   onPlayerDeath() {
+    this.combatRS.disengageAll();
     this.controls.enabled = false;
     this.touch?.hide();
     const lost = Math.floor(this.inventory.coins * 0.1);
@@ -964,12 +1016,13 @@ class Game {
         const d = Math.hypot(e.x - this.player.x, e.z - this.player.z);
         if (d > 18) continue;
         if (!this.labelVisible(e.x, e.y + 1.2, e.z)) continue;
+        const isTarget = this.combatRS.target === e;
         labels.push({
           x: e.x, y: e.y + 1.6, z: e.z,
-          name: e.def.label,
-          sub: e.def.behavior === 'aggressive' ? 'hostile' : e.def.behavior === 'defensive' ? 'wary' : 'harmless',
-          hpFrac: e.hp < e.def.hp ? e.hp / e.def.hp : null,
-          color: e.def.behavior === 'aggressive' ? '#ff9a8a' : '#d8e2c8',
+          name: `${isTarget ? '⚔️ ' : ''}${e.def.label}`,
+          sub: e.rsEngaged ? 'fighting you' : e.def.behavior === 'aggressive' ? 'hostile' : e.def.behavior === 'defensive' ? 'wary' : 'harmless',
+          hpFrac: e.hp < e.def.hp || e.rsEngaged ? e.hp / e.def.hp : null,
+          color: e.def.boss ? '#e2b13c' : e.def.behavior === 'aggressive' || e.rsEngaged ? '#ff9a8a' : '#d8e2c8',
         });
       }
     }

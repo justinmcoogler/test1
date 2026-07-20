@@ -4,6 +4,7 @@ const SETTINGS_KEY = 'emberveil_settings';
 export const NUM_SLOTS = 3;
 
 export const DEFAULT_SETTINGS = {
+  tacticalCombat: false, // false = classic auto-exchange battles (default)
   renderDistance: 4,
   sensitivity: 1,
   invertY: false,

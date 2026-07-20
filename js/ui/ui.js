@@ -6,6 +6,7 @@ import { EQUIP_SLOTS, EQUIP_LABELS, HOTBAR_SIZE, INV_SIZE } from '../game/invent
 import { QUESTS } from '../game/quests.js';
 import { NPC_DEFS, DIALOGUES } from '../game/npcs.js';
 import { STATUS_INFO, ABILITIES } from '../game/combat.js';
+import { RS_STYLES } from '../game/combatrs.js';
 import { tileIconDataURL } from '../gfx/textures.js';
 import { CHUNK } from '../world/worldgen.js';
 import { on, emit } from '../core/events.js';
@@ -85,6 +86,90 @@ export class UI {
     on('combatBanner', (text) => this.showBanner(text));
     on('combatStart', () => { this.combatMode = null; this.inspectMode = false; });
     on('nodeRespawned', () => SFX.respawnNode());
+    // classic (RuneScape-style) combat
+    on('rsEngaged', () => { $('rs-ui').classList.remove('hidden'); this.rsLogLines = []; this.renderRS(); });
+    on('rsCombatOver', () => { $('rs-ui').classList.add('hidden'); });
+    on('rsUpdate', () => this.renderRS());
+    on('rsLog', (text) => {
+      this.rsLogLines = this.rsLogLines || [];
+      this.rsLogLines.push(text);
+      if (this.rsLogLines.length > 6) this.rsLogLines.shift();
+      $('rs-log').innerHTML = this.rsLogLines.map((l) => `<div class="rs-line">${l}</div>`).join('');
+    });
+    on('rsAttack', () => SFX.swing());
+  }
+
+  // ---- classic combat panel ----
+  renderRS() {
+    const rs = this.game.combatRS;
+    if (!rs || !rs.active) return;
+    const t = rs.target;
+    if (t && t.hp > 0) {
+      $('rs-target').style.display = '';
+      $('rs-target-name').textContent = `${t.def.label}${t.enraged ? ' 💢' : ''}`;
+      $('rs-target-hp-fill').style.width = `${Math.max(0, (t.hp / t.def.hp)) * 100}%`;
+    } else {
+      $('rs-target').style.display = 'none';
+    }
+    $('rs-styles').innerHTML = rs.availableStyles().map((id) => {
+      const st = RS_STYLES[id];
+      return `<button class="rs-btn ${rs.style === id ? 'active' : ''}" data-style="${id}" title="${st.desc}">${st.icon} ${st.label}</button>`;
+    }).join('');
+    $('rs-specials').innerHTML = rs.availableSpecials().map((sp) => {
+      const cost = sp.energy ? `⚡${sp.energy}` : sp.mana ? `✦${sp.mana}` : '';
+      return `<button class="rs-btn" data-special="${sp.id}" title="${sp.desc}">
+        ${sp.icon} ${sp.label}<span class="rs-sub">${cost}</span>
+        ${sp.cdLeft > 0.1 ? `<span class="rs-cd">${Math.ceil(sp.cdLeft)}</span>` : ''}
+      </button>`;
+    }).join('');
+    $('rs-styles').querySelectorAll('[data-style]').forEach((b) => {
+      b.addEventListener('click', () => { rs.style = b.dataset.style; SFX.uiClick(); this.renderRS(); });
+    });
+    $('rs-specials').querySelectorAll('[data-special]').forEach((b) => {
+      b.addEventListener('click', () => { rs.useSpecial(b.dataset.special); SFX.uiClick(); });
+    });
+  }
+
+  // cooldown numbers tick down without full re-render
+  refreshRSCooldowns() {
+    const rs = this.game.combatRS;
+    if (!rs?.active) return;
+    $('rs-specials').querySelectorAll('[data-special]').forEach((b) => {
+      const sp = rs.availableSpecials().find((s) => s.id === b.dataset.special);
+      const cd = b.querySelector('.rs-cd');
+      if (!sp) return;
+      if (sp.cdLeft > 0.1) {
+        if (cd) cd.textContent = Math.ceil(sp.cdLeft);
+        else b.insertAdjacentHTML('beforeend', `<span class="rs-cd">${Math.ceil(sp.cdLeft)}</span>`);
+      } else if (cd) cd.remove();
+    });
+    const t = rs.target;
+    if (t && t.hp > 0) $('rs-target-hp-fill').style.width = `${Math.max(0, (t.hp / t.def.hp)) * 100}%`;
+  }
+
+  updateHitsplats(splats) {
+    if (!this.splatPool) this.splatPool = new Map();
+    const seen = new Set();
+    for (const s of splats) {
+      seen.add(s.id);
+      let el = this.splatPool.get(s.id);
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'hitsplat';
+        el.textContent = s.text;
+        el.style.color = s.color;
+        $('hud').appendChild(el);
+        this.splatPool.set(s.id, el);
+      }
+      const pr = this.game.renderer.project(s.x, s.y, s.z);
+      if (!pr) { el.style.display = 'none'; continue; }
+      el.style.display = '';
+      el.style.left = `${pr[0] + s.jx}px`;
+      el.style.top = `${pr[1]}px`;
+    }
+    for (const [id, el] of this.splatPool) {
+      if (!seen.has(id)) { el.remove(); this.splatPool.delete(id); }
+    }
   }
 
   // ------------------------------------------------------------ HUD
@@ -106,7 +191,17 @@ export class UI {
       for (let i = 0; i < HOTBAR_SIZE; i++) {
         const el = document.createElement('div');
         el.className = 'hotbar-slot';
-        el.addEventListener('click', () => { inv.selected = i; this.renderHotbar(); });
+        el.addEventListener('click', () => {
+          const s = inv.slots[i];
+          const def = s ? ITEMS[s.item] : null;
+          // in classic combat, clicking food eats it (RuneScape-style)
+          if (this.game.combatRS?.active && def && (def.type === 'food' || def.type === 'potion')) {
+            this.game.useItem(i);
+          } else {
+            inv.selected = i;
+          }
+          this.renderHotbar();
+        });
         bar.appendChild(el);
       }
     }
@@ -571,6 +666,7 @@ export class UI {
       `<span style="display:flex;align-items:center;gap:6px"><input type="range" data-set="${key}" min="${min}" max="${max}" step="${step}" value="${s[key]}"><span class="set-val">${s[key]}</span></span>`;
     const check = (key) => `<input type="checkbox" data-set="${key}" ${s[key] ? 'checked' : ''}>`;
     body.innerHTML = `<div class="settings-grid">
+      ${row('Tactical combat (grid & turns instead of classic)', check('tacticalCombat'))}
       ${row('Render distance (chunks)', range('renderDistance', 2, 8, 1))}
       ${row('Camera sensitivity', range('sensitivity', 0.2, 3, 0.1))}
       ${row('Invert Y axis', check('invertY'))}

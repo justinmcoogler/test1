@@ -54,6 +54,7 @@ try {
   await page.waitForSelector('#hud:not(.hidden)', { timeout: 60000 });
   await page.waitForTimeout(1500);
   check('boot', true);
+  await gState(() => { window.__game.settings.tacticalCombat = true; }); // this suite exercises tactical mode
 
   // ---- 1. Talk to Elder Maren, accept the first quest ----
   const maren = await gState(() => window.__game.world.structure.npcs.find((n) => n.id === 'maren'));

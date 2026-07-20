@@ -284,6 +284,56 @@ button:disabled { opacity: 0.45; cursor: default; }
 .dialog-btn.quest-offer { border-left: 3px solid var(--gold); }
 .dialog-btn.quest-ready { border-left: 3px solid var(--good); }
 
+/* ===== classic (RuneScape-style) combat ===== */
+#rs-ui { position: fixed; inset: 0; z-index: 24; pointer-events: none; color: var(--ink); }
+#rs-target {
+  position: absolute; top: 44px; left: 50%; transform: translateX(-50%);
+  background: rgba(14, 17, 22, 0.88); border: 1px solid var(--edge); border-radius: 8px;
+  padding: 6px 16px; text-align: center; min-width: 180px;
+}
+#rs-target-name { font-size: calc(13px * var(--text-scale)); font-weight: 600; color: #ffb0a0; }
+#rs-target-hp { height: 8px; background: #333; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+#rs-target-hp-fill { height: 100%; background: var(--hp); transition: width 0.2s; }
+#rs-panel {
+  position: absolute; left: 12px; bottom: 84px; display: flex; flex-direction: column; gap: 6px;
+  pointer-events: auto;
+}
+#rs-styles, #rs-specials { display: flex; gap: 5px; flex-wrap: wrap; max-width: 300px; }
+.rs-btn {
+  background: rgba(14, 17, 22, 0.88); border: 1px solid var(--edge); color: var(--ink);
+  border-radius: 8px; padding: 7px 10px; font-size: calc(12px * var(--text-scale)); position: relative; min-width: 52px;
+}
+.rs-btn.active { border-color: var(--gold); background: rgba(60, 50, 20, 0.85); }
+.rs-btn .rs-cd {
+  position: absolute; inset: 0; background: rgba(0, 0, 0, 0.62); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--gold);
+}
+.rs-btn .rs-sub { display: block; font-size: 9px; color: var(--ink-dim); }
+#rs-log {
+  position: absolute; left: 12px; bottom: 210px; width: min(300px, 40vw);
+  font-size: calc(12px * var(--text-scale)); text-shadow: 1px 1px 1px #000;
+  display: flex; flex-direction: column; justify-content: flex-end;
+}
+#rs-log .rs-line { opacity: 0.9; padding: 1px 0; }
+.hitsplat {
+  position: absolute; transform: translate(-50%, -50%); pointer-events: none;
+  font-weight: 800; font-size: calc(17px * var(--text-scale));
+  text-shadow: 0 0 4px #000, 1px 1px 0 #000; animation: splat-rise 1s ease-out forwards;
+}
+:root.reduced-motion .hitsplat { animation: none; }
+@keyframes splat-rise {
+  0% { opacity: 0; margin-top: 6px; }
+  15% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; margin-top: -26px; }
+}
+@media (max-width: 860px), (pointer: coarse) {
+  #rs-panel { left: auto; right: 100px; bottom: 168px; }
+  :root.left-handed #rs-panel { right: auto; left: 100px; }
+  #rs-target { top: 8px; left: 44%; min-width: 140px; }
+  #rs-log { bottom: 120px; font-size: 11px; }
+}
+
 /* ===== combat ===== */
 body.in-combat #hotbar, body.in-combat #menu-buttons, body.in-combat #interact-prompt,
 body.in-combat #quest-tracker, body.in-combat #compass-wrap { display: none !important; }

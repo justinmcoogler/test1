@@ -110,6 +110,7 @@ try {
   // ---- combat UI on mobile ----
   await page.evaluate(() => {
     const g = window.__game;
+    g.settings.tacticalCombat = true; // this section exercises the tactical UI on touch
     const e = [...g.enemyMgr.entities.values()].find((en) => en.type === 'practice_dummy');
     g.player.x = e.x - 1.1; g.player.y = 31.02; g.player.z = e.z; // adjacent tile → Strike in range
     g.startCombat(e);

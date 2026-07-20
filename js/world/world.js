@@ -235,6 +235,23 @@ export class World {
     return 0;
   }
 
+  // Standable air cell near a given height — works inside caves/dungeons where
+  // surfaceAt would report the terrain far above. Returns the standing y or null.
+  groundNear(x, z, nearY) {
+    const base = Math.round(nearY);
+    for (let dy = 2; dy >= -5; dy--) {
+      const y = base + dy;
+      if (y < 1 || y >= WORLD_H - 1) continue;
+      if (this.collisionHeight(x, y - 1, z) > 0 &&
+          this.collisionHeight(x, y, z) === 0 &&
+          this.collisionHeight(x, y + 1, z) === 0 &&
+          this.getBlock(x, y, z) !== B.water) {
+        return y;
+      }
+    }
+    return null;
+  }
+
   // ---- Nodes -------------------------------------------------------------
   nodeAt(x, y, z) {
     const id = this.nodeAtCell.get(cellKey(x, y, z));

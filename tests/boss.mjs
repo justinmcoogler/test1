@@ -35,15 +35,17 @@ try {
   await gState(() => {
     const g = window.__game;
     g.disableAggro = true;
-    g.skills.xp.strength = 3000;  // ~lvl 13
-    g.skills.xp.vitality = 3000;
-    g.skills.xp.defense = 1500;
+    g.settings.tacticalCombat = true; // this suite exercises tactical mode
+    g.skills.xp.strength = 16000; // ~lvl 11
+    g.skills.xp.vitality = 16000;
+    g.skills.xp.defense = 9000;
     g.inventory.add('bronze_blade', 1);
     g.inventory.add('hide_jerkin', 1);
     g.inventory.add('timber_shield', 1);
     g.inventory.add('roast_haunch', 6);
     g.inventory.add('minor_healing_tonic', 3);
-    for (const item of ['bronze_blade', 'hide_jerkin', 'timber_shield']) {
+    g.inventory.add('bronze_helm', 1);
+    for (const item of ['bronze_blade', 'hide_jerkin', 'timber_shield', 'bronze_helm']) {
       const i = g.inventory.slots.findIndex((s) => s && s.item === item);
       g.inventory.equipFromSlot(i);
     }
@@ -104,7 +106,7 @@ try {
         const strike = () => {
           if (c.usedAction) return true;
           // eat if hurt (that's the turn's action)
-          if (c.playerC.hp < c.playerC.maxHp * 0.4) {
+          if (c.playerC.hp < c.playerC.maxHp * 0.55) {
             const i = g.inventory.slots.findIndex((s) => s && (s.item === 'roast_haunch' || s.item === 'minor_healing_tonic'));
             if (i >= 0) { c.useItem(i); return true; }
           }
@@ -180,7 +182,14 @@ try {
     const g = window.__game;
     if (g.ui.chestId) g.ui.closeWindow();
     g.player.hp = 3;
-    g.player.x = 24.5; g.player.y = 13.02; g.player.z = -64.5; // antechamber rats
+    // teleport right next to a live dungeon rat (they wander now)
+    const rat = [...g.enemyMgr.entities.values()].find((e) => e.def.behavior === 'aggressive' && e.z < -55);
+    if (rat) {
+      g.player.x = rat.x + 0.8; g.player.y = rat.y + 0.02; g.player.z = rat.z;
+    } else {
+      g.player.x = 24.5; g.player.y = 13.02; g.player.z = -64.5;
+    }
+    g.player.vx = g.player.vy = g.player.vz = 0;
   });
   await page.waitForTimeout(2000);
   const inFight = await gState(() => window.__game.combat.active);
