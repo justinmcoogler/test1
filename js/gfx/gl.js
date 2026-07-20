@@ -74,9 +74,9 @@ out vec4 fragColor;
 void main() {
   vec4 tex = texture(uAtlas, vUV);
   if (uCutout > 0.5 && tex.a < 0.5) discard;
-  // candle-ish flicker: two incommensurate sines, spatial phase, gentle depth
-  float phase = (vWorld.x + vWorld.z) * 0.55 + vWorld.y * 0.3;
-  float flicker = 0.93 + 0.07 * sin(uTime * 8.3 + phase) * sin(uTime * 5.1 + phase * 1.7);
+  // flame breath: one uniform pulse so each pool swells and shrinks radially
+  // from its source — a slow fade in/out with a faint fast crackle on top
+  float flicker = 0.87 + 0.09 * sin(uTime * 2.3) + 0.04 * sin(uTime * 8.1) * sin(uTime * 5.7);
   // warm tint riding on the block-light channel so torch pools feel like fire
   float blk = vLight.g * flicker;
   float light = max(max(vLight.r * uDaylight, blk), 0.05);

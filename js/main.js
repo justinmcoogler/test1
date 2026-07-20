@@ -249,14 +249,12 @@ class Game {
       this.ui.toast(`${Math.ceil(secondsLeft / 60)} min of play time left — finish a lesson to bank more`, 'warn');
     });
     on('pointerLockFailed', () => {
-      // embedded pages (iframes) often deny mouse capture — first-person can't
-      // steer there, so fall back to the cursor-driven classic view
-      if (this.settings.classicCamera || this._plFallbackDone) return;
-      this._plFallbackDone = true;
-      this.settings.classicCamera = true;
-      this.camYaw = this.player.yaw;
-      this.applySettings();
-      this.ui.toast('Mouse capture is blocked here — switched to Classic view (click to move). Press V to retry first-person.', 'warn');
+      // embedded pages (iframes) often deny mouse capture. First person still
+      // works there — the view follows the mouse freely — so stay put; never
+      // yank the player into the classic camera mid-fight.
+      if (this.settings.classicCamera || this._plNoteShown) return;
+      this._plNoteShown = true;
+      this.ui.toast('Free-look: the view follows your mouse (no capture here). Click and hold to gather or fight.', '');
     });
     on('toggleCamera', () => {
       this.settings.classicCamera = !this.settings.classicCamera;
