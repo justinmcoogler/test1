@@ -62,11 +62,12 @@ uniform float uFogNear;
 uniform float uFogFar;
 uniform float uCutout;   // 1 → discard transparent texels
 uniform float uOpacity;
+uniform vec3 uTint;      // additive flash (damage/telegraph) for entities
 out vec4 fragColor;
 void main() {
   vec4 tex = texture(uAtlas, vUV);
   if (uCutout > 0.5 && tex.a < 0.5) discard;
-  vec3 col = tex.rgb * vLight;
+  vec3 col = clamp(tex.rgb * vLight + uTint, 0.0, 1.0);
   float fog = clamp((vDist - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
   fragColor = vec4(mix(col, uFogColor, fog), tex.a * uOpacity);
 }`;

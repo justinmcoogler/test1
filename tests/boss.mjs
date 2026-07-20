@@ -62,6 +62,7 @@ try {
     for (const e of [...g.enemyMgr.entities.values()]) {
       if (e.type !== 'rootbound_golem' && e.z < -55 && e.y < 25) g.enemyMgr.markKilled(e);
     }
+    for (const [id, t] of g.enemyMgr.killed) g.enemyMgr.killed.set(id, g.world.time + 3600);
   });
   // walk into the boss hall
   await gState(() => {

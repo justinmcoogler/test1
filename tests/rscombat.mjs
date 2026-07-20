@@ -168,14 +168,14 @@ try {
   await gState(() => {
     const g = window.__game;
     g.skills.xp.strength = 16000;  // ~lvl 11 on this curve
-    g.skills.xp.vitality = 16000;
-    g.skills.xp.defense = 9000;
+    g.skills.xp.vitality = 30000; // ~lvl 13 → more sustain vs slam variance
+    g.skills.xp.defense = 16000;
     for (const item of ['iron_blade', 'hide_jerkin', 'timber_shield', 'bronze_helm']) {
       g.inventory.add(item, 1);
       const i = g.inventory.slots.findIndex((s) => s && s.item === item);
       if (i >= 0) g.inventory.equipFromSlot(i);
     }
-    g.inventory.add('roast_haunch', 12);
+    g.inventory.add('roast_haunch', 20);
     g.recomputeVitals();
     g.player.hp = g.player.maxHp;
     g.combatRS.style = 'aggressive';
@@ -184,6 +184,8 @@ try {
     for (const e of [...g.enemyMgr.entities.values()]) {
       if (e.type !== 'rootbound_golem' && e.z < -55 && e.y < 25) g.enemyMgr.markKilled(e);
     }
+    // keep them down for the whole test — a respawned rat joining the boss pull is flaky
+    for (const [id, t] of g.enemyMgr.killed) g.enemyMgr.killed.set(id, g.world.time + 3600);
     g.player.x = 24.5; g.player.y = 13.02; g.player.z = -73.5;
     g.player.vx = g.player.vy = g.player.vz = 0;
     g.disableAggro = false;

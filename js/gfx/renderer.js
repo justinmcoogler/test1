@@ -9,7 +9,7 @@ import {
   mat4Identity, mat4Perspective, mat4Multiply, mat4View, mat4LookAt,
   frustumPlanes, aabbInFrustum, clamp,
 } from '../core/math.js';
-import { getAtlasCanvas } from './textures.js';
+import { getAtlasCanvas, tileUV } from './textures.js';
 
 const DAY_FOG = [0.62, 0.76, 0.88];
 const CAVE_FOG = [0.05, 0.06, 0.08];
@@ -92,26 +92,41 @@ export class Renderer {
 
   hasMesh(cx, cz) { return this.chunkMeshes.has(`${cx},${cz}`); }
 
+  // re-upload the atlas after custom mob skins are blitted in
+  refreshAtlas() {
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, getAtlasCanvas());
+    gl.generateMipmap(gl.TEXTURE_2D);
+  }
+
   // ---- voxel-box entity models ----
   deleteModel(name) {
     const mesh = this.modelCache.get(name);
     if (!mesh) return;
-    deleteMesh(this.gl, mesh);
+    if (mesh.animated) {
+      for (const p of mesh.parts) deleteMesh(this.gl, p.mesh);
+      if (mesh.texture) this.gl.deleteTexture(mesh.texture);
+    } else deleteMesh(this.gl, mesh);
     this.modelCache.delete(name);
   }
 
-  registerModel(name, boxes) {
+  // Boxes carry a color and optionally a material tile (`tex`) plus a special
+  // front-face tile (`texFront`, e.g. eyes). The mesh is textured (world
+  // shader): texture luminance × box color, Minecraft-skin style.
+  registerModel(name, boxes, defaultTex = 'skin_solid') {
     if (this.modelCache.has(name)) return;
+    const mesh = this.buildBoxMesh(boxes, defaultTex);
+    this.modelCache.set(name, mesh);
+  }
+
+  buildBoxMesh(boxes, defaultTex = 'skin_solid') {
     const verts = [], indices = [];
     let vc = 0;
-    const faceDefs = [
-      { n: [0, 1, 0], b: 1.0 }, { n: [0, -1, 0], b: 0.55 },
-      { n: [0, 0, 1], b: 0.85 }, { n: [0, 0, -1], b: 0.85 },
-      { n: [1, 0, 0], b: 0.7 }, { n: [-1, 0, 0], b: 0.7 },
-    ];
+    const faceBright = { top: 1.0, bottom: 0.55, south: 0.85, north: 0.85, east: 0.7, west: 0.7 };
     for (const box of boxes) {
       const { x, y, z, w, h, d } = box;
-      const [r, g, b] = box.color;
+      const [r, g, b] = box.color || [1, 1, 1];
       const x2 = x + w, y2 = y + h, z2 = z + d;
       const corners = {
         top: [[x, y2, z2], [x2, y2, z2], [x2, y2, z], [x, y2, z]],
@@ -121,15 +136,55 @@ export class Renderer {
         east: [[x2, y, z2], [x2, y, z], [x2, y2, z], [x2, y2, z2]],
         west: [[x, y, z], [x, y, z2], [x, y2, z2], [x, y2, z]],
       };
-      const order = ['top', 'bottom', 'south', 'north', 'east', 'west'];
-      order.forEach((fname, fi) => {
-        const br = faceDefs[fi].b;
-        for (const p of corners[fname]) verts.push(p[0], p[1], p[2], r * br, g * br, b * br);
+      for (const fname of ['top', 'bottom', 'south', 'north', 'east', 'west']) {
+        // per-face UVs: explicit box.uv (imported mobs) beats material tiles
+        let uv;
+        if (box.uv && box.uv[fname]) {
+          uv = box.uv[fname]; // {u0,v0,u1,v1} already in atlas space
+        } else {
+          const tileName = (fname === 'south' && box.texFront) ? box.texFront : (box.tex || defaultTex);
+          uv = tileUV[tileName] || tileUV.skin_solid;
+        }
+        const br = faceBright[fname];
+        const uvs = [[uv.u0, uv.v1], [uv.u1, uv.v1], [uv.u1, uv.v0], [uv.u0, uv.v0]];
+        corners[fname].forEach((p, i) => {
+          verts.push(p[0], p[1], p[2], uvs[i][0], uvs[i][1], r * br, g * br, b * br);
+        });
         indices.push(vc, vc + 1, vc + 2, vc, vc + 2, vc + 3);
         vc += 4;
-      });
+      }
     }
-    this.modelCache.set(name, uploadColorMesh(this.gl, new Float32Array(verts), new Uint32Array(indices)));
+    return uploadWorldMesh(this.gl, new Float32Array(verts), new Uint32Array(indices));
+  }
+
+  // Animated model: named parts, each its own mesh + pivot, posed per frame.
+  // `texture` (optional) is the mob's own skin — bound in place of the atlas.
+  registerAnimatedModel(name, parts, animations, texture = null) {
+    if (this.modelCache.has(name)) return;
+    this.modelCache.set(name, {
+      animated: true,
+      texture,
+      parts: parts.map((p) => ({
+        id: p.id, parent: p.parent || null, pivot: p.pivot || [0, 0, 0],
+        mesh: this.buildBoxMesh(p.boxes, p.tex || 'skin_solid'),
+      })),
+      animations: animations || {},
+    });
+  }
+
+  // upload a mob skin canvas as its own GL texture
+  createMobTexture(canvas) {
+    const gl = this.gl;
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
+    return tex;
   }
 
   // ---- particles ----
@@ -184,6 +239,7 @@ export class Renderer {
     gl.uniform1f(wp.uniforms.uFogNear, fogNear);
     gl.uniform1f(wp.uniforms.uFogFar, fogFar);
     gl.uniform1f(wp.uniforms.uOpacity, 1);
+    gl.uniform3f(wp.uniforms.uTint, 0, 0, 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
     gl.uniform1i(wp.uniforms.uAtlas, 0);
@@ -214,7 +270,42 @@ export class Renderer {
     }
     gl.enable(gl.CULL_FACE);
 
-    // --- entities ---
+    // --- entities (textured skins via the world program) ---
+    const baseMat = new Float32Array(16);
+    const partMat = new Float32Array(16);
+    for (const e of opts.entities || []) {
+      const model = this.modelCache.get(e.model);
+      if (!model) continue;
+      const s = e.scale || 1;
+      const cy = Math.cos(e.yaw || 0), sy = Math.sin(e.yaw || 0);
+      baseMat[0] = cy * s; baseMat[1] = 0; baseMat[2] = -sy * s; baseMat[3] = 0;
+      baseMat[4] = 0; baseMat[5] = s; baseMat[6] = 0; baseMat[7] = 0;
+      baseMat[8] = sy * s; baseMat[9] = 0; baseMat[10] = cy * s; baseMat[11] = 0;
+      baseMat[12] = e.x; baseMat[13] = e.y; baseMat[14] = e.z; baseMat[15] = 1;
+      gl.uniform3f(wp.uniforms.uTint, ...(e.tint || [0, 0, 0]));
+      if (model.animated) {
+        if (model.texture) gl.bindTexture(gl.TEXTURE_2D, model.texture);
+        for (const part of model.parts) {
+          const pose = e.pose?.[part.id];
+          if (pose) {
+            mat4Multiply(partMat, baseMat, pose);
+            gl.uniformMatrix4fv(wp.uniforms.uModel, false, partMat);
+          } else {
+            gl.uniformMatrix4fv(wp.uniforms.uModel, false, baseMat);
+          }
+          gl.bindVertexArray(part.mesh.vao);
+          gl.drawElements(gl.TRIANGLES, part.mesh.count, gl.UNSIGNED_INT, 0);
+        }
+        if (model.texture) gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
+      } else {
+        gl.uniformMatrix4fv(wp.uniforms.uModel, false, baseMat);
+        gl.bindVertexArray(model.vao);
+        gl.drawElements(gl.TRIANGLES, model.count, gl.UNSIGNED_INT, 0);
+      }
+    }
+    gl.uniform3f(wp.uniforms.uTint, 0, 0, 0);
+    gl.uniformMatrix4fv(wp.uniforms.uModel, false, mat4Identity(this.tmp));
+
     const cp = this.colorProg;
     gl.useProgram(cp.prog);
     gl.uniformMatrix4fv(cp.uniforms.uPV, false, this.pv);
@@ -223,24 +314,6 @@ export class Renderer {
     gl.uniform1f(cp.uniforms.uFogNear, fogNear);
     gl.uniform1f(cp.uniforms.uFogFar, fogFar);
     gl.uniform1f(cp.uniforms.uOpacity, 1);
-    gl.uniform3f(cp.uniforms.uTint, 0, 0, 0);
-
-    for (const e of opts.entities || []) {
-      const mesh = this.modelCache.get(e.model);
-      if (!mesh) continue;
-      const s = e.scale || 1;
-      const cy = Math.cos(e.yaw || 0), sy = Math.sin(e.yaw || 0);
-      // model matrix: rotY * scale then translate
-      const mm = this.tmp;
-      mm[0] = cy * s; mm[1] = 0; mm[2] = -sy * s; mm[3] = 0;
-      mm[4] = 0; mm[5] = s; mm[6] = 0; mm[7] = 0;
-      mm[8] = sy * s; mm[9] = 0; mm[10] = cy * s; mm[11] = 0;
-      mm[12] = e.x; mm[13] = e.y; mm[14] = e.z; mm[15] = 1;
-      gl.uniformMatrix4fv(cp.uniforms.uModel, false, mm);
-      gl.uniform3f(cp.uniforms.uTint, ...(e.tint || [0, 0, 0]));
-      gl.bindVertexArray(mesh.vao);
-      gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_INT, 0);
-    }
     gl.uniform3f(cp.uniforms.uTint, 0, 0, 0);
 
     // --- water (transparent) ---

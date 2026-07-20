@@ -140,6 +140,7 @@ export class CombatRS {
         const gy = world.groundNear(Math.floor(nx), Math.floor(nz), e.y);
         if (gy !== null && Math.abs(gy - e.y) <= 1.6) {
           e.x = nx; e.z = nz; e.y = gy;
+          e.movingT = 0.25;
         }
         e.yaw = Math.atan2(dx, dz);
       } else {
@@ -299,6 +300,8 @@ export class CombatRS {
 
   enemyAttack(e) {
     if (e.def.atk <= 0) return; // practice dummies just take it
+    e.attackT = 0.5; // drives attack animations on imported mobs
+    e.attackStart = this.game.world.time;
     const { player, inventory, skills } = this.game;
     const est = inventory.equipStats();
     const defensive = this.style === 'defensive';

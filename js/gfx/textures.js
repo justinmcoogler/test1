@@ -322,6 +322,95 @@ const PAINTERS = {
     for (let lx = 0; lx < LP; lx++) { px(c, x, y, lx, 0, '#6f5532'); px(c, x, y, lx, LP - 1, '#6f5532'); }
     for (let ly = 0; ly < LP; ly++) { px(c, x, y, 0, ly, '#6f5532'); px(c, x, y, LP - 1, ly, '#6f5532'); }
   },
+
+  // ---- creature skin materials -------------------------------------------
+  // Painted bright/grayscale: the entity shader multiplies these by each
+  // box's color, so one fur tile becomes brown boar fur or white wolf fur.
+  skin_solid: (c, x, y, r) => noisyFill(c, x, y, r, '#f2f2f2', 0.03),
+  skin_fur: (c, x, y, r) => {
+    noisyFill(c, x, y, r, '#e8e8e8', 0.05);
+    for (let i = 0; i < 30; i++) {
+      const lx = Math.floor(r() * LP), ly = Math.floor(r() * (LP - 3));
+      const shade = r() < 0.5 ? '#c2c2c2' : '#a8a8a8';
+      for (let j = 0; j < 2 + Math.floor(r() * 2); j++) px(c, x, y, lx, ly + j, shade);
+    }
+  },
+  skin_hide: (c, x, y, r) => {
+    noisyFill(c, x, y, r, '#ececec', 0.04, { chance: 0.1, color: '#cfcfcf' });
+    for (let i = 0; i < 6; i++) {
+      const bx = Math.floor(r() * (LP - 3)), by = Math.floor(r() * (LP - 3));
+      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2 + Math.floor(r() * 2); dx++) {
+        px(c, x, y, bx + dx, by + dy, '#bdbdbd');
+      }
+    }
+  },
+  skin_scales: (c, x, y, r) => {
+    noisyFill(c, x, y, r, '#e4e4e4', 0.03);
+    for (let row = 0; row < LP; row += 3) {
+      const off = (row / 3) % 2 === 0 ? 0 : 2;
+      for (let sx = off; sx < LP; sx += 4) {
+        px(c, x, y, sx, row, '#b8b8b8'); px(c, x, y, sx + 1, row, '#b8b8b8');
+        px(c, x, y, sx, row + 1, '#fbfbfb');
+      }
+    }
+  },
+  skin_stone: (c, x, y, r) => {
+    noisyFill(c, x, y, r, '#e0e0e0', 0.05, { chance: 0.08, color: '#c6c6c6' });
+    let lx = Math.floor(r() * LP);
+    for (let ly = 0; ly < LP; ly++) {
+      px(c, x, y, ((lx % LP) + LP) % LP, ly, '#a8a8a8');
+      if (r() < 0.5) lx += r() < 0.5 ? 1 : -1;
+    }
+    for (let i = 0; i < 5; i++) px(c, x, y, Math.floor(r() * LP), Math.floor(r() * LP), '#9c9c9c');
+  },
+  skin_bark: (c, x, y, r) => {
+    noisyFill(c, x, y, r, '#e6e2da', 0.04);
+    for (let lx = 1; lx < LP; lx += 3) {
+      for (let ly = 0; ly < LP; ly++) if (r() < 0.85) px(c, x, y, lx, ly, '#bab4a6');
+    }
+  },
+  skin_metal: (c, x, y, r) => {
+    for (let ly = 0; ly < LP; ly++) {
+      const band = 0.88 + 0.1 * Math.sin(ly * 1.1);
+      for (let lx = 0; lx < LP; lx++) {
+        const v = Math.round(238 * band + (r() - 0.5) * 10);
+        px(c, x, y, lx, ly, `rgb(${v},${v},${v})`);
+      }
+    }
+    for (const [rx, ry] of [[2, 2], [LP - 3, 2], [2, LP - 3], [LP - 3, LP - 3]]) px(c, x, y, rx, ry, '#9a9a9a');
+  },
+  skin_cloth: (c, x, y, r) => {
+    noisyFill(c, x, y, r, '#eeeeee', 0.03);
+    for (let ly = 0; ly < LP; ly += 2) for (let lx = ly % 4 === 0 ? 0 : 2; lx < LP; lx += 4) {
+      px(c, x, y, lx, ly, '#d4d4d4');
+    }
+  },
+  skin_straw: (c, x, y, r) => {
+    noisyFill(c, x, y, r, '#efe9d2', 0.05);
+    for (let i = 0; i < 22; i++) {
+      const lx = Math.floor(r() * LP), ly = Math.floor(r() * (LP - 4));
+      for (let j = 0; j < 4; j++) px(c, x, y, lx, ly + j, '#cfc49a');
+    }
+  },
+  skin_glow: (c, x, y, r) => {
+    const cx = LP / 2 - 0.5, cy = LP / 2 - 0.5;
+    for (let ly = 0; ly < LP; ly++) for (let lx = 0; lx < LP; lx++) {
+      const d = Math.hypot(lx - cx, ly - cy) / (LP / 2);
+      const v = Math.round(255 * Math.max(0.55, 1.05 - d * 0.5) + (r() - 0.5) * 8);
+      px(c, x, y, lx, ly, `rgb(${Math.min(255, v)},${Math.min(255, v)},${Math.min(255, v)})`);
+    }
+  },
+  skin_face: (c, x, y, r) => {
+    // bright base so it tints like the rest of the head; dark eyes + muzzle
+    noisyFill(c, x, y, r, '#f0f0f0', 0.03);
+    for (const ex of [4, 10]) {
+      px(c, x, y, ex, 5, '#26262b'); px(c, x, y, ex + 1, 5, '#26262b');
+      px(c, x, y, ex, 6, '#26262b'); px(c, x, y, ex + 1, 6, '#26262b');
+      px(c, x, y, ex, 5, '#3a3a44'); // corner glint
+    }
+    for (let lx = 6; lx <= 9; lx++) px(c, x, y, lx, 11, '#8f8578');
+    px(c, x, y, 7, 12, '#6e6659'); px(c, x, y, 8, 12, '#6e6659');
+  },
 };
 
 let atlasCanvas = null;

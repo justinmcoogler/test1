@@ -360,6 +360,30 @@ export const ENEMY_TYPES = {
   },
 };
 
+// ---- creature skins ---------------------------------------------------------
+// Material tiles tinted by each box's color (Minecraft-skin style), plus a
+// face tile on the head box where the creature has one.
+const SKINS = {
+  practice_dummy: 'skin_straw', mudback_boar: 'skin_hide', thicket_sprite: 'skin_bark',
+  gloomrat: 'skin_fur', root_creeper: 'skin_bark', moss_lurker: 'skin_stone',
+  marsh_wisp: 'skin_glow', bog_shambler: 'skin_hide', craghorn_ram: 'skin_fur',
+  stone_pecker: 'skin_fur', dune_stalker: 'skin_fur', sunscale_serpent: 'skin_scales',
+  frostmaw_wolf: 'skin_fur', rime_shade: 'skin_glow', cinder_imp: 'skin_scales',
+  magma_hulk: 'skin_stone', blight_horror: 'skin_bark', hollow_watcher: 'skin_glow',
+  shell_snapper: 'skin_scales', rootling: 'skin_bark', rootbound_golem: 'skin_stone',
+};
+const HEAD_BOX = {
+  mudback_boar: 2, gloomrat: 1, frostmaw_wolf: 1, craghorn_ram: 1, rootbound_golem: 1,
+  dune_stalker: 1, practice_dummy: 2, moss_lurker: 1, bog_shambler: 1, stone_pecker: 1,
+  cinder_imp: 1, magma_hulk: 1, blight_horror: 1, rootling: 1,
+};
+for (const [type, def] of Object.entries(ENEMY_TYPES)) {
+  def.skin = SKINS[type] || 'skin_hide';
+  if (HEAD_BOX[type] !== undefined && def.model[HEAD_BOX[type]]) {
+    def.model[HEAD_BOX[type]].texFront = 'skin_face';
+  }
+}
+
 // ---- overworld manager -----------------------------------------------------
 export class EnemyManager {
   constructor(world) {
@@ -419,6 +443,7 @@ export class EnemyManager {
           if (gy !== null && Math.abs(gy - e.y) <= 1.5) {
             e.x = nx; e.z = nz; e.y = gy;
             e.yaw = Math.atan2(dx, dz);
+            e.movingT = 0.25; // drives walk animations on imported mobs
           } else {
             e.targetX = undefined;
           }

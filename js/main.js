@@ -17,6 +17,7 @@ import { Combat } from './game/combat.js';
 import { CombatRS } from './game/combatrs.js';
 import { NPC_DEFS } from './game/npcs.js';
 import { UI } from './ui/ui.js';
+import { registerMob, injectSpawnRules, fetchMobFiles, evaluatePose } from './game/mobloader.js';
 import { hashSeed } from './core/rng.js';
 import { on, emit, clearAllListeners } from './core/events.js';
 import { clamp } from './core/math.js';
@@ -125,10 +126,13 @@ class Game {
 
   registerModels() {
     for (const [type, def] of Object.entries(ENEMY_TYPES)) {
-      this.renderer.registerModel(type, def.model);
+      this.renderer.registerModel(type, def.model, def.skin);
     }
     for (const [id, def] of Object.entries(NPC_DEFS)) {
-      this.renderer.registerModel(`npc_${id}`, def.model);
+      // NPC heads get a face; bodies read as cloth
+      const head = def.model.find((b) => b.h <= 0.35 && b.w >= 0.3 && b.w === b.d);
+      if (head && !head.texFront) head.texFront = 'skin_face';
+      this.renderer.registerModel(`npc_${id}`, def.model, 'skin_cloth');
     }
     this.playerModelVersion = 0;
     this.registerPlayerModel();
@@ -146,26 +150,33 @@ class Game {
       if (item.startsWith('woven')) return [0.5, 0.42, 0.62];
       return fallback;
     };
+    const matOf = (slot) => {
+      const e = eq[slot];
+      if (!e) return 'skin_cloth';
+      if (e.item.startsWith('hide')) return 'skin_hide';
+      if (e.item.startsWith('bronze')) return 'skin_metal';
+      return 'skin_cloth';
+    };
     const body = colorOf('body', [0.32, 0.5, 0.38]);
     const legs = colorOf('legs', [0.35, 0.32, 0.3]);
     const head = colorOf('head', [0.85, 0.7, 0.55]);
     const boots = colorOf('feet', [0.3, 0.24, 0.18]);
     const boxes = [
-      { x: -0.18, y: 0.12, z: -0.1, w: 0.15, h: 0.5, d: 0.2, color: legs },
-      { x: 0.03, y: 0.12, z: -0.1, w: 0.15, h: 0.5, d: 0.2, color: legs },
-      { x: -0.18, y: 0, z: -0.1, w: 0.15, h: 0.12, d: 0.22, color: boots },
-      { x: 0.03, y: 0, z: -0.1, w: 0.15, h: 0.12, d: 0.22, color: boots },
-      { x: -0.25, y: 0.62, z: -0.12, w: 0.5, h: 0.6, d: 0.24, color: body },
-      { x: -0.37, y: 0.66, z: -0.1, w: 0.11, h: 0.52, d: 0.2, color: colorOf('hands', body) },
-      { x: 0.26, y: 0.66, z: -0.1, w: 0.11, h: 0.52, d: 0.2, color: colorOf('hands', body) },
-      { x: -0.16, y: 1.22, z: -0.16, w: 0.32, h: 0.32, d: 0.32, color: head },
+      { x: -0.18, y: 0.12, z: -0.1, w: 0.15, h: 0.5, d: 0.2, color: legs, tex: matOf('legs') },
+      { x: 0.03, y: 0.12, z: -0.1, w: 0.15, h: 0.5, d: 0.2, color: legs, tex: matOf('legs') },
+      { x: -0.18, y: 0, z: -0.1, w: 0.15, h: 0.12, d: 0.22, color: boots, tex: 'skin_hide' },
+      { x: 0.03, y: 0, z: -0.1, w: 0.15, h: 0.12, d: 0.22, color: boots, tex: 'skin_hide' },
+      { x: -0.25, y: 0.62, z: -0.12, w: 0.5, h: 0.6, d: 0.24, color: body, tex: matOf('body') },
+      { x: -0.37, y: 0.66, z: -0.1, w: 0.11, h: 0.52, d: 0.2, color: colorOf('hands', body), tex: matOf('body') },
+      { x: 0.26, y: 0.66, z: -0.1, w: 0.11, h: 0.52, d: 0.2, color: colorOf('hands', body), tex: matOf('body') },
+      { x: -0.16, y: 1.22, z: -0.16, w: 0.32, h: 0.32, d: 0.32, color: head, tex: eq.head ? matOf('head') : 'skin_solid', texFront: eq.head ? undefined : 'skin_face' },
     ];
     const weapon = eq.main || eq.ranged;
     if (weapon) {
-      boxes.push({ x: 0.28, y: 0.7, z: 0.05, w: 0.07, h: 0.7, d: 0.07, color: [0.6, 0.6, 0.65] });
+      boxes.push({ x: 0.28, y: 0.7, z: 0.05, w: 0.07, h: 0.7, d: 0.07, color: [0.6, 0.6, 0.65], tex: 'skin_metal' });
     }
     if (eq.off) {
-      boxes.push({ x: -0.48, y: 0.7, z: -0.14, w: 0.08, h: 0.4, d: 0.4, color: [0.5, 0.38, 0.2] });
+      boxes.push({ x: -0.48, y: 0.7, z: -0.14, w: 0.08, h: 0.4, d: 0.4, color: [0.5, 0.38, 0.2], tex: 'skin_bark' });
     }
     if (this.playerModelName) this.renderer.deleteModel(this.playerModelName);
     this.playerModelVersion++;
@@ -177,6 +188,16 @@ class Game {
     on('itemGained', ({ item }) => this.discoveredItems.add(item));
     on('rightClick', (pos) => this.onSecondary(pos));
     on('interactKey', () => this.tryInteract());
+    on('pointerLockFailed', () => {
+      // embedded pages (iframes) often deny mouse capture — first-person can't
+      // steer there, so fall back to the cursor-driven classic view
+      if (this.settings.classicCamera || this._plFallbackDone) return;
+      this._plFallbackDone = true;
+      this.settings.classicCamera = true;
+      this.camYaw = this.player.yaw;
+      this.applySettings();
+      this.ui.toast('Mouse capture is blocked here — switched to Classic view (click to move). Press V to retry first-person.', 'warn');
+    });
     on('toggleCamera', () => {
       this.settings.classicCamera = !this.settings.classicCamera;
       this.applySettings();
@@ -247,6 +268,7 @@ class Game {
     document.documentElement.classList.toggle('left-handed', s.leftHanded);
     this.renderer.renderDistance = s.renderDistance;
     this.renderer.reducedMotion = s.reducedMotion;
+    document.body.classList.toggle('classic-cam', !!s.classicCamera);
     if (s.classicCamera) document.exitPointerLock?.();
     setVolumes(s);
     saveSettings(s);
@@ -551,6 +573,7 @@ class Game {
   }
 
   onClassicClick(sx, sy, isBreak = false) {
+    if (this.controls.consumeClickSuppress()) return; // that "click" was a camera drag
     if (this.player.dead || this.dialogueOpen || this.ui.currentWindow || this.combat.active) return;
     // 1. creatures & NPCs first (screen-space pick, like tapping them)
     const pickables = [];
@@ -1299,6 +1322,46 @@ class Game {
     this.saveGame();
   }
 
+  // ---------------------------------------------------------------- custom mobs
+  async importMob(json) {
+    // load a custom creature at runtime (also used by the mobs/ folder at boot)
+    const def = await registerMob(this, json);
+    injectSpawnRules(json); // affects chunks generated from now on
+    return def;
+  }
+
+  // dev/test helper: spawn any creature next to the player for a look
+  spawnMobNear(type) {
+    const def = ENEMY_TYPES[type];
+    if (!def) return null;
+    const p = this.player;
+    const ang = this.settings.classicCamera ? this.camYaw : p.yaw;
+    const sx = p.x - Math.sin(ang) * 3, sz = p.z - Math.cos(ang) * 3;
+    const gy = this.world.groundNear(Math.floor(sx), Math.floor(sz), p.y) ?? p.y;
+    const id = `preview:${type}:${Math.floor(Math.random() * 1e9)}`;
+    const ent = {
+      id, type, def, x: sx, y: gy, z: sz, homeX: sx, homeZ: sz,
+      yaw: Math.atan2(p.x - sx, p.z - sz), hp: def.hp, wanderT: 2, transient: true,
+    };
+    this.enemyMgr.entities.set(id, ent);
+    return ent;
+  }
+
+  // animation state → pose matrices for animated (imported) models
+  poseFor(e, model, dt) {
+    if (!model?.animated) return null;
+    e.attackT = Math.max(0, (e.attackT || 0) - dt);
+    e.movingT = Math.max(0, (e.movingT || 0) - dt);
+    const offset = ((e.homeX || 0) * 7 + (e.homeZ || 0) * 13) % 3;
+    if (e.attackT > 0 && model.animations.attack) {
+      return evaluatePose(model, 'attack', this.world.time - (e.attackStart || 0));
+    }
+    if (e.movingT > 0 && model.animations.walk) {
+      return evaluatePose(model, 'walk', this.world.time + offset);
+    }
+    return evaluatePose(model, 'idle', this.world.time + offset);
+  }
+
   // ---------------------------------------------------------------- rendering glue
   collectEntities(dt) {
     const out = [];
@@ -1318,17 +1381,24 @@ class Game {
         const facing = c.kind === 'player'
           ? Math.atan2((this.combat.enemies()[0]?.gx ?? c.gx) - c.gx, (this.combat.enemies()[0]?.gz ?? c.gz) - c.gz)
           : Math.atan2(this.combat.playerC.gx - c.gx, this.combat.playerC.gz - c.gz);
+        const modelName = c.kind === 'player' ? this.playerModelName : c.type;
+        const model = this.renderer.modelCache.get(modelName);
         out.push({
-          model: c.kind === 'player' ? this.playerModelName : c.type,
+          model: modelName,
           x: rp.x, y: rp.y, z: rp.z, yaw: facing,
           tint: c.flashT > 0 ? [0.6, 0.1, 0.1] : (c.telegraph ? [0.25, 0.05, 0.05] : [0, 0, 0]),
+          pose: model?.animated ? evaluatePose(model, 'idle', this.world.time) : null,
         });
       }
     } else {
       for (const e of this.enemyMgr.entities.values()) {
         const d = Math.hypot(e.x - this.player.x, e.z - this.player.z);
         if (d > 40) continue;
-        out.push({ model: e.type, x: e.x, y: e.y, z: e.z, yaw: e.yaw, tint: [0, 0, 0] });
+        const model = this.renderer.modelCache.get(e.type);
+        out.push({
+          model: e.type, x: e.x, y: e.y, z: e.z, yaw: e.yaw, tint: [0, 0, 0],
+          pose: this.poseFor(e, model, dt),
+        });
       }
       if (this.settings.classicCamera && !this.player.dead) {
         // third-person view shows your own character
@@ -1509,12 +1579,19 @@ async function startGame(slot, isNew) {
   $('loading-screen').classList.remove('hidden');
 
   buildAtlas();
+  // custom creature files: spawn rules must land before chunks generate
+  const mobFiles = await fetchMobFiles();
+  for (const f of mobFiles) { try { injectSpawnRules(f); } catch (e) { console.error('[mobs]', e.message); } }
   const game = new Game(slot, seedText, saveData);
+  for (const f of mobFiles) {
+    try { await registerMob(game, f); } catch (e) { console.error('[mobs]', e.message); }
+  }
   window.__game = game; // for automated tests & debugging
   const crafting = await import('./game/crafting.js');
   window.__crafting = crafting;
   window.__blocks = await import('./world/blocks.js');
   window.__enemies = await import('./game/enemies.js');
+  window.__mobloader = await import('./game/mobloader.js');
   await game.init((frac, text) => {
     $('loading-fill').style.width = `${Math.round(frac * 100)}%`;
     $('loading-text').textContent = text;

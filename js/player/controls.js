@@ -30,16 +30,28 @@ export class Controls {
     canvas.addEventListener('mousedown', (e) => {
       if (!this.enabled) return;
       if (this.classicMode) {
+        if (e.button === 0) this._leftDrag = { x: e.clientX, y: e.clientY, moved: false };
         if (e.button === 1) { this.orbitDragging = true; e.preventDefault(); }
         if (e.button === 2) emit('rightClick', { x: e.clientX, y: e.clientY });
         return; // left clicks are handled by the canvas click listener
       }
-      if (!this.pointerLocked) { canvas.requestPointerLock?.(); return; }
+      if (!this.pointerLocked) {
+        try {
+          const p = canvas.requestPointerLock?.();
+          p?.catch?.(() => emit('pointerLockFailed'));
+        } catch { emit('pointerLockFailed'); }
+        return;
+      }
       if (e.button === 0) this.leftDown = true;
       if (e.button === 2) { this.rightDown = true; emit('rightClick'); }
     });
     document.addEventListener('mouseup', (e) => {
-      if (e.button === 0) this.leftDown = false;
+      if (e.button === 0) {
+        this.leftDown = false;
+        // a left-drag orbited the camera — swallow the click it would produce
+        if (this._leftDrag?.moved) this.suppressNextClick = true;
+        this._leftDrag = null;
+      }
       if (e.button === 2) this.rightDown = false;
       if (e.button === 1) this.orbitDragging = false;
     });
@@ -48,9 +60,17 @@ export class Controls {
       this.pointerLocked = document.pointerLockElement === canvas;
       if (!this.pointerLocked) { this.leftDown = false; this.rightDown = false; }
     });
+    document.addEventListener('pointerlockerror', () => emit('pointerLockFailed'));
     document.addEventListener('mousemove', (e) => {
       if (!this.enabled) return;
       if (this.classicMode) {
+        if (this._leftDrag) {
+          if (!this._leftDrag.moved &&
+              Math.hypot(e.clientX - this._leftDrag.x, e.clientY - this._leftDrag.y) > 6) {
+            this._leftDrag.moved = true;
+          }
+          if (this._leftDrag.moved) { this.orbitDX += e.movementX; this.orbitDY += e.movementY; }
+        }
         if (this.orbitDragging) { this.orbitDX += e.movementX; this.orbitDY += e.movementY; }
         return;
       }
@@ -143,5 +163,12 @@ export class Controls {
 
   get primaryHeld() {
     return this.enabled && (this.leftDown || this.touchAction === true);
+  }
+
+  // true once after a left-drag, so the resulting click event is ignored
+  consumeClickSuppress() {
+    const v = !!this.suppressNextClick;
+    this.suppressNextClick = false;
+    return v;
   }
 }

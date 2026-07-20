@@ -25,11 +25,16 @@ export const DEFAULT_SETTINGS = {
 };
 
 export function loadSettings() {
+  // embedded builds (shared artifact page) can't capture the mouse, so the
+  // cursor-driven classic view is the sensible fresh default there
+  const embeddedDefaults = typeof window !== 'undefined' && window.__EMBEDDED
+    ? { ...DEFAULT_SETTINGS, classicCamera: true }
+    : DEFAULT_SETTINGS;
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS };
+    return raw ? { ...embeddedDefaults, ...JSON.parse(raw) } : { ...embeddedDefaults };
   } catch {
-    return { ...DEFAULT_SETTINGS };
+    return { ...embeddedDefaults };
   }
 }
 

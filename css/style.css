@@ -77,6 +77,8 @@ button { font-family: var(--font); cursor: pointer; }
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   font-size: 18px; color: rgba(255, 255, 255, 0.75); text-shadow: 0 0 3px #000;
 }
+/* classic view aims with the cursor — a fixed center crosshair only misleads */
+body.classic-cam #crosshair { display: none; }
 #vitals { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 5px; width: calc(210px * var(--ui-scale)); }
 .vital-bar { position: relative; height: calc(18px * var(--ui-scale)); background: rgba(0, 0, 0, 0.55); border: 1px solid var(--edge); border-radius: 4px; overflow: hidden; }
 .vital-fill { height: 100%; width: 100%; transition: width 0.25s; }
@@ -328,10 +330,13 @@ button:disabled { opacity: 0.45; cursor: default; }
   100% { opacity: 0; margin-top: -26px; }
 }
 @media (max-width: 860px), (pointer: coarse) {
-  #rs-panel { left: auto; right: 100px; bottom: 168px; }
-  :root.left-handed #rs-panel { right: auto; left: 100px; }
-  #rs-target { top: 8px; left: 44%; min-width: 140px; }
-  #rs-log { bottom: 120px; font-size: 11px; }
+  /* keep the combat panel clear of the right-side action buttons */
+  #rs-panel { left: 10px; right: auto; bottom: calc(230px + env(safe-area-inset-bottom, 0px)); }
+  #rs-styles, #rs-specials { max-width: 210px; }
+  .rs-btn { padding: 6px 8px; font-size: 11px; min-width: 46px; }
+  :root.left-handed #rs-panel { left: auto; right: 10px; }
+  #rs-target { top: calc(46px + env(safe-area-inset-top, 0px)); left: 50%; min-width: 140px; }
+  #rs-log { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); font-size: 11px; width: 46vw; }
 }
 
 /* ===== combat ===== */
@@ -424,15 +429,16 @@ body.in-combat #quest-tracker, body.in-combat #compass-wrap { display: none !imp
 
 /* ===== mobile layout ===== */
 @media (max-width: 860px), (pointer: coarse) {
-  #vitals { width: 150px; top: 8px; left: 8px; }
+  #vitals { width: 150px; top: calc(8px + env(safe-area-inset-top, 0px)); left: 8px; }
   .vital-bar { height: 15px; }
-  #minimap { width: 92px; height: 92px; top: 8px; right: 8px; }
+  #minimap { width: 92px; height: 92px; top: calc(8px + env(safe-area-inset-top, 0px)); right: 8px; }
   #quest-tracker { top: 108px; right: 8px; width: 180px; font-size: 11.5px; padding: 7px 9px; }
   #compass-wrap { display: none; }
-  #hotbar { bottom: 6px; gap: 4px; }
+  #hotbar { bottom: calc(6px + env(safe-area-inset-bottom, 0px)); gap: 4px; }
   .hotbar-slot { width: 44px; height: 44px; font-size: 20px; }
-  #menu-buttons { bottom: auto; top: 8px; right: 108px; }
+  #menu-buttons { bottom: auto; top: calc(8px + env(safe-area-inset-top, 0px)); right: 108px; }
   .menu-btn { width: 40px; height: 40px; font-size: 17px; }
+  #touch-buttons { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   #game-window { width: 100vw; height: 100vh; border-radius: 0; }
   #combat-log { bottom: 150px; max-height: 96px; width: 40vw; }
   #target-info { bottom: 150px; width: 200px; font-size: 11px; }
@@ -441,4 +447,20 @@ body.in-combat #quest-tracker, body.in-combat #compass-wrap { display: none !imp
   #combat-hint { top: 42px; font-size: 11px; }
   #dialogue { bottom: 8px; }
   #toasts { bottom: 210px; }
+}
+
+/* narrow portrait phones: the top row can't fit vitals + menu + minimap */
+@media (max-width: 500px) {
+  #menu-buttons {
+    top: calc(108px + env(safe-area-inset-top, 0px)); right: 8px;
+    flex-direction: column; gap: 5px;
+  }
+  #quest-tracker {
+    top: calc(108px + env(safe-area-inset-top, 0px)); right: 58px;
+    width: 138px; font-size: 11px;
+  }
+  #vitals { width: 132px; }
+  #hotbar { gap: 3px; }
+  .hotbar-slot { width: 40px; height: 40px; font-size: 18px; }
+  #toasts { bottom: 250px; }
 }

@@ -19,10 +19,17 @@ const js = result.outputFiles[0].text;
 const css = await readFile(join(root, 'css/style.css'), 'utf8');
 let html = await readFile(join(root, 'index.html'), 'utf8');
 
+// embed custom mob files so the single-file build ships them too
+let mobs = [];
+try {
+  const manifest = JSON.parse(await readFile(join(root, 'mobs/manifest.json'), 'utf8'));
+  for (const f of manifest) mobs.push(JSON.parse(await readFile(join(root, 'mobs', f), 'utf8')));
+} catch { /* no mobs dir */ }
+
 html = html.replace(/<link rel="stylesheet"[^>]*>/, `<style>\n${css}\n</style>`);
 html = html.replace(
   /<script type="module" src="js\/main.js"><\/script>/,
-  () => `<script>\n${js}\n</script>`
+  () => `<script>window.__EMBEDDED=1;window.__EMBEDDED_MOBS=${JSON.stringify(mobs)}</script>\n<script>\n${js}\n</script>`
 );
 
 await mkdir(dirname(out), { recursive: true });
