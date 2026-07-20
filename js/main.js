@@ -38,7 +38,7 @@ class Game {
     this.player = new Player();
     this.inventory = new Inventory();
     this.skills = new Skills();
-    this.quests = new QuestLog(this.inventory);
+    this.quests = new QuestLog(this.inventory, this.skills);
     this.enemyMgr = new EnemyManager(this.world);
     this.combat = new Combat(this);
     this.combatRS = new CombatRS(this);
@@ -157,6 +157,7 @@ class Game {
     if (eq.off) {
       boxes.push({ x: -0.48, y: 0.7, z: -0.14, w: 0.08, h: 0.4, d: 0.4, color: [0.5, 0.38, 0.2] });
     }
+    if (this.playerModelName) this.renderer.deleteModel(this.playerModelName);
     this.playerModelVersion++;
     this.playerModelName = `player_v${this.playerModelVersion}`;
     this.renderer.registerModel(this.playerModelName, boxes);
@@ -289,9 +290,9 @@ class Game {
       this.ui.setGatherProgress(null);
     }
 
-    // autosave
+    // autosave (never mid-battle or on the death screen)
     this.autosaveTimer -= dt;
-    if (this.autosaveTimer <= 0 && !this.combat.active) {
+    if (this.autosaveTimer <= 0 && !this.combat.active && !p.dead) {
       this.autosaveTimer = 45;
       this.saveGame();
     }
@@ -354,16 +355,22 @@ class Game {
         }
       }
     }
-    // mesh: dirty chunks first, then unmeshed with all neighbors present
+    // mesh: dirty chunks first (deferred until their neighbors exist so AO and
+    // sky light never bake against phantom air), then first-time meshes
+    const neighborsLoaded = (cx, cz) =>
+      this.world.hasChunk(cx - 1, cz) && this.world.hasChunk(cx + 1, cz) &&
+      this.world.hasChunk(cx, cz - 1) && this.world.hasChunk(cx, cz + 1) &&
+      this.world.hasChunk(cx - 1, cz - 1) && this.world.hasChunk(cx + 1, cz - 1) &&
+      this.world.hasChunk(cx - 1, cz + 1) && this.world.hasChunk(cx + 1, cz + 1);
     let meshBudget = 2;
     for (const key of [...this.world.dirtyChunks]) {
       if (meshBudget <= 0) break;
       const [cx, cz] = key.split(',').map(Number);
+      if (!this.world.hasChunk(cx, cz)) { this.world.dirtyChunks.delete(key); continue; }
+      if (!neighborsLoaded(cx, cz)) continue; // defer until neighbors stream in
       this.world.dirtyChunks.delete(key);
-      if (this.world.hasChunk(cx, cz)) {
-        this.renderer.remeshChunk(this.world, cx, cz);
-        meshBudget--;
-      }
+      this.renderer.remeshChunk(this.world, cx, cz);
+      meshBudget--;
     }
     for (let r = 0; r <= R && meshBudget > 0; r++) {
       for (let dz = -r; dz <= r && meshBudget > 0; dz++) {
@@ -371,8 +378,7 @@ class Game {
           if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
           const cx = pcx + dx, cz = pcz + dz;
           if (this.renderer.hasMesh(cx, cz) || !this.world.hasChunk(cx, cz)) continue;
-          if (!this.world.hasChunk(cx - 1, cz) || !this.world.hasChunk(cx + 1, cz) ||
-              !this.world.hasChunk(cx, cz - 1) || !this.world.hasChunk(cx, cz + 1)) continue;
+          if (!neighborsLoaded(cx, cz)) continue;
           this.renderer.remeshChunk(this.world, cx, cz);
           this.discovered.add(`${cx},${cz}`);
           meshBudget--;
@@ -581,6 +587,15 @@ class Game {
     const def = BLOCKS[hit.id];
     this.gather = null;
     if (!def || def.hardness === Infinity || def.shape === 'liquid') { this.breaking = null; return; }
+    // boss-warded chests can't be smashed open either
+    if (def.name === 'chest_block') {
+      const chest = this.world.getChestAt(hit.x, hit.y, hit.z);
+      if (chest?.meta.requiresBossDead && !this.flags[chest.meta.requiresBossDead]) {
+        this.ui.setGatherProgress(null);
+        this.breaking = null;
+        return;
+      }
+    }
     // tool speed
     let power = 0.55; // bare hands
     if (def.tool) {
@@ -618,11 +633,16 @@ class Game {
     if (def.tool === 'axe' && def.name !== 'workbench') this.skills.addXp('woodcutting', 2);
     if (this._breakTool) this.inventory.damageTool(this._breakTool, 1);
     emit('blockBroken', { x, y, z, block: def.name });
-    // breaking a player chest? spill contents
+    // breaking a chest spills its contents (warded chests were rejected earlier)
     if (def.name === 'chest_block') {
       const chest = this.world.getChestAt(x, y, z);
       if (chest) {
-        for (const c of this.world.openChest(chest.id)) this.inventory.add(c.item, c.qty);
+        if (chest.meta.requiresBossDead && !this.flags[chest.meta.requiresBossDead]) {
+          this.ui.toast('The chest is bound shut by living roots…', 'warn');
+          this.world.setBlock(x, y, z, B.chest_block, true); // restore it
+          return;
+        }
+        for (const c of this.world.openChest(chest.id)) this.inventory.add(c.item, c.qty, c.dur ?? null);
         this.world.chestContents.delete(chest.id);
         this.world.chestMeta.delete(chest.id);
       }
@@ -747,7 +767,7 @@ class Game {
       return;
     }
     if (this.combat.active) return;
-    const group = this.enemyMgr.nearbyGroup(enemyEntity.x, enemyEntity.z, 5)
+    const group = this.enemyMgr.nearbyGroup(enemyEntity.x, enemyEntity.z, 5, enemyEntity.y)
       .filter((e) => e.def.behavior !== 'passive' || e === enemyEntity)
       .slice(0, 4);
     this.combat.start(group, enemyEntity.x, enemyEntity.z);
@@ -1091,7 +1111,8 @@ function renderTitle() {
       b.innerHTML = `<span>Slot ${s.slot} — <b>New Adventure</b></span><span class="slot-sub">start fresh</span>`;
     } else {
       const mins = Math.floor(s.playtime / 60);
-      b.innerHTML = `<span>Slot ${s.slot} — <b>Continue</b><br><span class="slot-sub">Total level ${s.totalLevel} · ${mins}m played · seed "${s.seedText}"</span></span><span class="slot-del" title="Delete save">🗑</span>`;
+      const seedSafe = String(s.seedText).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+      b.innerHTML = `<span>Slot ${s.slot} — <b>Continue</b><br><span class="slot-sub">Total level ${s.totalLevel} · ${mins}m played · seed "${seedSafe}"</span></span><span class="slot-del" title="Delete save">🗑</span>`;
     }
     b.addEventListener('click', (e) => {
       if (e.target.classList.contains('slot-del')) {
@@ -1125,6 +1146,7 @@ async function startGame(slot, isNew) {
   window.__game = game; // for automated tests & debugging
   const crafting = await import('./game/crafting.js');
   window.__crafting = crafting;
+  window.__blocks = await import('./world/blocks.js');
   await game.init((frac, text) => {
     $('loading-fill').style.width = `${Math.round(frac * 100)}%`;
     $('loading-text').textContent = text;

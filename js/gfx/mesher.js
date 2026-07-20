@@ -88,7 +88,8 @@ export function meshChunk(world, cx, cz) {
           for (let f = 2; f < 6; f++) {
             const face = FACES[f];
             const n = get(x + face.n[0], y, z + face.n[2]);
-            if (n === B.air) addFace(water, def, face, wx, y, wz, Math.max(skyAt(x + face.n[0], y, z + face.n[2]), em), () => 0, 0.9);
+            // side quads stop at 0.88 to meet the lowered water surface exactly
+            if (n === B.air) addFace(water, def, face, wx, y, wz, Math.max(skyAt(x + face.n[0], y, z + face.n[2]), em), () => 0, 1, 0.88);
           }
           continue;
         }

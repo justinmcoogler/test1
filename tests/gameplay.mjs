@@ -44,7 +44,7 @@ async function teleportFacing(px, py, pz, tx, ty, tz) {
 }
 
 const holdPrimary = (on) => page.evaluate((v) => { window.__game.controls.leftDown = v; }, on);
-const gState = (fn) => page.evaluate(fn);
+const gState = (fn, arg) => page.evaluate(fn, arg);
 
 try {
   await page.goto(`http://localhost:${PORT}/`);
@@ -319,6 +319,18 @@ try {
   check('combat won & ended', !afterCombat.active && afterCombat.dummyGone, JSON.stringify(afterCombat));
   check('combat skill xp granted', afterCombat.strXp > 0 && afterCombat.vitXp > 0);
 
+  // ---- 9b. Player-placed chest storage survives reload ----
+  const chestPos = await gState(() => {
+    const g = window.__game;
+    const x = Math.floor(g.player.x) + 2, z = Math.floor(g.player.z) + 2;
+    g.world.ensureChunk(Math.floor(x / 16), Math.floor(z / 16));
+    const y = g.world.surfaceAt(x, z) + 1;
+    g.world.setBlock(x, y, z, window.__blocks.B.chest_block, true);
+    const id = g.world.registerPlayerChest(x, y, z);
+    g.world.openChest(id).push({ item: 'rough_stone', qty: 7 });
+    return [x, y, z];
+  });
+
   // ---- 10. Save, reload, verify persistence ----
   const preSave = await gState(() => {
     const g = window.__game;
@@ -354,6 +366,18 @@ try {
     preSave.coins === postLoad.coins && preSave.quest === postLoad.quest &&
     postLoad.edits >= preSave.edits && postLoad.time >= preSave.time - 1;
   check('save/reload persistence', persistOk, `pre=${JSON.stringify(preSave)} post=${JSON.stringify(postLoad)}`);
+
+  // player chest contents intact after reload — interacting must not wipe them
+  const chestAfter = await gState(([x, y, z]) => {
+    const g = window.__game;
+    g.world.ensureChunk(Math.floor(x / 16), Math.floor(z / 16));
+    const chest = g.world.getChestAt(x, y, z);
+    if (!chest) return { found: false };
+    const id = g.world.registerPlayerChest(x, y, z); // simulate the interact path
+    const contents = g.world.openChest(id);
+    return { found: true, stone: contents.find((c) => c.item === 'rough_stone')?.qty || 0 };
+  }, chestPos);
+  check('player chest storage survives reload', chestAfter.found && chestAfter.stone === 7, JSON.stringify(chestAfter));
 
   await page.screenshot({ path: 'tests/screenshots/gameplay-end.png' });
 } catch (e) {

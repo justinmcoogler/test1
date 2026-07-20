@@ -59,7 +59,7 @@ export class Controls {
     if (!down) return;
     const b = this.bindings;
     if (e.code === 'Escape') { emit('escapePressed'); return; }
-    if (/^Digit[1-9]$/.test(e.code)) { emit('hotbarSelect', parseInt(e.code.slice(5), 10) - 1); return; }
+    if (/^Digit[1-8]$/.test(e.code)) { emit('hotbarSelect', parseInt(e.code.slice(5), 10) - 1); return; }
     if (!this.enabled) {
       // window shortcuts still toggle their window closed
       for (const win of ['inventory', 'skills', 'crafting', 'quests', 'map', 'settings']) {

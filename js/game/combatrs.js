@@ -80,6 +80,16 @@ export class CombatRS {
     emit('rsUpdate');
   }
 
+  despawnSummons() {
+    // boss adds don't linger (or multiply) once the fight resets
+    for (const [id, e] of [...this.game.enemyMgr.entities]) {
+      if (e.transient) {
+        this.game.enemyMgr.entities.delete(id);
+        this.engaged.delete(id);
+      }
+    }
+  }
+
   disengageAll() {
     for (const [, st] of this.engaged) {
       st.entity.rsEngaged = false;
@@ -88,6 +98,7 @@ export class CombatRS {
     this.engaged.clear();
     this.target = null;
     this.queuedSpecial = null;
+    this.despawnSummons();
     emit('rsUpdate');
     emit('rsCombatOver');
   }
@@ -116,6 +127,7 @@ export class CombatRS {
         e.rsEngaged = false;
         this.engaged.delete(id);
         if (this.target === e) this.target = null;
+        if (e.def.boss) this.despawnSummons();
         emit('rsLog', `${e.def.label} loses interest.`);
         continue;
       }

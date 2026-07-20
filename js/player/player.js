@@ -163,7 +163,7 @@ export class Player {
   deserialize(d) {
     Object.assign(this, {
       x: d.x, y: d.y, z: d.z, yaw: d.yaw ?? Math.PI, pitch: d.pitch ?? 0,
-      hp: d.hp ?? this.maxHp, maxHp: d.maxHp ?? 40,
+      hp: Math.max(1, d.hp ?? this.maxHp), maxHp: d.maxHp ?? 40,
       energy: d.energy ?? 100, mana: d.mana ?? 20, maxMana: d.maxMana ?? 20,
     });
   }

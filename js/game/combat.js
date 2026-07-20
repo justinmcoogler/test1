@@ -68,7 +68,8 @@ export class Combat {
     const { world, player, inventory, skills } = this.game;
     this.active = true;
     this.tiles = new Map();
-    this.round = 1;
+    this.combatants = []; // reset before tile placement reads occupancy
+    this.round = 0;       // nextTurn() bumps to 1 on the first wrap
     this.log = [];
     this.result = null;
     this.aiTimer = 0;
@@ -164,7 +165,7 @@ export class Combat {
   nearestFreeTile(x, z) {
     let best = null, bestD = Infinity;
     for (const t of this.tiles.values()) {
-      if (this.combatants?.some((c) => c.gx === t.gx && c.gz === t.gz)) continue;
+      if (this.combatants?.some((c) => c.hp > 0 && c.gx === t.gx && c.gz === t.gz)) continue;
       const d = Math.hypot(t.gx + 0.5 - x, t.gz + 0.5 - z);
       if (d < bestD) { best = t; bestD = d; }
     }
@@ -282,7 +283,7 @@ export class Combat {
 
   moveAllowance(c) {
     let allow = c.kind === 'player' ? 3 + Math.floor(c.speed / 5) : c.moveRange;
-    if (c.statuses.some((s) => s.id === 'slow')) allow = Math.max(1, allow - 2);
+    if (c.statuses.some((s) => s.id === 'slow')) allow = Math.min(allow, Math.max(1, allow - 2));
     if (c.statuses.some((s) => s.id === 'root')) allow = 0;
     return allow;
   }
@@ -348,7 +349,7 @@ export class Combat {
         atk: base + skills.level('strength') * 0.4,
         acc: 60 + (w?.acc || 0) + skills.level('strength') * 0.5,
         crit: 5 + (w?.crit || 0) + est.crit + skills.level('tactics') * 0.1,
-        skill: 'strength', weaponSlot: 'main',
+        skill: 'strength', weaponSlot: w ? 'main' : null, // bare fists wear nothing down
       };
     }
     if (style === 'ranged') {
@@ -483,7 +484,7 @@ export class Combat {
       for (const t of targets) this.resolveAttack(this.playerC, t, ab);
       // weapon durability
       const stats = this.playerStyleStats(ab.style);
-      this.game.inventory.damageEquipped(stats.weaponSlot, 1);
+      if (stats.weaponSlot) this.game.inventory.damageEquipped(stats.weaponSlot, 1);
     }
     if (ab.cd) this.playerC.cooldowns[abilityId] = ab.cd;
     this.usedAction = true;
@@ -665,6 +666,12 @@ export class Combat {
     const steps = [];
     const player = this.playerC;
 
+    // passive creatures (training dummies) never fight back
+    if (c.def.behavior === 'passive' || c.def.atk <= 0) {
+      steps.push(() => this.addLog(`${c.label} sways gently.`));
+      return steps;
+    }
+
     // resolve a telegraphed attack first
     if (c.telegraph) {
       const tg = c.telegraph;
@@ -825,7 +832,9 @@ export class Combat {
       emit('combatEnd', { result, loot, coins, types: this.combatants.filter((c) => c.kind === 'enemy').map((c) => c.type) });
     } else if (result === 'fled') {
       for (const c of this.combatants) {
-        if (c.kind === 'enemy' && c.entity && !c.summoned) c.entity.hp = c.hp;
+        if (c.kind !== 'enemy' || !c.entity || c.summoned) continue;
+        if (c.hp <= 0) enemyMgr.markKilled(c.entity); // slain before you ran
+        else c.entity.hp = c.hp;
       }
       emit('combatEnd', { result });
     } else {

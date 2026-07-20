@@ -116,6 +116,12 @@ export function craft(rec, inv, skills, nearbyStations) {
   const check = canCraft(rec, inv, skills, nearbyStations);
   if (!check.ok) return check;
   inv.consumeAll(rec.inputs);
+  // consuming inputs may have freed the space; if the result still can't fit,
+  // refund rather than silently vaporizing the output
+  if (!inv.canFit(rec.out, rec.outQty)) {
+    for (const inp of rec.inputs) inv.add(inp.item, inp.qty);
+    return { ok: false, reason: 'Inventory full' };
+  }
   inv.add(rec.out, rec.outQty);
   skills.addXp(rec.skill, rec.xp);
   emit('crafted', { recipe: rec, item: rec.out, qty: rec.outQty });

@@ -103,8 +103,9 @@ export const QUESTS = [
 ];
 
 export class QuestLog {
-  constructor(inventory) {
+  constructor(inventory, skills) {
     this.inventory = inventory;
+    this.skills = skills;
     this.state = {}; // id → {status:'active'|'done', stage, progress}
     this.unsubs = [];
     this.listen();
@@ -122,7 +123,15 @@ export class QuestLog {
         for (const type of e.types || []) this.progressType('defeat', (st) => st.enemy === type);
       }),
       on('chestOpened', ({ id }) => this.progressType('chest', (st) => st.id === id, true)),
+      on('inventoryChanged', () => this.retryPending()),
     );
+  }
+
+  retryPending() {
+    for (const q of this.active()) {
+      const st = this.state[q.id];
+      if (st.pendingComplete && this.turnIn(q)) delete st.pendingComplete;
+    }
   }
 
   quest(id) { return QUESTS.find((q) => q.id === id); }
@@ -186,6 +195,10 @@ export class QuestLog {
     return true;
   }
 
+  rewardsFit(q) {
+    return (q.rewards?.items || []).every((it) => this.inventory.canFit(it.item, it.qty));
+  }
+
   // non-final talk stages advance on conversation
   talkedTo(npc) {
     for (const q of this.active()) {
@@ -197,9 +210,10 @@ export class QuestLog {
     }
   }
 
-  turnIn(q, skills) {
+  turnIn(q, skills = this.skills) {
     const st = this.state[q.id];
     if (!st || st.status !== 'active') return false;
+    if (!this.rewardsFit(q)) { emit('questRewardsBlocked', { quest: q }); return false; }
     if (q.turnInCost) this.inventory.consumeAll(q.turnInCost);
     st.status = 'done';
     st.stage = q.stages.length;
@@ -219,6 +233,10 @@ export class QuestLog {
     if (st.stage < q.stages.length) {
       emit('questStageAdvanced', { quest: q, stage: q.stages[st.stage] });
       this.checkCollect();
+    } else {
+      // quests that don't end on a talk stage complete on their own
+      st.stage = q.stages.length - 1; // keep index in range for turnIn
+      if (!this.turnIn(q)) st.pendingComplete = true; // retried when pack space frees up
     }
   }
 

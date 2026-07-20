@@ -83,7 +83,7 @@ def('timber_wall', { hardness: 2.0, tool: 'axe' });
 def('thatch', { hardness: 1.0, tool: 'axe' });
 def('stone_brick', { hardness: 3.2, tool: 'pickaxe' });
 def('glasspane', { label: 'Glass', opaque: false, hardness: 0.5, drops: null });
-def('torch_post', { label: 'Torch Post', shape: 'cross', solid: false, opaque: false, hardness: 0.2, emissive: 1 });
+def('torch_post', { label: 'Torch Post', shape: 'cross', solid: false, opaque: false, hardness: 0.2, emissive: 1, drops: 'torch_item' });
 
 // Stations & interactables
 def('workbench', { hardness: 2.2, tool: 'axe', tiles: { top: 'workbench_top', side: 'workbench_side' } });

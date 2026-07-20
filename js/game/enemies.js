@@ -438,11 +438,14 @@ export class EnemyManager {
     return null;
   }
 
-  // enemies close to an origin point (they join the same battle)
-  nearbyGroup(cx, cz, radius = 6) {
+  // enemies close to an origin point (they join the same battle);
+  // same-elevation only, so cave dwellers don't join surface fights
+  nearbyGroup(cx, cz, radius = 6, cy = null) {
     const group = [];
     for (const e of this.entities.values()) {
-      if (Math.hypot(e.x - cx, e.z - cz) <= radius) group.push(e);
+      if (Math.hypot(e.x - cx, e.z - cz) > radius) continue;
+      if (cy !== null && Math.abs(e.y - cy) > 3.5) continue;
+      group.push(e);
     }
     return group;
   }

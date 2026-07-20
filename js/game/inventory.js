@@ -56,6 +56,21 @@ export class Inventory {
     return this.slots.reduce((n, s) => n + (s && s.item === itemId ? s.qty : 0), 0);
   }
 
+  // How many of an item could be added without losing any (free slots + stack room).
+  capacityFor(itemId) {
+    const def = ITEMS[itemId];
+    if (!def) return 0;
+    if (itemId === 'coin') return Infinity;
+    let cap = 0;
+    for (const s of this.slots) {
+      if (!s) cap += def.stack;
+      else if (s.item === itemId && def.stack > 1) cap += def.stack - s.qty;
+    }
+    return cap;
+  }
+
+  canFit(itemId, qty = 1) { return this.capacityFor(itemId) >= qty; }
+
   remove(itemId, qty = 1) {
     if (itemId === 'coin') {
       const take = Math.min(this.coins, qty);
@@ -106,7 +121,8 @@ export class Inventory {
     emit('inventoryChanged');
   }
 
-  // Best tool of a kind anywhere in inventory (hotbar-selected wins ties).
+  // Best tool of a kind anywhere in inventory (hotbar-selected wins ties,
+  // but a deliberately-selected lower-tier tool never blocks tier gates).
   bestTool(kind) {
     let best = null, bestSlot = -1;
     this.slots.forEach((s, i) => {
@@ -117,7 +133,9 @@ export class Inventory {
       }
     });
     const sel = this.selectedStack();
-    if (sel && ITEMS[sel.item]?.tool === kind) return { stack: sel, slot: this.selected };
+    if (sel && ITEMS[sel.item]?.tool === kind && best && ITEMS[sel.item].tier >= ITEMS[best.item].tier) {
+      return { stack: sel, slot: this.selected };
+    }
     return best ? { stack: best, slot: bestSlot } : null;
   }
 

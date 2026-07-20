@@ -117,6 +117,7 @@ export const NODE_TYPES = {
   farm_plot: {
     label: 'Farm Plot', skill: 'farming', level: 1, tool: null,
     xp: 25, time: 1.2, charges: [1, 1], respawn: 150, kind: 'farm',
+    ready: 'crop_ripe', depleted: 'crop_young', // regrows through a young stage
     drops: [{ item: 'grainsheaf', qty: [1, 2], weight: 1 }],
     rare: [{ item: 'golden_grain', chance: 0.03 }],
   },

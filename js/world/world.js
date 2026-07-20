@@ -190,6 +190,7 @@ export class World {
 
   stampNodeInto(blocks, cx, cz, node, state) {
     for (const cell of nodeBlocks(node, state)) {
+      if (cell.id === undefined) continue;
       const lx = cell.x - cx * CHUNK, lz = cell.z - cz * CHUNK;
       if (lx < 0 || lx >= CHUNK || lz < 0 || lz >= CHUNK || cell.y < 0 || cell.y >= WORLD_H) continue;
       blocks[lidx(lx, cell.y, lz)] = cell.id;
@@ -274,17 +275,32 @@ export class World {
     return true;
   }
 
+  hasPlayerEdit(x, y, z) {
+    const cx = Math.floor(x / CHUNK), cz = Math.floor(z / CHUNK);
+    const m = this.editedBlocks.get(chunkKey(cx, cz));
+    if (!m) return false;
+    return m.has(((y * CHUNK + (z - cz * CHUNK)) * CHUNK) + (x - cx * CHUNK));
+  }
+
   restampNode(node, state) {
-    // clear old cells then stamp new state
+    // Water nodes (fishing spots) never alter blocks — clearing would punch
+    // a hole in the water surface and orphan the node.
+    if (node.def.kind === 'water') return;
     const cx = Math.floor(node.x / CHUNK), cz = Math.floor(node.z / CHUNK);
     const c = this.chunks.get(chunkKey(cx, cz));
     if (!c) return;
-    for (const [x, y, z] of nodeCells(node)) this.setBlock(x, y, z, B.air, false);
-    // trees also clear canopy
+    const clear = (x, y, z) => {
+      if (!this.hasPlayerEdit(x, y, z)) this.setBlock(x, y, z, B.air, false);
+    };
+    for (const [x, y, z] of nodeCells(node)) clear(x, y, z);
+    // trees also clear canopy — but never stomp player-built blocks
     if (node.def.kind === 'tree') {
-      for (const cell of nodeBlocks(node, 'ready')) this.setBlock(cell.x, cell.y, cell.z, B.air, false);
+      for (const cell of nodeBlocks(node, 'ready')) clear(cell.x, cell.y, cell.z);
     }
-    for (const cell of nodeBlocks(node, state)) this.setBlock(cell.x, cell.y, cell.z, cell.id, false);
+    for (const cell of nodeBlocks(node, state)) {
+      if (cell.id === undefined || this.hasPlayerEdit(cell.x, cell.y, cell.z)) continue;
+      this.setBlock(cell.x, cell.y, cell.z, cell.id, false);
+    }
   }
 
   update(dt) {
@@ -323,10 +339,8 @@ export class World {
 
   registerPlayerChest(x, y, z) {
     const id = `pc:${x},${y},${z}`;
-    if (!this.chestMeta.has(id)) {
-      this.chestMeta.set(id, { id, x, y, z, loot: [] });
-      this.chestContents.set(id, []);
-    }
+    if (!this.chestMeta.has(id)) this.chestMeta.set(id, { id, x, y, z, loot: [] });
+    if (!this.chestContents.has(id)) this.chestContents.set(id, []);
     return id;
   }
 
@@ -393,8 +407,9 @@ export class World {
     }
     const nodeStates = {};
     for (const [id, st] of this.nodeStates) {
-      // Only persist non-pristine states to keep saves small.
-      if (st.state !== 'ready' || true) nodeStates[id] = [st.state === 'ready' ? 1 : 0, Math.round(st.respawnAt), st.remaining];
+      // Only depleted nodes need persisting (their regen timers must survive);
+      // pristine ready nodes re-roll charges on load, keeping saves small.
+      if (st.state !== 'ready') nodeStates[id] = [0, Math.round(st.respawnAt), st.remaining];
     }
     const chests = {};
     for (const [id, c] of this.chestContents) chests[id] = c;
@@ -414,6 +429,13 @@ export class World {
       this.nodeStates.set(id, { state: ready ? 'ready' : 'depleted', respawnAt, remaining });
     }
     this.chestContents.clear();
-    for (const [id, c] of Object.entries(data.chests || {})) this.chestContents.set(id, c);
+    for (const [id, c] of Object.entries(data.chests || {})) {
+      this.chestContents.set(id, c);
+      // player-placed chest meta isn't in the structure list — rebuild from the id
+      if (id.startsWith('pc:') && !this.chestMeta.has(id)) {
+        const [x, y, z] = id.slice(3).split(',').map(Number);
+        this.chestMeta.set(id, { id, x, y, z, loot: [] });
+      }
+    }
   }
 }

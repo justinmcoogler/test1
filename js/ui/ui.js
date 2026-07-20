@@ -81,6 +81,7 @@ export class UI {
     on('questCompleted', ({ quest }) => { this.toast(`✅ Quest complete: ${quest.name}`, 'gold'); SFX.questDone(); this.renderQuestTracker(); });
     on('questChanged', () => { this.renderQuestTracker(); if (this.currentWindow === 'quests') this.renderWindowBody(); });
     on('questStageAdvanced', ({ stage }) => this.toast(`▸ ${stage.text}`, 'gold'));
+    on('questRewardsBlocked', () => this.toast('Quest reward waiting — make room in your pack!', 'warn'));
     on('combatLog', () => this.renderCombatLog());
     on('combatUpdate', () => this.renderCombat());
     on('combatBanner', (text) => this.showBanner(text));
@@ -368,6 +369,8 @@ export class UI {
   // ------------------------------------------------------------ windows
   toggleWindow(name) {
     if (this.currentWindow === name) { this.closeWindow(); return; }
+    // window shortcuts may close but never open windows during tactical battles
+    if (this.game.combat.active && !this.currentWindow) return;
     this.openWindow(name);
   }
 
@@ -737,7 +740,11 @@ export class UI {
       </div>`;
     body.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', () => {
       const price = parseInt(b.dataset.price, 10);
-      if (inv.coins >= price) { inv.remove('coin', price); inv.add(b.dataset.buy, 1); SFX.pickup(); }
+      if (inv.coins >= price) {
+        if (inv.add(b.dataset.buy, 1) < 1) { this.toast('Your pack is full!', 'warn'); return; }
+        inv.remove('coin', price);
+        SFX.pickup();
+      }
       this.renderWindowBody();
     }));
     body.querySelectorAll('[data-sell]').forEach((b) => b.addEventListener('click', () => {
@@ -765,7 +772,7 @@ export class UI {
     const contents = this.game.world.openChest(this.chestId);
     const inv = this.game.inventory;
     const rows = contents.map((c, i) => `<div class="shop-row">
-      <span>${itemIconHTML(c.item)} ${ITEMS[c.item]?.label || c.item} ×${c.qty}</span>
+      <span>${itemIconHTML(c.item)} ${ITEMS[c.item]?.label || c.item} ×${c.qty}${c.dur != null ? ' (worn)' : ''}</span>
       <button data-take="${i}">Take</button>
     </div>`).join('');
     const invRows = inv.slots.map((s, i) => s ? `<div class="shop-row">
@@ -777,22 +784,20 @@ export class UI {
         ${contents.length ? '<button id="take-all" style="margin-top:8px" class="dialog-btn">Take All</button>' : ''}</div>
       <div class="shop-col"><h4>Your pack</h4>${invRows || '<span style="color:var(--ink-dim)">Empty.</span>'}</div>
     </div>`;
-    body.querySelectorAll('[data-take]').forEach((b) => b.addEventListener('click', () => {
-      const i = parseInt(b.dataset.take, 10);
+    const takeOne = (i) => {
       const c = contents[i];
-      const added = inv.add(c.item, c.qty);
+      const added = inv.add(c.item, c.qty, c.dur ?? null);
       c.qty -= added;
       if (c.qty <= 0) contents.splice(i, 1);
+      return added;
+    };
+    body.querySelectorAll('[data-take]').forEach((b) => b.addEventListener('click', () => {
+      takeOne(parseInt(b.dataset.take, 10));
       SFX.pickup();
       this.renderWindowBody();
     }));
     body.querySelector('#take-all')?.addEventListener('click', () => {
-      for (let i = contents.length - 1; i >= 0; i--) {
-        const c = contents[i];
-        const added = inv.add(c.item, c.qty);
-        c.qty -= added;
-        if (c.qty <= 0) contents.splice(i, 1);
-      }
+      for (let i = contents.length - 1; i >= 0; i--) takeOne(i);
       SFX.pickup();
       this.renderWindowBody();
     });
@@ -800,9 +805,14 @@ export class UI {
       const i = parseInt(b.dataset.store, 10);
       const s = inv.slots[i];
       if (!s) return;
-      const existing = contents.find((c) => c.item === s.item);
-      if (existing) existing.qty += s.qty;
-      else contents.push({ item: s.item, qty: s.qty });
+      // items with durability keep it and never merge with other stacks
+      if (s.dur != null) {
+        contents.push({ item: s.item, qty: s.qty, dur: s.dur });
+      } else {
+        const existing = contents.find((c) => c.item === s.item && c.dur == null);
+        if (existing) existing.qty += s.qty;
+        else contents.push({ item: s.item, qty: s.qty });
+      }
       inv.slots[i] = null;
       emit('inventoryChanged');
       this.renderWindowBody();
@@ -851,12 +861,14 @@ export class UI {
         } else if (opt.action?.startsWith('turnIn:')) {
           const qid = opt.action.slice(7);
           const q = QUESTS.find((qq) => qq.id === qid);
-          g.quests.turnIn(q, g.skills);
-          $('dialogue-text').textContent = q.outro;
+          const done = g.quests.turnIn(q, g.skills);
+          $('dialogue-text').textContent = done
+            ? q.outro
+            : 'Your pack is stuffed full — make some room and come back for your reward.';
           $('dialogue-options').innerHTML = '';
           const ok = document.createElement('button');
           ok.className = 'dialog-btn';
-          ok.textContent = 'Thank you.';
+          ok.textContent = done ? 'Thank you.' : 'I\'ll be right back.';
           ok.addEventListener('click', () => this.hideDialogue());
           $('dialogue-options').appendChild(ok);
         } else if (opt.next) {
@@ -912,6 +924,7 @@ export class UI {
   hideCombat() {
     $('combat-ui').classList.add('hidden');
     $('target-info').classList.add('hidden');
+    $('combat-item-picker')?.remove();
     this.combatMode = null;
   }
 

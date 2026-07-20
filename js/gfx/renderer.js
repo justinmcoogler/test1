@@ -93,6 +93,13 @@ export class Renderer {
   hasMesh(cx, cz) { return this.chunkMeshes.has(`${cx},${cz}`); }
 
   // ---- voxel-box entity models ----
+  deleteModel(name) {
+    const mesh = this.modelCache.get(name);
+    if (!mesh) return;
+    deleteMesh(this.gl, mesh);
+    this.modelCache.delete(name);
+  }
+
   registerModel(name, boxes) {
     if (this.modelCache.has(name)) return;
     const verts = [], indices = [];
