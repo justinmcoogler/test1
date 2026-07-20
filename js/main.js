@@ -61,6 +61,16 @@ class Game {
     this.renderPositions = new Map(); // combatant id → smooth [x,z]
     this.shake = 0;
     this.lastFacing = null;
+    // classic (RuneScape-style) camera state
+    this.camYaw = Math.PI;
+    this.camPitch = -0.85;
+    this.camDist = 10;
+    this.moveTarget = null;      // {x, z} click-to-move destination
+    this.pendingInteract = null; // {kind, ...} action to run on arrival
+    this.autoGatherNode = null;
+    this.autoBreak = null;       // {x, y, z} block to break on arrival
+    this.blockedTime = 0;
+    this.modelYaw = Math.PI;
 
     if (saveData) this.restore(saveData);
     else {
@@ -165,8 +175,24 @@ class Game {
 
   bindGameEvents() {
     on('itemGained', ({ item }) => this.discoveredItems.add(item));
-    on('rightClick', () => this.onSecondary());
+    on('rightClick', (pos) => this.onSecondary(pos));
     on('interactKey', () => this.tryInteract());
+    on('toggleCamera', () => {
+      this.settings.classicCamera = !this.settings.classicCamera;
+      this.applySettings();
+      if (this.settings.classicCamera) {
+        this.camYaw = this.player.yaw;
+        document.exitPointerLock?.();
+      }
+      this.ui.toast(this.settings.classicCamera ? '📷 Classic view — click to move' : '📷 First-person view', 'gold');
+    });
+    on('wheelScroll', (dir) => {
+      if (this.settings.classicCamera && !this.combat.active && !this.ui.currentWindow) {
+        this.camDist = clamp(this.camDist + dir * 1.2, 5, 18);
+      } else {
+        emit('hotbarScroll', dir);
+      }
+    });
     on('playerDied', () => this.onPlayerDeath());
     on('playerDamaged', () => {
       if (this.settings.screenShake && !this.settings.reducedMotion) this.shake = 0.35;
@@ -187,11 +213,18 @@ class Game {
       this.renderer.spawnParticles(x + 0.5, y + 0.6, z + 0.5, [0.6, 0.6, 0.5], 10, 3, 0.7);
     });
     if (this.touch) {
-      this.touch.onTap = () => this.onTapInteract();
+      this.touch.onTap = (x, y) => {
+        if (this.settings.classicCamera && !this.combat.active) this.onClassicClick(x, y);
+        else this.onTapInteract();
+      };
+      this.touch.onLongPress = (x, y) => {
+        if (this.settings.classicCamera && !this.combat.active) this.onClassicClick(x, y, true);
+      };
       this.touch.onPlace = () => this.onSecondary();
     }
     this.canvas.addEventListener('click', (e) => {
       if (this.combat.active) this.onCombatClick(e.clientX, e.clientY);
+      else if (this.settings.classicCamera) this.onClassicClick(e.clientX, e.clientY, e.shiftKey);
     });
     window.addEventListener('resize', () => this.renderer.resize());
     $('respawn-btn').addEventListener('click', () => this.respawn());
@@ -214,6 +247,7 @@ class Game {
     document.documentElement.classList.toggle('left-handed', s.leftHanded);
     this.renderer.renderDistance = s.renderDistance;
     this.renderer.reducedMotion = s.reducedMotion;
+    if (s.classicCamera) document.exitPointerLock?.();
     setVolumes(s);
     saveSettings(s);
   }
@@ -249,14 +283,30 @@ class Game {
     this.playtime += dt;
     const p = this.player;
 
-    // input → camera
+    // input → camera & movement
+    const classic = this.settings.classicCamera;
+    this.controls.classicMode = classic;
     if (!this.combat.active) {
-      const [dyaw, dpitch] = this.controls.consumeLook();
-      p.yaw += dyaw;
-      p.pitch = clamp(p.pitch + dpitch, -Math.PI / 2 + 0.05, Math.PI / 2 - 0.05);
+      if (classic) {
+        const [dyaw, dpitch] = this.controls.consumeOrbit(dt);
+        this.camYaw += dyaw;
+        this.camPitch = clamp(this.camPitch + dpitch, -1.45, -0.25);
+        this.updateClassicMovement(dt);
+      } else {
+        const [dyaw, dpitch] = this.controls.consumeLook();
+        p.yaw += dyaw;
+        p.pitch = clamp(p.pitch + dpitch, -Math.PI / 2 + 0.05, Math.PI / 2 - 0.05);
+        this.controls.worldMove = null;
+        this.moveTarget = null;
+        this.pendingInteract = null;
+        this.autoGatherNode = null;
+        this.autoBreak = null;
+      }
       p.update(dt, this.controls, this.world);
     } else {
       this.controls.consumeLook();
+      this.controls.consumeOrbit(dt);
+      this.controls.worldMove = null;
     }
 
     this.world.update(dt);
@@ -277,13 +327,27 @@ class Game {
 
     // aggro check
     if (!this.combat.active && !p.dead && !this.dialogueOpen && !this.ui.currentWindow && !this.disableAggro) {
-      const aggro = this.enemyMgr.checkAggro(p);
-      if (aggro) this.startCombat(aggro);
+      if (this.settings.tacticalCombat) {
+        const aggro = this.enemyMgr.checkAggro(p);
+        if (aggro) this.startCombat(aggro);
+      } else {
+        // classic combat is multi-engagement: everything hostile in range piles on
+        for (const e of this.enemyMgr.entities.values()) {
+          if (e.rsEngaged || e.def.behavior !== 'aggressive' || !e.def.aggroRange) continue;
+          const d = Math.hypot(p.x - e.x, p.z - e.z);
+          if (d < e.def.aggroRange && Math.abs(p.y - e.y) < 3) this.combatRS.engage(e);
+        }
+      }
     }
 
     // interactions (exploration only)
     if (!this.combat.active && !p.dead) {
-      this.updateInteraction(dt);
+      if (classic) {
+        this.currentSelection = null;
+        this.updateClassicInteraction(dt);
+      } else {
+        this.updateInteraction(dt);
+      }
       this.quests.checkReach(p.x, p.z, p.y, this.world.markers);
     } else {
       this.ui.setPrompt(null);
@@ -310,16 +374,25 @@ class Game {
     if (this.combat.active && this.combatCam) {
       const { eye, target } = this.combatCam;
       this.renderer.setOrbitCamera([eye[0] + sx, eye[1] + sy, eye[2]], target);
+    } else if (classic) {
+      const { eye, target } = this.classicCameraEye();
+      this.renderer.setOrbitCamera([eye[0] + sx, eye[1] + sy, eye[2]], target);
     } else {
       const eye = p.eye();
       this.renderer.setFPSCamera([eye[0] + sx, eye[1] + sy, eye[2]], p.yaw, p.pitch);
     }
 
     // draw
+    const overlayTiles = this.combat.active
+      ? this.ui.getCombatTiles()
+      : [
+        ...this.combatRS.telegraphTiles(),
+        ...(this.destMarker ? [{ x: this.destMarker.x, y: this.destMarker.y, z: this.destMarker.z, color: [1, 0.85, 0.3] }] : []),
+      ];
     this.renderer.draw(this.world, {
       dt,
       entities: this.collectEntities(dt),
-      tiles: this.combat.active ? this.ui.getCombatTiles() : this.combatRS.telegraphTiles(),
+      tiles: overlayTiles,
       selection: this.currentSelection,
       markers: this.collectMarkers(),
     });
@@ -390,6 +463,280 @@ class Game {
       const removed = this.world.unloadFar(p.x, p.z, R + 3);
       for (const key of removed) this.renderer.dropChunk(key);
     }
+  }
+
+  // ---------------------------------------------------------------- classic camera mode
+  updateClassicMovement(dt) {
+    const p = this.player;
+    const c = this.controls;
+    // WASD moves relative to the camera and cancels click-to-move
+    const [f, s] = c.moveVector();
+    if (Math.abs(f) > 0.05 || Math.abs(s) > 0.05) {
+      this.cancelClassicActions();
+      const sy = Math.sin(this.camYaw), cy = Math.cos(this.camYaw);
+      c.worldMove = [(-sy * f) + (cy * s), (-cy * f) + (-sy * s)];
+    } else if (this.moveTarget) {
+      const dx = this.moveTarget.x - p.x, dz = this.moveTarget.z - p.z;
+      const d = Math.hypot(dx, dz);
+      const arriveDist = this.pendingInteract ? (this.pendingInteract.range || 0.45) : 0.45;
+      if (d <= arriveDist) {
+        c.worldMove = null;
+        this.moveTarget = null;
+        this.blockedTime = 0;
+        this.executePendingInteract();
+      } else {
+        c.worldMove = [dx / d, dz / d];
+        // auto-hop 1-block steps when we stop making progress
+        const speed = Math.hypot(p.vx, p.vz);
+        if (p.onGround && speed < 0.6) {
+          this.blockedTime += dt;
+          if (this.blockedTime > 0.18) {
+            p.vy = 8.1;
+            p.onGround = false;
+            this.blockedTime = 0;
+            this.moveTargetTimeout -= 0.8; // stalled hops shouldn't extend the walk
+          }
+        } else {
+          this.blockedTime = 0;
+        }
+        this.moveTargetTimeout -= dt;
+        if (this.moveTargetTimeout <= 0) {
+          this.cancelClassicActions();
+          this.ui.toast("Can't reach that.", 'warn');
+        }
+      }
+    } else {
+      c.worldMove = null;
+      // auto-follow your combat target like the old game
+      const rsTarget = this.combatRS.active ? this.combatRS.target : null;
+      if (rsTarget && rsTarget.hp > 0 && this.combatRS.style !== 'ranged' && this.combatRS.style !== 'magic') {
+        const dx = rsTarget.x - p.x, dz = rsTarget.z - p.z;
+        const d = Math.hypot(dx, dz);
+        if (d > 2.0) c.worldMove = [dx / d, dz / d];
+      }
+    }
+    // face the direction of travel
+    if (c.worldMove) this.modelYaw = Math.atan2(c.worldMove[0], c.worldMove[1]);
+  }
+
+  cancelClassicActions() {
+    this.moveTarget = null;
+    this.pendingInteract = null;
+    this.autoGatherNode = null;
+    this.autoBreak = null;
+    this.gather = null;
+    this.breaking = null;
+    this.ui.setGatherProgress(null);
+  }
+
+  // ray from the classic camera through a screen point
+  screenRay(sx, sy) {
+    const v = this.renderer.view;
+    const eye = this.renderer.camPos;
+    const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
+    const ndcX = (sx / w) * 2 - 1;
+    const ndcY = 1 - (sy / h) * 2;
+    const tanHalf = Math.tan(this.renderer.fov / 2);
+    const right = [v[0], v[4], v[8]];
+    const up = [v[1], v[5], v[9]];
+    const fwd = [-v[2], -v[6], -v[10]];
+    const aspect = w / h;
+    const dir = [
+      fwd[0] + right[0] * ndcX * tanHalf * aspect + up[0] * ndcY * tanHalf,
+      fwd[1] + right[1] * ndcX * tanHalf * aspect + up[1] * ndcY * tanHalf,
+      fwd[2] + right[2] * ndcX * tanHalf * aspect + up[2] * ndcY * tanHalf,
+    ];
+    const l = Math.hypot(...dir) || 1;
+    return { eye, dir: [dir[0] / l, dir[1] / l, dir[2] / l] };
+  }
+
+  onClassicClick(sx, sy, isBreak = false) {
+    if (this.player.dead || this.dialogueOpen || this.ui.currentWindow || this.combat.active) return;
+    // 1. creatures & NPCs first (screen-space pick, like tapping them)
+    const pickables = [];
+    for (const e of this.enemyMgr.entities.values()) {
+      const d = Math.hypot(e.x - this.player.x, e.z - this.player.z);
+      if (d > 30) continue;
+      pickables.push({ kind: 'enemy', ref: e, x: e.x, y: e.y + 0.8, z: e.z });
+    }
+    for (const npc of this.world.structure.npcs) {
+      pickables.push({ kind: 'npc', ref: npc, x: npc.x + 0.5, y: npc.y + 1, z: npc.z + 0.5 });
+    }
+    let best = null, bestD = 30;
+    for (const pk of pickables) {
+      const pr = this.renderer.project(pk.x, pk.y, pk.z);
+      if (!pr) continue;
+      const d = Math.hypot(pr[0] - sx, pr[1] - sy);
+      if (d < bestD) { best = pk; bestD = d; }
+    }
+    if (best && !isBreak) {
+      if (best.kind === 'enemy') {
+        this.pendingInteract = { kind: 'enemy', entity: best.ref, range: 2.6 };
+        this.moveTarget = { x: best.ref.x, z: best.ref.z };
+      } else {
+        this.pendingInteract = { kind: 'npc', npc: best.ref, range: 3.0 };
+        this.moveTarget = { x: best.ref.x + 0.5, z: best.ref.z + 0.5 };
+      }
+      this.moveTargetTimeout = 12;
+      this.markDestination(this.moveTarget.x, this.moveTarget.z);
+      return;
+    }
+
+    // 2. world raycast
+    const { eye, dir } = this.screenRay(sx, sy);
+    const hit = this.world.raycast(eye[0], eye[1], eye[2], dir[0], dir[1], dir[2], 60);
+    if (!hit) return;
+
+    if (hit.node) {
+      const st = this.world.nodeState(hit.node.id);
+      if (st?.state === 'depleted') {
+        const left = Math.max(0, Math.ceil(st.respawnAt - this.world.time));
+        this.ui.toast(`${hit.node.def.label} — regrowing (${left}s)`, '');
+        return;
+      }
+      this.pendingInteract = { kind: 'node', node: hit.node, range: 3.0 };
+      this.moveTarget = { x: hit.node.x + 0.5, z: hit.node.z + 0.5 };
+      this.moveTargetTimeout = 14;
+      this.markDestination(this.moveTarget.x, this.moveTarget.z);
+      return;
+    }
+    const bdef = BLOCKS[hit.id];
+    const stations = ['workbench', 'furnace', 'anvil_block', 'campfire', 'alchemy_table', 'loom_block', 'enchant_altar', 'construction_bench'];
+    if (bdef && (stations.includes(bdef.name) || bdef.name === 'chest_block') && !isBreak) {
+      this.pendingInteract = { kind: bdef.name === 'chest_block' ? 'chest' : 'station', x: hit.x, y: hit.y, z: hit.z, range: 3.2 };
+      this.moveTarget = { x: hit.x + 0.5, z: hit.z + 0.5 };
+      this.moveTargetTimeout = 12;
+      this.markDestination(this.moveTarget.x, this.moveTarget.z);
+      return;
+    }
+    if (isBreak) {
+      // shift+click / long-press: walk over and break the block
+      if (!bdef || bdef.hardness === Infinity || bdef.shape === 'liquid') return;
+      this.pendingInteract = { kind: 'break', x: hit.x, y: hit.y, z: hit.z, range: 3.6 };
+      this.moveTarget = { x: hit.x + 0.5, z: hit.z + 0.5 };
+      this.moveTargetTimeout = 12;
+      this.markDestination(this.moveTarget.x, this.moveTarget.z);
+      return;
+    }
+    // plain ground click → walk to the clicked spot
+    const tx = hit.x + hit.face[0], ty = hit.y + hit.face[1], tz = hit.z + hit.face[2];
+    const standX = hit.face[1] === 1 ? hit.x : tx;
+    const standZ = hit.face[1] === 1 ? hit.z : tz;
+    this.pendingInteract = null;
+    this.autoGatherNode = null;
+    this.autoBreak = null;
+    this.moveTarget = { x: standX + 0.5, z: standZ + 0.5 };
+    this.moveTargetTimeout = 16;
+    this.markDestination(this.moveTarget.x, this.moveTarget.z);
+  }
+
+  markDestination(x, z) {
+    const y = this.world.groundNear(Math.floor(x), Math.floor(z), this.player.y) ?? this.player.y;
+    this.destMarker = { x: Math.floor(x), y, z: Math.floor(z), t: 1.6 };
+    this.renderer.spawnParticles(x, y + 0.4, z, [1, 0.85, 0.3], 6, 1.2, 0.5, 0.06);
+    SFX.uiClick();
+  }
+
+  executePendingInteract() {
+    const pi = this.pendingInteract;
+    this.pendingInteract = null;
+    if (!pi) return;
+    if (pi.kind === 'enemy') {
+      if (this.enemyMgr.entities.has(pi.entity.id)) this.startCombat(pi.entity);
+    } else if (pi.kind === 'npc') {
+      this.quests.talkedTo(pi.npc.id);
+      this.ui.showDialogue(NPC_DEFS[pi.npc.id].dialogue);
+      emit('talkedTo', { npc: pi.npc.id });
+    } else if (pi.kind === 'node') {
+      this.autoGatherNode = pi.node;
+    } else if (pi.kind === 'station') {
+      this.ui.openWindow('crafting');
+    } else if (pi.kind === 'chest') {
+      const chest = this.world.getChestAt(pi.x, pi.y, pi.z);
+      const id = chest ? chest.id : this.world.registerPlayerChest(pi.x, pi.y, pi.z);
+      const meta = this.world.chestMeta.get(id);
+      if (meta?.requiresBossDead && !this.flags[meta.requiresBossDead]) {
+        this.ui.toast('The chest is bound shut by living roots… defeat the guardian.', 'warn');
+        return;
+      }
+      this.ui.openChestUI(id);
+      emit('chestOpened', { id });
+    } else if (pi.kind === 'break') {
+      this.autoBreak = { x: pi.x, y: pi.y, z: pi.z };
+    }
+  }
+
+  // classic-mode interaction loop: auto-gather / auto-break the chosen target
+  updateClassicInteraction(dt) {
+    if (this.destMarker) {
+      this.destMarker.t -= dt;
+      if (this.destMarker.t <= 0) this.destMarker = null;
+    }
+    if (this.combatRS.active) {
+      this.autoGatherNode = null;
+      this.autoBreak = null;
+      this.gather = null;
+      this.breaking = null;
+      this.ui.setGatherProgress(null);
+      this.ui.setPrompt(null);
+      return;
+    }
+    const p = this.player;
+    if (this.autoGatherNode) {
+      const node = this.autoGatherNode;
+      const st = this.world.nodeState(node.id);
+      const d = Math.hypot(node.x + 0.5 - p.x, node.z + 0.5 - p.z);
+      if (!st || d > 3.6 || !this.world.nodesById.has(node.id)) {
+        this.autoGatherNode = null;
+        this.gather = null;
+        this.ui.setGatherProgress(null);
+      } else if (st.state === 'depleted') {
+        this.autoGatherNode = null;
+        this.gather = null;
+        this.ui.setGatherProgress(null);
+        this.ui.setPrompt(null);
+      } else {
+        this.modelYaw = Math.atan2(node.x + 0.5 - p.x, node.z + 0.5 - p.z);
+        this.updateGathering(node, dt); // shows progress, grants xp, handles tools
+      }
+      return;
+    }
+    if (this.autoBreak) {
+      const b = this.autoBreak;
+      const id = this.world.getBlock(b.x, b.y, b.z);
+      const def = BLOCKS[id];
+      const d = Math.hypot(b.x + 0.5 - p.x, b.z + 0.5 - p.z);
+      if (!def || id === B.air || def.hardness === Infinity || d > 4) {
+        this.autoBreak = null;
+        this.breaking = null;
+        this.ui.setGatherProgress(null);
+      } else {
+        this.modelYaw = Math.atan2(b.x + 0.5 - p.x, b.z + 0.5 - p.z);
+        this.currentSelection = { x: b.x, y: b.y, z: b.z };
+        this.updateBreaking({ x: b.x, y: b.y, z: b.z, id }, dt);
+        if (this.world.getBlock(b.x, b.y, b.z) === B.air) this.autoBreak = null;
+      }
+      return;
+    }
+    this.ui.setPrompt(this.moveTarget && this.pendingInteract ? 'Walking…' : null);
+    if (!this.breaking && !this.gather) this.ui.setGatherProgress(null);
+  }
+
+  // classic-mode camera: orbit the player, pulled in when terrain blocks the view
+  classicCameraEye() {
+    const p = this.player;
+    const target = [p.x, p.y + 1.4, p.z];
+    const cp = Math.cos(this.camPitch), sp = Math.sin(this.camPitch);
+    const dir = [Math.sin(this.camYaw) * cp, -sp, Math.cos(this.camYaw) * cp];
+    let dist = this.camDist;
+    for (let t = 1.0; t < this.camDist; t += 0.25) {
+      const bx = Math.floor(target[0] + dir[0] * t);
+      const by = Math.floor(target[1] + dir[1] * t);
+      const bz = Math.floor(target[2] + dir[2] * t);
+      const id = this.world.getBlock(bx, by, bz);
+      if (id !== B.air && BLOCKS[id]?.opaque) { dist = Math.max(1.2, t - 0.4); break; }
+    }
+    return { eye: [target[0] + dir[0] * dist, target[1] + dir[1] * dist, target[2] + dir[2] * dist], target };
   }
 
   // ---------------------------------------------------------------- interaction
@@ -649,12 +996,24 @@ class Game {
     }
   }
 
-  onSecondary() {
+  onSecondary(pos = null) {
     if (this.combat.active || this.combatRS.active || this.player.dead || this.dialogueOpen || this.ui.currentWindow) return;
-    // interactables first
-    if (this.tryInteract(true)) return;
-    // place block
-    const hit = this.facingRay();
+    let hit;
+    if (this.settings.classicCamera) {
+      // classic view: right-click (or ▣) places at the cursor / screen centre
+      const sx = pos?.x ?? this.canvas.clientWidth / 2;
+      const sy = pos?.y ?? this.canvas.clientHeight / 2;
+      const { eye, dir } = this.screenRay(sx, sy);
+      hit = this.world.raycast(eye[0], eye[1], eye[2], dir[0], dir[1], dir[2], 40);
+      if (hit && Math.hypot(hit.x + 0.5 - this.player.x, hit.z + 0.5 - this.player.z) > 5.5) {
+        this.ui.toast('Too far away to build there.', 'warn');
+        return;
+      }
+    } else {
+      // interactables first (first-person only; classic interacts via left-click)
+      if (this.tryInteract(true)) return;
+      hit = this.facingRay();
+    }
     if (!hit || hit.node) return;
     const sel = this.inventory.selectedStack();
     const def = sel ? ITEMS[sel.item] : null;
@@ -971,6 +1330,14 @@ class Game {
         if (d > 40) continue;
         out.push({ model: e.type, x: e.x, y: e.y, z: e.z, yaw: e.yaw, tint: [0, 0, 0] });
       }
+      if (this.settings.classicCamera && !this.player.dead) {
+        // third-person view shows your own character
+        out.push({
+          model: this.playerModelName,
+          x: this.player.x, y: this.player.y, z: this.player.z,
+          yaw: this.modelYaw, tint: [0, 0, 0],
+        });
+      }
     }
     for (const npc of this.world.structure.npcs) {
       out.push({ model: `npc_${npc.id}`, x: npc.x + 0.5, y: npc.y, z: npc.z + 0.5, yaw: Math.atan2(this.player.x - npc.x, this.player.z - npc.z), tint: [0, 0, 0] });
@@ -1147,6 +1514,7 @@ async function startGame(slot, isNew) {
   const crafting = await import('./game/crafting.js');
   window.__crafting = crafting;
   window.__blocks = await import('./world/blocks.js');
+  window.__enemies = await import('./game/enemies.js');
   await game.init((frac, text) => {
     $('loading-fill').style.width = `${Math.round(frac * 100)}%`;
     $('loading-text').textContent = text;

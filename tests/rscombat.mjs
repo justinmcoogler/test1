@@ -180,6 +180,10 @@ try {
     g.player.hp = g.player.maxHp;
     g.combatRS.style = 'aggressive';
     for (let cx = 0; cx <= 2; cx++) for (let cz = -6; cz <= -3; cz++) g.world.ensureChunk(cx, cz);
+    // clear the antechamber (as the quest intends) so only the golem answers
+    for (const e of [...g.enemyMgr.entities.values()]) {
+      if (e.type !== 'rootbound_golem' && e.z < -55 && e.y < 25) g.enemyMgr.markKilled(e);
+    }
     g.player.x = 24.5; g.player.y = 13.02; g.player.z = -73.5;
     g.player.vx = g.player.vy = g.player.vz = 0;
     g.disableAggro = false;

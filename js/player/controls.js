@@ -6,7 +6,7 @@ export const DEFAULT_BINDINGS = {
   forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD',
   jump: 'Space', sprint: 'ShiftLeft',
   inventory: 'KeyE', skills: 'KeyK', crafting: 'KeyC', quests: 'KeyJ',
-  map: 'KeyM', settings: 'KeyO', interact: 'KeyF',
+  map: 'KeyM', settings: 'KeyO', interact: 'KeyF', camera: 'KeyV',
 };
 
 export class Controls {
@@ -20,11 +20,20 @@ export class Controls {
     this.pointerLocked = false;
     this.enabled = true;       // false while menus/combat/dialogue are open
     this.sprintToggled = false;
+    this.classicMode = false;  // RuneScape-style camera: no pointer lock
+    this.orbitDX = 0; this.orbitDY = 0;   // classic-mode camera drag
+    this.worldMove = null;                // classic-mode world-space steering
+    this.orbitDragging = false;
 
     document.addEventListener('keydown', (e) => this.onKey(e, true));
     document.addEventListener('keyup', (e) => this.onKey(e, false));
     canvas.addEventListener('mousedown', (e) => {
       if (!this.enabled) return;
+      if (this.classicMode) {
+        if (e.button === 1) { this.orbitDragging = true; e.preventDefault(); }
+        if (e.button === 2) emit('rightClick', { x: e.clientX, y: e.clientY });
+        return; // left clicks are handled by the canvas click listener
+      }
       if (!this.pointerLocked) { canvas.requestPointerLock?.(); return; }
       if (e.button === 0) this.leftDown = true;
       if (e.button === 2) { this.rightDown = true; emit('rightClick'); }
@@ -32,6 +41,7 @@ export class Controls {
     document.addEventListener('mouseup', (e) => {
       if (e.button === 0) this.leftDown = false;
       if (e.button === 2) this.rightDown = false;
+      if (e.button === 1) this.orbitDragging = false;
     });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('pointerlockchange', () => {
@@ -39,13 +49,18 @@ export class Controls {
       if (!this.pointerLocked) { this.leftDown = false; this.rightDown = false; }
     });
     document.addEventListener('mousemove', (e) => {
-      if (!this.pointerLocked || !this.enabled) return;
+      if (!this.enabled) return;
+      if (this.classicMode) {
+        if (this.orbitDragging) { this.orbitDX += e.movementX; this.orbitDY += e.movementY; }
+        return;
+      }
+      if (!this.pointerLocked) return;
       this.mouseDX += e.movementX;
       this.mouseDY += e.movementY;
     });
     canvas.addEventListener('wheel', (e) => {
       if (!this.enabled) return;
-      emit('hotbarScroll', Math.sign(e.deltaY));
+      emit('wheelScroll', Math.sign(e.deltaY));
       e.preventDefault();
     }, { passive: false });
   }
@@ -68,6 +83,7 @@ export class Controls {
       return;
     }
     if (e.code === b.interact) emit('interactKey');
+    if (e.code === b.camera) emit('toggleCamera');
     if (e.code === b.sprint && this.settings.sprintToggle) this.sprintToggled = !this.sprintToggled;
     for (const win of ['inventory', 'skills', 'crafting', 'quests', 'map', 'settings']) {
       if (e.code === b[win]) emit('toggleWindow', win);
@@ -105,6 +121,22 @@ export class Controls {
     const dyaw = -this.mouseDX * sens + (this.touchLookDX || 0);
     const dpitch = -this.mouseDY * sens * inv + (this.touchLookDY || 0);
     this.mouseDX = 0; this.mouseDY = 0;
+    this.touchLookDX = 0; this.touchLookDY = 0;
+    return [dyaw, dpitch];
+  }
+
+  // classic mode: camera-orbit deltas from drag / arrow keys / touch drag
+  consumeOrbit(dt) {
+    const sens = (this.settings.sensitivity ?? 1) * 0.005;
+    let dyaw = -this.orbitDX * sens + (this.touchLookDX || 0);
+    let dpitch = -this.orbitDY * sens + (this.touchLookDY || 0);
+    if (this.enabled) {
+      if (this.keys.has('ArrowLeft')) dyaw += 2.2 * dt;
+      if (this.keys.has('ArrowRight')) dyaw -= 2.2 * dt;
+      if (this.keys.has('ArrowUp')) dpitch -= 1.6 * dt;
+      if (this.keys.has('ArrowDown')) dpitch += 1.6 * dt;
+    }
+    this.orbitDX = 0; this.orbitDY = 0;
     this.touchLookDX = 0; this.touchLookDY = 0;
     return [dyaw, dpitch];
   }

@@ -27,7 +27,9 @@ dummy, and finally descending past the ore chamber into the **Rootgrave** to fac
 Rootbound Golem. **Merchant Tam** at the stall buys goods, sells supplies, and has side
 contracts.
 
-### Desktop controls
+### Two ways to play
+
+**First person** (default) — Minecraft-style immersion:
 
 | Input | Action |
 |---|---|
@@ -38,7 +40,17 @@ contracts.
 | F | Talk / use station / open chest |
 | 1–8, wheel | Hotbar |
 | E K C J M O | Inventory · Skills · Crafting · Quests · Map · Settings |
+| V | Switch camera view |
 | Esc | Close / settings |
+
+**Classic view** (press **V** or toggle in Settings) — RuneScape-style third person
+with click-to-move: click the ground to walk there (your character hops small
+ledges on its own), click a tree/vein/spot to walk over and gather until it's
+depleted, click a creature to walk over and fight, click a villager to talk,
+click a station or chest to use it. Shift+click (long-press on mobile) breaks a
+block, right-click places one. Middle-drag or arrow keys orbit the camera,
+wheel zooms, and WASD still walks camera-relative. In combat your character
+auto-follows the target, RuneScape-style.
 
 ### Mobile controls
 

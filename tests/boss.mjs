@@ -55,10 +55,18 @@ try {
     for (let cx = 0; cx <= 2; cx++) for (let cz = -6; cz <= -3; cz++) g.world.ensureChunk(cx, cz);
   });
 
+  // clear the antechamber (as the quest instructs) so the boss pull is clean —
+  // dungeon creatures wander and could otherwise aggro first
+  await gState(() => {
+    const g = window.__game;
+    for (const e of [...g.enemyMgr.entities.values()]) {
+      if (e.type !== 'rootbound_golem' && e.z < -55 && e.y < 25) g.enemyMgr.markKilled(e);
+    }
+  });
   // walk into the boss hall
   await gState(() => {
     const g = window.__game;
-    g.player.x = 24.5; g.player.y = 13.02; g.player.z = -71.5;
+    g.player.x = 24.5; g.player.y = 13.02; g.player.z = -73.5;
     g.player.vx = g.player.vy = g.player.vz = 0;
     g.player.yaw = 0; g.player.pitch = -0.1;
     g.disableAggro = false;
@@ -118,8 +126,9 @@ try {
         };
         const moveSmart = () => {
           if (c.usedMove) return;
-          const reach = c.getMovableTiles();
           const enemy = c.enemies()[0];
+          if (!enemy) return; // everything just died this turn
+          const reach = c.getMovableTiles();
           const inDanger = danger.some((t) => t.gx === c.playerC.gx && t.gz === c.playerC.gz);
           let best = null, bd = 1e9;
           for (const key of reach.keys()) {
@@ -182,20 +191,28 @@ try {
     const g = window.__game;
     if (g.ui.chestId) g.ui.closeWindow();
     g.player.hp = 3;
-    // teleport right next to a live dungeon rat (they wander now)
-    const rat = [...g.enemyMgr.entities.values()].find((e) => e.def.behavior === 'aggressive' && e.z < -55);
-    if (rat) {
-      g.player.x = rat.x + 0.8; g.player.y = rat.y + 0.02; g.player.z = rat.z;
-    } else {
-      g.player.x = 24.5; g.player.y = 13.02; g.player.z = -64.5;
-    }
+    // spawn a fresh rat right here so the hopeless fight is deterministic
+    g.player.x = 24.5; g.player.y = 13.02; g.player.z = -64.5;
     g.player.vx = g.player.vy = g.player.vz = 0;
+    const def = window.__enemies.ENEMY_TYPES.gloomrat;
+    g.enemyMgr.entities.set('test_rat', {
+      id: 'test_rat', type: 'gloomrat', def,
+      x: 25.5, y: 13, z: -64.5, homeX: 25.5, homeZ: -64.5,
+      yaw: 0, hp: def.hp, wanderT: 99, transient: true,
+    });
   });
-  await page.waitForTimeout(2000);
-  const inFight = await gState(() => window.__game.combat.active);
+  // watch for the fight (it may start and end within a second at 3 hp)
+  let inFight = false, diedFast = false;
+  for (let i = 0; i < 15; i++) {
+    const st = await gState(() => ({ c: window.__game.combat.active, d: window.__game.player.dead }));
+    if (st.c) inFight = true;
+    if (st.d) { diedFast = true; break; }
+    await page.waitForTimeout(400);
+  }
+  if (diedFast) inFight = true; // combat came and went — death is what we're after
   if (inFight) {
     // just end turns until we fall
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 30 && !diedFast; i++) {
       const st = await gState(() => {
         const g = window.__game;
         if (!g.combat.active) return { over: true };

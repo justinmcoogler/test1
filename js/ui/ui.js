@@ -669,6 +669,7 @@ export class UI {
       `<span style="display:flex;align-items:center;gap:6px"><input type="range" data-set="${key}" min="${min}" max="${max}" step="${step}" value="${s[key]}"><span class="set-val">${s[key]}</span></span>`;
     const check = (key) => `<input type="checkbox" data-set="${key}" ${s[key] ? 'checked' : ''}>`;
     body.innerHTML = `<div class="settings-grid">
+      ${row('Classic camera — third person, click to move (V)', check('classicCamera'))}
       ${row('Tactical combat (grid & turns instead of classic)', check('tacticalCombat'))}
       ${row('Render distance (chunks)', range('renderDistance', 2, 8, 1))}
       ${row('Camera sensitivity', range('sensitivity', 0.2, 3, 0.1))}
@@ -690,8 +691,9 @@ export class UI {
       <span style="color:var(--ink-dim);font-size:12px;align-self:center" id="save-status"></span>
     </div>
     <div style="margin-top:14px;color:var(--ink-dim);font-size:12px;line-height:1.7">
-      <b>Desktop:</b> WASD move · Mouse look (click to capture) · Space jump · Shift sprint · LMB gather/mine/attack · RMB place/interact · F interact · E inventory · K skills · C crafting · J quests · M map · 1–8 hotbar<br>
-      <b>Mobile:</b> left stick move · drag right side to look · ✦ hold to gather / tap to interact · ▣ place block
+      <b>First person:</b> WASD move · Mouse look (click to capture) · Space jump · Shift sprint · LMB gather/mine/attack · RMB place/interact · F interact · E inventory · K skills · C crafting · J quests · M map · 1–8 hotbar · V camera<br>
+      <b>Classic view:</b> click ground to walk · click trees/rocks/creatures/villagers to act · Shift+click (or long-press) a block to break it · RMB place block · middle-drag or arrow keys orbit · wheel zoom · WASD also walks<br>
+      <b>Mobile:</b> left stick move · drag right side to look/orbit · ✦ hold to gather / tap to interact · ▣ place block · in classic view just tap where you want to go
     </div>`;
     body.querySelectorAll('[data-set]').forEach((inp) => {
       inp.addEventListener('input', () => {

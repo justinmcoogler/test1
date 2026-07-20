@@ -42,11 +42,17 @@ export class Player {
     const feetWater = world.isWater(Math.floor(this.x), Math.floor(this.y + 0.1), Math.floor(this.z));
 
     // --- movement intent ---
-    const [mx, mz] = input.moveVector(); // forward, strafe in [-1,1]
-    const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
-    // forward is -Z at yaw 0
-    let dx = (-sy * mx) + (cy * mz);
-    let dz = (-cy * mx) + (-sy * mz);
+    let dx, dz;
+    if (input.worldMove) {
+      // classic mode supplies a world-space direction (click-to-move / camera-relative WASD)
+      [dx, dz] = input.worldMove;
+    } else {
+      const [mx, mz] = input.moveVector(); // forward, strafe in [-1,1]
+      const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
+      // forward is -Z at yaw 0
+      dx = (-sy * mx) + (cy * mz);
+      dz = (-cy * mx) + (-sy * mz);
+    }
     const dl = Math.hypot(dx, dz);
     if (dl > 1) { dx /= dl; dz /= dl; }
 

@@ -70,7 +70,10 @@ export class TouchControls {
       if (this.camStart) {
         const dt = performance.now() - this.camStart[2];
         const dist = Math.hypot(e.clientX - this.camStart[0], e.clientY - this.camStart[1]);
-        if (dt < 260 && dist < 12 && this.settings.tapToInteract && this.onTap) this.onTap();
+        if (dist < 12 && this.settings.tapToInteract) {
+          if (dt < 260 && this.onTap) this.onTap(e.clientX, e.clientY);
+          else if (dt >= 500 && this.onLongPress) this.onLongPress(e.clientX, e.clientY);
+        }
       }
       this.camPointer = null;
       this.camLast = null;
