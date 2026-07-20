@@ -300,14 +300,6 @@ class Game {
       if (this.combat.active) this.onCombatClick(e.clientX, e.clientY);
       else if (this.settings.classicCamera) this.onClassicClick(e.clientX, e.clientY, e.shiftKey);
     });
-    // classic view: a double-click (or press-and-hold) is the "work on this"
-    // gesture — mine/chop/gather/break — while a plain tap only walks
-    this.canvas.addEventListener('dblclick', (e) => {
-      if (!this.combat.active && this.settings.classicCamera) this.onClassicClick(e.clientX, e.clientY, true);
-    });
-    on('classicHold', ({ x, y }) => {
-      if (!this.combat.active && this.settings.classicCamera && !this.player.dead) this.onClassicClick(x, y, true);
-    });
     window.addEventListener('resize', () => this.renderer.resize());
     $('respawn-btn').addEventListener('click', () => this.respawn());
   }
@@ -725,9 +717,8 @@ class Game {
     const hit = this.world.raycast(eye[0], eye[1], eye[2], dir[0], dir[1], dir[2], 60);
     if (!hit) return;
 
-    // gathering & breaking need a deliberate action: double-click, click-and-hold,
-    // shift+click, or long-press. A plain tap is always movement.
-    if (hit.node && isBreak) {
+    // clicking a resource node walks over and gathers it
+    if (hit.node && !isBreak) {
       const st = this.world.nodeState(hit.node.id);
       if (st?.state === 'depleted') {
         const left = Math.max(0, Math.ceil(st.respawnAt - this.world.time));
@@ -747,16 +738,17 @@ class Game {
       this.walkTo(hit.x + 0.5, hit.z + 0.5, 12);
       return;
     }
-    if (isBreak && !hit.node) {
+    if (isBreak) {
+      // shift+click / long-press: walk over and break the block
       if (!bdef || bdef.hardness === Infinity || bdef.shape === 'liquid') return;
       this.pendingInteract = { kind: 'break', x: hit.x, y: hit.y, z: hit.z, range: 3.6 };
       this.walkTo(hit.x + 0.5, hit.z + 0.5, 12);
       return;
     }
-    // plain click (nodes included) → walk to the clicked spot
+    // plain ground click → walk to the clicked spot
     const tx = hit.x + hit.face[0], tz = hit.z + hit.face[2];
-    const standX = hit.face[1] === 1 || hit.node ? hit.x : tx;
-    const standZ = hit.face[1] === 1 || hit.node ? hit.z : tz;
+    const standX = hit.face[1] === 1 ? hit.x : tx;
+    const standZ = hit.face[1] === 1 ? hit.z : tz;
     this.pendingInteract = null;
     this.autoGatherNode = null;
     this.autoBreak = null;

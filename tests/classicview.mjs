@@ -77,7 +77,7 @@ try {
   }, [dest]);
   check('player walked to the clicked spot', after.distToDest < 1.2 && after.targetCleared, JSON.stringify(after));
 
-  // ---- 3. Tap a tree = walk only; DOUBLE-click = walk over and auto-gather ----
+  // ---- 3. Click a tree → walks over and auto-gathers ----
   await gState(() => { window.__game.inventory.add('crude_axe', 1); });
   const tree = await gState(() => {
     const g = window.__game;
@@ -104,22 +104,10 @@ try {
   const treeScreen = await screenPos(tree.x + 0.5, tree.y + 1, tree.z + 0.5);
   check('tree projects on screen', !!treeScreen);
   const logsBefore = await gState(() => window.__game.inventory.count('fernwood_log'));
-  // a single tap must only walk (never start chopping)
   await page.mouse.click(treeScreen[0], treeScreen[1]);
-  await page.waitForTimeout(250);
-  const tapState = await gState(() => ({
-    pending: window.__game.pendingInteract?.kind || 'none',
-    walking: !!window.__game.moveTarget,
-  }));
-  check('single tap on a tree walks without gathering', tapState.pending === 'none' && tapState.walking, JSON.stringify(tapState));
-  // double-click is the "work on this" gesture (re-project: the tap above moved us)
-  await gState(() => { window.__game.cancelClassicActions(); window.__game.player.vx = window.__game.player.vz = 0; });
-  await page.waitForTimeout(250);
-  const treeScreen2 = await screenPos(tree.x + 0.5, tree.y + 1, tree.z + 0.5);
-  await page.mouse.dblclick(treeScreen2[0], treeScreen2[1]);
   await page.waitForTimeout(400);
   const pending = await gState(() => window.__game.pendingInteract?.kind || window.__game.autoGatherNode?.type || 'none');
-  check('double-click queues gather', pending === 'node' || pending === 'tree_fernwood', pending);
+  check('tree click queues gather', pending === 'node' || pending === 'tree_fernwood', pending);
   await page.waitForTimeout(12000); // walk + a few chops
   const logsAfter = await gState(() => window.__game.inventory.count('fernwood_log'));
   check('auto-gather chopped logs', logsAfter > logsBefore, `${logsBefore}→${logsAfter}`);

@@ -30,18 +30,7 @@ export class Controls {
     canvas.addEventListener('mousedown', (e) => {
       if (!this.enabled) return;
       if (this.classicMode) {
-        if (e.button === 0) {
-          this._leftDrag = { x: e.clientX, y: e.clientY, moved: false };
-          // press-and-hold (without dragging) = deliberate action: mine/chop/break
-          clearTimeout(this._holdTimer);
-          this._holdFired = false;
-          this._holdTimer = setTimeout(() => {
-            if (this._leftDrag && !this._leftDrag.moved) {
-              this._holdFired = true;
-              emit('classicHold', { x: this._leftDrag.x, y: this._leftDrag.y });
-            }
-          }, 420);
-        }
+        if (e.button === 0) this._leftDrag = { x: e.clientX, y: e.clientY, moved: false };
         if (e.button === 1) { this.orbitDragging = true; e.preventDefault(); }
         if (e.button === 2) emit('rightClick', { x: e.clientX, y: e.clientY });
         return; // left clicks are handled by the canvas click listener
@@ -59,11 +48,8 @@ export class Controls {
     document.addEventListener('mouseup', (e) => {
       if (e.button === 0) {
         this.leftDown = false;
-        clearTimeout(this._holdTimer);
-        // a left-drag orbited the camera (or a hold already acted) — swallow
-        // the click event this release would produce
-        if (this._leftDrag?.moved || this._holdFired) this.suppressNextClick = true;
-        this._holdFired = false;
+        // a left-drag orbited the camera — swallow the click it would produce
+        if (this._leftDrag?.moved) this.suppressNextClick = true;
         this._leftDrag = null;
       }
       if (e.button === 2) this.rightDown = false;
@@ -82,7 +68,6 @@ export class Controls {
           if (!this._leftDrag.moved &&
               Math.hypot(e.clientX - this._leftDrag.x, e.clientY - this._leftDrag.y) > 6) {
             this._leftDrag.moved = true;
-            clearTimeout(this._holdTimer); // a drag is camera orbit, not a hold
           }
           if (this._leftDrag.moved) { this.orbitDX += e.movementX; this.orbitDY += e.movementY; }
         }

@@ -759,8 +759,8 @@ export class UI {
     </div>
     <div style="margin-top:14px;color:var(--ink-dim);font-size:12px;line-height:1.7">
       <b>First person:</b> WASD move · Mouse look (click to capture) · Space jump · Shift sprint · LMB gather/mine/attack · RMB place/interact · F interact · E inventory · K skills · C crafting · J quests · M map · 1–8 hotbar · V camera<br>
-      <b>Classic view:</b> click to walk · double-click or press-and-hold a tree/rock/block to chop, mine or break it · click creatures/villagers to fight or talk · RMB place block · left-drag, middle-drag or arrow keys orbit · wheel zoom · click the minimap for the big map, then click anywhere explored to auto-walk there<br>
-      <b>Mobile:</b> left stick move · drag right side to look/orbit · Action button holds to gather · Place button builds · in classic view tap to walk, long-press to mine
+      <b>Classic view:</b> click ground to walk · click trees/rocks/creatures/villagers to act · Shift+click (or long-press) a block to break it · RMB place block · left-drag, middle-drag or arrow keys orbit · wheel zoom · click the minimap for the big map, then click anywhere explored to auto-walk there<br>
+      <b>Mobile:</b> left stick move · drag right side to look/orbit · Action button holds to gather · Place button builds · in classic view just tap where you want to go
     </div>`;
     body.querySelectorAll('[data-set]').forEach((inp) => {
       inp.addEventListener('input', () => {
