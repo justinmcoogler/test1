@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Emberveil — Voxel Sandbox RPG</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='1' y='1' width='14' height='14' fill='%23e2b13c'/><rect x='3' y='3' width='10' height='10' fill='%235f9e46'/></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="game-canvas"></canvas>
+
+<!-- ===== Title screen ===== -->
+<div id="title-screen" class="fullscreen-overlay">
+  <div class="title-box">
+    <h1 class="game-title">EMBERVEIL</h1>
+    <p class="game-subtitle">A voxel sandbox role-playing adventure</p>
+    <div id="save-slots" class="save-slots"></div>
+    <div class="title-row">
+      <input id="seed-input" type="text" placeholder="World seed (optional)" autocomplete="off">
+    </div>
+    <p class="title-hint" id="title-hint"></p>
+  </div>
+</div>
+
+<!-- ===== Loading ===== -->
+<div id="loading-screen" class="fullscreen-overlay hidden">
+  <div class="title-box">
+    <h2 id="loading-text">Shaping the world…</h2>
+    <div class="loading-bar"><div id="loading-fill"></div></div>
+  </div>
+</div>
+
+<!-- ===== HUD ===== -->
+<div id="hud" class="hidden">
+  <div id="crosshair">+</div>
+
+  <div id="vitals">
+    <div class="vital-bar hp"><div class="vital-fill" id="hp-fill"></div><span id="hp-text"></span></div>
+    <div class="vital-bar energy"><div class="vital-fill" id="energy-fill"></div><span id="energy-text"></span></div>
+    <div class="vital-bar mana"><div class="vital-fill" id="mana-fill"></div><span id="mana-text"></span></div>
+  </div>
+
+  <div id="compass-wrap"><canvas id="compass" width="260" height="26"></canvas></div>
+  <canvas id="minimap" width="140" height="140"></canvas>
+
+  <div id="quest-tracker"></div>
+  <div id="interact-prompt" class="hidden"></div>
+  <div id="gather-progress" class="hidden"><div id="gather-fill"></div><span id="gather-label"></span></div>
+  <div id="toasts"></div>
+
+  <div id="hotbar"></div>
+
+  <div id="menu-buttons">
+    <button class="menu-btn" data-win="inventory" title="Inventory (E)">🎒</button>
+    <button class="menu-btn" data-win="skills" title="Skills (K)">📈</button>
+    <button class="menu-btn" data-win="crafting" title="Crafting (C)">🔨</button>
+    <button class="menu-btn" data-win="quests" title="Quests (J)">📜</button>
+    <button class="menu-btn" data-win="map" title="Map (M)">🗺️</button>
+    <button class="menu-btn" data-win="settings" title="Settings (O)">⚙️</button>
+  </div>
+</div>
+
+<!-- ===== Touch controls ===== -->
+<div id="touch-ui" class="hidden">
+  <div id="joystick-zone"><div id="joystick-base"><div id="joystick-knob"></div></div></div>
+  <div id="touch-buttons">
+    <button id="btn-jump" class="touch-btn">⤒</button>
+    <button id="btn-sprint" class="touch-btn">»</button>
+    <button id="btn-action" class="touch-btn big">✦</button>
+    <button id="btn-place" class="touch-btn">▣</button>
+  </div>
+  <div id="camera-zone"></div>
+</div>
+
+<!-- ===== Windows ===== -->
+<div id="window-root" class="hidden">
+  <div id="game-window">
+    <div id="window-tabs"></div>
+    <button id="window-close">✕</button>
+    <div id="window-body"></div>
+  </div>
+</div>
+
+<!-- ===== Dialogue ===== -->
+<div id="dialogue" class="hidden">
+  <div id="dialogue-name"></div>
+  <div id="dialogue-text"></div>
+  <div id="dialogue-options"></div>
+</div>
+
+<!-- ===== Combat UI ===== -->
+<div id="combat-ui" class="hidden">
+  <div id="turn-order"></div>
+  <div id="combat-banner" class="hidden"></div>
+  <div id="combat-log"></div>
+  <div id="target-info" class="hidden"></div>
+  <div id="combat-actions"></div>
+</div>
+
+<div id="death-screen" class="fullscreen-overlay hidden">
+  <div class="title-box">
+    <h2>You were overwhelmed…</h2>
+    <p id="death-text"></p>
+    <button id="respawn-btn" class="big-btn">Awaken at Brookhollow</button>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

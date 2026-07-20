@@ -1,0 +1,1001 @@
+// All DOM UI: HUD, windows, dialogue, shop, chest, combat interface, labels.
+import { ITEMS } from '../game/items.js';
+import { SKILL_DEFS, SKILL_UNLOCKS, xpForLevel } from '../game/skills.js';
+import { RECIPES, STATION_LABELS, canCraft, craft } from '../game/crafting.js';
+import { EQUIP_SLOTS, EQUIP_LABELS, HOTBAR_SIZE, INV_SIZE } from '../game/inventory.js';
+import { QUESTS } from '../game/quests.js';
+import { NPC_DEFS, DIALOGUES } from '../game/npcs.js';
+import { STATUS_INFO, ABILITIES } from '../game/combat.js';
+import { tileIconDataURL } from '../gfx/textures.js';
+import { CHUNK } from '../world/worldgen.js';
+import { on, emit } from '../core/events.js';
+import { SFX } from '../core/audio.js';
+
+const $ = (id) => document.getElementById(id);
+
+function itemIconHTML(itemId, size = null) {
+  const def = ITEMS[itemId];
+  if (!def) return '?';
+  if (def.tileIcon) {
+    const url = tileIconDataURL(def.tileIcon);
+    if (url) return `<img src="${url}" alt="${def.label}">`;
+  }
+  return def.icon;
+}
+
+export class UI {
+  constructor(game) {
+    this.game = game;
+    this.currentWindow = null;
+    this.selectedInvSlot = null;
+    this.selectedSkill = 'mining';
+    this.selectedRecipe = null;
+    this.combatMode = null;       // null | 'move' | {ability}
+    this.inspectMode = false;
+    this.shopNpc = null;
+    this.chestId = null;
+    this.labelPool = [];
+    this.minimapTiles = new Map(); // chunkKey → canvas
+    this.bindEvents();
+  }
+
+  // ------------------------------------------------------------ boot & events
+  bindEvents() {
+    const g = this.game;
+    $('window-close').addEventListener('click', () => this.closeWindow());
+    document.querySelectorAll('.menu-btn').forEach((b) => {
+      b.addEventListener('click', () => { this.toggleWindow(b.dataset.win); });
+    });
+    on('toggleWindow', (w) => this.toggleWindow(w));
+    on('escapePressed', () => {
+      if (g.dialogueOpen) this.hideDialogue();
+      else if (this.currentWindow) this.closeWindow();
+      else this.toggleWindow('settings');
+    });
+    on('hotbarSelect', (i) => { g.inventory.selected = i; this.renderHotbar(); SFX.uiClick(); });
+    on('hotbarScroll', (dir) => {
+      g.inventory.selected = (g.inventory.selected + dir + HOTBAR_SIZE) % HOTBAR_SIZE;
+      this.renderHotbar();
+    });
+    on('inventoryChanged', () => {
+      this.renderHotbar();
+      if (this.currentWindow === 'inventory') this.renderWindowBody();
+      if (this.chestId) this.renderWindowBody();
+    });
+    on('xpGained', ({ skill, amount }) => {
+      this.toast(`+${amount} ${SKILL_DEFS[skill].label} XP`, 'xp');
+      if (this.currentWindow === 'skills') this.renderWindowBody();
+    });
+    on('levelUp', ({ skill, level }) => {
+      this.toast(`⭐ ${SKILL_DEFS[skill].label} level ${level}!`, 'levelup');
+      SFX.levelUp();
+    });
+    on('itemGained', ({ item, qty }) => {
+      const def = ITEMS[item];
+      if (def) this.toast(`+${qty} ${def.label}`, item === 'coin' ? 'gold' : '');
+    });
+    on('inventoryFull', () => this.toast('Inventory full!', 'warn'));
+    on('toolBroke', ({ item }) => { this.toast(`${ITEMS[item].label} broke!`, 'warn'); SFX.toolBreak(); });
+    on('questStarted', ({ quest }) => { this.toast(`📜 Quest started: ${quest.name}`, 'gold'); this.renderQuestTracker(); });
+    on('questCompleted', ({ quest }) => { this.toast(`✅ Quest complete: ${quest.name}`, 'gold'); SFX.questDone(); this.renderQuestTracker(); });
+    on('questChanged', () => { this.renderQuestTracker(); if (this.currentWindow === 'quests') this.renderWindowBody(); });
+    on('questStageAdvanced', ({ stage }) => this.toast(`▸ ${stage.text}`, 'gold'));
+    on('combatLog', () => this.renderCombatLog());
+    on('combatUpdate', () => this.renderCombat());
+    on('combatBanner', (text) => this.showBanner(text));
+    on('combatStart', () => { this.combatMode = null; this.inspectMode = false; });
+    on('nodeRespawned', () => SFX.respawnNode());
+  }
+
+  // ------------------------------------------------------------ HUD
+  renderVitals() {
+    const p = this.game.player;
+    $('hp-fill').style.width = `${(p.hp / p.maxHp) * 100}%`;
+    $('hp-text').textContent = `❤ ${Math.ceil(p.hp)}/${p.maxHp}`;
+    $('energy-fill').style.width = `${(p.energy / p.maxEnergy) * 100}%`;
+    $('energy-text').textContent = `⚡ ${Math.floor(p.energy)}`;
+    $('mana-fill').style.width = `${(p.mana / p.maxMana) * 100}%`;
+    $('mana-text').textContent = `✦ ${Math.floor(p.mana)}/${p.maxMana}`;
+  }
+
+  renderHotbar() {
+    const inv = this.game.inventory;
+    const bar = $('hotbar');
+    if (bar.childElementCount !== HOTBAR_SIZE) {
+      bar.innerHTML = '';
+      for (let i = 0; i < HOTBAR_SIZE; i++) {
+        const el = document.createElement('div');
+        el.className = 'hotbar-slot';
+        el.addEventListener('click', () => { inv.selected = i; this.renderHotbar(); });
+        bar.appendChild(el);
+      }
+    }
+    for (let i = 0; i < HOTBAR_SIZE; i++) {
+      const el = bar.children[i];
+      const s = inv.slots[i];
+      el.classList.toggle('selected', inv.selected === i);
+      let html = `<span class="key">${i + 1}</span>`;
+      if (s) {
+        const def = ITEMS[s.item];
+        html += itemIconHTML(s.item);
+        if (s.qty > 1) html += `<span class="qty">${s.qty}</span>`;
+        if (s.dur != null && def.dur) {
+          html += `<span class="dur"><div style="width:${(s.dur / def.dur) * 100}%"></div></span>`;
+        }
+      }
+      el.innerHTML = html;
+    }
+  }
+
+  toast(text, cls = '') {
+    const t = document.createElement('div');
+    t.className = `toast ${cls}`;
+    t.textContent = text;
+    $('toasts').appendChild(t);
+    setTimeout(() => t.remove(), 2600);
+    while ($('toasts').childElementCount > 6) $('toasts').firstChild.remove();
+    if (cls === 'xp') SFX.xp();
+  }
+
+  renderQuestTracker() {
+    const el = $('quest-tracker');
+    const act = this.game.quests.active();
+    if (!act.length) { el.innerHTML = '<div class="qt-name">No active quest</div><div class="qt-progress">Talk to Elder Maren in Brookhollow</div>'; return; }
+    const q = act[0];
+    const stage = this.game.quests.currentStage(q);
+    const prog = this.game.quests.stageProgressText(q);
+    el.innerHTML = `<div class="qt-name">${q.name}</div>
+      <div class="qt-obj">${stage ? stage.text : ''}</div>
+      ${prog ? `<div class="qt-progress">${prog}</div>` : ''}`;
+  }
+
+  setPrompt(text) {
+    const el = $('interact-prompt');
+    if (!text) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    el.textContent = text;
+  }
+
+  setGatherProgress(frac, label) {
+    const el = $('gather-progress');
+    if (frac == null) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    $('gather-fill').style.width = `${frac * 100}%`;
+    $('gather-label').textContent = label || '';
+  }
+
+  drawCompass() {
+    const canvas = $('compass');
+    const ctx = canvas.getContext('2d');
+    const yaw = this.game.player.yaw;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    const dirs = [['N', 0], ['E', Math.PI / 2], ['S', Math.PI], ['W', -Math.PI / 2]];
+    // heading: yaw 0 → -Z (north)
+    for (const [label, ang] of dirs) {
+      let rel = ang - (-this.game.player.yaw);
+      while (rel > Math.PI) rel -= Math.PI * 2;
+      while (rel < -Math.PI) rel += Math.PI * 2;
+      const x = canvas.width / 2 + (rel / (Math.PI / 2)) * 60;
+      if (x > 4 && x < canvas.width - 4) {
+        ctx.fillStyle = label === 'N' ? '#e2b13c' : '#cfcdc4';
+        ctx.fillText(label, x, 18);
+      }
+    }
+    ctx.fillStyle = '#fff';
+    ctx.fillText('▾', canvas.width / 2, 9);
+  }
+
+  chunkTileCanvas(cx, cz) {
+    const key = `${cx},${cz}`;
+    let t = this.minimapTiles.get(key);
+    if (t) return t;
+    const gen = this.game.world.gen;
+    const c = document.createElement('canvas');
+    c.width = CHUNK; c.height = CHUNK;
+    const ctx = c.getContext('2d');
+    const img = ctx.createImageData(CHUNK, CHUNK);
+    for (let lz = 0; lz < CHUNK; lz++) {
+      for (let lx = 0; lx < CHUNK; lx++) {
+        const wx = cx * CHUNK + lx, wz = cz * CHUNK + lz;
+        const h = gen.heightAt(wx, wz);
+        const biome = gen.biomeAt(wx, wz);
+        let rgb;
+        if (h <= 28) rgb = [52, 88, 148];
+        else if (biome.surface === 'sand') rgb = [214, 196, 138];
+        else if (biome.surface === 'snow_grass') rgb = [222, 230, 236];
+        else if (biome.surface === 'stone') rgb = [128, 130, 134];
+        else if (biome.surface === 'ashen_soil') rgb = [90, 84, 80];
+        else if (biome.surface === 'corrupt_soil') rgb = [92, 70, 104];
+        else rgb = [86, 140, 70];
+        const shade = 0.75 + ((h - 24) / 36) * 0.5;
+        const i = (lz * CHUNK + lx) * 4;
+        img.data[i] = rgb[0] * shade;
+        img.data[i + 1] = rgb[1] * shade;
+        img.data[i + 2] = rgb[2] * shade;
+        img.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    this.minimapTiles.set(key, c);
+    return c;
+  }
+
+  drawMinimap() {
+    const canvas = $('minimap');
+    const ctx = canvas.getContext('2d');
+    const p = this.game.player;
+    const scale = 1.4; // px per block
+    ctx.fillStyle = '#101318';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const half = canvas.width / 2;
+    const pcx = Math.floor(p.x / CHUNK), pcz = Math.floor(p.z / CHUNK);
+    for (let dz = -4; dz <= 4; dz++) {
+      for (let dx = -4; dx <= 4; dx++) {
+        const cx = pcx + dx, cz = pcz + dz;
+        if (!this.game.discovered.has(`${cx},${cz}`)) continue;
+        const tile = this.chunkTileCanvas(cx, cz);
+        ctx.save();
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(
+          tile,
+          half + (cx * CHUNK - p.x) * scale,
+          half + (cz * CHUNK - p.z) * scale,
+          CHUNK * scale, CHUNK * scale
+        );
+        ctx.restore();
+      }
+    }
+    // quest marker
+    const mk = this.game.quests.trackedMarker(this.game.world.markers);
+    if (mk) {
+      const mx = half + (mk.pos[0] - p.x) * scale, mz = half + (mk.pos[2] - p.z) * scale;
+      const cx2 = Math.max(6, Math.min(canvas.width - 6, mx));
+      const cz2 = Math.max(6, Math.min(canvas.height - 6, mz));
+      ctx.fillStyle = '#e2b13c';
+      ctx.beginPath();
+      ctx.arc(cx2, cz2, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000'; ctx.stroke();
+    }
+    // player arrow
+    ctx.save();
+    ctx.translate(half, half);
+    ctx.rotate(-p.yaw);
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.moveTo(0, -6); ctx.lineTo(4, 5); ctx.lineTo(-4, 5);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  // ------------------------------------------------------------ windows
+  toggleWindow(name) {
+    if (this.currentWindow === name) { this.closeWindow(); return; }
+    this.openWindow(name);
+  }
+
+  openWindow(name) {
+    this.currentWindow = name;
+    this.shopNpc = null;
+    this.chestId = null;
+    $('window-root').classList.remove('hidden');
+    this.game.onWindowOpened();
+    this.renderTabs();
+    this.renderWindowBody();
+    SFX.uiOpen();
+  }
+
+  closeWindow() {
+    if (!this.currentWindow) return;
+    this.currentWindow = null;
+    this.shopNpc = null;
+    this.chestId = null;
+    $('window-root').classList.add('hidden');
+    this.game.onWindowClosed();
+  }
+
+  renderTabs() {
+    const tabs = [
+      ['inventory', '🎒 Inventory'], ['skills', '📈 Skills'], ['crafting', '🔨 Crafting'],
+      ['quests', '📜 Quests'], ['map', '🗺️ Map'], ['settings', '⚙️ Settings'],
+    ];
+    $('window-tabs').innerHTML = tabs.map(([id, label]) =>
+      `<button class="win-tab ${this.currentWindow === id ? 'active' : ''}" data-tab="${id}">${label}</button>`).join('');
+    $('window-tabs').querySelectorAll('.win-tab').forEach((b) => {
+      b.addEventListener('click', () => { this.currentWindow = b.dataset.tab; this.shopNpc = null; this.chestId = null; this.renderTabs(); this.renderWindowBody(); });
+    });
+  }
+
+  renderWindowBody() {
+    const body = $('window-body');
+    if (this.shopNpc) return this.renderShop(body);
+    if (this.chestId) return this.renderChest(body);
+    switch (this.currentWindow) {
+      case 'inventory': return this.renderInventory(body);
+      case 'skills': return this.renderSkills(body);
+      case 'crafting': return this.renderCrafting(body);
+      case 'quests': return this.renderQuests(body);
+      case 'map': return this.renderMap(body);
+      case 'settings': return this.renderSettings(body);
+    }
+  }
+
+  // ---- inventory ----
+  renderInventory(body) {
+    const inv = this.game.inventory;
+    const est = inv.equipStats();
+    const skills = this.game.skills;
+    let grid = '';
+    for (let i = 0; i < INV_SIZE; i++) {
+      const s = inv.slots[i];
+      const def = s ? ITEMS[s.item] : null;
+      grid += `<div class="inv-slot ${i < HOTBAR_SIZE ? 'hotbar-mark' : ''} ${this.selectedInvSlot === i ? 'selected' : ''}" data-idx="${i}" title="${def ? def.label : ''}">
+        ${s ? itemIconHTML(s.item) : ''}
+        ${s && s.qty > 1 ? `<span class="qty">${s.qty}</span>` : ''}
+        ${s && s.dur != null && def.dur ? `<span class="dur"><div style="width:${(s.dur / def.dur) * 100}%"></div></span>` : ''}
+      </div>`;
+    }
+    let equip = '';
+    for (const slot of EQUIP_SLOTS) {
+      const e = inv.equipment[slot];
+      equip += `<div class="equip-row">
+        <span class="eq-label">${EQUIP_LABELS[slot]}</span>
+        <div class="eq-slot" data-eq="${slot}" title="${e ? ITEMS[e.item].label : 'Empty'}">${e ? itemIconHTML(e.item) : ''}</div>
+        <span class="eq-item">${e ? ITEMS[e.item].label : '—'}</span>
+      </div>`;
+    }
+    const sel = this.selectedInvSlot != null ? inv.slots[this.selectedInvSlot] : null;
+    const selDef = sel ? ITEMS[sel.item] : null;
+    let actions = '<div class="item-actions"><span class="ia-desc">Select an item…</span></div>';
+    if (selDef) {
+      const canUse = selDef.type === 'food' || selDef.type === 'potion' || sel.item === 'waterlogged_cache';
+      const canEquip = ['weapon', 'armor', 'accessory', 'utility'].includes(selDef.type);
+      const statline = ['atk', 'acc', 'crit', 'armor', 'evasion', 'speed', 'magic', 'magicResist', 'mana', 'hp', 'block', 'heal']
+        .filter((k) => selDef[k]).map((k) => `${k} ${selDef[k] > 0 ? '+' : ''}${selDef[k]}`).join(' · ');
+      actions = `<div class="item-actions">
+        <span class="ia-name">${selDef.label}</span>
+        <div class="ia-desc">${selDef.desc || ''} ${statline ? `<br>${statline}` : ''} ${selDef.gather ? `· +${Math.round(selDef.gather * 100)}% gathering` : ''}</div>
+        ${canUse ? '<button data-act="use">Use</button>' : ''}
+        ${canEquip ? '<button data-act="equip">Equip</button>' : ''}
+        <button data-act="drop">Drop</button>
+      </div>`;
+    }
+    body.innerHTML = `<div class="inv-layout">
+      <div style="flex:1;min-width:300px">
+        <div style="margin-bottom:8px;color:var(--gold)">🪙 ${inv.coins} coins</div>
+        <div class="inv-grid">${grid}</div>
+        ${actions}
+      </div>
+      <div class="equip-panel">
+        <h3 style="color:var(--gold);font-size:14px;margin-bottom:8px">Equipment</h3>
+        ${equip}
+        <div class="stat-block">
+          Armor ${est.armor} · Evasion ${est.evasion} · Crit +${est.crit}%<br>
+          Speed ${est.speed >= 0 ? '+' : ''}${est.speed} · Magic +${est.magic} · Block ${est.block}%<br>
+          Max HP ${30 + skills.level('vitality') * 2 + est.hp} · Gathering +${Math.round(est.gather * 100)}%
+        </div>
+      </div>
+    </div>`;
+    body.querySelectorAll('.inv-slot').forEach((el) => {
+      el.addEventListener('click', () => {
+        const idx = parseInt(el.dataset.idx, 10);
+        if (this.selectedInvSlot != null && this.selectedInvSlot !== idx && inv.slots[this.selectedInvSlot]) {
+          inv.moveSlot(this.selectedInvSlot, idx);
+          this.selectedInvSlot = null;
+        } else {
+          this.selectedInvSlot = this.selectedInvSlot === idx ? null : idx;
+        }
+        this.renderWindowBody();
+      });
+    });
+    body.querySelectorAll('.eq-slot').forEach((el) => {
+      el.addEventListener('click', () => { inv.unequip(el.dataset.eq); this.renderWindowBody(); });
+    });
+    body.querySelectorAll('[data-act]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const idx = this.selectedInvSlot;
+        if (idx == null) return;
+        const act = b.dataset.act;
+        if (act === 'use') this.game.useItem(idx);
+        else if (act === 'equip') {
+          const wasWeapon = ITEMS[inv.slots[idx].item]?.type === 'weapon';
+          if (inv.equipFromSlot(idx) && wasWeapon) emit('equippedWeapon', {});
+        }
+        else if (act === 'drop') inv.removeSlot(idx, inv.slots[idx]?.qty || 1);
+        this.selectedInvSlot = null;
+        this.renderWindowBody();
+      });
+    });
+  }
+
+  // ---- skills ----
+  renderSkills(body) {
+    const skills = this.game.skills;
+    const groups = { Gathering: [], Crafting: [], Combat: [] };
+    for (const [key, def] of Object.entries(SKILL_DEFS)) groups[def.group].push(key);
+    let html = `<div style="margin-bottom:10px;color:var(--ink-dim)">Total level: <b style="color:var(--gold)">${skills.totalLevel()}</b></div><div class="skill-groups">`;
+    for (const [group, keys] of Object.entries(groups)) {
+      html += `<div class="skill-group"><h3>${group}</h3><div class="skill-grid">`;
+      for (const key of keys) {
+        const def = SKILL_DEFS[key];
+        const lvl = skills.level(key);
+        html += `<div class="skill-card ${this.selectedSkill === key ? 'selected' : ''}" data-skill="${key}">
+          <div class="sk-head"><span>${def.icon} ${def.label}</span><span class="sk-lvl">${lvl}</span></div>
+          <div class="sk-bar"><div style="width:${skills.progress(key) * 100}%"></div></div>
+        </div>`;
+      }
+      html += '</div></div>';
+    }
+    html += '</div>';
+    const sel = this.selectedSkill;
+    if (sel) {
+      const def = SKILL_DEFS[sel];
+      const lvl = skills.level(sel);
+      const xp = skills.xp[sel];
+      const next = lvl < 99 ? xpForLevel(lvl + 1) - xp : 0;
+      html += `<div class="skill-detail" style="margin-top:14px">
+        <h3>${def.icon} ${def.label} — Level ${lvl}</h3>
+        <div class="sd-desc">${def.desc}<br>XP: ${xp.toLocaleString()}${lvl < 99 ? ` · ${next.toLocaleString()} to level ${lvl + 1}` : ' · MAX'}</div>
+        ${(SKILL_UNLOCKS[sel] || []).map(([ulvl, text]) =>
+          `<div class="unlock-row ${lvl >= ulvl ? 'unlocked' : 'locked'}"><span class="ul-lvl">Lv ${ulvl}</span><span>${text}</span></div>`).join('')}
+      </div>`;
+    }
+    body.innerHTML = html;
+    body.querySelectorAll('.skill-card').forEach((el) => {
+      el.addEventListener('click', () => { this.selectedSkill = el.dataset.skill; this.renderWindowBody(); });
+    });
+  }
+
+  // ---- crafting ----
+  renderCrafting(body) {
+    const g = this.game;
+    const stations = g.nearbyStations();
+    const discovered = g.discoveredItems;
+    const groups = new Map();
+    for (const rec of RECIPES) {
+      if (rec.discover && !discovered.has(rec.discover)) continue;
+      const k = rec.station || 'hand';
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(rec);
+    }
+    let list = `<div class="craft-station-note">Nearby stations: ${stations.size ? [...stations].map((s) => STATION_LABELS[s]).join(', ') : 'none (stand near one to use it)'}</div>`;
+    for (const [k, recs] of groups) {
+      const stationKey = k === 'hand' ? null : k;
+      list += `<div class="craft-group-title">${STATION_LABELS[stationKey]}</div>`;
+      for (const rec of recs) {
+        const check = canCraft(rec, g.inventory, g.skills, stations);
+        const def = ITEMS[rec.out];
+        list += `<div class="craft-row ${this.selectedRecipe === rec.id ? 'selected' : ''} ${check.ok ? '' : 'unavailable'}" data-rec="${rec.id}">
+          <span class="cr-icon">${itemIconHTML(rec.out)}</span>
+          <span>${def.label}${rec.outQty > 1 ? ` ×${rec.outQty}` : ''}</span>
+        </div>`;
+      }
+    }
+    const rec = RECIPES.find((r) => r.id === this.selectedRecipe);
+    let detail = '<div class="craft-detail"><span style="color:var(--ink-dim)">Select a recipe…</span></div>';
+    if (rec) {
+      const check = canCraft(rec, g.inventory, g.skills, stations);
+      const def = ITEMS[rec.out];
+      detail = `<div class="craft-detail">
+        <div class="cd-name">${itemIconHTML(rec.out)} ${def.label}${rec.outQty > 1 ? ` ×${rec.outQty}` : ''}</div>
+        <div class="cd-req">${STATION_LABELS[rec.station]} · ${SKILL_DEFS[rec.skill].label} ${rec.level} · +${rec.xp} XP</div>
+        <div class="ia-desc">${def.desc || ''}</div>
+        ${rec.inputs.map((inp) => {
+          const have = g.inventory.count(inp.item);
+          return `<div class="cd-input ${have >= inp.qty ? 'have' : 'missing'}"><span>${ITEMS[inp.item].label}</span><span>${have}/${inp.qty}</span></div>`;
+        }).join('')}
+        <div style="margin-top:10px">
+          <button data-craft="1" ${check.ok ? '' : 'disabled'}>Craft</button>
+          <button data-craft="5" ${check.ok ? '' : 'disabled'}>Craft ×5</button>
+        </div>
+        ${check.ok ? '' : `<div style="color:var(--bad);font-size:12px;margin-top:8px">${check.reason}</div>`}
+      </div>`;
+    }
+    body.innerHTML = `<div class="craft-layout"><div class="craft-list">${list}</div>${detail}</div>`;
+    body.querySelectorAll('.craft-row').forEach((el) => {
+      el.addEventListener('click', () => { this.selectedRecipe = el.dataset.rec; this.renderWindowBody(); });
+    });
+    body.querySelectorAll('[data-craft]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const n = parseInt(b.dataset.craft, 10);
+        for (let i = 0; i < n; i++) {
+          const res = craft(rec, g.inventory, g.skills, g.nearbyStations());
+          if (!res.ok) break;
+          if (rec.station === 'campfire' && ITEMS[rec.out].type === 'food') emit('cooked', { item: rec.out });
+        }
+        SFX.uiClick();
+        this.renderWindowBody();
+      });
+    });
+  }
+
+  // ---- quests ----
+  renderQuests(body) {
+    const ql = this.game.quests;
+    const active = ql.active();
+    const done = ql.completed();
+    let html = '<h3 style="color:var(--gold);margin-bottom:10px">Active Quests</h3>';
+    if (!active.length) html += '<div style="color:var(--ink-dim);margin-bottom:12px">Nothing right now — talk to the villagers of Brookhollow.</div>';
+    for (const q of active) {
+      const st = ql.state[q.id];
+      html += `<div class="quest-entry"><h4>${q.name}</h4>
+        ${q.stages.map((s, i) => `<div class="quest-stage ${i < st.stage ? 'done-stage' : i === st.stage ? 'current' : ''}">
+          ${i < st.stage ? '✓' : i === st.stage ? '▸' : '·'} ${s.text} ${i === st.stage ? ql.stageProgressText(q) : ''}
+        </div>`).join('')}
+      </div>`;
+    }
+    if (done.length) {
+      html += '<h3 style="color:var(--good);margin:14px 0 10px">Completed</h3>';
+      for (const q of done) html += `<div class="quest-entry done"><h4>${q.name}</h4></div>`;
+    }
+    body.innerHTML = html;
+  }
+
+  // ---- map ----
+  renderMap(body) {
+    body.innerHTML = '<canvas id="map-canvas" width="640" height="480"></canvas><div style="color:var(--ink-dim);font-size:12px;margin-top:6px">Explored terrain · ⭐ Brookhollow · 🟡 quest objective · ▲ you</div>';
+    const canvas = $('map-canvas');
+    const ctx = canvas.getContext('2d');
+    const p = this.game.player;
+    ctx.fillStyle = '#0d1015';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const scale = 0.9;
+    const ox = canvas.width / 2 - p.x * scale, oz = canvas.height / 2 - p.z * scale;
+    ctx.imageSmoothingEnabled = false;
+    for (const key of this.game.discovered) {
+      const [cx, cz] = key.split(',').map(Number);
+      const tile = this.chunkTileCanvas(cx, cz);
+      ctx.drawImage(tile, ox + cx * CHUNK * scale, oz + cz * CHUNK * scale, CHUNK * scale, CHUNK * scale);
+    }
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⭐', ox, oz + 5);
+    const mk = this.game.quests.trackedMarker(this.game.world.markers);
+    if (mk) ctx.fillText('🟡', ox + mk.pos[0] * scale, oz + mk.pos[2] * scale + 5);
+    ctx.save();
+    ctx.translate(ox + p.x * scale, oz + p.z * scale);
+    ctx.rotate(-p.yaw);
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(5, 6); ctx.lineTo(-5, 6); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#000'; ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---- settings ----
+  renderSettings(body) {
+    const s = this.game.settings;
+    const row = (label, control) => `<div class="setting-row"><label>${label}</label>${control}</div>`;
+    const range = (key, min, max, step) =>
+      `<span style="display:flex;align-items:center;gap:6px"><input type="range" data-set="${key}" min="${min}" max="${max}" step="${step}" value="${s[key]}"><span class="set-val">${s[key]}</span></span>`;
+    const check = (key) => `<input type="checkbox" data-set="${key}" ${s[key] ? 'checked' : ''}>`;
+    body.innerHTML = `<div class="settings-grid">
+      ${row('Render distance (chunks)', range('renderDistance', 2, 8, 1))}
+      ${row('Camera sensitivity', range('sensitivity', 0.2, 3, 0.1))}
+      ${row('Invert Y axis', check('invertY'))}
+      ${row('UI scale', range('uiScale', 0.7, 1.6, 0.05))}
+      ${row('Text size', range('textScale', 0.8, 1.5, 0.05))}
+      ${row('Reduced motion', check('reducedMotion'))}
+      ${row('Screen shake', check('screenShake'))}
+      ${row('Colorblind-friendly colors', check('colorblind'))}
+      ${row('Sprint: toggle instead of hold', check('sprintToggle'))}
+      ${row('Left-handed mobile layout', check('leftHanded'))}
+      ${row('Tap to interact (mobile)', check('tapToInteract'))}
+      ${row('Sound effects volume', range('sfxVolume', 0, 1, 0.05))}
+      ${row('Music volume', range('musicVolume', 0, 1, 0.05))}
+    </div>
+    <div class="settings-actions">
+      <button id="btn-save-now">💾 Save game now</button>
+      <button id="btn-to-title">🏠 Save & quit to title</button>
+      <span style="color:var(--ink-dim);font-size:12px;align-self:center" id="save-status"></span>
+    </div>
+    <div style="margin-top:14px;color:var(--ink-dim);font-size:12px;line-height:1.7">
+      <b>Desktop:</b> WASD move · Mouse look (click to capture) · Space jump · Shift sprint · LMB gather/mine/attack · RMB place/interact · F interact · E inventory · K skills · C crafting · J quests · M map · 1–8 hotbar<br>
+      <b>Mobile:</b> left stick move · drag right side to look · ✦ hold to gather / tap to interact · ▣ place block
+    </div>`;
+    body.querySelectorAll('[data-set]').forEach((inp) => {
+      inp.addEventListener('input', () => {
+        const key = inp.dataset.set;
+        s[key] = inp.type === 'checkbox' ? inp.checked : parseFloat(inp.value);
+        if (inp.type === 'range') inp.nextElementSibling.textContent = s[key];
+        this.game.applySettings();
+      });
+    });
+    $('btn-save-now').addEventListener('click', () => {
+      this.game.saveGame();
+      $('save-status').textContent = 'Saved ✓';
+      setTimeout(() => { const el = $('save-status'); if (el) el.textContent = ''; }, 1800);
+    });
+    $('btn-to-title').addEventListener('click', () => { this.game.saveGame(); location.reload(); });
+  }
+
+  // ---- shop ----
+  openShop(npcId) {
+    this.shopNpc = npcId;
+    this.currentWindow = 'inventory';
+    $('window-root').classList.remove('hidden');
+    this.game.onWindowOpened();
+    $('window-tabs').innerHTML = `<button class="win-tab active">🛒 ${NPC_DEFS[npcId].label}</button>`;
+    this.renderWindowBody();
+  }
+
+  renderShop(body) {
+    const npc = NPC_DEFS[this.shopNpc];
+    const inv = this.game.inventory;
+    const sells = npc.shop.sells.map((s) => `<div class="shop-row">
+      <span>${itemIconHTML(s.item)} ${ITEMS[s.item].label}</span>
+      <span>🪙 ${s.price} <button data-buy="${s.item}" data-price="${s.price}" ${inv.coins < s.price ? 'disabled' : ''}>Buy</button></span>
+    </div>`).join('');
+    const sellable = Object.entries(npc.shop.buys)
+      .filter(([item]) => inv.count(item) > 0)
+      .map(([item, price]) => `<div class="shop-row">
+        <span>${itemIconHTML(item)} ${ITEMS[item].label} ×${inv.count(item)}</span>
+        <span>🪙 ${price} <button data-sell="${item}" data-price="${price}">Sell</button>
+        <button data-sellall="${item}" data-price="${price}">All</button></span>
+      </div>`).join('');
+    body.innerHTML = `<div style="margin-bottom:10px;color:var(--gold)">🪙 Your coins: ${inv.coins}</div>
+      <div class="shop-cols">
+        <div class="shop-col"><h4>For sale</h4>${sells}</div>
+        <div class="shop-col"><h4>Tam buys</h4>${sellable || '<span style="color:var(--ink-dim)">Nothing Tam wants right now.</span>'}</div>
+      </div>`;
+    body.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', () => {
+      const price = parseInt(b.dataset.price, 10);
+      if (inv.coins >= price) { inv.remove('coin', price); inv.add(b.dataset.buy, 1); SFX.pickup(); }
+      this.renderWindowBody();
+    }));
+    body.querySelectorAll('[data-sell]').forEach((b) => b.addEventListener('click', () => {
+      inv.remove(b.dataset.sell, 1); inv.add('coin', parseInt(b.dataset.price, 10));
+      this.renderWindowBody();
+    }));
+    body.querySelectorAll('[data-sellall]').forEach((b) => b.addEventListener('click', () => {
+      const n = inv.count(b.dataset.sellall);
+      inv.remove(b.dataset.sellall, n); inv.add('coin', parseInt(b.dataset.price, 10) * n);
+      this.renderWindowBody();
+    }));
+  }
+
+  // ---- chest ----
+  openChestUI(chestId) {
+    this.chestId = chestId;
+    this.currentWindow = 'inventory';
+    $('window-root').classList.remove('hidden');
+    this.game.onWindowOpened();
+    $('window-tabs').innerHTML = `<button class="win-tab active">📦 Storage</button>`;
+    this.renderWindowBody();
+  }
+
+  renderChest(body) {
+    const contents = this.game.world.openChest(this.chestId);
+    const inv = this.game.inventory;
+    const rows = contents.map((c, i) => `<div class="shop-row">
+      <span>${itemIconHTML(c.item)} ${ITEMS[c.item]?.label || c.item} ×${c.qty}</span>
+      <button data-take="${i}">Take</button>
+    </div>`).join('');
+    const invRows = inv.slots.map((s, i) => s ? `<div class="shop-row">
+      <span>${itemIconHTML(s.item)} ${ITEMS[s.item].label} ×${s.qty}</span>
+      <button data-store="${i}">Store</button>
+    </div>` : '').join('');
+    body.innerHTML = `<div class="shop-cols">
+      <div class="shop-col"><h4>Chest</h4>${rows || '<span style="color:var(--ink-dim)">Empty.</span>'}
+        ${contents.length ? '<button id="take-all" style="margin-top:8px" class="dialog-btn">Take All</button>' : ''}</div>
+      <div class="shop-col"><h4>Your pack</h4>${invRows || '<span style="color:var(--ink-dim)">Empty.</span>'}</div>
+    </div>`;
+    body.querySelectorAll('[data-take]').forEach((b) => b.addEventListener('click', () => {
+      const i = parseInt(b.dataset.take, 10);
+      const c = contents[i];
+      const added = inv.add(c.item, c.qty);
+      c.qty -= added;
+      if (c.qty <= 0) contents.splice(i, 1);
+      SFX.pickup();
+      this.renderWindowBody();
+    }));
+    body.querySelector('#take-all')?.addEventListener('click', () => {
+      for (let i = contents.length - 1; i >= 0; i--) {
+        const c = contents[i];
+        const added = inv.add(c.item, c.qty);
+        c.qty -= added;
+        if (c.qty <= 0) contents.splice(i, 1);
+      }
+      SFX.pickup();
+      this.renderWindowBody();
+    });
+    body.querySelectorAll('[data-store]').forEach((b) => b.addEventListener('click', () => {
+      const i = parseInt(b.dataset.store, 10);
+      const s = inv.slots[i];
+      if (!s) return;
+      const existing = contents.find((c) => c.item === s.item);
+      if (existing) existing.qty += s.qty;
+      else contents.push({ item: s.item, qty: s.qty });
+      inv.slots[i] = null;
+      emit('inventoryChanged');
+      this.renderWindowBody();
+    }));
+  }
+
+  // ------------------------------------------------------------ dialogue
+  showDialogue(nodeId) {
+    const g = this.game;
+    let node = DIALOGUES[nodeId];
+    if (!node) return this.hideDialogue();
+    g.dialogueOpen = true;
+    g.onWindowOpened();
+    const npcId = node.speaker;
+    const npc = NPC_DEFS[npcId];
+    let text, options;
+    if (node.dynamic) {
+      ({ text, options } = this.buildQuestHub(npcId));
+    } else {
+      text = node.text();
+      options = node.options;
+    }
+    $('dialogue').classList.remove('hidden');
+    $('dialogue-name').textContent = `${npc.label} — ${npc.role}`;
+    $('dialogue-text').textContent = text;
+    $('dialogue-options').innerHTML = '';
+    for (const opt of options) {
+      const b = document.createElement('button');
+      b.className = `dialog-btn ${opt.cls || ''}`;
+      b.textContent = opt.label;
+      b.addEventListener('click', () => {
+        SFX.uiClick();
+        if (opt.action === 'close') this.hideDialogue();
+        else if (opt.action === 'shop') { this.hideDialogue(); this.openShop(npcId); }
+        else if (opt.action?.startsWith('startQuest:')) {
+          const qid = opt.action.slice(11);
+          g.quests.start(qid);
+          const q = QUESTS.find((qq) => qq.id === qid);
+          $('dialogue-text').textContent = q.intro;
+          $('dialogue-options').innerHTML = '';
+          const ok = document.createElement('button');
+          ok.className = 'dialog-btn';
+          ok.textContent = 'I\'ll get to it.';
+          ok.addEventListener('click', () => this.hideDialogue());
+          $('dialogue-options').appendChild(ok);
+        } else if (opt.action?.startsWith('turnIn:')) {
+          const qid = opt.action.slice(7);
+          const q = QUESTS.find((qq) => qq.id === qid);
+          g.quests.turnIn(q, g.skills);
+          $('dialogue-text').textContent = q.outro;
+          $('dialogue-options').innerHTML = '';
+          const ok = document.createElement('button');
+          ok.className = 'dialog-btn';
+          ok.textContent = 'Thank you.';
+          ok.addEventListener('click', () => this.hideDialogue());
+          $('dialogue-options').appendChild(ok);
+        } else if (opt.next) {
+          this.showDialogue(opt.next);
+        } else this.hideDialogue();
+      });
+      $('dialogue-options').appendChild(b);
+    }
+  }
+
+  buildQuestHub(npcId) {
+    const ql = this.game.quests;
+    const options = [];
+    for (const q of QUESTS.filter((q) => q.giver === npcId)) {
+      if (ql.readyToTurnIn(q, npcId)) {
+        options.push({ label: `✅ ${q.name} (complete)`, action: `turnIn:${q.id}`, cls: 'quest-ready' });
+      } else if (ql.isAvailable(q)) {
+        options.push({ label: `📜 ${q.name}`, action: `startQuest:${q.id}`, cls: 'quest-offer' });
+      }
+    }
+    const activeHere = ql.activeFrom(npcId).filter((q) => !ql.readyToTurnIn(q, npcId));
+    let text;
+    if (options.length) {
+      text = npcId === 'maren'
+        ? 'There is work that would suit you, if you\'re willing.'
+        : 'Matter of fact, I could use a hand.';
+    } else if (activeHere.length) {
+      const q = activeHere[0];
+      const stage = ql.currentStage(q);
+      text = `How goes it? ${stage ? `You were going to: ${stage.text.toLowerCase()}` : ''}`;
+    } else {
+      text = npcId === 'maren'
+        ? 'The valley provides for the diligent. Explore, practice your crafts — and stay clear of the deep wilds until you\'re ready.'
+        : 'Nothing today. Coin talks though — bring me goods!';
+    }
+    options.push({ label: 'Back.', next: npcId === 'maren' ? 'maren_root' : 'tam_root' });
+    return { text, options };
+  }
+
+  hideDialogue() {
+    $('dialogue').classList.add('hidden');
+    this.game.dialogueOpen = false;
+    this.game.onWindowClosed();
+  }
+
+  // ------------------------------------------------------------ combat UI
+  showCombat() {
+    $('combat-ui').classList.remove('hidden');
+    this.renderCombat();
+    this.renderCombatLog();
+  }
+
+  hideCombat() {
+    $('combat-ui').classList.add('hidden');
+    $('target-info').classList.add('hidden');
+    this.combatMode = null;
+  }
+
+  showBanner(text) {
+    const el = $('combat-banner');
+    el.textContent = text;
+    el.classList.remove('hidden');
+    SFX.bossRoar();
+    setTimeout(() => el.classList.add('hidden'), 2600);
+  }
+
+  renderCombat() {
+    const combat = this.game.combat;
+    if (!combat.active) return;
+    // turn order
+    const cur = combat.current();
+    $('turn-order').innerHTML = combat.combatants.map((c) => `
+      <div class="turn-chip ${c === cur ? 'current' : ''} ${c.hp <= 0 ? 'dead' : ''}">
+        <span>${c.kind === 'player' ? 'You' : c.label}</span>
+        <div class="tc-hp"><div style="width:${(c.hp / c.maxHp) * 100}%"></div></div>
+        <span style="font-size:9px">${c.statuses.map((s) => STATUS_INFO[s.id]?.icon || '').join('')}</span>
+      </div>`).join('');
+
+    const isPlayerTurn = cur === combat.playerC && !combat.pendingEnd;
+    const p = this.game.player;
+    let html = '';
+    if (isPlayerTurn) {
+      const abilities = combat.playerAbilities();
+      html += `<button class="combat-btn ${this.combatMode === 'move' ? 'active-mode' : ''}" data-cbt="move" ${combat.usedMove ? 'disabled' : ''}>🥾 Move<span class="cb-sub">${combat.usedMove ? 'used' : `${combat.moveAllowance(combat.playerC)} tiles`}</span></button>`;
+      for (const ab of abilities) {
+        const cost = ab.energy ? `⚡${ab.energy}` : ab.mana ? `✦${ab.mana}` : '';
+        const active = this.combatMode && this.combatMode.ability === ab.id;
+        html += `<button class="combat-btn ${active ? 'active-mode' : ''}" data-cbt="ability" data-ab="${ab.id}" ${ab.blocked ? 'disabled' : ''} title="${ab.desc || ''}${ab.blocked ? ' — ' + ab.blocked : ''}">
+          ${ab.label}<span class="cb-sub">${cost}${ab.cdLeft ? ` · CD ${ab.cdLeft}` : ''}</span></button>`;
+      }
+      html += `<button class="combat-btn" data-cbt="defend" ${combat.usedAction ? 'disabled' : ''}>🛡️ Defend<span class="cb-sub">-50% dmg</span></button>`;
+      html += `<button class="combat-btn" data-cbt="item" ${combat.usedAction ? 'disabled' : ''}>🎒 Item</button>`;
+      html += `<button class="combat-btn ${this.inspectMode ? 'active-mode' : ''}" data-cbt="inspect">🔍 Inspect<span class="cb-sub">free</span></button>`;
+      html += `<button class="combat-btn" data-cbt="flee" ${combat.usedAction ? 'disabled' : ''}>🏃 Flee</button>`;
+      html += `<button class="combat-btn end-turn" data-cbt="end">⏭️ End Turn</button>`;
+    } else if (!combat.pendingEnd) {
+      html = `<div class="combat-btn" style="border-color:var(--edge)">⏳ ${cur?.label || ''}'s turn…</div>`;
+    }
+    $('combat-actions').innerHTML = html;
+    $('combat-actions').querySelectorAll('[data-cbt]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const t = b.dataset.cbt;
+        SFX.uiClick();
+        if (t === 'move') { this.combatMode = this.combatMode === 'move' ? null : 'move'; this.inspectMode = false; }
+        else if (t === 'ability') {
+          const id = b.dataset.ab;
+          const ab = ABILITIES[id];
+          this.inspectMode = false;
+          if (ab.style === 'heal') { this.game.combat.doAbility(id, 'player'); this.combatMode = null; }
+          else this.combatMode = this.combatMode?.ability === id ? null : { ability: id };
+        }
+        else if (t === 'defend') { combat.doDefend(); this.combatMode = null; }
+        else if (t === 'item') this.renderCombatItemPicker();
+        else if (t === 'inspect') { this.inspectMode = !this.inspectMode; this.combatMode = null; }
+        else if (t === 'flee') { combat.attemptFlee(); this.combatMode = null; }
+        else if (t === 'end') { this.combatMode = null; combat.endTurn(); }
+        this.renderCombat();
+      });
+    });
+
+    // hint line
+    let hint = $('combat-hint');
+    if (!hint) {
+      hint = document.createElement('div');
+      hint.id = 'combat-hint';
+      $('combat-ui').appendChild(hint);
+    }
+    if (this.combatMode === 'move') hint.textContent = 'Tap a highlighted tile to move';
+    else if (this.combatMode?.ability) hint.textContent = `Tap a highlighted enemy to use ${ABILITIES[this.combatMode.ability].label}`;
+    else if (this.inspectMode) hint.textContent = 'Tap an enemy to inspect it';
+    else if (isPlayerTurn) hint.textContent = `Round ${combat.round} — your turn`;
+    else hint.textContent = '';
+    hint.style.display = hint.textContent ? '' : 'none';
+  }
+
+  renderCombatItemPicker() {
+    let picker = $('combat-item-picker');
+    if (picker) { picker.remove(); return; }
+    picker = document.createElement('div');
+    picker.id = 'combat-item-picker';
+    const inv = this.game.inventory;
+    let any = false;
+    inv.slots.forEach((s, i) => {
+      if (!s) return;
+      const def = ITEMS[s.item];
+      if (def.type !== 'food' && def.type !== 'potion') return;
+      any = true;
+      const b = document.createElement('button');
+      b.className = 'combat-btn';
+      b.innerHTML = `${def.icon} ${def.label}<span class="cb-sub">×${s.qty}${def.heal ? ` · +${def.heal}hp` : ''}</span>`;
+      b.addEventListener('click', () => { this.game.combat.useItem(i); picker.remove(); });
+      picker.appendChild(b);
+    });
+    if (!any) {
+      picker.innerHTML = '<div class="combat-btn">No usable items</div>';
+      setTimeout(() => picker.remove(), 1500);
+    }
+    $('combat-ui').appendChild(picker);
+  }
+
+  renderCombatLog() {
+    const combat = this.game.combat;
+    if (!combat.log) return;
+    $('combat-log').innerHTML = combat.log.slice(-9).map((l) => `<div class="cl-line">${l}</div>`).join('');
+  }
+
+  showTargetInfo(info, preview) {
+    const el = $('target-info');
+    if (!info) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    el.innerHTML = `<h4>${info.label} — ${info.hp}/${info.maxHp} HP</h4>
+      <div class="ti-desc">${info.desc}</div>
+      ${info.stats ? `<div>ATK ${info.stats.atk} · ARM ${info.stats.armor} · EVA ${info.stats.evasion} · SPD ${info.stats.speed}</div>` : ''}
+      ${info.elements ? `<div>Weak: ${info.elements.weak.join(', ') || '—'} · Resists: ${info.elements.resist.join(', ') || '—'}</div>` : ''}
+      ${info.statuses?.length ? `<div>${info.statuses.map((s) => `${STATUS_INFO[s.id]?.icon} ${STATUS_INFO[s.id]?.label} (${s.turns})`).join(' · ')}</div>` : ''}
+      ${info.intent ? `<div style="color:var(--bad);font-weight:600">⚠️ ${info.intent}</div>` : ''}
+      ${preview ? `<div style="margin-top:6px;border-top:1px solid var(--edge);padding-top:6px">
+        Hit ${preview.hitChance}% · Damage ${preview.dmgMin}–${preview.dmgMax} · Crit ${Math.round(preview.crit)}%</div>` : ''}
+      <div style="color:var(--ink-dim);margin-top:4px;font-style:italic">${info.recommend || ''}</div>`;
+  }
+
+  // tiles for renderer overlays during combat
+  getCombatTiles() {
+    const combat = this.game.combat;
+    if (!combat.active) return [];
+    const tiles = [];
+    const cbSafe = this.game.settings.colorblind;
+    if (this.combatMode === 'move') {
+      for (const key of combat.getMovableTiles().keys()) {
+        const t = combat.tiles.get(key);
+        tiles.push({ x: t.gx, y: t.y, z: t.gz, color: cbSafe ? [0.0, 0.45, 0.7] : [0.3, 0.8, 0.35] });
+      }
+    } else if (this.combatMode?.ability) {
+      for (const id of combat.getAbilityTargets(this.combatMode.ability)) {
+        const e = combat.combatants.find((c) => c.id === id);
+        const t = combat.tileAt(e.gx, e.gz);
+        if (t) tiles.push({ x: t.gx, y: t.y, z: t.gz, color: cbSafe ? [0.9, 0.6, 0.0] : [0.9, 0.25, 0.2] });
+      }
+    }
+    for (const t of combat.dangerTiles()) {
+      tiles.push({ x: t.gx, y: t.y, z: t.gz, color: cbSafe ? [0.85, 0.35, 0.0] : [0.95, 0.55, 0.1] });
+    }
+    // current combatant tile
+    const cur = combat.current();
+    if (cur) {
+      const t = combat.tileAt(cur.gx, cur.gz);
+      if (t) tiles.push({ x: t.gx, y: t.y, z: t.gz, color: [0.9, 0.85, 0.4] });
+    }
+    return tiles;
+  }
+
+  // ------------------------------------------------------------ world labels
+  updateLabels(labels) {
+    // labels: [{x,y,z,name,sub,hpFrac,intent}] — projected via renderer
+    const renderer = this.game.renderer;
+    const hud = $('hud');
+    while (this.labelPool.length < labels.length) {
+      const el = document.createElement('div');
+      el.className = 'world-label';
+      hud.appendChild(el);
+      this.labelPool.push(el);
+    }
+    for (let i = 0; i < this.labelPool.length; i++) {
+      const el = this.labelPool[i];
+      const l = labels[i];
+      if (!l) { el.style.display = 'none'; continue; }
+      const pr = renderer.project(l.x, l.y, l.z);
+      if (!pr || pr[2] > 40) { el.style.display = 'none'; continue; }
+      el.style.display = '';
+      el.style.left = `${pr[0]}px`;
+      el.style.top = `${pr[1]}px`;
+      el.innerHTML = `${l.intent ? `<div class="wl-intent">${l.intent}</div>` : ''}
+        <div class="wl-name" style="color:${l.color || '#fff'}">${l.name}</div>
+        ${l.sub ? `<div style="color:var(--ink-dim);font-size:10px">${l.sub}</div>` : ''}
+        ${l.hpFrac != null ? `<div class="wl-bar"><div style="width:${l.hpFrac * 100}%"></div></div>` : ''}`;
+    }
+  }
+}
