@@ -73,7 +73,7 @@ def('mushroom_cap', { shape: 'cross', solid: false, opaque: false, hardness: 0.2
 def('reed', { shape: 'cross', solid: false, opaque: false, hardness: 0.3, drops: null });
 def('cactus_flesh', { label: 'Spinebloom', hardness: 0.9, drops: null, opaque: false });
 def('dig_mound', { shape: 'slab', hardness: 1.4, tool: 'shovel', drops: null, tiles: { all: 'dig_mound' } });
-def('farmland', { shape: 'slab', hardness: 0.8, tool: 'shovel', drops: 'dirt', tiles: { top: 'farmland', side: 'dirt' } });
+def('farmland', { hardness: 0.8, tool: 'shovel', drops: 'dirt', tiles: { top: 'farmland', side: 'dirt' } });
 def('crop_young', { shape: 'cross', solid: false, opaque: false, hardness: 0.1, drops: null });
 def('crop_ripe', { shape: 'cross', solid: false, opaque: false, hardness: 0.1, drops: null });
 

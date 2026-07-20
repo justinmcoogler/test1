@@ -57,7 +57,7 @@ export const QUESTS = [
     outro: `You move like someone the wilds should worry about. Take this jerkin — boarhide, fittingly.`,
     stages: [
       { type: 'craft', item: 'wooden_cudgel', count: 1, text: 'Craft a weapon (Wooden Cudgel at the Workbench)' },
-      { type: 'equip', text: 'Equip your weapon (Inventory → click it → Equip)' },
+      { type: 'equip', text: 'Equip your weapon (Inventory > click it > Equip)' },
       { type: 'defeat', enemy: 'practice_dummy', count: 1, text: 'Defeat the training dummy (click it to start combat)' },
       { type: 'defeat', enemy: 'mudback_boar', count: 1, text: 'Defeat a Mudback Boar in the west meadow' },
       { type: 'talk', npc: 'maren', text: 'Report to Elder Maren' },

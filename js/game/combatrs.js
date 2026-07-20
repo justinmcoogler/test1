@@ -9,19 +9,19 @@ import { clamp } from '../core/math.js';
 import { isSolid, BLOCKS } from '../world/blocks.js';
 
 export const RS_STYLES = {
-  balanced: { label: 'Balanced', icon: '⚔️', weaponSlot: 'main', kind: 'melee', desc: 'Split XP between Strength, Defense and Vitality.' },
-  aggressive: { label: 'Aggressive', icon: '💢', weaponSlot: 'main', kind: 'melee', dmg: 1.15, acc: -3, desc: '+15% damage. Trains Strength.' },
-  defensive: { label: 'Defensive', icon: '🛡️', weaponSlot: 'main', kind: 'melee', dmg: 0.85, guard: true, desc: '-15% damage, take less damage. Trains Defense.' },
-  ranged: { label: 'Ranged', icon: '🎯', weaponSlot: 'ranged', kind: 'ranged', desc: 'Fight at distance with your bow. Trains Ranged.' },
-  magic: { label: 'Magic', icon: '✨', weaponSlot: 'main', kind: 'magic', desc: 'Sling spells (costs mana). Trains Magic.' },
+  balanced: { label: 'Balanced', icon: 'swords', weaponSlot: 'main', kind: 'melee', desc: 'Split XP between Strength, Defense and Vitality.' },
+  aggressive: { label: 'Aggressive', icon: 'burst', weaponSlot: 'main', kind: 'melee', dmg: 1.15, acc: -3, desc: '+15% damage. Trains Strength.' },
+  defensive: { label: 'Defensive', icon: 'shield', weaponSlot: 'main', kind: 'melee', dmg: 0.85, guard: true, desc: '-15% damage, take less damage. Trains Defense.' },
+  ranged: { label: 'Ranged', icon: 'target', weaponSlot: 'ranged', kind: 'ranged', desc: 'Fight at distance with your bow. Trains Ranged.' },
+  magic: { label: 'Magic', icon: 'sparkle', weaponSlot: 'main', kind: 'magic', desc: 'Sling spells (costs mana). Trains Magic.' },
 };
 
 export const RS_SPECIALS = {
-  power_strike: { label: 'Power Strike', icon: '💥', kind: 'melee', energy: 30, cd: 8, power: 1.7, req: ['strength', 5], desc: 'A heavy blow: +70% damage.' },
-  cleave: { label: 'Cleave', icon: '🌀', kind: 'melee', energy: 40, cd: 12, power: 1.15, aoe: true, req: ['strength', 15], desc: 'Strike every foe in reach.' },
-  aimed_shot: { label: 'Aimed Shot', icon: '🎯', kind: 'ranged', energy: 30, cd: 8, power: 1.6, acc: 20, req: ['ranged', 5], desc: 'Never rushes, rarely misses.' },
-  ember_burst: { label: 'Ember Burst', icon: '🔥', kind: 'magic', mana: 10, cd: 10, power: 1.5, element: 'fire', req: ['magic', 10], desc: 'A roaring gout of flame.' },
-  mend: { label: 'Mend', icon: '💚', kind: 'heal', mana: 6, cd: 9, req: ['healing', 1], desc: 'Knit your wounds mid-fight.' },
+  power_strike: { label: 'Power Strike', icon: 'burst', kind: 'melee', energy: 30, cd: 8, power: 1.7, req: ['strength', 5], desc: 'A heavy blow: +70% damage.' },
+  cleave: { label: 'Cleave', icon: 'swirlicon', kind: 'melee', energy: 40, cd: 12, power: 1.15, aoe: true, req: ['strength', 15], desc: 'Strike every foe in reach.' },
+  aimed_shot: { label: 'Aimed Shot', icon: 'target', kind: 'ranged', energy: 30, cd: 8, power: 1.6, acc: 20, req: ['ranged', 5], desc: 'Never rushes, rarely misses.' },
+  ember_burst: { label: 'Ember Burst', icon: 'flame', kind: 'magic', mana: 10, cd: 10, power: 1.5, element: 'fire', req: ['magic', 10], desc: 'A roaring gout of flame.' },
+  mend: { label: 'Mend', icon: 'heartplus', kind: 'heal', mana: 6, cd: 9, req: ['healing', 1], desc: 'Knit your wounds mid-fight.' },
 };
 
 const MELEE_RANGE = 2.4;
@@ -224,7 +224,7 @@ export class CombatRS {
         cx: Math.floor(p.x), cy: Math.round(p.y), cz: Math.floor(p.z),
         radius: 1.6, power: 1.7,
       };
-      emit('rsLog', '⚠️ The ground trembles beneath you — MOVE!');
+      emit('rsLog', 'The ground trembles beneath you — MOVE!');
     }
   }
 
@@ -277,7 +277,7 @@ export class CombatRS {
         if (crit) dmg *= 1.6;
         dmg = Math.max(1, Math.round(dmg));
         t.hp -= dmg;
-        splat = crit ? `💥${dmg}` : `${dmg}`;
+        splat = crit ? `${dmg}!` : `${dmg}`;
         color = crit ? '#ffd166' : '#ff5d5d';
         // XP routing by style, RS-style
         const xp = dmg * 1.8;
@@ -315,7 +315,7 @@ export class CombatRS {
       return;
     }
     if (est.block && Math.random() * 100 < est.block) {
-      emit('rsLog', `🛡️ You block ${e.def.label}'s attack!`);
+      emit('rsLog', `You block ${e.def.label}'s attack!`);
       skills.addXp('defense', 6);
       return;
     }
@@ -338,7 +338,7 @@ export class CombatRS {
   kill(entity) {
     const { skills, inventory, enemyMgr } = this.game;
     const def = entity.def;
-    emit('rsLog', `☠️ You defeat the ${def.label}!`);
+    emit('rsLog', `You defeat the ${def.label}!`);
     // kill bonus xp to the active style
     const bonus = (def.xp || 10) * 0.6;
     const stats = this.playerStats(RS_STYLES[this.style], null);

@@ -375,6 +375,16 @@ export class Renderer {
         p.color
       );
     }
+    // quest-trail guide dots: little pixels laid along the path on the ground
+    for (const d of opts.dots || []) {
+      const pulse = 0.5 + 0.5 * Math.sin(this.time * 4 + (d.x + d.z) * 0.9);
+      const r = 0.1 + pulse * 0.04;
+      const y = d.y + 0.06;
+      quad(
+        [[d.x + 0.5 - r, y, d.z + 0.5 + r], [d.x + 0.5 + r, y, d.z + 0.5 + r], [d.x + 0.5 + r, y, d.z + 0.5 - r], [d.x + 0.5 - r, y, d.z + 0.5 - r]],
+        [1, 0.85 + pulse * 0.1, 0.35]
+      );
+    }
     for (const mk of opts.markers || []) {
       const pulse = 0.5 + 0.5 * Math.sin(this.time * 3 + mk.x);
       const r = 0.28 + pulse * 0.1;

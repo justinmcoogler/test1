@@ -13,7 +13,7 @@
   --mana: #5b8dd9;
   --good: #6cbf5a;
   --bad: #d9534f;
-  --font: 'Segoe UI', system-ui, sans-serif;
+  --font: 'Pixelify Sans', 'Segoe UI', system-ui, sans-serif;
 }
 :root.colorblind {
   --hp: #d55e00;
@@ -71,6 +71,7 @@ button { font-family: var(--font); cursor: pointer; }
 /* ===== HUD ===== */
 /* HUD sits above the touch layer so its buttons stay tappable; the root is
    pointer-transparent so camera drags still reach the touch zones below. */
+.pix { image-rendering: pixelated; vertical-align: -3px; }
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 22; color: var(--ink); font-size: calc(14px * var(--text-scale)); }
 #hud > * { pointer-events: none; }
 #crosshair {
@@ -90,7 +91,7 @@ body.classic-cam #crosshair { display: none; }
   font-size: calc(11px * var(--text-scale)); text-shadow: 1px 1px 1px #000; letter-spacing: 0.5px;
 }
 #compass-wrap { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.45); border: 1px solid var(--edge); border-radius: 6px; padding: 2px 6px; }
-#minimap { position: absolute; top: 12px; right: 12px; border: 1px solid var(--edge); border-radius: 8px; background: #101318; }
+#minimap { position: absolute; top: 12px; right: 12px; border: 1px solid var(--edge); border-radius: 8px; background: #101318; pointer-events: auto; cursor: pointer; }
 #quest-tracker {
   position: absolute; top: 170px; right: 12px; width: calc(240px * var(--ui-scale));
   background: rgba(0, 0, 0, 0.45); border-left: 3px solid var(--gold);
@@ -223,7 +224,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .unlock-row { display: flex; gap: 10px; padding: 4px 0; font-size: 13px; }
 .unlock-row .ul-lvl { color: var(--gold); width: 48px; flex-shrink: 0; }
 .unlock-row.locked { color: var(--ink-dim); }
-.unlock-row.unlocked .ul-lvl::after { content: ' ✓'; color: var(--good); }
+.unlock-row.unlocked .ul-lvl::after { content: ' +'; color: var(--good); }
 
 /* crafting */
 .craft-layout { display: flex; gap: 14px; height: 100%; }
@@ -463,4 +464,30 @@ body.in-combat #quest-tracker, body.in-combat #compass-wrap { display: none !imp
   #hotbar { gap: 3px; }
   .hotbar-slot { width: 40px; height: 40px; font-size: 18px; }
   #toasts { bottom: 250px; }
+}
+
+/* windows go single-column on narrow screens */
+@media (max-width: 640px) {
+  #window-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 8px 8px 0; }
+  #window-tabs::-webkit-scrollbar { display: none; }
+  .win-tab { padding: 8px 10px; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
+  #window-body { padding: 10px; }
+  .craft-layout { flex-direction: column; height: auto; }
+  .craft-list { max-height: 46vh; flex: none; }
+  .craft-detail { width: auto; }
+  .equip-panel { width: 100%; }
+  .inv-grid { gap: 4px; }
+  .inv-slot { font-size: 18px; border-radius: 5px; }
+  .skill-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .settings-grid { grid-template-columns: 1fr; }
+  .setting-row input[type=range] { width: 110px; }
+  .shop-col { min-width: 100%; }
+  .game-title { font-size: 40px; letter-spacing: 6px; }
+  .title-box { padding: 16px; }
+  .slot-btn { padding: 12px 12px; font-size: 14px; }
+  .title-row input { font-size: 16px; } /* ≥16px stops iOS focus-zoom */
+  #dialogue { padding: 12px; }
+  #dialogue-text { font-size: 14px; }
+  .dialog-btn { padding: 9px 12px; }
+  .item-actions button, .shop-row button, .craft-detail button { padding: 9px 12px; }
 }

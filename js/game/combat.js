@@ -45,14 +45,14 @@ export const ABILITIES = {
 };
 
 export const STATUS_INFO = {
-  poison: { label: 'Poisoned', icon: '🟢', dot: 3 },
-  burn: { label: 'Burning', icon: '🔥', dot: 4 },
-  slow: { label: 'Slowed', icon: '🐌' },
-  root: { label: 'Rooted', icon: '🌿' },
-  stun: { label: 'Stunned', icon: '💫' },
-  atkUp: { label: 'Bolstered', icon: '⬆️' },
-  atkDown: { label: 'Weakened', icon: '⬇️' },
-  guard: { label: 'Guarding', icon: '🛡️' },
+  poison: { label: 'Poisoned', icon: 'PSN', dot: 3 },
+  burn: { label: 'Burning', icon: 'BRN', dot: 4 },
+  slow: { label: 'Slowed', icon: 'SLW' },
+  root: { label: 'Rooted', icon: 'RT' },
+  stun: { label: 'Stunned', icon: 'STN' },
+  atkUp: { label: 'Bolstered', icon: '+ATK' },
+  atkDown: { label: 'Weakened', icon: '-ATK' },
+  guard: { label: 'Guarding', icon: 'GRD' },
 };
 
 const tkey = (gx, gz) => `${gx},${gz}`;
@@ -143,7 +143,7 @@ export class Combat {
     this.turnIdx = -1;
     this.usedMove = false;
     this.usedAction = false;
-    this.addLog(`⚔️ Battle begins! ${this.combatants.filter(c => c.kind === 'enemy').map(c => c.label).join(', ')}`);
+    this.addLog(`Battle begins! ${this.combatants.filter(c => c.kind === 'enemy').map(c => c.label).join(', ')}`);
     emit('combatStart', {});
     this.nextTurn();
   }
@@ -468,7 +468,7 @@ export class Combat {
       this.healingCast += heal;
       skills.addXp('healing', Math.round(heal * 1.2));
       if (ab.buff) this.playerC.statuses.push({ id: ab.buff.id, turns: ab.buff.turns });
-      this.addLog(`💚 You ${ab.label.toLowerCase()} for ${heal} health.`);
+      this.addLog(`You ${ab.label.toLowerCase()} for ${heal} health.`);
       emit('combatFx', { kind: 'heal', target: this.playerC });
     } else {
       const target = this.combatants.find((c) => c.id === targetId);
@@ -505,7 +505,7 @@ export class Combat {
       return;
     }
     if (target.kind === 'player' && target.blockChance && Math.random() * 100 < target.blockChance) {
-      this.addLog(`🛡️ You block the ${ability.label}!`);
+      this.addLog(`You block the ${ability.label}!`);
       this.game.skills.addXp('defense', 6);
       return;
     }
@@ -539,7 +539,7 @@ export class Combat {
   applyDamage(target, dmg, source, label, isCrit = false) {
     target.hp = Math.max(0, target.hp - dmg);
     const tlabel = target.kind === 'player' ? 'You' : target.label;
-    this.addLog(`${isCrit ? '💥 CRITICAL! ' : ''}${tlabel} take${target.kind === 'player' ? '' : 's'} ${dmg} damage${label ? ` from ${label}` : ''}.`);
+    this.addLog(`${isCrit ? 'CRITICAL! ' : ''}${tlabel} take${target.kind === 'player' ? '' : 's'} ${dmg} damage${label ? ` from ${label}` : ''}.`);
     emit('combatFx', { kind: 'damage', target, dmg, crit: isCrit });
     if (target.kind === 'player') {
       this.game.player.hp = target.hp;
@@ -549,7 +549,7 @@ export class Combat {
       this.game.skills.addXp('vitality', Math.round(dmg * 0.4));
     }
     if (target.hp <= 0) {
-      this.addLog(`☠️ ${tlabel} ${target.kind === 'player' ? 'fall' : 'falls'}!`);
+      this.addLog(`${tlabel} ${target.kind === 'player' ? 'fall' : 'falls'}!`);
       if (target.kind === 'enemy') this.onEnemyDown(target);
     }
     // boss phase check
@@ -558,7 +558,7 @@ export class Combat {
       if (ph && target.hp / target.maxHp <= ph.at) {
         target.phaseIdx++;
         target.atk += ph.addAtk || 0;
-        if (ph.banner) { this.addLog(`⚠️ ${ph.banner}`); emit('combatBanner', ph.banner); }
+        if (ph.banner) { this.addLog(`${ph.banner}`); emit('combatBanner', ph.banner); }
         for (const summonType of ph.summon || []) {
           const t = this.nearestFreeTile(target.gx + 0.5 + (Math.random() * 4 - 2), target.gz + 0.5 + (Math.random() * 4 - 2));
           if (!t) continue;
@@ -584,7 +584,7 @@ export class Combat {
     this.playerC.defending = true;
     this.playerC.statuses.push({ id: 'guard', turns: 1 });
     this.usedAction = true;
-    this.addLog('🛡️ You brace behind your guard.');
+    this.addLog('You brace behind your guard.');
     this.game.skills.addXp('defense', 3);
     emit('combatUpdate');
     return true;
@@ -635,7 +635,7 @@ export class Combat {
     const chance = clamp(0.5 + (this.playerC.speed - avgSpeed) * 0.06, 0.2, 0.9);
     this.usedAction = true;
     if (Math.random() < chance) {
-      this.addLog('🏃 You slip away from the fight!');
+      this.addLog('You slip away from the fight!');
       this.pendingEnd = { t: 0.8, result: 'fled' };
       emit('combatUpdate');
     } else {
@@ -733,10 +733,10 @@ export class Combat {
       if (chosen && chosen.ab.telegraph) {
         if (chosen.ab.areaTelegraph != null) {
           c.telegraph = { ability: chosen.id, cx: player.gx, cz: player.gz };
-          this.addLog(`⚠️ ${c.label} ${chosen.ab.telegraph}`);
+          this.addLog(`${c.label} ${chosen.ab.telegraph}`);
         } else if (d <= (chosen.ab.range || 1) + 1) {
           c.telegraph = { ability: chosen.id };
-          this.addLog(`⚠️ ${c.label} ${chosen.ab.telegraph}`);
+          this.addLog(`${c.label} ${chosen.ab.telegraph}`);
         } else if (d <= basic.range && this.canReach(c, player, basic)) {
           this.resolveAttack(c, player, basic);
         }
@@ -828,7 +828,7 @@ export class Combat {
       if (huntXp) skills.addXp('hunting', huntXp);
       for (const l of loot) inventory.add(l.item, l.qty);
       inventory.add('coin', coins);
-      this.addLog(`🏆 Victory! +${coins} coins.`);
+      this.addLog(`Victory! +${coins} coins.`);
       emit('combatEnd', { result, loot, coins, types: this.combatants.filter((c) => c.kind === 'enemy').map((c) => c.type) });
     } else if (result === 'fled') {
       for (const c of this.combatants) {

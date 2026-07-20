@@ -8,6 +8,7 @@ import { NPC_DEFS, DIALOGUES } from '../game/npcs.js';
 import { STATUS_INFO, ABILITIES } from '../game/combat.js';
 import { RS_STYLES } from '../game/combatrs.js';
 import { tileIconDataURL } from '../gfx/textures.js';
+import { icon, itemIcon, skillIcon } from '../gfx/icons.js';
 import { CHUNK } from '../world/worldgen.js';
 import { on, emit } from '../core/events.js';
 import { SFX } from '../core/audio.js';
@@ -21,7 +22,7 @@ function itemIconHTML(itemId, size = null) {
     const url = tileIconDataURL(def.tileIcon);
     if (url) return `<img src="${url}" alt="${def.label}">`;
   }
-  return def.icon;
+  return itemIcon(itemId, size || 20);
 }
 
 export class UI {
@@ -40,10 +41,26 @@ export class UI {
     this.bindEvents();
   }
 
+  // fill the static HUD buttons with pixel icons
+  paintStaticIcons() {
+    const menuIcons = { inventory: 'bag', skills: 'chart', crafting: 'hammer', quests: 'scroll', map: 'mapicon', settings: 'gear' };
+    document.querySelectorAll('.menu-btn').forEach((b) => { b.innerHTML = icon(menuIcons[b.dataset.win], 22); });
+    const touchIcons = { 'btn-jump': 'arrowup', 'btn-sprint': 'chevrons', 'btn-action': 'handstar', 'btn-place': 'blockicon' };
+    for (const [id, name] of Object.entries(touchIcons)) {
+      const el = $(id);
+      if (el) el.innerHTML = icon(name, id === 'btn-action' ? 30 : 22);
+    }
+  }
+
   // ------------------------------------------------------------ boot & events
   bindEvents() {
     const g = this.game;
+    this.paintStaticIcons();
     $('window-close').addEventListener('click', () => this.closeWindow());
+    // tapping the minimap enlarges it into the full map window
+    $('minimap').addEventListener('click', () => {
+      if (!g.combat.active && !g.player.dead) this.toggleWindow('map');
+    });
     document.querySelectorAll('.menu-btn').forEach((b) => {
       b.addEventListener('click', () => { this.toggleWindow(b.dataset.win); });
     });
@@ -68,7 +85,7 @@ export class UI {
       if (this.currentWindow === 'skills') this.renderWindowBody();
     });
     on('levelUp', ({ skill, level }) => {
-      this.toast(`⭐ ${SKILL_DEFS[skill].label} level ${level}!`, 'levelup');
+      this.toast(`${SKILL_DEFS[skill].label} level ${level}!`, 'levelup');
       SFX.levelUp();
     });
     on('itemGained', ({ item, qty }) => {
@@ -77,10 +94,10 @@ export class UI {
     });
     on('inventoryFull', () => this.toast('Inventory full!', 'warn'));
     on('toolBroke', ({ item }) => { this.toast(`${ITEMS[item].label} broke!`, 'warn'); SFX.toolBreak(); });
-    on('questStarted', ({ quest }) => { this.toast(`📜 Quest started: ${quest.name}`, 'gold'); this.renderQuestTracker(); });
-    on('questCompleted', ({ quest }) => { this.toast(`✅ Quest complete: ${quest.name}`, 'gold'); SFX.questDone(); this.renderQuestTracker(); });
+    on('questStarted', ({ quest }) => { this.toast(`Quest started: ${quest.name}`, 'gold'); this.renderQuestTracker(); });
+    on('questCompleted', ({ quest }) => { this.toast(`Quest complete: ${quest.name}`, 'gold'); SFX.questDone(); this.renderQuestTracker(); });
     on('questChanged', () => { this.renderQuestTracker(); if (this.currentWindow === 'quests') this.renderWindowBody(); });
-    on('questStageAdvanced', ({ stage }) => this.toast(`▸ ${stage.text}`, 'gold'));
+    on('questStageAdvanced', ({ stage }) => this.toast(`Next: ${stage.text}`, 'gold'));
     on('questRewardsBlocked', () => this.toast('Quest reward waiting — make room in your pack!', 'warn'));
     on('combatLog', () => this.renderCombatLog());
     on('combatUpdate', () => this.renderCombat());
@@ -106,20 +123,20 @@ export class UI {
     if (!rs || !rs.active) return;
     const t = rs.target;
     if (t && t.hp > 0) {
+      $('rs-target-name').textContent = `${t.def.label}${t.enraged ? ' (enraged!)' : ''}`;
       $('rs-target').style.display = '';
-      $('rs-target-name').textContent = `${t.def.label}${t.enraged ? ' 💢' : ''}`;
       $('rs-target-hp-fill').style.width = `${Math.max(0, (t.hp / t.def.hp)) * 100}%`;
     } else {
       $('rs-target').style.display = 'none';
     }
     $('rs-styles').innerHTML = rs.availableStyles().map((id) => {
       const st = RS_STYLES[id];
-      return `<button class="rs-btn ${rs.style === id ? 'active' : ''}" data-style="${id}" title="${st.desc}">${st.icon} ${st.label}</button>`;
+      return `<button class="rs-btn ${rs.style === id ? 'active' : ''}" data-style="${id}" title="${st.desc}">${icon(st.icon, 14)} ${st.label}</button>`;
     }).join('');
     $('rs-specials').innerHTML = rs.availableSpecials().map((sp) => {
-      const cost = sp.energy ? `⚡${sp.energy}` : sp.mana ? `✦${sp.mana}` : '';
+      const cost = sp.energy ? `${icon('bolt', 11)}${sp.energy}` : sp.mana ? `${icon('sparkle', 11)}${sp.mana}` : '';
       return `<button class="rs-btn" data-special="${sp.id}" title="${sp.desc}">
-        ${sp.icon} ${sp.label}<span class="rs-sub">${cost}</span>
+        ${icon(sp.icon, 14)} ${sp.label}<span class="rs-sub">${cost}</span>
         ${sp.cdLeft > 0.1 ? `<span class="rs-cd">${Math.ceil(sp.cdLeft)}</span>` : ''}
       </button>`;
     }).join('');
@@ -177,11 +194,11 @@ export class UI {
   renderVitals() {
     const p = this.game.player;
     $('hp-fill').style.width = `${(p.hp / p.maxHp) * 100}%`;
-    $('hp-text').textContent = `❤ ${Math.ceil(p.hp)}/${p.maxHp}`;
+    $('hp-text').textContent = `HP ${Math.ceil(p.hp)}/${p.maxHp}`;
     $('energy-fill').style.width = `${(p.energy / p.maxEnergy) * 100}%`;
-    $('energy-text').textContent = `⚡ ${Math.floor(p.energy)}`;
+    $('energy-text').textContent = `EN ${Math.floor(p.energy)}`;
     $('mana-fill').style.width = `${(p.mana / p.maxMana) * 100}%`;
-    $('mana-text').textContent = `✦ ${Math.floor(p.mana)}/${p.maxMana}`;
+    $('mana-text').textContent = `MP ${Math.floor(p.mana)}/${p.maxMana}`;
   }
 
   renderHotbar() {
@@ -263,9 +280,8 @@ export class UI {
   drawCompass() {
     const canvas = $('compass');
     const ctx = canvas.getContext('2d');
-    const yaw = this.game.player.yaw;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = '13px sans-serif';
+    ctx.font = "13px 'Pixelify Sans', sans-serif";
     ctx.textAlign = 'center';
     const dirs = [['N', 0], ['E', Math.PI / 2], ['S', Math.PI], ['W', -Math.PI / 2]];
     // heading: yaw 0 → -Z (north)
@@ -276,11 +292,17 @@ export class UI {
       const x = canvas.width / 2 + (rel / (Math.PI / 2)) * 60;
       if (x > 4 && x < canvas.width - 4) {
         ctx.fillStyle = label === 'N' ? '#e2b13c' : '#cfcdc4';
-        ctx.fillText(label, x, 18);
+        ctx.fillText(label, x, 20);
       }
     }
+    // heading pointer
     ctx.fillStyle = '#fff';
-    ctx.fillText('▾', canvas.width / 2, 9);
+    ctx.beginPath();
+    ctx.moveTo(canvas.width / 2 - 4, 2);
+    ctx.lineTo(canvas.width / 2 + 4, 2);
+    ctx.lineTo(canvas.width / 2, 7);
+    ctx.closePath();
+    ctx.fill();
   }
 
   chunkTileCanvas(cx, cz) {
@@ -343,10 +365,9 @@ export class UI {
         ctx.restore();
       }
     }
-    // quest marker
-    const mk = this.game.quests.trackedMarker(this.game.world.markers);
-    if (mk) {
-      const mx = half + (mk.pos[0] - p.x) * scale, mz = half + (mk.pos[2] - p.z) * scale;
+    // quest / travel markers (clamped to the minimap edge when far away)
+    const dot = (wx, wz) => {
+      const mx = half + (wx - p.x) * scale, mz = half + (wz - p.z) * scale;
       const cx2 = Math.max(6, Math.min(canvas.width - 6, mx));
       const cz2 = Math.max(6, Math.min(canvas.height - 6, mz));
       ctx.fillStyle = '#e2b13c';
@@ -354,7 +375,10 @@ export class UI {
       ctx.arc(cx2, cz2, 4, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#000'; ctx.stroke();
-    }
+    };
+    const mk = this.game.quests.trackedMarker(this.game.world.markers);
+    if (mk) dot(mk.pos[0], mk.pos[2]);
+    if (this.game.travelDest) dot(this.game.travelDest[0], this.game.travelDest[2]);
     // player arrow
     ctx.save();
     ctx.translate(half, half);
@@ -396,11 +420,11 @@ export class UI {
 
   renderTabs() {
     const tabs = [
-      ['inventory', '🎒 Inventory'], ['skills', '📈 Skills'], ['crafting', '🔨 Crafting'],
-      ['quests', '📜 Quests'], ['map', '🗺️ Map'], ['settings', '⚙️ Settings'],
+      ['inventory', 'bag', 'Inventory'], ['skills', 'chart', 'Skills'], ['crafting', 'hammer', 'Crafting'],
+      ['quests', 'scroll', 'Quests'], ['map', 'mapicon', 'Map'], ['settings', 'gear', 'Settings'],
     ];
-    $('window-tabs').innerHTML = tabs.map(([id, label]) =>
-      `<button class="win-tab ${this.currentWindow === id ? 'active' : ''}" data-tab="${id}">${label}</button>`).join('');
+    $('window-tabs').innerHTML = tabs.map(([id, ic, label]) =>
+      `<button class="win-tab ${this.currentWindow === id ? 'active' : ''}" data-tab="${id}">${icon(ic, 14)} ${label}</button>`).join('');
     $('window-tabs').querySelectorAll('.win-tab').forEach((b) => {
       b.addEventListener('click', () => { this.currentWindow = b.dataset.tab; this.shopNpc = null; this.chestId = null; this.renderTabs(); this.renderWindowBody(); });
     });
@@ -462,7 +486,7 @@ export class UI {
     }
     body.innerHTML = `<div class="inv-layout">
       <div style="flex:1;min-width:300px">
-        <div style="margin-bottom:8px;color:var(--gold)">🪙 ${inv.coins} coins</div>
+        <div style="margin-bottom:8px;color:var(--gold)">${icon('coin', 14)} ${inv.coins} coins</div>
         <div class="inv-grid">${grid}</div>
         ${actions}
       </div>
@@ -520,7 +544,7 @@ export class UI {
         const def = SKILL_DEFS[key];
         const lvl = skills.level(key);
         html += `<div class="skill-card ${this.selectedSkill === key ? 'selected' : ''}" data-skill="${key}">
-          <div class="sk-head"><span>${def.icon} ${def.label}</span><span class="sk-lvl">${lvl}</span></div>
+          <div class="sk-head"><span>${skillIcon(key, 14)} ${def.label}</span><span class="sk-lvl">${lvl}</span></div>
           <div class="sk-bar"><div style="width:${skills.progress(key) * 100}%"></div></div>
         </div>`;
       }
@@ -534,7 +558,7 @@ export class UI {
       const xp = skills.xp[sel];
       const next = lvl < 99 ? xpForLevel(lvl + 1) - xp : 0;
       html += `<div class="skill-detail" style="margin-top:14px">
-        <h3>${def.icon} ${def.label} — Level ${lvl}</h3>
+        <h3>${skillIcon(sel, 16)} ${def.label} — Level ${lvl}</h3>
         <div class="sd-desc">${def.desc}<br>XP: ${xp.toLocaleString()}${lvl < 99 ? ` · ${next.toLocaleString()} to level ${lvl + 1}` : ' · MAX'}</div>
         ${(SKILL_UNLOCKS[sel] || []).map(([ulvl, text]) =>
           `<div class="unlock-row ${lvl >= ulvl ? 'unlocked' : 'locked'}"><span class="ul-lvl">Lv ${ulvl}</span><span>${text}</span></div>`).join('')}
@@ -620,7 +644,7 @@ export class UI {
       const st = ql.state[q.id];
       html += `<div class="quest-entry"><h4>${q.name}</h4>
         ${q.stages.map((s, i) => `<div class="quest-stage ${i < st.stage ? 'done-stage' : i === st.stage ? 'current' : ''}">
-          ${i < st.stage ? '✓' : i === st.stage ? '▸' : '·'} ${s.text} ${i === st.stage ? ql.stageProgressText(q) : ''}
+          ${i < st.stage ? '+' : i === st.stage ? '>' : '-'} ${s.text} ${i === st.stage ? ql.stageProgressText(q) : ''}
         </div>`).join('')}
       </div>`;
     }
@@ -632,14 +656,21 @@ export class UI {
   }
 
   // ---- map ----
+  // Enlarged world map: shows only chunks the player has actually uncovered.
+  // Clicking an explored spot starts auto-travel (classic) / a guide trail (FP).
   renderMap(body) {
-    body.innerHTML = '<canvas id="map-canvas" width="640" height="480"></canvas><div style="color:var(--ink-dim);font-size:12px;margin-top:6px">Explored terrain · ⭐ Brookhollow · 🟡 quest objective · ▲ you</div>';
+    body.innerHTML = `<canvas id="map-canvas"></canvas>
+      <div style="color:var(--ink-dim);font-size:12px;margin-top:6px">
+        Click an explored spot to walk there. Gold diamond: Brookhollow · gold dot: quest objective · gold cross: travel mark · white arrow: you.
+      </div>`;
     const canvas = $('map-canvas');
+    canvas.width = Math.max(320, Math.min(760, (window.innerWidth || 800) - 100));
+    canvas.height = Math.max(280, Math.min(520, (window.innerHeight || 640) - 240));
     const ctx = canvas.getContext('2d');
     const p = this.game.player;
     ctx.fillStyle = '#0d1015';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const scale = 0.9;
+    const scale = 1.1;
     const ox = canvas.width / 2 - p.x * scale, oz = canvas.height / 2 - p.z * scale;
     ctx.imageSmoothingEnabled = false;
     for (const key of this.game.discovered) {
@@ -647,11 +678,33 @@ export class UI {
       const tile = this.chunkTileCanvas(cx, cz);
       ctx.drawImage(tile, ox + cx * CHUNK * scale, oz + cz * CHUNK * scale, CHUNK * scale, CHUNK * scale);
     }
-    ctx.font = '14px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('⭐', ox, oz + 5);
+    const diamond = (x, y, r, fill) => {
+      ctx.fillStyle = fill;
+      ctx.beginPath();
+      ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#000'; ctx.stroke();
+    };
+    diamond(ox, oz, 6, '#e2b13c'); // Brookhollow (world origin)
     const mk = this.game.quests.trackedMarker(this.game.world.markers);
-    if (mk) ctx.fillText('🟡', ox + mk.pos[0] * scale, oz + mk.pos[2] * scale + 5);
+    if (mk) {
+      ctx.fillStyle = '#e2b13c';
+      ctx.beginPath();
+      ctx.arc(ox + mk.pos[0] * scale, oz + mk.pos[2] * scale, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000'; ctx.stroke();
+    }
+    if (this.game.travelDest) {
+      const [tx, , tz] = this.game.travelDest;
+      const mx = ox + tx * scale, mz = oz + tz * scale;
+      ctx.strokeStyle = '#e2b13c';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(mx - 5, mz - 5); ctx.lineTo(mx + 5, mz + 5);
+      ctx.moveTo(mx + 5, mz - 5); ctx.lineTo(mx - 5, mz + 5);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+    }
     ctx.save();
     ctx.translate(ox + p.x * scale, oz + p.z * scale);
     ctx.rotate(-p.yaw);
@@ -659,6 +712,20 @@ export class UI {
     ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(5, 6); ctx.lineTo(-5, 6); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#000'; ctx.stroke();
     ctx.restore();
+
+    canvas.addEventListener('click', (e) => {
+      const r = canvas.getBoundingClientRect();
+      const mx = (e.clientX - r.left) * (canvas.width / r.width);
+      const my = (e.clientY - r.top) * (canvas.height / r.height);
+      const wx = (mx - ox) / scale, wz = (my - oz) / scale;
+      const ck = `${Math.floor(wx / CHUNK)},${Math.floor(wz / CHUNK)}`;
+      if (!this.game.discovered.has(ck)) {
+        this.toast("You haven't explored that area yet.", 'warn');
+        return;
+      }
+      this.game.setTravelDest(wx, wz);
+      this.closeWindow();
+    });
   }
 
   // ---- settings ----
@@ -675,6 +742,7 @@ export class UI {
       ${row('Invert Y axis', check('invertY'))}
       ${row('UI scale', range('uiScale', 0.7, 1.6, 0.05))}
       ${row('Text size', range('textScale', 0.8, 1.5, 0.05))}
+      ${row('Quest trail — guide dots toward your objective', check('questTrail'))}
       ${row('Reduced motion', check('reducedMotion'))}
       ${row('Screen shake', check('screenShake'))}
       ${row('Colorblind-friendly colors', check('colorblind'))}
@@ -685,14 +753,14 @@ export class UI {
       ${row('Music volume', range('musicVolume', 0, 1, 0.05))}
     </div>
     <div class="settings-actions">
-      <button id="btn-save-now">💾 Save game now</button>
-      <button id="btn-to-title">🏠 Save & quit to title</button>
+      <button id="btn-save-now">${icon('disk', 14)} Save game now</button>
+      <button id="btn-to-title">${icon('house', 14)} Save & quit to title</button>
       <span style="color:var(--ink-dim);font-size:12px;align-self:center" id="save-status"></span>
     </div>
     <div style="margin-top:14px;color:var(--ink-dim);font-size:12px;line-height:1.7">
       <b>First person:</b> WASD move · Mouse look (click to capture) · Space jump · Shift sprint · LMB gather/mine/attack · RMB place/interact · F interact · E inventory · K skills · C crafting · J quests · M map · 1–8 hotbar · V camera<br>
-      <b>Classic view:</b> click ground to walk · click trees/rocks/creatures/villagers to act · Shift+click (or long-press) a block to break it · RMB place block · middle-drag or arrow keys orbit · wheel zoom · WASD also walks<br>
-      <b>Mobile:</b> left stick move · drag right side to look/orbit · ✦ hold to gather / tap to interact · ▣ place block · in classic view just tap where you want to go
+      <b>Classic view:</b> click to walk · double-click or press-and-hold a tree/rock/block to chop, mine or break it · click creatures/villagers to fight or talk · RMB place block · left-drag, middle-drag or arrow keys orbit · wheel zoom · click the minimap for the big map, then click anywhere explored to auto-walk there<br>
+      <b>Mobile:</b> left stick move · drag right side to look/orbit · Action button holds to gather · Place button builds · in classic view tap to walk, long-press to mine
     </div>`;
     body.querySelectorAll('[data-set]').forEach((inp) => {
       inp.addEventListener('input', () => {
@@ -704,7 +772,7 @@ export class UI {
     });
     $('btn-save-now').addEventListener('click', () => {
       this.game.saveGame();
-      $('save-status').textContent = 'Saved ✓';
+      $('save-status').textContent = 'Saved.';
       setTimeout(() => { const el = $('save-status'); if (el) el.textContent = ''; }, 1800);
     });
     $('btn-to-title').addEventListener('click', () => { this.game.saveGame(); location.reload(); });
@@ -716,7 +784,7 @@ export class UI {
     this.currentWindow = 'inventory';
     $('window-root').classList.remove('hidden');
     this.game.onWindowOpened();
-    $('window-tabs').innerHTML = `<button class="win-tab active">🛒 ${NPC_DEFS[npcId].label}</button>`;
+    $('window-tabs').innerHTML = `<button class="win-tab active">${icon('cart', 14)} ${NPC_DEFS[npcId].label}</button>`;
     this.renderWindowBody();
   }
 
@@ -725,16 +793,16 @@ export class UI {
     const inv = this.game.inventory;
     const sells = npc.shop.sells.map((s) => `<div class="shop-row">
       <span>${itemIconHTML(s.item)} ${ITEMS[s.item].label}</span>
-      <span>🪙 ${s.price} <button data-buy="${s.item}" data-price="${s.price}" ${inv.coins < s.price ? 'disabled' : ''}>Buy</button></span>
+      <span>${icon('coin', 13)} ${s.price} <button data-buy="${s.item}" data-price="${s.price}" ${inv.coins < s.price ? 'disabled' : ''}>Buy</button></span>
     </div>`).join('');
     const sellable = Object.entries(npc.shop.buys)
       .filter(([item]) => inv.count(item) > 0)
       .map(([item, price]) => `<div class="shop-row">
         <span>${itemIconHTML(item)} ${ITEMS[item].label} ×${inv.count(item)}</span>
-        <span>🪙 ${price} <button data-sell="${item}" data-price="${price}">Sell</button>
+        <span>${icon('coin', 13)} ${price} <button data-sell="${item}" data-price="${price}">Sell</button>
         <button data-sellall="${item}" data-price="${price}">All</button></span>
       </div>`).join('');
-    body.innerHTML = `<div style="margin-bottom:10px;color:var(--gold)">🪙 Your coins: ${inv.coins}</div>
+    body.innerHTML = `<div style="margin-bottom:10px;color:var(--gold)">${icon('coin', 14)} Your coins: ${inv.coins}</div>
       <div class="shop-cols">
         <div class="shop-col"><h4>For sale</h4>${sells}</div>
         <div class="shop-col"><h4>Tam buys</h4>${sellable || '<span style="color:var(--ink-dim)">Nothing Tam wants right now.</span>'}</div>
@@ -765,7 +833,7 @@ export class UI {
     this.currentWindow = 'inventory';
     $('window-root').classList.remove('hidden');
     this.game.onWindowOpened();
-    $('window-tabs').innerHTML = `<button class="win-tab active">📦 Storage</button>`;
+    $('window-tabs').innerHTML = `<button class="win-tab active">${icon('boxicon', 14)} Storage</button>`;
     this.renderWindowBody();
   }
 
@@ -885,9 +953,9 @@ export class UI {
     const options = [];
     for (const q of QUESTS.filter((q) => q.giver === npcId)) {
       if (ql.readyToTurnIn(q, npcId)) {
-        options.push({ label: `✅ ${q.name} (complete)`, action: `turnIn:${q.id}`, cls: 'quest-ready' });
+        options.push({ label: `${q.name} (turn in!)`, action: `turnIn:${q.id}`, cls: 'quest-ready' });
       } else if (ql.isAvailable(q)) {
-        options.push({ label: `📜 ${q.name}`, action: `startQuest:${q.id}`, cls: 'quest-offer' });
+        options.push({ label: `Quest: ${q.name}`, action: `startQuest:${q.id}`, cls: 'quest-offer' });
       }
     }
     const activeHere = ql.activeFrom(npcId).filter((q) => !ql.readyToTurnIn(q, npcId));
@@ -954,20 +1022,20 @@ export class UI {
     let html = '';
     if (isPlayerTurn) {
       const abilities = combat.playerAbilities();
-      html += `<button class="combat-btn ${this.combatMode === 'move' ? 'active-mode' : ''}" data-cbt="move" ${combat.usedMove ? 'disabled' : ''}>🥾 Move<span class="cb-sub">${combat.usedMove ? 'used' : `${combat.moveAllowance(combat.playerC)} tiles`}</span></button>`;
+      html += `<button class="combat-btn ${this.combatMode === 'move' ? 'active-mode' : ''}" data-cbt="move" ${combat.usedMove ? 'disabled' : ''}>Move<span class="cb-sub">${combat.usedMove ? 'used' : `${combat.moveAllowance(combat.playerC)} tiles`}</span></button>`;
       for (const ab of abilities) {
-        const cost = ab.energy ? `⚡${ab.energy}` : ab.mana ? `✦${ab.mana}` : '';
+        const cost = ab.energy ? `${icon('bolt', 10)}${ab.energy}` : ab.mana ? `${icon('sparkle', 10)}${ab.mana}` : '';
         const active = this.combatMode && this.combatMode.ability === ab.id;
         html += `<button class="combat-btn ${active ? 'active-mode' : ''}" data-cbt="ability" data-ab="${ab.id}" ${ab.blocked ? 'disabled' : ''} title="${ab.desc || ''}${ab.blocked ? ' — ' + ab.blocked : ''}">
           ${ab.label}<span class="cb-sub">${cost}${ab.cdLeft ? ` · CD ${ab.cdLeft}` : ''}</span></button>`;
       }
-      html += `<button class="combat-btn" data-cbt="defend" ${combat.usedAction ? 'disabled' : ''}>🛡️ Defend<span class="cb-sub">-50% dmg</span></button>`;
-      html += `<button class="combat-btn" data-cbt="item" ${combat.usedAction ? 'disabled' : ''}>🎒 Item</button>`;
-      html += `<button class="combat-btn ${this.inspectMode ? 'active-mode' : ''}" data-cbt="inspect">🔍 Inspect<span class="cb-sub">free</span></button>`;
-      html += `<button class="combat-btn" data-cbt="flee" ${combat.usedAction ? 'disabled' : ''}>🏃 Flee</button>`;
-      html += `<button class="combat-btn end-turn" data-cbt="end">⏭️ End Turn</button>`;
+      html += `<button class="combat-btn" data-cbt="defend" ${combat.usedAction ? 'disabled' : ''}>${icon('shield', 12)} Defend<span class="cb-sub">-50% dmg</span></button>`;
+      html += `<button class="combat-btn" data-cbt="item" ${combat.usedAction ? 'disabled' : ''}>${icon('bag', 12)} Item</button>`;
+      html += `<button class="combat-btn ${this.inspectMode ? 'active-mode' : ''}" data-cbt="inspect">Inspect<span class="cb-sub">free</span></button>`;
+      html += `<button class="combat-btn" data-cbt="flee" ${combat.usedAction ? 'disabled' : ''}>Flee</button>`;
+      html += `<button class="combat-btn end-turn" data-cbt="end">End Turn</button>`;
     } else if (!combat.pendingEnd) {
-      html = `<div class="combat-btn" style="border-color:var(--edge)">⏳ ${cur?.label || ''}'s turn…</div>`;
+      html = `<div class="combat-btn" style="border-color:var(--edge)">${cur?.label || ''}'s turn…</div>`;
     }
     $('combat-actions').innerHTML = html;
     $('combat-actions').querySelectorAll('[data-cbt]').forEach((b) => {
@@ -1020,7 +1088,7 @@ export class UI {
       any = true;
       const b = document.createElement('button');
       b.className = 'combat-btn';
-      b.innerHTML = `${def.icon} ${def.label}<span class="cb-sub">×${s.qty}${def.heal ? ` · +${def.heal}hp` : ''}</span>`;
+      b.innerHTML = `${itemIconHTML(s.item, 14)} ${def.label}<span class="cb-sub">×${s.qty}${def.heal ? ` · +${def.heal}hp` : ''}</span>`;
       b.addEventListener('click', () => { this.game.combat.useItem(i); picker.remove(); });
       picker.appendChild(b);
     });
@@ -1046,7 +1114,7 @@ export class UI {
       ${info.stats ? `<div>ATK ${info.stats.atk} · ARM ${info.stats.armor} · EVA ${info.stats.evasion} · SPD ${info.stats.speed}</div>` : ''}
       ${info.elements ? `<div>Weak: ${info.elements.weak.join(', ') || '—'} · Resists: ${info.elements.resist.join(', ') || '—'}</div>` : ''}
       ${info.statuses?.length ? `<div>${info.statuses.map((s) => `${STATUS_INFO[s.id]?.icon} ${STATUS_INFO[s.id]?.label} (${s.turns})`).join(' · ')}</div>` : ''}
-      ${info.intent ? `<div style="color:var(--bad);font-weight:600">⚠️ ${info.intent}</div>` : ''}
+      ${info.intent ? `<div style="color:var(--bad);font-weight:600">! ${info.intent}</div>` : ''}
       ${preview ? `<div style="margin-top:6px;border-top:1px solid var(--edge);padding-top:6px">
         Hit ${preview.hitChance}% · Damage ${preview.dmgMin}–${preview.dmgMax} · Crit ${Math.round(preview.crit)}%</div>` : ''}
       <div style="color:var(--ink-dim);margin-top:4px;font-style:italic">${info.recommend || ''}</div>`;

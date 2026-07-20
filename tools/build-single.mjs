@@ -26,7 +26,9 @@ try {
   for (const f of manifest) mobs.push(JSON.parse(await readFile(join(root, 'mobs', f), 'utf8')));
 } catch { /* no mobs dir */ }
 
-html = html.replace(/<link rel="stylesheet"[^>]*>/, `<style>\n${css}\n</style>`);
+const fonts = await readFile(join(root, 'css/fonts.css'), 'utf8');
+html = html.replace(/<link rel="stylesheet" href="css\/fonts.css">/, `<style>\n${fonts}\n</style>`);
+html = html.replace(/<link rel="stylesheet" href="css\/style.css">/, `<style>\n${css}\n</style>`);
 html = html.replace(
   /<script type="module" src="js\/main.js"><\/script>/,
   () => `<script>window.__EMBEDDED=1;window.__EMBEDDED_MOBS=${JSON.stringify(mobs)}</script>\n<script>\n${js}\n</script>`

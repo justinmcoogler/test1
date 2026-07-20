@@ -9,7 +9,7 @@ import { emit } from '../core/events.js';
 
 const SLAB_BLOCKS = new Set();
 export function initSlabSet() {
-  for (const name of ['stump', 'dig_mound', 'farmland', 'anvil_block', 'campfire']) SLAB_BLOCKS.add(B[name]);
+  for (const name of ['stump', 'dig_mound', 'anvil_block', 'campfire']) SLAB_BLOCKS.add(B[name]);
 }
 
 export const chunkKey = (cx, cz) => `${cx},${cz}`;

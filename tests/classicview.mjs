@@ -77,7 +77,7 @@ try {
   }, [dest]);
   check('player walked to the clicked spot', after.distToDest < 1.2 && after.targetCleared, JSON.stringify(after));
 
-  // ---- 3. Click a tree → walks over and auto-gathers ----
+  // ---- 3. Tap a tree = walk only; DOUBLE-click = walk over and auto-gather ----
   await gState(() => { window.__game.inventory.add('crude_axe', 1); });
   const tree = await gState(() => {
     const g = window.__game;
@@ -104,10 +104,22 @@ try {
   const treeScreen = await screenPos(tree.x + 0.5, tree.y + 1, tree.z + 0.5);
   check('tree projects on screen', !!treeScreen);
   const logsBefore = await gState(() => window.__game.inventory.count('fernwood_log'));
+  // a single tap must only walk (never start chopping)
   await page.mouse.click(treeScreen[0], treeScreen[1]);
+  await page.waitForTimeout(250);
+  const tapState = await gState(() => ({
+    pending: window.__game.pendingInteract?.kind || 'none',
+    walking: !!window.__game.moveTarget,
+  }));
+  check('single tap on a tree walks without gathering', tapState.pending === 'none' && tapState.walking, JSON.stringify(tapState));
+  // double-click is the "work on this" gesture (re-project: the tap above moved us)
+  await gState(() => { window.__game.cancelClassicActions(); window.__game.player.vx = window.__game.player.vz = 0; });
+  await page.waitForTimeout(250);
+  const treeScreen2 = await screenPos(tree.x + 0.5, tree.y + 1, tree.z + 0.5);
+  await page.mouse.dblclick(treeScreen2[0], treeScreen2[1]);
   await page.waitForTimeout(400);
   const pending = await gState(() => window.__game.pendingInteract?.kind || window.__game.autoGatherNode?.type || 'none');
-  check('tree click queues gather', pending === 'node' || pending === 'tree_fernwood', pending);
+  check('double-click queues gather', pending === 'node' || pending === 'tree_fernwood', pending);
   await page.waitForTimeout(12000); // walk + a few chops
   const logsAfter = await gState(() => window.__game.inventory.count('fernwood_log'));
   check('auto-gather chopped logs', logsAfter > logsBefore, `${logsBefore}→${logsAfter}`);
@@ -124,6 +136,7 @@ try {
     const g = window.__game;
     const e = [...g.enemyMgr.entities.values()].find((en) => en.type === 'practice_dummy');
     if (!e) return null;
+    e.hp = 999; // keep it standing for the whole assert window
     const sx = e.x - 6, sz = e.z;
     g.player.x = sx; g.player.z = sz;
     g.player.y = (g.world.groundNear(Math.floor(sx), Math.floor(sz), 31) ?? 31) + 0.02;
@@ -176,6 +189,35 @@ try {
   await page.waitForTimeout(300);
   const zoomAfter = await gState(() => window.__game.camDist);
   check('wheel zooms the camera', zoomAfter !== zoomBefore, `${zoomBefore}→${zoomAfter}`);
+
+  // ---- 6.5 Map travel + quest-trail dots (pathfinding) ----
+  const travel = await gState(() => {
+    const g = window.__game;
+    const tx = g.player.x + 18, tz = g.player.z + 4;
+    g.setTravelDest(tx, tz);
+    return [tx, tz];
+  });
+  await page.waitForTimeout(2500);
+  const travelMid = await gState(() => ({
+    walking: !!(window.__game.moveTarget || window.__game.travelDest),
+    dots: (window.__game.trailDots || []).length,
+  }));
+  check('map travel starts walking a path', travelMid.walking, JSON.stringify(travelMid));
+  check('guide dots trail the route', travelMid.dots > 0, `${travelMid.dots} dots`);
+  await page.waitForTimeout(9000);
+  const travelDone = await gState(([t]) => {
+    const g = window.__game;
+    return +Math.hypot(g.player.x - t[0], g.player.z - t[1]).toFixed(1);
+  }, [travel]);
+  check('travel arrives near the marked spot', travelDone < 6, `${travelDone} blocks away`);
+  // missing-tool feedback: double-click an ore with no pickaxe
+  const toolMsg = await gState(() => {
+    const g = window.__game;
+    for (const s of g.inventory.slots) if (s && (s.item.includes('pickaxe'))) return 'had-pickaxe';
+    const node = { def: { skill: 'mining', level: 1, tool: 'pickaxe', kind: 'ore' }, id: 'test' };
+    return g.gatherBlockedReason(node.def);
+  });
+  check('missing-tool message names the pickaxe', typeof toolMsg === 'string' && toolMsg.includes('pickaxe'), String(toolMsg));
 
   // ---- 7. Toggle back to first person with V ----
   await page.keyboard.press('KeyV');

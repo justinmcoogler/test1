@@ -17,6 +17,7 @@ export const DEFAULT_SETTINGS = {
   sprintToggle: false,
   leftHanded: false,
   tapToInteract: true,
+  questTrail: true,      // guide dots on the ground toward the tracked objective
   sfxVolume: 0.7,
   musicVolume: 0.35,
   shadows: true,
