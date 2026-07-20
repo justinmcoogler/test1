@@ -384,7 +384,7 @@ class Game {
         this.camPitch = clamp(this.camPitch + dpitch, -1.45, -0.25);
         this.updateClassicMovement(dt);
       } else {
-        const [dyaw, dpitch] = this.controls.consumeLook();
+        const [dyaw, dpitch] = this.controls.consumeLook(dt);
         p.yaw += dyaw;
         p.pitch = clamp(p.pitch + dpitch, -Math.PI / 2 + 0.05, Math.PI / 2 - 0.05);
         this.controls.worldMove = null;

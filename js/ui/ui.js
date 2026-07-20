@@ -314,7 +314,7 @@ export class UI {
     const canvas = $('compass');
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = "15px 'VT323', monospace";
+    ctx.font = "11px 'Silkscreen', monospace";
     ctx.textAlign = 'center';
     const dirs = [['N', 0], ['E', Math.PI / 2], ['S', Math.PI], ['W', -Math.PI / 2]];
     // heading: yaw 0 → -Z (north)

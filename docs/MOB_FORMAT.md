@@ -13,9 +13,12 @@ The working reference file is [`mobs/glimmerfox.json`](../mobs/glimmerfox.json)
 
 - **Units**: world blocks (a player is 1.8 tall, a boar ~0.9). Y is up.
 - **Facing**: the creature looks toward **+Z** ("south" faces are the front).
-- **Texture**: any square image up to **1024×1024** (AI-generated PNGs work
-  great); the engine stores it at up to 256². `(0,0)` is top-left, and all UV
-  rects are written in the source image's own pixel coordinates.
+- **Texture**: a detailed painted atlas, any square image up to **1024×1024**
+  (AI-generated PNGs work great); the engine stores it at up to **512²**.
+  Author at **64 texels per block** ("64×", 4× Minecraft's default) — shade
+  faces, add material texture, paint the face. `(0,0)` is top-left, and all UV
+  rects are written in the source image's own pixel coordinates. See
+  `docs/MOB_BUILDER_PROMPT.md` for the atlas-sizing math.
 - **Angles**: degrees. **Times**: seconds.
 - **Sizes**: ≤ 24 parts, ≤ 64 boxes total, each box dimension `0 < size ≤ 3`.
 - `id`: snake_case, 3–32 chars, must not collide with built-in creatures.
@@ -50,8 +53,9 @@ mob as a single file and works with any image source (e.g. ChatGPT image gen):
 { "width": 64, "height": 64, "rgbaBase64": "<raw RGBA rows>" } // raw pixels; width/height required
 ```
 
-Large images are averaged down to 256² on the GPU; crisp pixel art ≤256 is
-kept pixel-perfect. If `width`/`height` are given with `dataUri`/`file`, UV
+Images larger than 512² are averaged down to 512² on the GPU; pixel art ≤512
+is kept pixel-perfect. A 256² atlas covers ~16 block² of surface at 64×, a
+512² atlas ~64 block² (enough for a boss) — keep the atlas ≤ 512². If `width`/`height` are given with `dataUri`/`file`, UV
 rects are interpreted against that declared size; otherwise against the
 image's natural size.
 

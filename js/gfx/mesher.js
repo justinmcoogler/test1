@@ -36,10 +36,21 @@ class MeshBuilder {
   }
 }
 
-// Block-light flood fill: BFS from emissive blocks (torches, lava, crystals)
-// over a chunk + margin region. Decay per step keeps a torch radius ~8.
+// Block-light flood fill from emissive blocks (torches, lava, crystals) over
+// a chunk + margin region. Propagation includes diagonal steps with true
+// Euclidean costs, so pools fall off as circles rather than diamonds, while
+// still respecting walls. Decay per block keeps a torch radius ~8.
 const LIGHT_MARGIN = 8;
 const LIGHT_DECAY = 0.115;
+const LIGHT_STEPS = [];
+for (let dx = -1; dx <= 1; dx++) {
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      if (!dx && !dy && !dz) continue;
+      LIGHT_STEPS.push([dx, dy, dz, LIGHT_DECAY * Math.hypot(dx, dy, dz)]);
+    }
+  }
+}
 
 function computeBlockLight(get) {
   const M = LIGHT_MARGIN;
@@ -61,16 +72,17 @@ function computeBlockLight(get) {
       }
     }
   }
-  // BFS through non-opaque cells
+  // relaxation flood through non-opaque cells (re-queues on improvement)
   for (let q = 0; q < queue.length; q += 4) {
     const x = queue[q], y = queue[q + 1], z = queue[q + 2];
-    const nl = queue[q + 3] - LIGHT_DECAY;
-    if (nl <= 0.05) continue;
-    for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
+    const l = queue[q + 3];
+    for (const [dx, dy, dz, cost] of LIGHT_STEPS) {
+      const nl = l - cost;
+      if (nl <= 0.05) continue;
       const nx = x + dx, ny = y + dy, nz = z + dz;
       if (nx < -M || nx >= CHUNK + M || nz < -M || nz >= CHUNK + M || ny < 1 || ny >= WORLD_H) continue;
       const i = idx(nx, ny, nz);
-      if (light[i] >= nl) continue;
+      if (light[i] >= nl - 0.004) continue;
       const id = get(nx, ny, nz);
       if (id !== B.air && isOpaque(id)) continue;
       light[i] = nl;

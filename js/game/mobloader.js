@@ -101,8 +101,8 @@ async function decodeTexture(tex, baseUrl = 'mobs/') {
     img.src = src;
   });
   const srcW = tex.width || img.naturalWidth, srcH = tex.height || img.naturalHeight;
-  // keep GPU copy ≤ 256² — plenty for a creature skin, cheap to mip
-  const scale = Math.min(1, 256 / Math.max(img.naturalWidth, img.naturalHeight));
+  // keep GPU copy ≤ 512² so detailed 64×-per-block skins survive; still cheap to mip
+  const scale = Math.min(1, 512 / Math.max(img.naturalWidth, img.naturalHeight));
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.round(img.naturalWidth * scale));
   c.height = Math.max(1, Math.round(img.naturalHeight * scale));

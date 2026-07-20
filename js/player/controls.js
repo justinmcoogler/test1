@@ -80,8 +80,13 @@ export class Controls {
         return;
       }
       if (!this.pointerLocked) {
-        // drag-to-look fallback when the mouse can't be captured
-        if (this._fpDrag) { this.mouseDX += e.movementX; this.mouseDY += e.movementY; }
+        // no mouse capture (embedded page): the view follows the mouse freely
+        // over the canvas — no hold needed. Moves over UI don't turn the view.
+        if (e.target === this.canvas || this._fpDrag) {
+          this.mouseDX += e.movementX;
+          this.mouseDY += e.movementY;
+          this._fpCursor = [e.clientX, e.clientY];
+        } else this._fpCursor = null;
         return;
       }
       this.mouseDX += e.movementX;
@@ -144,11 +149,21 @@ export class Controls {
   }
 
   // consume accumulated mouse deltas, returns [dyaw, dpitch] in radians
-  consumeLook() {
+  consumeLook(dt = 0.016) {
     const sens = (this.settings.sensitivity ?? 1) * 0.0024;
     const inv = this.settings.invertY ? -1 : 1;
-    const dyaw = -this.mouseDX * sens + (this.touchLookDX || 0);
+    let dyaw = -this.mouseDX * sens + (this.touchLookDX || 0);
     const dpitch = -this.mouseDY * sens * inv + (this.touchLookDY || 0);
+    // without capture the cursor stops at the canvas edge — keep turning when
+    // it's parked near the left/right side so a full spin stays possible
+    if (!this.pointerLocked && this.enabled && !this.classicMode && this._fpCursor) {
+      const w = this.canvas.clientWidth || 1;
+      const mx = (this._fpCursor[0] / w) * 2 - 1;
+      const EDGE = 0.7;
+      if (Math.abs(mx) > EDGE) {
+        dyaw -= Math.sign(mx) * ((Math.abs(mx) - EDGE) / (1 - EDGE)) * 2.6 * dt;
+      }
+    }
     this.mouseDX = 0; this.mouseDY = 0;
     this.touchLookDX = 0; this.touchLookDY = 0;
     return [dyaw, dpitch];

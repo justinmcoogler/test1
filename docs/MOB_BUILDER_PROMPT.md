@@ -25,10 +25,15 @@ head = 0.5×0.5×0.5 units).
    body corners. Quadrupeds: 4 legs. Bipeds: 2 legs + 2 arms at the sides.
 4. **Tiny detail boxes sell the silhouette** — snout, ears, horns, tail,
    crest, wings. 1-4 px boxes. This is where the character comes from.
-5. **2-4 strong colors** — body color, lighter head/belly, dark feet, one
-   accent (glow eyes, crest). High contrast between head and body.
-6. **z+ is forward.** The face goes on the head's south (+z) face. y=0 is
-   the ground; feet boxes start at y 0.
+5. **Richly textured, not flat** — the shape is chunky, but the *skin* is a
+   detailed painting: base color with lighter tops and darker undersides,
+   material texture (fur strokes, scale rows, stone speckle, metal
+   highlights), fabric folds, dirt, scars. Gradients, shading, dithering and
+   ambient-occlusion darkening in the crevices are all encouraged — think a
+   Minecraft high-resolution (64×) mob skin, not a solid-color block.
+6. **z+ is forward.** The face goes on the head's south (+z) face — paint
+   eyes, nostrils, mouth, brow there. y=0 is the ground; feet boxes start at
+   y 0.
 
 ## File format
 
@@ -108,14 +113,57 @@ head = 0.5×0.5×0.5 units).
 | 2 | 30-60 | 10-14 | 80-120 | tundra/badlands |
 | 3 | 60-100 | 14-20 | 150-350 | endgame wilds |
 
-## Texture notes
+## Texture: paint it like a 64× resource pack (do the math)
 
-- Make the texture a flat-color pixel painting (no gradients), matching the
-  box colors, with visible eyes/markings on the face region you UV to the
-  head's `south` face. 64×64 is plenty; the game stores up to 256².
-- If you cannot generate an image, set every box's `uv` to a small flat-color
-  region and lean on `color` tints — the game shades boxes per-face.
+Emberveil renders these skins at **64× resolution** — 64 texels per block,
+which is 4× Minecraft's default 16×. That is a lot of room for detail, so
+**use it**: shade every face, add material texture, paint the face. The skin
+is a single atlas image; every box face is a rectangle cut out of it via
+`uv` (coordinates in the SOURCE image's pixels).
+
+**The sizing math.** A box face that measures `W × H` blocks should get
+`(W × 64) × (H × 64)` texels of atlas space. Worked example — a pig-sized
+body `0.625 × 0.5 × 1.0` blocks (10×8×16 model px):
+
+| face | blocks | texels (64×) |
+|---|---|---|
+| top / bottom | 0.625 × 1.0 | 40 × 64 |
+| front / back (face) | 0.625 × 0.5 | 40 × 32 |
+| left / right | 1.0 × 0.5 | 64 × 32 |
+
+Lay every box's six faces out on one atlas with no overlaps (Minecraft-style
+cross unwrap is ideal but any packing works — just give each face its own
+`uv` rect). Sum the face areas to size the atlas:
+
+- **texels needed ≈ (total surface area in block²) × 4096** (since 64² = 4096).
+- A **256×256** atlas holds 65,536 texels → ~**16 block²** of surface, which
+  fits most small/medium creatures at full 64×.
+- A **512×512** atlas holds 262,144 texels → ~**64 block²**, plenty for a
+  boss. The game stores skins at up to **512²** on the GPU (accepts source
+  images up to 1024²), so **keep your atlas ≤ 512×512** — anything larger is
+  downscaled and detail is lost.
+
+So: pick the smallest power-of-two atlas that fits your unwrap at 64 texels
+per block (usually 128², 256², or 512²), set `texture.width`/`height` to it,
+and reference face rects in those pixel coordinates.
+
+**Painting guidance (this is where quality comes from):**
+- Start each face from the base color, then add a directional light pass:
+  lighten the top edge, darken the bottom and the seams between boxes.
+- Add the creature's material: short fur streaks, overlapping scale rows,
+  cracked-stone speckle, woven cloth, wet-clay mottling, glowing runes.
+- Paint the face carefully — eyes with a highlight, nostrils, a mouth line,
+  a brow ridge. This is the first thing players read.
+- Dither or gradient large flat areas so they don't look plastic; keep edges
+  crisp (this is pixel art, not a smooth render).
+- Keep a consistent palette (6–12 colors) so it reads as one creature.
+
+**Fallback:** if you truly cannot output an image, give every box a small
+flat `uv` rect on a tiny texture and rely on `color` tints — but you will
+lose the detail this format is built for. Prefer a real painted atlas.
 
 Creature to build: **[DESCRIBE YOUR CREATURE HERE — name, size, biome,
-temperament, one visual hook, e.g. "a knee-high ember hare with glowing ash
-ears that hops in packs across the badlands at dusk"]**
+temperament, and its visual hooks: silhouette, materials, colors, face,
+markings. e.g. "a knee-high ember hare, ash-grey fur with glowing orange
+cracks along its flanks, long singed ears, coal-black eyes, that hops in
+packs across the badlands at dusk"]**
