@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "serve": "node tests/server.mjs 8080",
+    "test": "node --test tests/unit/*.test.mjs",
+    "test:e2e": "node tests/smoke.mjs && node tests/gameplay.mjs && node tests/boss.mjs && node tests/mobile.mjs",
+    "test:all": "npm test && npm run test:e2e"
   },
   "repository": {
     "type": "git",
@@ -15,5 +18,6 @@
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.61.1"
-  }
+  },
+  "type": "module"
 }

@@ -335,7 +335,7 @@ export const ENEMY_TYPES = {
   },
   rootbound_golem: {
     label: 'Rootbound Golem', behavior: 'aggressive', tier: 0, boss: true,
-    hp: 120, atk: 10, acc: 62, evasion: 2, armor: 5, speed: 4, moveRange: 2,
+    hp: 100, atk: 10, acc: 62, evasion: 2, armor: 4, speed: 4, moveRange: 2,
     abilities: ['root_slam', 'grasping_roots'], element: 'nature', weak: ['fire'], resist: ['nature'],
     phases: [{ at: 0.5, addAtk: 4, summon: ['rootling', 'rootling'], banner: 'The golem groans — roots burst from the floor!' }],
     xp: 500, respawn: 900, aggroRange: 6,

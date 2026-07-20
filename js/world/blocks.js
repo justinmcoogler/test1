@@ -7,13 +7,15 @@ export const BLOCKS = []; // id → def
 
 let nextId = 0;
 function def(name, opts = {}) {
+  const shape = opts.shape || 'cube';
   const d = {
     id: nextId,
     name,
     label: opts.label || name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
     solid: opts.solid !== false,
-    opaque: opts.opaque !== false,
-    shape: opts.shape || 'cube',
+    // non-full shapes (slab/cross/liquid) never occlude neighbors
+    opaque: shape !== 'cube' ? false : opts.opaque !== false,
+    shape,
     tiles: opts.tiles || { all: name },
     hardness: opts.hardness ?? 1.5,       // seconds at bare-hand baseline
     tool: opts.tool || null,               // 'pickaxe' | 'axe' | 'shovel' | null

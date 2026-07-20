@@ -69,7 +69,9 @@ button { font-family: var(--font); cursor: pointer; }
 }
 
 /* ===== HUD ===== */
-#hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; color: var(--ink); font-size: calc(14px * var(--text-scale)); }
+/* HUD sits above the touch layer so its buttons stay tappable; the root is
+   pointer-transparent so camera drags still reach the touch zones below. */
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 22; color: var(--ink); font-size: calc(14px * var(--text-scale)); }
 #hud > * { pointer-events: none; }
 #crosshair {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
@@ -283,6 +285,8 @@ button:disabled { opacity: 0.45; cursor: default; }
 .dialog-btn.quest-ready { border-left: 3px solid var(--good); }
 
 /* ===== combat ===== */
+body.in-combat #hotbar, body.in-combat #menu-buttons, body.in-combat #interact-prompt,
+body.in-combat #quest-tracker, body.in-combat #compass-wrap { display: none !important; }
 #combat-ui { position: fixed; inset: 0; z-index: 30; pointer-events: none; color: var(--ink); }
 #turn-order {
   position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
@@ -327,7 +331,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .combat-btn .cb-sub { display: block; font-size: 10px; color: var(--ink-dim); margin-top: 2px; }
 .combat-btn.end-turn { border-color: #6b5416; background: rgba(60, 50, 20, 0.85); }
 #combat-hint {
-  position: absolute; bottom: 78px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 58px; left: 50%; transform: translateX(-50%);
   background: rgba(0,0,0,0.6); border-radius: 6px; padding: 5px 14px; font-size: 12.5px; pointer-events: none;
 }
 
@@ -353,8 +357,9 @@ button:disabled { opacity: 0.45; cursor: default; }
   position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; transform: translate(-50%, -50%);
   background: rgba(255, 255, 255, 0.3); border-radius: 50%;
 }
-#camera-zone { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: auto; }
-#touch-buttons { position: absolute; right: 12px; bottom: 84px; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; pointer-events: auto; }
+#camera-zone { position: absolute; right: 0; top: 0; width: 55%; height: 100%; pointer-events: auto; z-index: 1; }
+#joystick-zone { z-index: 2; }
+#touch-buttons { position: absolute; right: 12px; bottom: 84px; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; pointer-events: auto; z-index: 3; }
 .touch-btn {
   width: 58px; height: 58px; border-radius: 50%; font-size: 22px;
   background: rgba(14, 17, 22, 0.75); border: 2px solid rgba(255, 255, 255, 0.3); color: var(--ink);
@@ -379,10 +384,11 @@ button:disabled { opacity: 0.45; cursor: default; }
   #menu-buttons { bottom: auto; top: 8px; right: 108px; }
   .menu-btn { width: 40px; height: 40px; font-size: 17px; }
   #game-window { width: 100vw; height: 100vh; border-radius: 0; }
-  #combat-log { bottom: 168px; max-height: 110px; width: 46vw; }
-  #target-info { bottom: 168px; width: 210px; }
-  #combat-actions { bottom: 64px; }
-  .combat-btn { padding: 8px 10px; min-width: 60px; font-size: 12px; }
+  #combat-log { bottom: 150px; max-height: 96px; width: 40vw; }
+  #target-info { bottom: 150px; width: 200px; font-size: 11px; }
+  #combat-actions { bottom: 8px; }
+  .combat-btn { padding: 6px 8px; min-width: 52px; font-size: 11px; }
+  #combat-hint { top: 42px; font-size: 11px; }
   #dialogue { bottom: 8px; }
-  #toasts { bottom: 160px; }
+  #toasts { bottom: 210px; }
 }

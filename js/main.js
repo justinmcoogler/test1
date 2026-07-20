@@ -261,7 +261,7 @@ class Game {
     this.combat.update(dt);
 
     // aggro check
-    if (!this.combat.active && !p.dead && !this.dialogueOpen && !this.ui.currentWindow) {
+    if (!this.combat.active && !p.dead && !this.dialogueOpen && !this.ui.currentWindow && !this.disableAggro) {
       const aggro = this.enemyMgr.checkAggro(p);
       if (aggro) this.startCombat(aggro);
     }
@@ -723,6 +723,7 @@ class Game {
 
   onCombatStart() {
     this.controls.enabled = false;
+    document.body.classList.add('in-combat');
     document.exitPointerLock?.();
     this.ui.closeWindow();
     this.ui.hideDialogue();
@@ -746,6 +747,7 @@ class Game {
 
   onCombatEnd({ result }) {
     this.ui.hideCombat();
+    document.body.classList.remove('in-combat');
     this.combatCam = null;
     if (this.touch && !this.player.dead) this.touch.show();
     if (result === 'won') {
@@ -759,6 +761,8 @@ class Game {
       this.autosaveTimer = Math.min(this.autosaveTimer, 2);
     } else if (result === 'lost') {
       SFX.defeat();
+      this.player.dead = true;
+      this.player.hp = 0;
       this.onPlayerDeath();
       return;
     }
@@ -917,6 +921,16 @@ class Game {
     return out;
   }
 
+  labelVisible(x, y, z) {
+    // occlude labels behind solid terrain
+    const eye = this.combat.active && this.combatCam ? this.combatCam.eye : this.player.eye();
+    const dx = x - eye[0], dy = y - eye[1], dz = z - eye[2];
+    const dist = Math.hypot(dx, dy, dz);
+    if (dist < 0.5) return true;
+    const hit = this.world.raycast(eye[0], eye[1], eye[2], dx / dist, dy / dist, dz / dist, dist - 0.6, false);
+    return !hit || !BLOCKS[hit.id]?.opaque;
+  }
+
   updateWorldLabels() {
     const labels = [];
     if (this.combat.active) {
@@ -936,6 +950,7 @@ class Game {
       for (const npc of this.world.structure.npcs) {
         const d = Math.hypot(npc.x - this.player.x, npc.z - this.player.z);
         if (d > 22) continue;
+        if (!this.labelVisible(npc.x + 0.5, npc.y + 1.6, npc.z + 0.5)) continue;
         const def = NPC_DEFS[npc.id];
         const hasQuest = this.quests.availableFrom(npc.id).length > 0;
         const turnIn = this.quests.activeFrom(npc.id).some((q) => this.quests.readyToTurnIn(q, npc.id));
@@ -948,6 +963,7 @@ class Game {
       for (const e of this.enemyMgr.entities.values()) {
         const d = Math.hypot(e.x - this.player.x, e.z - this.player.z);
         if (d > 18) continue;
+        if (!this.labelVisible(e.x, e.y + 1.2, e.z)) continue;
         labels.push({
           x: e.x, y: e.y + 1.6, z: e.z,
           name: e.def.label,
