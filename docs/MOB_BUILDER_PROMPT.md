@@ -55,6 +55,35 @@ head = 0.5×0.5×0.5 units).
    eyes, nostrils, mouth, brow there. y=0 is the ground; feet boxes start at
    y 0.
 
+## Match the REAL animal's proportions
+
+Chunky ≠ wrong proportions. Build the box layout so that, from the side and
+front, the silhouette reads as that specific animal. Get these right:
+
+- **Overall shape ratio.** Measure the real animal and keep the ratio. A cow
+  or horse is *long and low* (body length ≈ 1.6–2× its standing height); a
+  chicken or frog is *tall and compact* (roughly as tall as long). Don't make
+  everything a cube.
+- **Leg length & placement.** Legs reach the ground (their boxes start at
+  y=0) and their combined height is a believable fraction of the animal: a cow
+  ~45% legs, a bird ~25% short legs, a wolf ~40%. Set each leg IN from the body
+  corners so they sit under the body, one near each corner.
+- **Head size & position.** Grazers/quadrupeds carry the head *forward and
+  slightly up* on a short neck at the front (z+) of the body — it should perch,
+  not merge into the body's front face. Bipeds/birds carry it *on top*.
+- **Detail boxes go where they belong on the real animal:**
+  - **Horns/antlers** → at the TOP-OUTER corners of the head, angling up/out —
+    NOT clustered at the center of the skull (that reads as chimney pipes).
+  - **Ears** → the upper sides of the head.
+  - **Muzzle/beak/snout** → the lower-front of the head.
+  - **Tail** → the rear (−z), at the right height.
+  - **Wings** → the upper sides of the body.
+- **Symmetry.** Mirror every left/right pair exactly across x=0 (hornL at
+  x=−a..−b ⇒ hornR at x=+b..+a). Asymmetric pairs look broken.
+
+Before finalizing, picture the front and side silhouette and confirm it could
+only be this animal.
+
 ## File format
 
 ```json
@@ -206,6 +235,52 @@ Do **not** hand-code flat colors — paint a real atlas image and save it as
 - Paint the face: eyes with a highlight, nostrils, a mouth line, a brow ridge.
 - Dither or gradient large flat areas so they don't look plastic; keep edges
   crisp (pixel art, not a smooth render). Keep a 6–12 colour palette.
+
+## Final self-audit (do this before you output — do not skip)
+
+Walk the whole file and confirm each item. If any fails, fix it and re-check.
+
+**A. UV ↔ face alignment (the #1 cause of broken-looking mobs).** For EVERY
+box face, the `uv` rect must point at the panel where you actually painted
+THAT face's art:
+- Each `uv` rect `[x, y, w, h]` must lie fully inside the atlas
+  (`x+w ≤ width`, `y+h ≤ height`) and over **painted pixels** — never empty
+  background or a neighbouring panel.
+- A face's rect must match that face's real aspect ratio: a `W×H`-block face
+  gets a `w:h` proportional to `W:H` (e.g. a 0.5×0.25 side face → a 2:1 rect
+  like 64×32). A square rect on a long face stretches the art.
+- The head's **south (+z) / `north` panel** is the FACE — it must be the panel
+  where you painted the eyes/muzzle, not a blank hide panel.
+- Rects must not overlap each other unless two faces intentionally share art.
+- No painted panel should be left unreferenced, and no box face left without a
+  `uv`.
+
+**B. Face features — the creature must have a correct, complete face.** On the
+head's front (+z) panel, confirm the species' full feature set is painted and
+correctly placed:
+- **Exactly two eyes**, one on each side of the centerline, at the SAME height,
+  mirrored across x=0 (never one eye, three eyes, or two stacked/lopsided).
+  Give each a dark pupil and a small light catch-highlight.
+- **A nose / nostrils / snout** below and between the eyes, and **a mouth or
+  beak line** below that. A muzzle/beak/snout detail box, if used, sits on the
+  lower-front and its own front panel carries the nostrils/mouth.
+- **Species-appropriate extras in the right count:** two ears (mammals), a comb
+  + wattle (chicken), two horns (cow/ram), whiskers (cat/rat), etc. — the
+  correct NUMBER, symmetric, and on the correct panels.
+- Vertical order top→bottom on the face reads: (ears/horns) → eyes → nose →
+  mouth. Eyes are in the upper half of the face, not at the very top or bottom.
+- Nothing important lands on a hidden/interior face; the eyes are on the panel
+  that actually shows forward.
+
+**C. Proportions & placement.** Re-read "Match the REAL animal's proportions":
+head perches (not merged), horns/wings/ears/tail in the right spots,
+left/right pairs mirrored across x=0, legs reach y=0 under the body, overall
+length:height ratio matches the real animal.
+
+**D. Format.** ≤24 parts / ≤64 boxes, every box size ≤3, parents exist,
+animations (`idle`/`walk`/`attack`) present, stats + drops + biomes valid.
+
+State in your reasoning that all four checks (A–D) passed, then output the zip.
 
 Creature to build: **[DESCRIBE YOUR CREATURE HERE — name, size, biome,
 temperament, and its visual hooks: silhouette, materials, colors, face,
