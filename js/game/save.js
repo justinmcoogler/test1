@@ -30,12 +30,17 @@ export function loadSettings() {
   const embeddedDefaults = typeof window !== 'undefined' && window.__EMBEDDED
     ? { ...DEFAULT_SETTINGS, classicCamera: true }
     : DEFAULT_SETTINGS;
+  let s;
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    return raw ? { ...embeddedDefaults, ...JSON.parse(raw) } : { ...embeddedDefaults };
+    s = raw ? { ...embeddedDefaults, ...JSON.parse(raw) } : { ...embeddedDefaults };
   } catch {
-    return { ...embeddedDefaults };
+    s = { ...embeddedDefaults };
   }
+  // Combat is RuneScape-style, full stop. The old tactical-grid toggle could
+  // linger in saved settings — override it so no one gets stuck in grid battles.
+  s.tacticalCombat = false;
+  return s;
 }
 
 export function saveSettings(s) {

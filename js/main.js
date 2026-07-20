@@ -18,6 +18,7 @@ import { CombatRS } from './game/combatrs.js';
 import { NPC_DEFS } from './game/npcs.js';
 import { UI } from './ui/ui.js';
 import { registerMob, injectSpawnRules, fetchMobFiles, evaluatePose } from './game/mobloader.js';
+import { EducationManager } from './game/education.js';
 import { hashSeed } from './core/rng.js';
 import { on, emit, clearAllListeners } from './core/events.js';
 import { clamp } from './core/math.js';
@@ -43,6 +44,7 @@ class Game {
     this.enemyMgr = new EnemyManager(this.world);
     this.combat = new Combat(this);
     this.combatRS = new CombatRS(this);
+    this.education = new EducationManager(); // dormant in free play; see docs/EDUCATION.md
     this.hitsplats = [];
     this.splatId = 0;
     this.controls = new Controls(this.canvas, this.settings);
@@ -188,6 +190,26 @@ class Game {
     on('itemGained', ({ item }) => this.discoveredItems.add(item));
     on('rightClick', (pos) => this.onSecondary(pos));
     on('interactKey', () => this.tryInteract());
+    // education-mode gates (invisible until a save switches to education mode)
+    on('playtimeExhausted', () => {
+      this.playtimeLocked = true;
+      this.controls.enabled = false;
+      this.combatRS.disengageAll();
+      this.touch?.hide();
+      this.ui.closeWindow();
+      this.showPlaytimeLock();
+      this.saveGame();
+    });
+    on('playtimeUnlocked', () => {
+      this.playtimeLocked = false;
+      document.getElementById('playtime-lock')?.remove();
+      if (!this.player.dead) this.controls.enabled = true;
+      this.touch?.show();
+      this.ui.toast(`▶️ Play time added — ${this.education.balanceMinutes()} minutes banked!`, 'gold');
+    });
+    on('playtimeLow', ({ secondsLeft }) => {
+      this.ui.toast(`⏳ ${Math.ceil(secondsLeft / 60)} min of play time left — finish a lesson to bank more`, 'warn');
+    });
     on('pointerLockFailed', () => {
       // embedded pages (iframes) often deny mouse capture — first-person can't
       // steer there, so fall back to the cursor-driven classic view
@@ -375,6 +397,9 @@ class Game {
       this.ui.setPrompt(null);
       this.ui.setGatherProgress(null);
     }
+
+    // education/playtime clock (no-op in free play)
+    this.education.update(dt, !p.dead && !this.ui.currentWindow && !this.dialogueOpen && !this.playtimeLocked);
 
     // autosave (never mid-battle or on the death screen)
     this.autosaveTimer -= dt;
@@ -1303,6 +1328,23 @@ class Game {
     }
   }
 
+  // Full-screen gate shown when the play-time bank runs dry (education mode).
+  // The lesson launcher plugs into this screen in a later phase.
+  showPlaytimeLock() {
+    if (document.getElementById('playtime-lock')) return;
+    const el = document.createElement('div');
+    el.id = 'playtime-lock';
+    el.className = 'fullscreen-overlay';
+    el.innerHTML = `<div class="title-box">
+      <h2>⏰ Play time is used up!</h2>
+      <p style="color:var(--ink-dim);margin-top:10px">Complete a lesson to earn more time in Emberveil.<br>
+      Your world is saved and waiting for you.</p>
+      <p style="color:var(--ink-dim);margin-top:14px;font-size:13px">Lessons: ${Object.keys(this.education.lessonsDone).length} completed ·
+      ${Math.round(this.education.playtimeTotalSec / 60)} minutes played all-time</p>
+    </div>`;
+    document.body.appendChild(el);
+  }
+
   onPlayerDeath() {
     this.combatRS.disengageAll();
     this.controls.enabled = false;
@@ -1502,6 +1544,7 @@ class Game {
       skills: this.skills.serialize(),
       quests: this.quests.serialize(),
       enemies: this.enemyMgr.serialize(),
+      education: this.education.serialize(),
       flags: this.flags,
       discovered: [...this.discovered],
       discoveredItems: [...this.discoveredItems],
@@ -1517,6 +1560,7 @@ class Game {
     this.skills.deserialize(d.skills);
     this.quests.deserialize(d.quests);
     this.enemyMgr.deserialize(d.enemies);
+    this.education.deserialize(d.education);
     this.flags = d.flags || {};
     this.discovered = new Set(d.discovered || []);
     this.discoveredItems = new Set(d.discoveredItems || []);

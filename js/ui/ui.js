@@ -670,7 +670,6 @@ export class UI {
     const check = (key) => `<input type="checkbox" data-set="${key}" ${s[key] ? 'checked' : ''}>`;
     body.innerHTML = `<div class="settings-grid">
       ${row('Classic camera — third person, click to move (V)', check('classicCamera'))}
-      ${row('Tactical combat (grid & turns instead of classic)', check('tacticalCombat'))}
       ${row('Render distance (chunks)', range('renderDistance', 2, 8, 1))}
       ${row('Camera sensitivity', range('sensitivity', 0.2, 3, 0.1))}
       ${row('Invert Y axis', check('invertY'))}

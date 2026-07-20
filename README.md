@@ -79,20 +79,17 @@ large touch targets; a left-handed layout is available in Settings.
 - **Equipment** — 11 slots (head/body/legs/hands/feet/main/off/ranged/2 accessories/
   utility) with real tradeoffs (armor vs evasion vs speed, hide vs bronze vs woven);
   gear changes your voxel character's appearance in combat.
-- **Combat, two ways**
-  - **Classic (default)** — RuneScape-style battles in the open world: click a creature
-    to engage and you exchange blows automatically on weapon-speed timers, with damage
-    hitsplats, attack styles that route XP (Aggressive→Strength, Defensive→Defense,
-    Balanced splits, plus Ranged and Magic with your bow or staff), food eaten straight
-    from the hotbar mid-fight, special attacks on cooldowns (Power Strike, Cleave, Aimed
-    Shot, Ember Burst, Mend), auto-retaliate, and fleeing by simply running away. Bosses
-    keep real mechanics: the golem's slam telegraphs the ground under you — step out or
-    take it — and it summons rootlings at half health. Enemies path through caves and
-    can be safespotted from ledges with ranged weapons, as is right and proper.
-  - **Tactical (Settings toggle)** — grid battles carved from the terrain around you:
-    initiative order, move + action per turn, height advantage, cover, line of sight,
-    elemental weaknesses, statuses, telegraphed danger tiles, hit-chance and damage
-    previews, inspect, items, defend, flee.
+- **Combat** — RuneScape-style battles in the open world: click a creature
+  to engage and you exchange blows automatically on weapon-speed timers, with damage
+  hitsplats, attack styles that route XP (Aggressive→Strength, Defensive→Defense,
+  Balanced splits, plus Ranged and Magic with your bow or staff), food eaten straight
+  from the hotbar mid-fight, special attacks on cooldowns (Power Strike, Cleave, Aimed
+  Shot, Ember Burst, Mend), auto-retaliate, and fleeing by simply running away. Bosses
+  keep real mechanics: the golem's slam telegraphs the ground under you — step out or
+  take it — and it summons rootlings at half health. Enemies path through caves and
+  can be safespotted from ledges with ranged weapons, as is right and proper.
+  (A tactical grid engine also lives in the codebase, exercised by the test suite,
+  but it is not part of the player experience.)
 - **Creatures** — 20 original creatures from Mudback Boars and Thicket Sprites to
   Frostmaw Wolves, Magma Hulks and Hollow Watchers, each with voxel models, behaviors,
   drop tables and combat quirks; the **Rootbound Golem** boss telegraphs area slams,
