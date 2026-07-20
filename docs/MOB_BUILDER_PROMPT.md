@@ -7,8 +7,12 @@ Minecraft-style proportion rules so new creatures match the built-ins.
 ---
 
 You are building a creature for **Emberveil**, a voxel sandbox RPG. Output a
-single JSON file in the `emberveil-mob` format, version 1. Respond with ONLY
-the JSON — no prose, no markdown fences.
+single JSON file in the `emberveil-mob` format, version 1. Its skin must be a
+**detailed painted texture atlas** (see the texture section) — never flat
+solid colors. If you can generate images, embed the painted PNG in
+`texture.dataUri`. If you cannot, output the JSON with a placeholder texture
+and, after it, a copy-paste image-generation prompt for the skin (Path B
+below). Output the JSON first with no prose or markdown fences before it.
 
 ## Art style — follow these proportion rules exactly
 
@@ -158,9 +162,54 @@ and reference face rects in those pixel coordinates.
   crisp (this is pixel art, not a smooth render).
 - Keep a consistent palette (6–12 colors) so it reads as one creature.
 
-**Fallback:** if you truly cannot output an image, give every box a small
-flat `uv` rect on a tiny texture and rely on `color` tints — but you will
-lose the detail this format is built for. Prefer a real painted atlas.
+## How to actually make the texture with image generation
+
+Do **not** hand-code flat colors. Produce a real painted atlas image. Pick
+whichever path fits the tool you're using:
+
+**Path A — you can generate images directly (e.g. an image-capable model).**
+1. Compute the atlas size + face layout from the math above.
+2. Generate one square pixel-art texture atlas at that size. Lay the faces out
+   on a predictable grid and *label the regions in your own reasoning* so the
+   `uv` rects you write match where you painted each face.
+3. Export as PNG, base64-encode it, and put it in `texture.dataUri` with the
+   matching `width`/`height`. Write every box's `uv` rects to point at the
+   regions you painted.
+
+**Path B — you generate the JSON but a separate tool makes the image**
+(e.g. ChatGPT/DALL·E/Midjourney, or Stable Diffusion). Output the JSON with a
+**placeholder** `texture` and, after the JSON, a ready-to-paste image prompt.
+Then the human generates the PNG and swaps it in. Use a **uniform grid** so
+the regions are predictable no matter what the generator returns — e.g. for a
+256×256 atlas, reserve a 64×64 cell per major face and map each box face to
+its cell.
+
+Copy-paste image-generation prompt template (fill the brackets):
+
+> Pixel-art texture atlas for a voxel game creature, flat orthographic, no
+> perspective, no background, hard-edged pixels (not smooth/anti-aliased),
+> [WIDTH]×[HEIGHT] pixels. It is an unwrapped Minecraft-style mob skin laid
+> out as a grid of labeled panels: [LIST PANELS — e.g. "head-front, head-top,
+> head-sides, body-top, body-sides, wing, leg, tail"]. Creature: [DESCRIBE
+> materials + colors + markings — e.g. "russet chicken feathers with lighter
+> belly, a bright red comb, a yellow-orange beak and scaly yellow legs; short
+> feather strokes, soft top-lit shading, darker in the seams"]. Paint eyes
+> with a white highlight on the head-front panel. Cohesive 8–12 colour
+> palette. Crisp pixels, subtle dithering on large areas.
+
+Then convert the PNG to a data URI and paste it into `texture.dataUri`
+(any of these work):
+
+```bash
+# terminal
+printf 'data:image/png;base64,'; base64 -w0 skin.png
+# or Node
+node -e "console.log('data:image/png;base64,'+require('fs').readFileSync('skin.png').toString('base64'))"
+```
+
+**Last-resort fallback only:** if no image is possible at all, give every box
+a tiny flat `uv` rect and rely on `color` tints — but expect a flat, blocky
+look. The format is built for painted atlases; use one.
 
 Creature to build: **[DESCRIBE YOUR CREATURE HERE — name, size, biome,
 temperament, and its visual hooks: silhouette, materials, colors, face,
