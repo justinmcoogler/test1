@@ -42,7 +42,7 @@ export class Controls {
         } catch { emit('pointerLockFailed'); }
         // no capture (embedded pages, denied permission): drag-to-look still
         // works, and holding the button still gathers/mines
-        if (e.button === 0) { this.leftDown = true; this._fpDrag = true; }
+        if (e.button === 0) { this.leftDown = true; this._fpDrag = { x: e.clientX, y: e.clientY, moved: false }; }
         if (e.button === 2) { this.rightDown = true; emit('rightClick'); }
         return;
       }
@@ -52,9 +52,10 @@ export class Controls {
     document.addEventListener('mouseup', (e) => {
       if (e.button === 0) {
         this.leftDown = false;
-        this._fpDrag = false;
-        // a left-drag orbited the camera — swallow the click it would produce
-        if (this._leftDrag?.moved) this.suppressNextClick = true;
+        // a left-drag (classic orbit, or first-person free-look) turned the
+        // view — swallow the click it would otherwise produce
+        if (this._leftDrag?.moved || this._fpDrag?.moved) this.suppressNextClick = true;
+        this._fpDrag = null;
         this._leftDrag = null;
       }
       if (e.button === 2) this.rightDown = false;
@@ -82,6 +83,10 @@ export class Controls {
       if (!this.pointerLocked) {
         // no mouse capture (embedded page): the view follows the mouse freely
         // over the canvas — no hold needed. Moves over UI don't turn the view.
+        if (this._fpDrag && !this._fpDrag.moved &&
+            Math.hypot(e.clientX - this._fpDrag.x, e.clientY - this._fpDrag.y) > 6) {
+          this._fpDrag.moved = true;
+        }
         if (e.target === this.canvas || this._fpDrag) {
           this.mouseDX += e.movementX;
           this.mouseDY += e.movementY;

@@ -311,8 +311,16 @@ class Game {
       this.touch.onPlace = () => this.onSecondary();
     }
     this.canvas.addEventListener('click', (e) => {
-      if (this.combat.active) this.onCombatClick(e.clientX, e.clientY);
-      else if (this.settings.classicCamera) this.onClassicClick(e.clientX, e.clientY, e.shiftKey);
+      if (this.combat.active) { this.onCombatClick(e.clientX, e.clientY); return; }
+      // click-to-move is third-person (classic camera) ONLY — a first-person
+      // click just attacks/interacts with whatever you're aiming at, and never
+      // switches the camera
+      if (this.settings.classicCamera) {
+        this.onClassicClick(e.clientX, e.clientY, e.shiftKey);
+      } else {
+        if (this.controls.consumeClickSuppress()) return; // that "click" was a free-look drag
+        this.onTapInteract();
+      }
     });
     window.addEventListener('resize', () => this.renderer.resize());
     $('respawn-btn').addEventListener('click', () => this.respawn());
