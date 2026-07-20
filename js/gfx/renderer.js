@@ -250,6 +250,7 @@ export class Renderer {
     gl.uniform1f(tp.uniforms.uFogFar, fogFar);
     gl.uniform1f(tp.uniforms.uOpacity, 1);
     gl.uniform1f(tp.uniforms.uDaylight, this.daylight);
+    gl.uniform1f(tp.uniforms.uTime, this.reducedMotion ? 0 : this.time);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
     gl.uniform1i(tp.uniforms.uAtlas, 0);

@@ -41,6 +41,7 @@ uniform mat4 uPV;
 uniform mat4 uModel;
 out vec2 vUV;
 out vec3 vLight;
+out vec3 vWorld;
 out float vDist;
 uniform vec3 uCamPos;
 void main() {
@@ -48,15 +49,18 @@ void main() {
   gl_Position = uPV * wp;
   vUV = aUV;
   vLight = aLight;
+  vWorld = wp.xyz;
   vDist = distance(wp.xyz, uCamPos);
 }`;
 
 // Terrain: vLight carries (skyLight, blockLight, –). Sky light follows the
-// day/night clock; block light (torches, lava, crystals) does not.
+// day/night clock; block light (torches, lava, crystals) does not — but it
+// flickers like flame, phased by world position so pools shimmer out of sync.
 export const TERRAIN_FS = `#version 300 es
 precision highp float;
 in vec2 vUV;
 in vec3 vLight;
+in vec3 vWorld;
 in float vDist;
 uniform sampler2D uAtlas;
 uniform vec3 uFogColor;
@@ -65,12 +69,21 @@ uniform float uFogFar;
 uniform float uCutout;   // 1 → discard transparent texels
 uniform float uOpacity;
 uniform float uDaylight; // 0.25 night … 1 noon
+uniform float uTime;
 out vec4 fragColor;
 void main() {
   vec4 tex = texture(uAtlas, vUV);
   if (uCutout > 0.5 && tex.a < 0.5) discard;
-  float light = max(max(vLight.r * uDaylight, vLight.g), 0.05);
-  vec3 col = clamp(tex.rgb * light, 0.0, 1.0);
+  // candle-ish flicker: two incommensurate sines, spatial phase, gentle depth
+  float phase = (vWorld.x + vWorld.z) * 0.55 + vWorld.y * 0.3;
+  float flicker = 0.93 + 0.07 * sin(uTime * 8.3 + phase) * sin(uTime * 5.1 + phase * 1.7);
+  // warm tint riding on the block-light channel so torch pools feel like fire
+  float blk = vLight.g * flicker;
+  float light = max(max(vLight.r * uDaylight, blk), 0.05);
+  vec3 col = tex.rgb * light;
+  float warmth = clamp(blk - vLight.r * uDaylight, 0.0, 1.0);
+  col += vec3(0.10, 0.045, -0.02) * warmth * flicker;
+  col = clamp(col, 0.0, 1.0);
   float fog = clamp((vDist - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
   fragColor = vec4(mix(col, uFogColor, fog), tex.a * uOpacity);
 }`;

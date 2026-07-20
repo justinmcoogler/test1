@@ -138,8 +138,9 @@ export function meshChunk(world, cx, cz) {
             const n = get(x + face.n[0], y, z + face.n[2]);
             // side quads stop at 0.88 to meet the lowered water surface exactly
             if (n === B.air) {
+              const lblk = Math.max(blockAt(x + face.n[0], y, z + face.n[2]), em);
               addFace(water, def, face, wx, y, wz, skyAt(x + face.n[0], y, z + face.n[2]),
-                Math.max(blockAt(x + face.n[0], y, z + face.n[2]), em), () => 0, 1, 0.88);
+                () => ({ ao: 0, blk: lblk }), 1, 0.88);
             }
           }
           continue;
@@ -155,9 +156,12 @@ export function meshChunk(world, cx, cz) {
             if (!def.opaque && nid === id) continue;        // skip same-type transparent faces
           }
           const sky = skyAt(nx, ny, nz);
-          const blk = Math.max(blockAt(nx, ny, nz), def.emissive);
-          const aoFn = (corner) => vertexAO(occludes, x, y, z, face, corner);
-          addFace(target, def, face, wx, y, wz, sky, blk, aoFn, 1, isSlab ? 0.6 : 1);
+          const shadeFn = (corner) => {
+            const s = cornerSample(occludes, blockAt, x, y, z, face, corner);
+            s.blk = Math.max(s.blk, def.emissive);
+            return s;
+          };
+          addFace(target, def, face, wx, y, wz, sky, shadeFn, 1, isSlab ? 0.6 : 1);
         }
       }
     }
@@ -166,7 +170,11 @@ export function meshChunk(world, cx, cz) {
   return { opaque: opaque.build(), cutout: cutout.build(), water: water.build() };
 }
 
-function vertexAO(occludes, x, y, z, face, cornerIdx) {
+// Per-corner shading: ambient occlusion plus smooth block light. The block
+// light for each vertex averages the (un-occluded) cells that touch that
+// corner, so torch pools grade smoothly across faces instead of stepping
+// block by block.
+function cornerSample(occludes, blockAt, x, y, z, face, cornerIdx) {
   // Corner position in face space → the three neighbor cells that occlude it.
   const c = face.c[cornerIdx];
   const n = face.n;
@@ -181,12 +189,18 @@ function vertexAO(occludes, x, y, z, face, cornerIdx) {
   const s2 = occludes(bx + t2[0], by + t2[1], bz + t2[2]) ? 1 : 0;
   const cr = occludes(bx + t1[0] + t2[0], by + t1[1] + t2[1], bz + t1[2] + t2[2]) ? 1 : 0;
   const occ = s1 && s2 ? 3 : s1 + s2 + cr;
-  return occ * 0.16;
+  // smooth light: average the open cells around this corner
+  let sum = blockAt(bx, by, bz), cnt = 1;
+  if (!s1) { sum += blockAt(bx + t1[0], by + t1[1], bz + t1[2]); cnt++; }
+  if (!s2) { sum += blockAt(bx + t2[0], by + t2[1], bz + t2[2]); cnt++; }
+  if (!cr && !(s1 && s2)) { sum += blockAt(bx + t1[0] + t2[0], by + t1[1] + t2[1], bz + t1[2] + t2[2]); cnt++; }
+  return { ao: occ * 0.16, blk: sum / cnt };
 }
 
 // Vertex light layout for terrain: (skyLight, blockLight, –). The terrain
-// shader resolves final light = max(sky × daylight, block).
-function addFace(builder, def, face, x, y, z, sky, blk, aoFn, alpha = 1, hScale = 1) {
+// shader resolves final light = max(sky × daylight, block × flicker).
+// shadeFn(corner) → { ao, blk } supplies per-vertex occlusion + smooth light.
+function addFace(builder, def, face, x, y, z, sky, shadeFn, alpha = 1, hScale = 1) {
   const uv = faceUV(def, face.n[1] === 1 ? 'top' : face.n[1] === -1 ? 'bottom' : 'side');
   const p = [];
   const uvs = [];
@@ -202,7 +216,7 @@ function addFace(builder, def, face, x, y, z, sky, blk, aoFn, alpha = 1, hScale 
     else if (face.n[0] !== 0) { uu = c[2]; vv = 1 - cy; }
     else { uu = c[0]; vv = 1 - cy; }
     uvs.push([uv.u0 + (uv.u1 - uv.u0) * uu, uv.v0 + (uv.v1 - uv.v0) * vv]);
-    const ao = aoFn(i);
+    const { ao, blk } = shadeFn(i);
     const sl = Math.max(0.08, face.b * sky * (1 - ao));
     const bl = face.b * blk * (1 - ao);
     light.push([sl, bl, sl]);
