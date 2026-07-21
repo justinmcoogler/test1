@@ -28,6 +28,9 @@ export function parseMobFile(json) {
     partIds.add(p.id);
     if (p.parent && !json.parts.some((q) => q.id === p.parent)) fail(id, `part ${p.id} has unknown parent`);
     if (!Array.isArray(p.boxes) || !p.boxes.length) fail(id, `part ${p.id} has no boxes`);
+    if (p.rotation !== undefined && (!Array.isArray(p.rotation) || p.rotation.length !== 3 || p.rotation.some((v) => typeof v !== 'number'))) {
+      fail(id, `part ${p.id}: rotation must be [x,y,z] degrees`);
+    }
     boxCount += p.boxes.length;
     for (const b of p.boxes) {
       if (!Array.isArray(b.from) || b.from.length !== 3) fail(id, `part ${p.id}: box.from must be [x,y,z]`);
@@ -135,6 +138,7 @@ export async function registerMob(game, json) {
     id: p.id,
     parent: p.parent || null,
     pivot: p.pivot || [0, 0, 0],
+    rotation: p.rotation || null, // static rest rotation (deg), composed with animation
     boxes: p.boxes.map((b) => {
       const box = {
         x: b.from[0], y: b.from[1], z: b.from[2],
@@ -265,15 +269,22 @@ function poseMatrix(pivot, rotDeg, trans) {
 
 // Evaluate an animation at time t → { partId: mat4 } with parent chains applied.
 export function evaluatePose(model, animName, t) {
-  const anim = model.animations[animName] || model.animations.idle;
-  if (!anim) return null;
+  const anim = model.animations[animName] || model.animations.idle || null;
+  // with no animation we still emit a rest pose so any static part rotations
+  // (Blockbench bone/cube rotations) show; parts without one collapse to identity.
+  const hasStatic = !anim && model.parts.some((p) => p.rotation);
+  if (!anim && !hasStatic) return null;
   const local = {};
-  const tt = anim.loop === false ? Math.min(t, anim.length) : t % anim.length;
+  const tt = anim ? (anim.loop === false ? Math.min(t, anim.length) : t % anim.length) : 0;
   for (const part of model.parts) {
-    const ch = anim.parts?.[part.id];
+    const ch = anim?.parts?.[part.id];
     const rot = sampleChannel(ch?.rotate, tt, [0, 0, 0]);
     const trans = sampleChannel(ch?.translate, tt, [0, 0, 0]);
-    local[part.id] = poseMatrix(part.pivot, rot, trans);
+    // a part's rest rotation (from Blockbench bones / baked cube rotations) is
+    // added to the animated rotation, matching Blockbench's additive semantics
+    const base = part.rotation;
+    const rotFull = base ? [rot[0] + base[0], rot[1] + base[1], rot[2] + base[2]] : rot;
+    local[part.id] = poseMatrix(part.pivot, rotFull, trans);
   }
   const world = {};
   const resolve = (part) => {

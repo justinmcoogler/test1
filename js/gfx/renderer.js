@@ -169,6 +169,7 @@ export class Renderer {
       texture,
       parts: parts.map((p) => ({
         id: p.id, parent: p.parent || null, pivot: p.pivot || [0, 0, 0],
+        rotation: p.rotation || null,
         mesh: this.buildBoxMesh(p.boxes, p.tex || 'skin_solid'),
       })),
       animations: animations || {},

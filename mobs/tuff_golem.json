@@ -1,0 +1,1173 @@
+{
+  "format": "emberveil-mob",
+  "version": 1,
+  "id": "tuff_golem",
+  "label": "Tuff Golem",
+  "parts": [
+    {
+      "id": "all",
+      "boxes": [
+        {
+          "from": [
+            0.03419,
+            0.82051,
+            0
+          ],
+          "size": [
+            0.02,
+            0.02,
+            0.02
+          ],
+          "uv": [
+            0,
+            0,
+            1,
+            1
+          ]
+        }
+      ],
+      "pivot": [
+        0.03419,
+        0.82051,
+        0
+      ]
+    },
+    {
+      "id": "left_leg",
+      "boxes": [
+        {
+          "from": [
+            -0.42165,
+            0,
+            -0.09117
+          ],
+          "size": [
+            0.36467,
+            0.45584,
+            0.36467
+          ],
+          "uv": {
+            "north": [
+              36,
+              23,
+              4,
+              5
+            ],
+            "east": [
+              32,
+              23,
+              4,
+              5
+            ],
+            "south": [
+              44,
+              23,
+              4,
+              5
+            ],
+            "west": [
+              40,
+              23,
+              4,
+              5
+            ],
+            "up": [
+              40,
+              23,
+              -4,
+              -4
+            ],
+            "down": [
+              44,
+              19,
+              -4,
+              4
+            ]
+          }
+        }
+      ],
+      "parent": "all",
+      "pivot": [
+        -0.2849,
+        0.59259,
+        0.18234
+      ]
+    },
+    {
+      "id": "right_leg",
+      "boxes": [
+        {
+          "from": [
+            0.05698,
+            0,
+            -0.09117
+          ],
+          "size": [
+            0.36467,
+            0.45584,
+            0.36467
+          ],
+          "uv": {
+            "north": [
+              39,
+              4,
+              4,
+              5
+            ],
+            "east": [
+              35,
+              4,
+              4,
+              5
+            ],
+            "south": [
+              47,
+              4,
+              4,
+              5
+            ],
+            "west": [
+              43,
+              4,
+              4,
+              5
+            ],
+            "up": [
+              43,
+              4,
+              -4,
+              -4
+            ],
+            "down": [
+              47,
+              0,
+              -4,
+              4
+            ]
+          }
+        }
+      ],
+      "parent": "all",
+      "pivot": [
+        0.21652,
+        0.59259,
+        0.18234
+      ]
+    },
+    {
+      "id": "left_arm",
+      "boxes": [
+        {
+          "from": [
+            0.44444,
+            0.18234,
+            -0.09117
+          ],
+          "size": [
+            0.31909,
+            1.00285,
+            0.36467
+          ],
+          "uv": {
+            "north": [
+              4,
+              23,
+              4,
+              11
+            ],
+            "east": [
+              0,
+              23,
+              4,
+              11
+            ],
+            "south": [
+              12,
+              23,
+              4,
+              11
+            ],
+            "west": [
+              8,
+              23,
+              4,
+              11
+            ],
+            "up": [
+              8,
+              23,
+              -4,
+              -4
+            ],
+            "down": [
+              12,
+              19,
+              -4,
+              4
+            ]
+          }
+        }
+      ],
+      "parent": "all",
+      "pivot": [
+        0.44444,
+        0.95726,
+        0.09117
+      ]
+    },
+    {
+      "id": "right_arm",
+      "boxes": [
+        {
+          "from": [
+            -0.76353,
+            0.18234,
+            -0.09117
+          ],
+          "size": [
+            0.31909,
+            1.00285,
+            0.36467
+          ],
+          "uv": {
+            "north": [
+              20,
+              23,
+              4,
+              11
+            ],
+            "east": [
+              16,
+              23,
+              4,
+              11
+            ],
+            "south": [
+              28,
+              23,
+              4,
+              11
+            ],
+            "west": [
+              24,
+              23,
+              4,
+              11
+            ],
+            "up": [
+              24,
+              23,
+              -4,
+              -4
+            ],
+            "down": [
+              28,
+              19,
+              -4,
+              4
+            ]
+          }
+        }
+      ],
+      "parent": "all",
+      "pivot": [
+        -0.51282,
+        0.95726,
+        0.11396
+      ]
+    },
+    {
+      "id": "body",
+      "boxes": [
+        {
+          "from": [
+            -0.43311,
+            0.19367,
+            -0.35334
+          ],
+          "size": [
+            0.86621,
+            0.52433,
+            0.88901
+          ],
+          "uv": {
+            "north": [
+              10,
+              50,
+              12,
+              6
+            ],
+            "east": [
+              0,
+              50,
+              10,
+              6
+            ],
+            "south": [
+              32,
+              50,
+              12,
+              6
+            ],
+            "west": [
+              22,
+              50,
+              10,
+              6
+            ],
+            "up": [
+              31,
+              48,
+              -12,
+              -10
+            ],
+            "down": [
+              43,
+              38,
+              -12,
+              10
+            ]
+          }
+        }
+      ],
+      "parent": "all",
+      "pivot": [
+        0.03419,
+        1.09402,
+        0.18234
+      ]
+    },
+    {
+      "id": "head",
+      "boxes": [
+        {
+          "from": [
+            -0.44444,
+            0.74758,
+            -0.36467
+          ],
+          "size": [
+            0.88889,
+            0.85242,
+            0.91168
+          ],
+          "uv": {
+            "north": [
+              10,
+              9,
+              11,
+              9
+            ],
+            "east": [
+              0,
+              9,
+              10,
+              8
+            ],
+            "south": [
+              21,
+              9,
+              10,
+              8
+            ],
+            "west": [
+              25,
+              0,
+              10,
+              8
+            ],
+            "up": [
+              17,
+              6,
+              -7,
+              -6
+            ],
+            "down": [
+              25,
+              0,
+              -8,
+              8
+            ]
+          }
+        }
+      ],
+      "parent": "body",
+      "pivot": [
+        0.03419,
+        0.82051,
+        0
+      ]
+    },
+    {
+      "id": "nose",
+      "boxes": [
+        {
+          "from": [
+            -0.10256,
+            0.8433,
+            -0.54701
+          ],
+          "size": [
+            0.22792,
+            0.36467,
+            0.18234
+          ],
+          "uv": {
+            "north": [
+              2,
+              2,
+              3,
+              4
+            ],
+            "east": [
+              0,
+              2,
+              2,
+              4
+            ],
+            "south": [
+              7,
+              2,
+              3,
+              4
+            ],
+            "west": [
+              5,
+              2,
+              2,
+              4
+            ],
+            "up": [
+              5,
+              2,
+              -3,
+              -2
+            ],
+            "down": [
+              8,
+              0,
+              -3,
+              2
+            ]
+          }
+        }
+      ],
+      "parent": "head",
+      "pivot": [
+        0.03419,
+        1.09214,
+        0.18234
+      ]
+    },
+    {
+      "id": "holding",
+      "boxes": [
+        {
+          "from": [
+            -0.41122,
+            0.19277,
+            -0.33145
+          ],
+          "size": [
+            0.82244,
+            0.52615,
+            0.84524
+          ],
+          "uv": {
+            "north": [
+              10,
+              50,
+              12,
+              6
+            ],
+            "east": [
+              0,
+              50,
+              10,
+              6
+            ],
+            "south": [
+              32,
+              50,
+              12,
+              6
+            ],
+            "west": [
+              22,
+              50,
+              10,
+              6
+            ],
+            "up": [
+              12,
+              50,
+              -12,
+              -14
+            ],
+            "down": [
+              28.1,
+              37.1,
+              -12,
+              10
+            ]
+          }
+        }
+      ],
+      "parent": "body",
+      "pivot": [
+        0.00006,
+        0.85323,
+        0.18234
+      ]
+    }
+  ],
+  "texture": {
+    "dataUri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAHZ0lEQVR4Xu1aTWxUVRQ+r1AmQKnTP0ophVZNoSYmRv5dEMRWjEFjXCmmys6fhW6ILohuDAsTN7pQTFwYS1waoxgMBUNwAfIXUbFQiIiUUhnaGdoCGRh45rvT73Hm8ob3cEZmOszdvJ9z3733fPc7555zZhyZaN3dz7u8j8dHeSvbtu108AD5rJoWOd53WObOaTDyxNi4RGdVeX0hZxuLnxE+n/m7z/TDM96j4Z7v8Tw4FJNdvT+Zudieee5Jb01456ZuaLG3toyXd/jgTRgEwBtvvuU2N1TJj3v2GAC0AlpxzK+VXLZkkezq7fWWBdB0a5nfYUBFKwgA69Z1GpSXLV3irWv/gYPmvqam2nu3qL3D3B/r78tQAO/PxsY9pTUz7G/IGA0YGQXZd9/suPsMIABtC1o9xU6d/ktmzJglkcjN9UAZKq+pr2ltmwQBIGtssyEQYEzRA6CpS7un8n6+gPZNhpDmM2ZON0DbY9jgcD6YCAHS31HOcfwADOMOHDIAO852+fLYLSZgD2Y7PMi547ZJQEaw4OwAAhXDe/gWfmM7Ss5Lv+KnFNfyyccfZZhQKADCdArq88WXn3re+uzpAc9XkBlPdHUJ3kNJNO39AVrzgnkTTrDXAAXHiYZvIpGIua+fOHm4lv0HjxlmaMB6er4uDACb39/kUgkNABebDQDuPvrx+wtDMUkmkxmM0BsApQGaDQy+2/j2e4UBIIghYeU4ajXVyQbs9v3z6uTPgeGM04bj5mQCnFQfUbBJNHh9nvdtLa3S3LIgQ5eBgVPS2JimL9vZodMynrjoBUE6INL94BTtcz8sUPns5wAA2CQaHJO2PzomgAMADFUVCDYAUB4tGwCcB57bL/LLp2JhxzIA6F0CALRjDcADKk7A4KnrrowMD8vsujqJJy7K1VRKnCkVZt5oXbO52nTWTgt2vOndzXdss2EVC9vPQbyNnSftM+g8EeGBAQBge+8uI+5c/bg4FU4agIZ0XrB9505zfenF9TIUG80IhzG2HUHCMW54+fXCAwAGGGpP2D3usfOw0YUdjxpFQNeHH+owAKx9YYNcB9XdCoknLkhNtF4qKx2ZMqdVtm39XNZ2dko8HjNg0Dn5AVA0DCAA2gxIXSiOhuSnrrZe+k+kM7nlKxbL0d+PypWrl2T6tJkyZ3aD9PWfMrLHVi6VWPySBxy+ZYAEOZhAh/tfzu2w1A7bz2EWaGd0HIDANNbjZLjJ2JMn/jCKAICmxgaJ1tZ7cx4+kk6mLl+6YsDTAGgQ7OQn7KLz2c/4gBWLl5oxdbKDZ/gGmkdKZebnz8dk9OIFI0smXUkkxiRaW2OeEyNxaWysNmbDuB/vOYeepygYEBbNp7u63LaFbV53t2K6oXl1Vb0Mj4zIDSfNDgCwY0e6iDIZ2qRZ6P8F5i0AIK7nZHZWBz8RlHHpyBLjIOhhLoDnoLP/bpTBNJhZAdh36EAG6PQHYQEw5qBqhnSERQ+AHRrb0VwYAPS5b6fEkwIAu/igj8iwACC91cVQMCKMCd11E7ADIV1+0segX8WGNLcdFEPrbCDoqBOmxpK5Tsowpk6e9Fy6TJZrLGGSIQyudz1bamwratflKNdVHbwDE/zGhOx25TOyhuP6MTOIkUGnxy0AaKX86n72Ttjg+UWUZBV3Dt+wFMZiB96x7MVSmC6D2eZExXINprxQWCsGSuoCp1aSBRKb5rf7ccQPAO4uKj1oR377xVz9QOcxapfBAFSQUw1kAHIBXfJmUUTXBAiAXpy2YyY4BEWnvtlK57b5cGzUI+wSmC58EiSaQ84MoNe16Un7tB0RF0AAdNFE1xVYAeYO6EqwrvnnasNBOxwkz8gGmfnpmqBtGhoAKqkpritKnFyDYTuyXHcwSMEguQHAtrtszs9vMPunMfTJZkZ+3rwoAOCucvdYDc52/GT7bZBs0amvbQr2mEUFABaHUtiaVavMz+C40hfok8AGQMtwj1oAx9A1AcgIDoOkogGAO4PFd3evl56erzwA/EDIdt4TAFSCMBb/TKHNR1eIcj3Ggmw8SF6uBwQhVOpy58O6hRn/wwlSeOPw8ZJijQGgfWr6J+igdu7GNXk11lcGIAioySR3PmvocJsqKkOtuT+VlJIzARuAuffVy+BEzd9GpQxAKTLAdoJwdDQJfQ82lCQDygBYxyB2fXFllQxeT8o9yQDQfHUk/RfZ3clR0TFCSZsAd9sPAC0r2WOQ1Meuawbg/tC1ceMYSzISZBzAnYey8AE0AQBAUCAryVDYVpIAEAwCgGtJmwBpXszXZ//5Na/JmHOyfY07rTZN+asj41Ls9/P3fZtfAL5vesQdSCVl3tSITIZrvn2Qc7B9jYvkh0lQsV/zbgJbX5nvLtr7oBxbeVKqf4jK3HeuiWxpyniObmmSfZZcXjsngx9UyuhTCcH39rM9HuV+49vz6Wd7/LwDANsf3b3SrV691wl7dX8W11kuXn/72R4nX/05TqjiRchOeXUoIecsqm5lAIpqOwqwmDIDCgB6UU1ZZkBRbUcBFnPPM+Bfmq6Dm1S45PYAAAAASUVORK5CYII=",
+    "width": 64,
+    "height": 64
+  },
+  "stats": {
+    "hp": 45,
+    "atk": 7,
+    "speed": 1,
+    "behavior": "defensive",
+    "tier": 1,
+    "xp": 40,
+    "desc": "Imported from Blockbench (free)."
+  },
+  "drops": [],
+  "animations": {
+    "walk": {
+      "length": 0.8,
+      "loop": true,
+      "parts": {
+        "right_arm": {
+          "rotate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.2,
+              [
+                -32.5,
+                0,
+                0
+              ]
+            ],
+            [
+              0.4,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.6,
+              [
+                32.5,
+                0,
+                0
+              ]
+            ],
+            [
+              0.8,
+              [
+                0,
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "body": {
+          "translate": [
+            [
+              0.4,
+              [
+                0,
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "left_arm": {
+          "rotate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.2,
+              [
+                32.5,
+                0,
+                0
+              ]
+            ],
+            [
+              0.4,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.6,
+              [
+                -32.5,
+                0,
+                0
+              ]
+            ],
+            [
+              0.8,
+              [
+                0,
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "right_leg": {
+          "rotate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.2,
+              [
+                -20,
+                0,
+                0
+              ]
+            ],
+            [
+              0.4,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.6,
+              [
+                20,
+                0,
+                0
+              ]
+            ],
+            [
+              0.8,
+              [
+                0,
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "left_leg": {
+          "rotate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.2,
+              [
+                20,
+                0,
+                0
+              ]
+            ],
+            [
+              0.4,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.6,
+              [
+                -20,
+                0,
+                0
+              ]
+            ],
+            [
+              0.8,
+              [
+                0,
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "all": {
+          "translate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.2,
+              [
+                0,
+                -0.06826,
+                0
+              ]
+            ],
+            [
+              0.4,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.6,
+              [
+                0,
+                -0.06826,
+                0
+              ]
+            ],
+            [
+              0.8,
+              [
+                0,
+                -0.03413,
+                0
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    "idle": {
+      "length": 0.25,
+      "loop": false,
+      "parts": {
+        "all": {
+          "rotate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ]
+          ],
+          "translate": [
+            [
+              0,
+              [
+                -0.06826,
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "left_arm": {
+          "rotate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ]
+          ],
+          "translate": [
+            [
+              0,
+              [
+                0,
+                -0.27303,
+                0
+              ]
+            ]
+          ]
+        },
+        "right_arm": {
+          "rotate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ]
+          ],
+          "translate": [
+            [
+              0,
+              [
+                0,
+                -0.27303,
+                0
+              ]
+            ]
+          ]
+        },
+        "body": {
+          "rotate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ]
+          ],
+          "translate": [
+            [
+              0,
+              [
+                0,
+                -0.20478,
+                0
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    "attack": {
+      "length": 1,
+      "loop": false,
+      "parts": {
+        "left_arm": {
+          "rotate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.2,
+              [
+                -47.5,
+                0,
+                0
+              ]
+            ],
+            [
+              0.4,
+              [
+                -71.79,
+                0,
+                0
+              ]
+            ],
+            [
+              0.7,
+              [
+                -71.79,
+                0,
+                0
+              ]
+            ],
+            [
+              0.95,
+              [
+                -90,
+                0,
+                0
+              ]
+            ]
+          ],
+          "translate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.35,
+              [
+                0,
+                -0.20478,
+                -0.2389
+              ]
+            ]
+          ]
+        },
+        "right_arm": {
+          "rotate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.2,
+              [
+                -47.5,
+                0,
+                0
+              ]
+            ],
+            [
+              0.4,
+              [
+                -71.79,
+                0,
+                0
+              ]
+            ],
+            [
+              0.7,
+              [
+                -71.79,
+                0,
+                0
+              ]
+            ],
+            [
+              0.95,
+              [
+                -90,
+                0,
+                0
+              ]
+            ]
+          ],
+          "translate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.35,
+              [
+                0,
+                -0.20478,
+                -0.2389
+              ]
+            ]
+          ]
+        },
+        "body": {
+          "rotate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.2,
+              [
+                5,
+                0,
+                0
+              ]
+            ],
+            [
+              0.4,
+              [
+                2.14,
+                0,
+                0
+              ]
+            ],
+            [
+              0.7,
+              [
+                2.14,
+                0,
+                0
+              ]
+            ],
+            [
+              0.95,
+              [
+                0,
+                0,
+                0
+              ]
+            ]
+          ],
+          "translate": [
+            [
+              0.15,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.4,
+              [
+                0,
+                -0.06826,
+                0
+              ]
+            ],
+            [
+              0.7,
+              [
+                0,
+                -0.06826,
+                0
+              ]
+            ],
+            [
+              1,
+              [
+                0,
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "holding": {
+          "rotate": [
+            [
+              0.15,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.25,
+              [
+                17.5,
+                0,
+                0
+              ]
+            ],
+            [
+              0.4,
+              [
+                8.75,
+                0,
+                0
+              ]
+            ],
+            [
+              0.7,
+              [
+                8.75,
+                0,
+                0
+              ]
+            ],
+            [
+              0.95,
+              [
+                0,
+                0,
+                0
+              ]
+            ]
+          ],
+          "translate": [
+            [
+              0,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.15,
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            [
+              0.4,
+              [
+                0,
+                0,
+                -0.79589
+              ]
+            ],
+            [
+              0.7,
+              [
+                0,
+                0,
+                -0.79589
+              ]
+            ],
+            [
+              0.95,
+              [
+                0,
+                0,
+                -0.92149
+              ]
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "_source": {
+    "tool": "bbmodel-to-mob",
+    "bbmodel": "tuff_golem.bbmodel",
+    "model_format": "free",
+    "targetHeight": 1.6
+  }
+}
