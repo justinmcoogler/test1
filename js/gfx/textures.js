@@ -1,12 +1,12 @@
-// Procedural texture atlas. Every tile is painted at 64×64 with a 4px grain
-// (16×16 logical pixels) for a crisp, chunky look. Fully original, seeded art.
+// Procedural texture atlas. Every tile is painted at 32×32 logical pixels
+// (1px grain) for detailed, fully original seeded art.
 import { mulberry32, hashSeed } from '../core/rng.js';
 
-export const TILE = 64;
+export const TILE = 32;
 export const ATLAS_COLS = 16;
 export const ATLAS_ROWS = 8;
-const G = 4; // grain: logical pixel size
-const LP = TILE / G; // 16 logical pixels per side
+const G = 1; // grain: logical pixel size
+const LP = TILE / G; // 32 logical pixels per side
 
 export const tileUV = {}; // name → {u0,v0,u1,v1}
 
