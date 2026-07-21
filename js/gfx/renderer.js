@@ -80,6 +80,7 @@ export class Renderer {
     const gl = this.gl;
     this.chunkMeshes.set(key, {
       cx, cz,
+      top: world.getChunk(cx, cz)?.contentTop ?? WORLD_H, // for a tight vertical frustum-cull box
       opaque: m.opaque ? uploadWorldMesh(gl, m.opaque.verts, m.opaque.indices) : null,
       cutout: m.cutout ? uploadWorldMesh(gl, m.cutout.verts, m.cutout.indices) : null,
       water: m.water ? uploadWorldMesh(gl, m.water.verts, m.water.indices) : null,
@@ -262,7 +263,7 @@ export class Renderer {
       const dx = m.cx - pcx, dz = m.cz - pcz;
       if (Math.max(Math.abs(dx), Math.abs(dz)) > this.renderDistance) continue;
       const minX = m.cx * CHUNK, minZ = m.cz * CHUNK;
-      if (!aabbInFrustum(this.planes, minX, 0, minZ, minX + CHUNK, WORLD_H, minZ + CHUNK)) continue;
+      if (!aabbInFrustum(this.planes, minX, 0, minZ, minX + CHUNK, m.top ?? WORLD_H, minZ + CHUNK)) continue;
       visible.push(m);
     }
 

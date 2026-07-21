@@ -52,13 +52,13 @@ for (let dx = -1; dx <= 1; dx++) {
   }
 }
 
-function computeBlockLight(get) {
+function computeBlockLight(get, bandTop) {
   const M = LIGHT_MARGIN;
   const EX = CHUNK + 2 * M, EZ = CHUNK + 2 * M;
   const idx = (x, y, z) => ((y * EZ) + (z + M)) * EX + (x + M);
-  const light = new Float32Array(EX * WORLD_H * EZ);
+  const light = new Float32Array(EX * bandTop * EZ);
   const queue = [];
-  for (let y = 1; y < WORLD_H; y++) {
+  for (let y = 1; y < bandTop; y++) {
     for (let z = -M; z < CHUNK + M; z++) {
       for (let x = -M; x < CHUNK + M; x++) {
         const id = get(x, y, z);
@@ -80,7 +80,7 @@ function computeBlockLight(get) {
       const nl = l - cost;
       if (nl <= 0.05) continue;
       const nx = x + dx, ny = y + dy, nz = z + dz;
-      if (nx < -M || nx >= CHUNK + M || nz < -M || nz >= CHUNK + M || ny < 1 || ny >= WORLD_H) continue;
+      if (nx < -M || nx >= CHUNK + M || nz < -M || nz >= CHUNK + M || ny < 1 || ny >= bandTop) continue;
       const i = idx(nx, ny, nz);
       if (light[i] >= nl - 0.004) continue;
       const id = get(nx, ny, nz);
@@ -90,7 +90,7 @@ function computeBlockLight(get) {
     }
   }
   return (x, y, z) => {
-    if (x < -M || x >= CHUNK + M || z < -M || z >= CHUNK + M || y < 0 || y >= WORLD_H) return 0;
+    if (x < -M || x >= CHUNK + M || z < -M || z >= CHUNK + M || y < 0 || y >= bandTop) return 0;
     return light[idx(x, y, z)];
   };
 }
@@ -103,12 +103,27 @@ export function meshChunk(world, cx, cz) {
 
   const get = (x, y, z) => world.getBlock(ox + x, y, oz + z);
 
+  // Vertical caps: this chunk only holds blocks below its own contentTop, so the
+  // main mesh loop stops there. The sky/column-top scan and the block-light flood
+  // also need to see slightly-taller neighbours (torches in the ±margin ring, tall
+  // blocks abutting our top edge), so those use the neighbourhood max + 1.
+  const self = world.getChunk(cx, cz);
+  const selfTop = Math.min(WORLD_H, self?.contentTop ?? WORLD_H);
+  let bandTop = selfTop;
+  for (let dz = -1; dz <= 1; dz++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const nc = world.getChunk(cx + dx, cz + dz);
+      if (nc && nc.contentTop > bandTop) bandTop = nc.contentTop;
+    }
+  }
+  bandTop = Math.min(WORLD_H, bandTop + 1);
+
   // column-top cache for sky light (includes neighbor ring)
   const colTop = new Int16Array((CHUNK + 2) * (CHUNK + 2));
   for (let z = -1; z <= CHUNK; z++) {
     for (let x = -1; x <= CHUNK; x++) {
       let top = 0;
-      for (let y = WORLD_H - 1; y >= 0; y--) {
+      for (let y = bandTop - 1; y >= 0; y--) {
         const id = get(x, y, z);
         if (id !== B.air && isOpaque(id)) { top = y; break; }
       }
@@ -121,13 +136,13 @@ export function meshChunk(world, cx, cz) {
     if (y >= top) return 1;
     return Math.max(0.42, 1 - (top - y) * 0.1);
   };
-  const blockAt = computeBlockLight(get);
+  const blockAt = computeBlockLight(get, bandTop);
   const occludes = (x, y, z) => {
     const id = get(x, y, z);
     return id !== B.air && isOpaque(id);
   };
 
-  for (let y = 0; y < WORLD_H; y++) {
+  for (let y = 0; y < selfTop; y++) {
     for (let z = 0; z < CHUNK; z++) {
       for (let x = 0; x < CHUNK; x++) {
         const id = get(x, y, z);

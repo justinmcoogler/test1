@@ -8,7 +8,7 @@ import { hash2, hash3 } from '../core/rng.js';
 import { clamp, lerp, smoothstep } from '../core/math.js';
 
 export const CHUNK = 16;
-export const WORLD_H = 128;
+export const WORLD_H = 512;
 export const SEA = 62;
 
 // The Frostwatch frontier camp: a second hand-built site far out in forced
@@ -200,7 +200,11 @@ export class WorldGen {
     const fillerId = B[biome.filler];
     const tundra = biome === BIOMES.frostbound_tundra;
 
-    for (let y = 0; y < WORLD_H; y++) {
+    // Everything above the ground/water line is air, and the chunk array is
+    // zero-initialised to air — so we only fill up to the surface. This keeps
+    // column generation cost tied to terrain height, not the (tall) world height.
+    const top = Math.max(h, SEA);
+    for (let y = 0; y <= top; y++) {
       let id = B.air;
       if (y === 0) id = B.bedrock;
       else if (y <= h) {

@@ -60,11 +60,18 @@ export class World {
     const setLocal = (lx, y, lz, id) => { blocks[lidx(lx, y, lz)] = id; };
     const gen = this.gen;
 
+    // Highest occupied layer (+1) in this chunk. The mesher/light/scans stop
+    // here instead of at WORLD_H, so cost tracks terrain height, not the tall
+    // world ceiling. Everything above is guaranteed air.
+    let contentTop = SEA + 1;
+    const bumpTop = (y) => { if (y + 1 > contentTop) contentTop = y + 1; };
+
     for (let lz = 0; lz < CHUNK; lz++) {
       for (let lx = 0; lx < CHUNK; lx++) {
         const wx = cx * CHUNK + lx, wz = cz * CHUNK + lz;
         const { h } = gen.column(blocks, lx, lz, wx, wz, setLocal);
         chunk.surfaceH[lz * CHUNK + lx] = h;
+        bumpTop(Math.max(h, SEA));
       }
     }
 
@@ -96,7 +103,7 @@ export class World {
         // small plants (pure decoration)
         if (grassy && above === B.air) {
           for (const p of biome.plants) {
-            if (hash2(this.seed + 903 + B[p.block], wx, wz) < p.d) { setLocal(lx, h + 1, lz, B[p.block]); break; }
+            if (hash2(this.seed + 903 + B[p.block], wx, wz) < p.d) { setLocal(lx, h + 1, lz, B[p.block]); bumpTop(h + 1); break; }
           }
         }
         // surface nodes
@@ -161,6 +168,7 @@ export class World {
     if (structEdits) {
       for (const [x, y, z, id] of structEdits) {
         blocks[lidx(x - cx * CHUNK, y, z - cz * CHUNK)] = id;
+        if (id !== B.air) bumpTop(y);
       }
     }
     // Structure nodes/spawns that fall in this chunk
@@ -186,13 +194,17 @@ export class World {
         st.state = 'ready'; st.remaining = this.rollCharges(node);
       }
       if (st.state === 'depleted') this.depletedWatch.add(node.id);
-      this.stampNodeInto(blocks, cx, cz, node, st.state);
+      bumpTop(this.stampNodeInto(blocks, cx, cz, node, st.state));
     }
 
     // Player edits replay last — they always win.
     const edits = this.editedBlocks.get(chunkKey(cx, cz));
-    if (edits) for (const [idx, id] of edits) blocks[idx] = id;
+    if (edits) for (const [idx, id] of edits) {
+      blocks[idx] = id;
+      if (id !== B.air) bumpTop(Math.floor(idx / (CHUNK * CHUNK)));
+    }
 
+    chunk.contentTop = Math.min(WORLD_H, contentTop);
     return chunk;
   }
 
@@ -202,12 +214,15 @@ export class World {
   }
 
   stampNodeInto(blocks, cx, cz, node, state) {
+    let maxY = -1;
     for (const cell of nodeBlocks(node, state)) {
       if (cell.id === undefined) continue;
       const lx = cell.x - cx * CHUNK, lz = cell.z - cz * CHUNK;
       if (lx < 0 || lx >= CHUNK || lz < 0 || lz >= CHUNK || cell.y < 0 || cell.y >= WORLD_H) continue;
       blocks[lidx(lx, cell.y, lz)] = cell.id;
+      if (cell.id !== B.air) maxY = Math.max(maxY, cell.y);
     }
+    return maxY;
   }
 
   // ---- Block access ------------------------------------------------------
@@ -229,6 +244,7 @@ export class World {
     const idx = lidx(x - cx * CHUNK, y, z - cz * CHUNK);
     if (c.blocks[idx] === id && !record) return;
     c.blocks[idx] = id;
+    if (id !== B.air && y + 1 > (c.contentTop || 0)) c.contentTop = Math.min(WORLD_H, y + 1); // building upward raises the mesh ceiling
     c.mapStamp = (c.mapStamp || 0) + 1; // invalidates cached map tiles
     if (record) {
       if (!this.editedBlocks.has(k)) this.editedBlocks.set(k, new Map());
@@ -257,7 +273,9 @@ export class World {
   isNight() { return this.daylight() < 0.55; }
 
   surfaceAt(x, z) {
-    for (let y = WORLD_H - 1; y > 0; y--) {
+    const c = this.chunks.get(chunkKey(Math.floor(x / CHUNK), Math.floor(z / CHUNK)));
+    const start = c ? Math.min(WORLD_H - 1, c.contentTop) : WORLD_H - 1;
+    for (let y = start; y > 0; y--) {
       const id = this.getBlock(x, y, z);
       if (id !== B.air && id !== B.water) return y;
     }

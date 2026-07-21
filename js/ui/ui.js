@@ -394,7 +394,7 @@ export class UI {
         for (let lx = 0; lx < CHUNK; lx++) {
           const wx = cx * CHUNK + lx, wz = cz * CHUNK + lz;
           let rgb = [16, 20, 26], topY = 0;
-          for (let y = WORLD_H - 1; y >= 0; y--) {
+          for (let y = Math.min(WORLD_H - 1, chunk.contentTop ?? WORLD_H - 1); y >= 0; y--) {
             const id = world.getBlock(wx, y, wz);
             if (id === B.air) continue;
             rgb = colors[id] || [120, 120, 120];
