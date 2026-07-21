@@ -40,7 +40,7 @@ try {
     const i = g.inventory.slots.findIndex((s) => s && s.item === 'wooden_cudgel');
     g.inventory.equipFromSlot(i);
     const e = [...g.enemyMgr.entities.values()].find((en) => en.type === 'practice_dummy');
-    g.player.x = e.x - 1.6; g.player.y = 31.02; g.player.z = e.z;
+    g.player.x = e.x - 1.6; g.player.y = 65.02; g.player.z = e.z;
     g.player.vx = g.player.vy = g.player.vz = 0;
     const dx = e.x - g.player.x, dz = e.z - g.player.z;
     g.player.yaw = Math.atan2(-dx, -dz);
@@ -186,7 +186,7 @@ try {
     }
     // keep them down for the whole test — a respawned rat joining the boss pull is flaky
     for (const [id, t] of g.enemyMgr.killed) g.enemyMgr.killed.set(id, g.world.time + 3600);
-    g.player.x = 24.5; g.player.y = 13.02; g.player.z = -73.5;
+    g.player.x = 24.5; g.player.y = 47.02; g.player.z = -73.5;
     g.player.vx = g.player.vy = g.player.vz = 0;
     g.disableAggro = false;
   });

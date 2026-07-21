@@ -32,7 +32,7 @@ try {
     document.getElementById('touch-ui')?.classList.add('hidden');
     // empty grass south of the square
     g.player.x = -4.5; g.player.z = 30.5;
-    g.player.y = (g.world.groundNear(-5, 30, 31) ?? 31) + 0.02;
+    g.player.y = (g.world.groundNear(-5, 30, 65) ?? 65) + 0.02;
     g.player.vx = g.player.vz = 0;
   });
 

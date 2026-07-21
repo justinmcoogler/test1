@@ -58,7 +58,7 @@ try {
 
   // ---- 1. Talk to Elder Maren, accept the first quest ----
   const maren = await gState(() => window.__game.world.structure.npcs.find((n) => n.id === 'maren'));
-  await teleportFacing(maren.x + 0.5, 31, maren.z + 2.5, maren.x, 32, maren.z);
+  await teleportFacing(maren.x + 0.5, 65, maren.z + 2.5, maren.x, 66, maren.z);
   await page.keyboard.press('KeyF');
   await page.waitForTimeout(300);
   check('dialogue opens', await page.isVisible('#dialogue'));
@@ -73,7 +73,7 @@ try {
   check('quest q_arrival active', q1Active === 'active');
 
   // ---- 2. Visit the grove, then chop a fernwood tree there ----
-  await teleportFacing(24.5, 31, 0.5, 24, 31, 4); // grove marker
+  await teleportFacing(24.5, 65, 0.5, 24, 65, 4); // grove marker
   await page.waitForTimeout(600);
   const groveReached = await gState(() => window.__game.quests.state.q_arrival?.stage >= 1);
   check('grove reach stage advanced', groveReached);
@@ -88,7 +88,7 @@ try {
     return best;
   });
   check('grove tree exists', !!tree);
-  await teleportFacing(tree.x + 0.5 - 2, 31, tree.z + 0.5, tree.x, tree.y + 1, tree.z);
+  await teleportFacing(tree.x + 0.5 - 2, 65, tree.z + 0.5, tree.x, tree.y + 1, tree.z);
   await holdPrimary(true);
   await page.waitForTimeout(14000); // several chops (~3.3s each with the worn hatchet)
   await holdPrimary(false);
@@ -108,7 +108,7 @@ try {
       return null;
     });
     if (tree2) {
-      await teleportFacing(tree2.x + 0.5 - 2, 31, tree2.z + 0.5, tree2.x, tree2.y + 1, tree2.z);
+      await teleportFacing(tree2.x + 0.5 - 2, 65, tree2.z + 0.5, tree2.x, tree2.y + 1, tree2.z);
       await holdPrimary(true);
       await page.waitForTimeout(10000);
       await holdPrimary(false);
@@ -164,7 +164,7 @@ try {
   await page.keyboard.press('Escape');
 
   // ---- 5. Return to Maren, turn in quest ----
-  await teleportFacing(maren.x + 0.5, 31, maren.z + 2.5, maren.x, 32, maren.z);
+  await teleportFacing(maren.x + 0.5, 65, maren.z + 2.5, maren.x, 66, maren.z);
   await page.keyboard.press('KeyF');
   await page.waitForTimeout(250);
   await page.click('#dialogue-options .dialog-btn:nth-child(2)');
@@ -199,7 +199,7 @@ try {
     const x = Math.floor(g.player.x) + 3, z = Math.floor(g.player.z);
     return { x, z, y: g.world.surfaceAt(x, z) };
   });
-  await teleportFacing(spot.x - 2 + 0.5, 31.5, spot.z + 0.5, spot.x, spot.y, spot.z);
+  await teleportFacing(spot.x - 2 + 0.5, 65.5, spot.z + 0.5, spot.x, spot.y, spot.z);
   await gState(() => window.__game.onSecondary());
   await page.waitForTimeout(200);
   const placed = await gState(() => {
@@ -221,7 +221,7 @@ try {
     return null;
   });
   check('mine copper node exists', !!ore);
-  await teleportFacing(ore.x + 0.5 - 2, 19, ore.z + 0.5, ore.x, ore.y, ore.z);
+  await teleportFacing(ore.x + 0.5 - 2, 53, ore.z + 0.5, ore.x, ore.y, ore.z);
   await holdPrimary(true);
   await page.waitForTimeout(9000);
   await holdPrimary(false);
@@ -236,7 +236,7 @@ try {
     g.inventory.add('copper_ore_chunk', 3);
     g.inventory.add('tin_ore_chunk', 3);
   });
-  await teleportFacing(12.5, 31, -12.5, 12, 31, -14); // workshop, near furnace
+  await teleportFacing(12.5, 65, -12.5, 12, 65, -14); // workshop, near furnace
   await page.waitForTimeout(300);
   const smelted = await gState(() => {
     const g = window.__game;
@@ -265,7 +265,7 @@ try {
     const idx = g.inventory.slots.findIndex((s) => s && s.item === 'wooden_cudgel');
     g.inventory.equipFromSlot(idx);
   });
-  await teleportFacing(dummy.x - 2, 31, dummy.z, Math.floor(dummy.x), 31, Math.floor(dummy.z));
+  await teleportFacing(dummy.x - 2, 65, dummy.z, Math.floor(dummy.x), 65, Math.floor(dummy.z));
   await gState(() => {
     const g = window.__game;
     const e = [...g.enemyMgr.entities.values()].find((e) => e.type === 'practice_dummy');

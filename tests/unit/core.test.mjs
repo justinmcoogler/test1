@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { hashSeed, mulberry32, hash2 } from '../../js/core/rng.js';
 import { fbm2, valueNoise2 } from '../../js/core/noise.js';
 import { xpForLevel, levelForXp, Skills } from '../../js/game/skills.js';
-import { WorldGen, CHUNK, SEA, BIOMES } from '../../js/world/worldgen.js';
+import { WorldGen, CHUNK, SEA, WORLD_H, BIOMES } from '../../js/world/worldgen.js';
 import { NODE_TYPES, nodeBlocks, nodeCells, rollNodeDrops } from '../../js/game/nodes.js';
 import { RECIPES } from '../../js/game/crafting.js';
 import { ITEMS } from '../../js/game/items.js';
@@ -58,12 +58,12 @@ test('worldgen: deterministic heights, sane range, flat settlement', () => {
     const x = (i * 37) % 800 - 400, z = (i * 91) % 800 - 400;
     const h = g1.heightAt(x, z);
     assert.equal(h, g2.heightAt(x, z));
-    assert.ok(h >= 4 && h < 60);
+    assert.ok(h >= 4 && h <= WORLD_H - 6);
     if (h !== g3.heightAt(x, z)) diff++;
   }
   assert.ok(diff > 100, 'different seeds should differ');
   for (const [x, z] of [[0, 0], [10, -10], [-20, 15], [30, 0], [0, 30]]) {
-    assert.equal(g1.heightAt(x, z), 30, `settlement should be flat at ${x},${z}`);
+    assert.equal(g1.heightAt(x, z), 64, `settlement should be flat at ${x},${z}`);
   }
 });
 

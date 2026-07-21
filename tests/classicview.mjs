@@ -96,7 +96,7 @@ try {
     const g = window.__game;
     const sx = t.x - 5, sz = t.z;
     g.player.x = sx; g.player.z = sz;
-    g.player.y = (g.world.groundNear(Math.floor(sx), Math.floor(sz), 31) ?? 31) + 0.02;
+    g.player.y = (g.world.groundNear(Math.floor(sx), Math.floor(sz), 65) ?? 65) + 0.02;
     g.player.vx = g.player.vy = g.player.vz = 0;
     g.camYaw = Math.atan2(-(t.x - sx), -(t.z - sz)); // face camera toward the tree
   }, [tree]);
@@ -127,7 +127,7 @@ try {
     e.hp = 999; // keep it standing for the whole assert window
     const sx = e.x - 6, sz = e.z;
     g.player.x = sx; g.player.z = sz;
-    g.player.y = (g.world.groundNear(Math.floor(sx), Math.floor(sz), 31) ?? 31) + 0.02;
+    g.player.y = (g.world.groundNear(Math.floor(sx), Math.floor(sz), 65) ?? 65) + 0.02;
     g.player.vx = g.player.vy = g.player.vz = 0;
     g.camYaw = Math.atan2(-(e.x - sx), -(e.z - sz));
     return { x: e.x, y: e.y, z: e.z };

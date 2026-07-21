@@ -138,14 +138,14 @@ try {
     for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) {
       game.world.ensureChunk(35 + dx, -8 + dz);
     }
-    p.y = (game.world.groundNear(560, -119, 40) ?? 35) + 0.02;
+    p.y = (game.world.groundNear(560, -119, 67) ?? 67) + 0.02;
     game.enemyMgr.refresh();
     const biome = game.world.gen.biomeAt(560, -120).label;
     const sylla = game.world.structure.npcs.some((n) => n.id === 'sylla');
     const bossSpawn = [...game.enemyMgr.entities.values()].some((e) => e.type === 'rimehowl_alpha');
-    const chest = game.world.getChestAt(557, 34, -142);
+    const chest = game.world.getChestAt(557, 68, -142);
     const warded = chest?.meta.requiresBossDead === 'boss_rimehowl';
-    const forge = game.world.getBlock(564, 34, -117); // furnace at CX+4
+    const forge = game.world.getBlock(564, 68, -117); // furnace at CX+4
     return { biome, sylla, bossSpawn, warded, forgeIsFurnace: forge === window.__blocks.B.furnace };
   });
   check('camp sits in forced tundra', frost.biome === 'Frostbound Tundra', frost.biome);
@@ -206,7 +206,7 @@ try {
   const water = await g(() => {
     const game = window.__game;
     const p = game.player;
-    p.x = 0.5; p.z = 18.5; p.y = 26; // pond bottom, head under
+    p.x = 0.5; p.z = 18.5; p.y = 60; // pond bottom, head under
     p.vx = p.vy = p.vz = 0;
     p.air = 2;
     return { maxAir: p.maxAir };
@@ -219,7 +219,7 @@ try {
   await g(() => {
     const p = window.__game.player;
     p.x = 6.5; p.z = 6.5; // back on the square
-    p.y = (window.__game.world.groundNear(6, 6, 31) ?? 31) + 0.02;
+    p.y = (window.__game.world.groundNear(6, 6, 65) ?? 65) + 0.02;
   });
   await page.waitForTimeout(1200);
   const surfaced = await g(() => ({ air: window.__game.player.air, hp: window.__game.player.hp }));
@@ -230,7 +230,7 @@ try {
   // ---- 10. QoL: town storage + xp toggle ----
   const qol = await g(() => {
     const game = window.__game;
-    const chest = game.world.getChestAt(4, 31, 4);
+    const chest = game.world.getChestAt(4, 65, 4);
     return {
       townStorage: chest?.id === 'town_storage',
       xpToastsDefault: game.settings.xpToasts === true,

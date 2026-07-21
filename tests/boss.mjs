@@ -67,7 +67,7 @@ try {
   // walk into the boss hall
   await gState(() => {
     const g = window.__game;
-    g.player.x = 24.5; g.player.y = 13.02; g.player.z = -73.5;
+    g.player.x = 24.5; g.player.y = 47.02; g.player.z = -73.5;
     g.player.vx = g.player.vy = g.player.vz = 0;
     g.player.yaw = 0; g.player.pitch = -0.1;
     g.disableAggro = false;
@@ -172,7 +172,7 @@ try {
   // ---- treasure chest ----
   await gState(() => {
     const g = window.__game;
-    g.player.x = 24.5; g.player.y = 13.02; g.player.z = -77.8;
+    g.player.x = 24.5; g.player.y = 47.02; g.player.z = -77.8;
     g.player.yaw = 0; g.player.pitch = -0.45;
   });
   await page.waitForTimeout(300);
@@ -193,7 +193,7 @@ try {
     if (g.ui.chestId) g.ui.closeWindow();
     g.player.hp = 3;
     // spawn a fresh rat right here so the hopeless fight is deterministic
-    g.player.x = 24.5; g.player.y = 13.02; g.player.z = -64.5;
+    g.player.x = 24.5; g.player.y = 47.02; g.player.z = -64.5;
     g.player.vx = g.player.vy = g.player.vz = 0;
     const def = window.__enemies.ENEMY_TYPES.gloomrat;
     g.enemyMgr.entities.set('test_rat', {

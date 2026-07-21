@@ -88,7 +88,7 @@ try {
   });
   await page.evaluate(([t]) => {
     const g = window.__game;
-    g.player.x = t.x + 0.5 - 2; g.player.y = 31.02; g.player.z = t.z + 0.5;
+    g.player.x = t.x + 0.5 - 2; g.player.y = 65.02; g.player.z = t.z + 0.5;
     g.player.vx = g.player.vy = g.player.vz = 0;
     const dx = t.x + 0.5 - g.player.x, dy = t.y + 1 - (g.player.y + 1.62), dz = t.z + 0.5 - g.player.z;
     g.player.yaw = Math.atan2(-dx, -dz);
@@ -112,7 +112,7 @@ try {
     const g = window.__game;
     g.settings.tacticalCombat = true; // this section exercises the tactical UI on touch
     const e = [...g.enemyMgr.entities.values()].find((en) => en.type === 'practice_dummy');
-    g.player.x = e.x - 1.1; g.player.y = 31.02; g.player.z = e.z; // adjacent tile → Strike in range
+    g.player.x = e.x - 1.1; g.player.y = 65.02; g.player.z = e.z; // adjacent tile → Strike in range
     g.startCombat(e);
   });
   await page.waitForTimeout(900);

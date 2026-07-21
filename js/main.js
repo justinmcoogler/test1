@@ -122,6 +122,16 @@ class Game {
     }
     if (!this._restored) {
       this.player.y = this.world.surfaceAt(sx, sz) + 1;
+    } else {
+      // Save-compat: pre-128 saves stored an absolute y from the old 64-tall
+      // world, which now lands the player deep inside the taller terrain. If
+      // their feet are inside a solid block, snap up to standable ground.
+      const px = Math.floor(this.player.x), pz = Math.floor(this.player.z);
+      if (this.world.collisionHeight(px, Math.floor(this.player.y), pz) > 0) {
+        const gy = this.world.groundNear(px, pz, this.player.y);
+        this.player.y = gy ?? this.world.surfaceAt(px, pz) + 1;
+        this.player.vy = 0;
+      }
     }
     this.enemyMgr.refresh();
     this.enemyMgr.applySavedHp();

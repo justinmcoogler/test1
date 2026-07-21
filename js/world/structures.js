@@ -5,6 +5,15 @@ import { B } from './blocks.js';
 
 const key = (x, y, z) => `${x},${y},${z}`;
 
+// The whole settlement, mine, dungeon, pond and Frostwatch camp are authored
+// at the legacy 64-tall vertical scale (ground≈30) and lifted uniformly into
+// the current 128-tall world by LIFT. Lifting everything by the same amount
+// preserves every relative height — so mine→dungeon stairs stay contiguous
+// and the pond stays watertight without touching a single interior y-literal.
+// LIFT must equal (worldgen settlement surface) − 30. Worldgen pins the
+// settlement plateau at 64 and Frostwatch at 67, so LIFT = 34.
+const LIFT = 34;
+
 export function buildStarterStructures() {
   const edits = new Map();
   const nodes = [];
@@ -12,7 +21,8 @@ export function buildStarterStructures() {
   const npcs = [];
   const chests = [];
 
-  const set = (x, y, z, id) => edits.set(key(x, y, z), id);
+  // every block write is lifted; callers author at the legacy scale
+  const set = (x, y, z, id) => edits.set(key(x, y + LIFT, z), id);
   const box = (x1, y1, z1, x2, y2, z2, id) => {
     for (let x = x1; x <= x2; x++) for (let y = y1; y <= y2; y++) for (let z = z1; z <= z2; z++) set(x, y, z, id);
   };
@@ -23,7 +33,7 @@ export function buildStarterStructures() {
     }
   };
 
-  const GROUND = 30; // settlement plateau surface height
+  const GROUND = 30; // authored plateau height (real surface is GROUND + LIFT)
   const F = GROUND + 1; // standing level
 
   // ---- Paths -------------------------------------------------------------
@@ -296,6 +306,15 @@ export function buildStarterStructures() {
     dungeonAntechamber: [24, 13, -64],
     bossHall: [24, 13, -76],
   };
+
+  // Block writes were lifted inside set(); the data placements above still hold
+  // authored y-values, so lift them all by the same amount to land on the real
+  // (128-tall) surface. Do this once, here, instead of at every push site.
+  for (const n of nodes) n.y += LIFT;
+  for (const sp of spawns) sp.y += LIFT;
+  for (const ch of chests) ch.y += LIFT;
+  for (const n of npcs) n.y += LIFT;
+  for (const m of Object.values(markers)) m[1] += LIFT;
 
   return { edits, nodes, spawns, npcs, chests, markers };
 }

@@ -151,7 +151,7 @@ export class World {
       let type = roll < 0.45 ? 'ore_copper' : roll < 0.85 ? 'ore_tin' : 'ore_iron';
       if (tier >= 1 && roll > 0.7) type = 'ore_iron';
       if (tier >= 2 && roll > 0.85) type = 'ore_silver';
-      if (tier >= 2 && ly < 14 && roll > 0.93) type = 'crystal_node';
+      if (tier >= 2 && ly < 40 && roll > 0.93) type = 'crystal_node';
       if (tier >= 3 && roll > 0.8) type = 'ore_emberstone';
       chunk.nodes.push({ type, x: wx, y: ly, z: wz });
     }

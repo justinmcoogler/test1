@@ -8,13 +8,13 @@ import { hash2, hash3 } from '../core/rng.js';
 import { clamp, lerp, smoothstep } from '../core/math.js';
 
 export const CHUNK = 16;
-export const WORLD_H = 64;
-export const SEA = 28;
+export const WORLD_H = 128;
+export const SEA = 62;
 
 // The Frostwatch frontier camp: a second hand-built site far out in forced
 // tundra. Terrain, biome and danger tier are pinned around it so the camp
 // exists on every seed.
-export const FROST_CAMP = { x: 560, z: -120, ground: 33 };
+export const FROST_CAMP = { x: 560, z: -120, ground: 67 };
 
 export const BIOMES = {
   greenwood_plains: {
@@ -108,13 +108,15 @@ export class WorldGen {
     const hills = fbm2(s + 22, x * 0.02, z * 0.02, 4);                   // local relief
     const highMask = smoothstep(clamp((fbm2(s + 33, x * 0.0035, z * 0.0035, 3) - 0.45) * 3, 0, 1));
     const mount = Math.pow(ridge2(s + 44, x * 0.009, z * 0.009, 3), 1.6) * highMask;
-    let h = 16 + cont * 20 + hills * 7 + mount * 24;
+    // Re-centered for a 128-tall world: plains sit just above sea (~66),
+    // valleys dip below the sea into water, mountains tower toward ~120.
+    let h = 39 + cont * 40 + hills * 14 + mount * 54;
 
     // Rivers: carve winding channels below sea level, but not on high peaks.
     const rv = ridge2(s + 55, x * 0.003, z * 0.003, 2);
-    if (rv > 0.86 && h < SEA + 14) {
+    if (rv > 0.86 && h < SEA + 28) {
       const depth = (rv - 0.86) / 0.14; // 0..1
-      h = Math.min(h, lerp(h, SEA - 2.5 - depth * 3, smoothstep(clamp(depth * 2, 0, 1))));
+      h = Math.min(h, lerp(h, SEA - 5 - depth * 6, smoothstep(clamp(depth * 2, 0, 1))));
     }
 
     // Starter plateau: gentle, guaranteed-walkable land around the settlement.
@@ -122,10 +124,10 @@ export class WorldGen {
     const d = Math.hypot(x, z);
     if (d < 150) {
       const t = smoothstep(clamp(1 - d / 150, 0, 1));
-      h = lerp(h, 30.2 + hills * 1.6, t);
+      h = lerp(h, 64.2 + hills * 1.6, t);
       if (d < 44) {
         const t2 = smoothstep(clamp((44 - d) / 10, 0, 1));
-        h = lerp(h, 30, t2);
+        h = lerp(h, 64, t2);
       }
     }
     // Frostwatch plateau: the frontier camp gets the same treatment
@@ -167,8 +169,8 @@ export class WorldGen {
       return m > 0.56 ? BIOMES.ancient_forest : BIOMES.greenwood_plains;
     }
     if (tier === 1) {
-      if (m > 0.6 && h < SEA + 8) return BIOMES.misty_wetlands;
-      if (h > SEA + 12) return BIOMES.rocky_highlands;
+      if (m > 0.6 && h < SEA + 16) return BIOMES.misty_wetlands;
+      if (h > SEA + 24) return BIOMES.rocky_highlands;
       return m > 0.5 ? BIOMES.ancient_forest : BIOMES.greenwood_plains;
     }
     if (tier === 2) {
@@ -236,7 +238,7 @@ export function undergroundNodeCandidates(gen, cx, cz) {
   for (let i = 0; i < attempts; i++) {
     const rx = Math.floor(hash3(gen.seed + 301, cx, cz, i * 3) * CHUNK);
     const rz = Math.floor(hash3(gen.seed + 302, cx, cz, i * 3 + 1) * CHUNK);
-    const ry = 6 + Math.floor(hash3(gen.seed + 303, cx, cz, i * 3 + 2) * 20);
+    const ry = 6 + Math.floor(hash3(gen.seed + 303, cx, cz, i * 3 + 2) * 46);
     out.push({ lx: rx, ly: ry, lz: rz, roll: hash3(gen.seed + 304, cx, cz, i) });
   }
   return out;

@@ -54,16 +54,16 @@ try {
   await page.waitForTimeout(1200);
 
   // gravity off for aerial shots: keep re-setting position (dead flag not used)
-  await shot('settlement-air', 0, 55, 34, Math.PI, -0.75);       // above, looking north over village
-  await shot('square', 4, 33, 4, Math.PI * 0.75, -0.1);          // village square
-  await shot('cottage', -6, 33, -2, Math.PI * 0.72, -0.05);      // cottage + Maren
-  await shot('workshop', 6, 33, -11, -Math.PI / 2, -0.08);       // workshop pavilion
-  await shot('pond', 4, 33, 12, Math.PI, -0.25);                 // fishing pond
-  await shot('minemouth', 24.5, 33, -18, Math.PI, -0.12);        // mine arch
-  await shot('mineshaft', 24.5, 27, -30, Math.PI, -0.35);        // stairway down
-  await shot('orechamber', 24.5, 21, -45, Math.PI, -0.1);        // ore chamber
-  await shot('bosshall', 24.5, 15.5, -71, Math.PI, -0.05);       // boss hall + golem
-  await shot('wilds', 120, 48, 120, Math.PI * 0.25, -0.3);       // wilderness terrain
+  await shot('settlement-air', 0, 89, 34, Math.PI, -0.75);       // above, looking north over village
+  await shot('square', 4, 67, 4, Math.PI * 0.75, -0.1);          // village square
+  await shot('cottage', -6, 67, -2, Math.PI * 0.72, -0.05);      // cottage + Maren
+  await shot('workshop', 6, 67, -11, -Math.PI / 2, -0.08);       // workshop pavilion
+  await shot('pond', 4, 67, 12, Math.PI, -0.25);                 // fishing pond
+  await shot('minemouth', 24.5, 67, -18, Math.PI, -0.12);        // mine arch
+  await shot('mineshaft', 24.5, 61, -30, Math.PI, -0.35);        // stairway down
+  await shot('orechamber', 24.5, 55, -45, Math.PI, -0.1);        // ore chamber
+  await shot('bosshall', 24.5, 49.5, -71, Math.PI, -0.05);       // boss hall + golem
+  await shot('wilds', 120, 82, 120, Math.PI * 0.25, -0.3);       // wilderness terrain
   if (errors.length) { console.log('PAGE ERRORS:'); errors.forEach((e) => console.log(' •', e)); }
 } finally {
   await browser.close();

@@ -13,7 +13,7 @@ const W = 0.6, H = 1.8;
 
 export class Player {
   constructor() {
-    this.x = 6.5; this.y = 40; this.z = 6.5;
+    this.x = 6.5; this.y = 74; this.z = 6.5;
     this.vx = 0; this.vy = 0; this.vz = 0;
     this.yaw = Math.PI; this.pitch = -0.1;
     this.onGround = false;
