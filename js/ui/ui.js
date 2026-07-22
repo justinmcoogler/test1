@@ -674,8 +674,10 @@ export class UI {
     const stations = g.nearbyStations();
     const discovered = g.discoveredItems;
     const groups = new Map();
+    const firearmsAllowed = g.education.firearmsAllowed;
     for (const rec of RECIPES) {
       if (rec.discover && !discovered.has(rec.discover)) continue;
+      if (rec.educationLocked && !firearmsAllowed) continue; // hide the black-powder chain when guns are off
       const k = rec.station || 'hand';
       if (!groups.has(k)) groups.set(k, []);
       groups.get(k).push(rec);
@@ -685,7 +687,7 @@ export class UI {
       const stationKey = k === 'hand' ? null : k;
       list += `<div class="craft-group-title">${STATION_LABELS[stationKey]}</div>`;
       for (const rec of recs) {
-        const check = canCraft(rec, g.inventory, g.skills, stations);
+        const check = canCraft(rec, g.inventory, g.skills, stations, firearmsAllowed);
         const def = ITEMS[rec.out];
         list += `<div class="craft-row ${this.selectedRecipe === rec.id ? 'selected' : ''} ${check.ok ? '' : 'unavailable'}" data-rec="${rec.id}">
           <span class="cr-icon">${itemIconHTML(rec.out)}</span>
@@ -696,7 +698,7 @@ export class UI {
     const rec = RECIPES.find((r) => r.id === this.selectedRecipe);
     let detail = '<div class="craft-detail"><span style="color:var(--ink-dim)">Select a recipe…</span></div>';
     if (rec) {
-      const check = canCraft(rec, g.inventory, g.skills, stations);
+      const check = canCraft(rec, g.inventory, g.skills, stations, firearmsAllowed);
       const def = ITEMS[rec.out];
       detail = `<div class="craft-detail">
         <div class="cd-name">${itemIconHTML(rec.out)} ${def.label}${rec.outQty > 1 ? ` ×${rec.outQty}` : ''}</div>
@@ -721,7 +723,7 @@ export class UI {
       b.addEventListener('click', () => {
         const n = parseInt(b.dataset.craft, 10);
         for (let i = 0; i < n; i++) {
-          const res = craft(rec, g.inventory, g.skills, g.nearbyStations());
+          const res = craft(rec, g.inventory, g.skills, g.nearbyStations(), g.education.firearmsAllowed);
           if (!res.ok) break;
           if (rec.station === 'campfire' && ITEMS[rec.out].type === 'food') emit('cooked', { item: rec.out });
         }

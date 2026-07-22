@@ -4,11 +4,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { METALS, WOODS, GEMS, FIREARMS, toolMetals, jewelryMetals } from '../../js/game/materials.js';
-import { RECIPES, STATION_LABELS } from '../../js/game/crafting.js';
+import { RECIPES, STATION_LABELS, canCraft, craft } from '../../js/game/crafting.js';
+import { EducationManager } from '../../js/game/education.js';
 import { NODE_TYPES } from '../../js/game/nodes.js';
 import { SKILL_DEFS } from '../../js/game/skills.js';
 import { ITEMS } from '../../js/game/items.js';
 import { B } from '../../js/world/blocks.js';
+import { BIOMES } from '../../js/world/worldgen.js';
 
 const item = (id) => ITEMS[id] !== undefined;
 const block = (n) => B[n] !== undefined;
@@ -46,6 +48,27 @@ test('recipes: the whole firearms chain is craftable and education-locked', () =
   for (const rc of gunRecs) assert.ok(rc.out === FIREARMS.powder.id || FIREARMS.ammo.some((a) => a.id === rc.out) || FIREARMS.guns.some((g) => g.id === rc.out), `unexpected locked recipe ${rc.out}`);
 });
 
+test('firearms are craftable in free play but blocked in education mode by default', () => {
+  const edu = new EducationManager();
+  assert.equal(edu.firearmsAllowed, true, 'free play allows firearms');
+  edu.setMode('education');
+  assert.equal(edu.firearmsAllowed, false, 'education mode blocks firearms by default');
+  edu.setMode('education', { firearms: true });
+  assert.equal(edu.firearmsAllowed, true, 'a teacher can opt firearms back in');
+
+  // a gun recipe must be blocked by canCraft when firearms are off, allowed when on
+  const gunRec = RECIPES.find((rc) => rc.educationLocked && FIREARMS.guns.some((g) => g.id === rc.out));
+  assert.ok(gunRec, 'a gun recipe exists');
+  const inv = { hasAll: () => true, canFit: () => true, add() {}, consumeAll() {} };
+  const skills = { level: () => 99, addXp() {} };
+  const stations = new Set([gunRec.station]);
+  assert.equal(canCraft(gunRec, inv, skills, stations, false).ok, false, 'guns off → not craftable');
+  assert.equal(canCraft(gunRec, inv, skills, stations, true).ok, true, 'guns on → craftable');
+  // a non-gun recipe is unaffected by the firearms flag
+  const bar = RECIPES.find((rc) => rc.out === 'copper_bar');
+  assert.equal(canCraft(bar, inv, skills, new Set([bar.station]), false).ok, true, 'copper still craftable with guns off');
+});
+
 test('nodes: every node references real skills, blocks and drop items', () => {
   for (const [type, def] of Object.entries(NODE_TYPES)) {
     assert.ok(def.skill in SKILL_DEFS, `node ${type} bad skill ${def.skill}`);
@@ -57,6 +80,31 @@ test('nodes: every node references real skills, blocks and drop items', () => {
     }
     for (const d of def.drops) assert.ok(item(d.item), `node ${type} drops missing item ${d.item}`);
     for (const rd of def.rare) assert.ok(item(rd.item), `node ${type} rare drops missing item ${rd.item}`);
+  }
+});
+
+test('worldgen: every wood & metal actually spawns on a tree-valid surface', () => {
+  // Mirror of world.js `treeGround`: trees only root on these surfaces.
+  const TREE_SURFACES = new Set(['grass', 'snow_grass', 'corrupt_soil', 'stone', 'sand']);
+  // Which tree/ore node types the biomes actually place, and on what surface.
+  const placedTrees = new Map(); // tree type → true if on a tree-valid surface
+  const placedNodes = new Set();
+  for (const biome of Object.values(BIOMES)) {
+    const surfaceOk = TREE_SURFACES.has(biome.surface);
+    for (const t of biome.trees || []) placedTrees.set(t.type, (placedTrees.get(t.type) || false) || surfaceOk);
+    for (const n of biome.nodes || []) placedNodes.add(n.type);
+  }
+  for (const w of WOODS) {
+    const type = `tree_${w.id}`;
+    assert.ok(placedTrees.has(type), `wood ${w.id} is in no biome's trees[] — unobtainable`);
+    assert.ok(placedTrees.get(type), `wood ${w.id} only spawns on a non-tree surface — it would never generate`);
+  }
+  // underground selection (world.js) covers copper/tin/iron/lead/silver/gold/meteoric + coal;
+  // the rest must appear via a biome nodes[] list.
+  const underground = new Set(['ore_copper', 'ore_tin', 'ore_iron', 'ore_lead', 'ore_silver', 'ore_gold', 'ore_meteoric', 'deposit_coal']);
+  for (const m of mineable) {
+    const type = `ore_${m.id}`;
+    assert.ok(placedNodes.has(type) || underground.has(type), `metal ${m.id} spawns nowhere (no biome node, not underground)`);
   }
 });
 

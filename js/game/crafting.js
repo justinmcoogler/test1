@@ -154,15 +154,16 @@ export function availableRecipes(skills, discoveredItems) {
   return RECIPES.filter((rec) => !rec.discover || discoveredItems.has(rec.discover));
 }
 
-export function canCraft(rec, inv, skills, nearbyStations) {
+export function canCraft(rec, inv, skills, nearbyStations, firearmsAllowed = true) {
+  if (rec.educationLocked && !firearmsAllowed) return { ok: false, reason: 'Firearms are disabled in this mode' };
   if (rec.station && !nearbyStations.has(rec.station)) return { ok: false, reason: `Needs ${STATION_LABELS[rec.station]}` };
   if (skills.level(rec.skill) < rec.level) return { ok: false, reason: `Needs ${rec.skill} ${rec.level}` };
   if (!inv.hasAll(rec.inputs)) return { ok: false, reason: 'Missing materials' };
   return { ok: true };
 }
 
-export function craft(rec, inv, skills, nearbyStations) {
-  const check = canCraft(rec, inv, skills, nearbyStations);
+export function craft(rec, inv, skills, nearbyStations, firearmsAllowed = true) {
+  const check = canCraft(rec, inv, skills, nearbyStations, firearmsAllowed);
   if (!check.ok) return check;
   inv.consumeAll(rec.inputs);
   // consuming inputs may have freed the space; if the result still can't fit,

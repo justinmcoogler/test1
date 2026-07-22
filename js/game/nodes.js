@@ -23,7 +23,7 @@ for (const w of WOODS) {
   generated[`tree_${w.id}`] = {
     label: `${w.label} Tree`, skill: 'woodcutting', level: w.woodLevel, tool: 'axe',
     xp: Math.round(12 + w.tier * 6), time: +(2.6 + w.tier * 0.25).toFixed(1),
-    charges: [3, 4 + Math.floor(w.tier / 3)], respawn: 40 + w.tier * 20, kind: 'tree',
+    charges: [3, 5 + Math.floor(w.tier / 3)], respawn: 40 + w.tier * 20, kind: 'tree',
     log: `${w.id}_log`, leaves: `${w.id}_leaves`,
     trunk: [4 + Math.floor(w.tier / 3), 6 + Math.floor(w.tier / 2)],
     canopy: NEEDLE.has(w.id) ? 'cone' : 'round',

@@ -32,8 +32,9 @@ export const SKILL_DEFS = {
 // Milestone unlock tables (display + real gates live in recipes/nodes/abilities)
 export const SKILL_UNLOCKS = {
   mining: [
-    [1, 'Copper ore, clay & coal'], [10, 'Tin ore'], [20, 'Lead & silver ore'], [25, 'Iron ore'],
-    [30, 'Zinc ore'], [40, 'Gold ore'], [55, 'Platinum ore'], [70, 'Meteoric iron (crater sites)'],
+    [1, 'Copper ore, clay & saltpeter'], [10, 'Tin ore'], [15, 'Coal & sulfur seams'],
+    [20, 'Lead & silver ore'], [25, 'Iron ore'], [30, 'Zinc ore'], [40, 'Gold ore'],
+    [55, 'Platinum ore'], [70, 'Meteoric iron (crater sites)'],
     [90, 'Master miner: rare gem chance doubled — gems drop while mining any rock'],
   ],
   woodcutting: [
@@ -59,16 +60,16 @@ export const SKILL_UNLOCKS = {
     [1, 'Surface dig sites'], [15, 'Relic fragments more common'], [30, 'Dungeon excavations'], [60, 'Lost-age treasures'],
   ],
   smithing: [
-    [1, 'Smelt copper; copper tools'], [10, 'Smelt tin & lead'], [15, 'Bronze (copper+tin) & bronze gear'],
-    [25, 'Smelt iron; iron gear'], [40, 'Steel (iron+coal)'], [60, 'Damascus steel'],
-    [70, 'Meteoric iron — masterwork forging'],
+    [1, 'Smelt copper; copper tools'], [10, 'Smelt tin'], [15, 'Bronze (copper+tin) & bronze gear'],
+    [20, 'Smelt lead & silver'], [25, 'Smelt iron; iron gear'], [40, 'Steel (iron+coal)'],
+    [60, 'Damascus steel'], [70, 'Meteoric iron — masterwork forging'],
   ],
   woodworking: [
-    [1, 'Planks, hafts & benches'], [35, 'Ash & hickory bows'], [55, 'Walnut gunstocks'],
-    [65, 'Yew longbows'], [85, 'Lignum-vitae masterwork'],
+    [1, 'Planks, hafts & benches'], [30, 'Oak bows'], [35, 'Ash bows'], [45, 'Hickory bows'],
+    [55, 'Walnut gunstocks'], [65, 'Yew longbows'], [85, 'Lignum-vitae masterwork bows'],
   ],
   crafting: [
-    [1, 'Cut rock crystal & amethyst'], [20, 'Garnet'], [25, 'Pewter fittings'], [30, 'Topaz'],
+    [1, 'Cut rock crystal'], [5, 'Cut amethyst'], [20, 'Garnet'], [25, 'Pewter fittings'], [30, 'Topaz'],
     [35, 'Brass; assemble the hand cannon'], [45, 'Emerald & electrum'], [50, 'Sapphire'],
     [55, 'Flintlock & matchlock firearms'], [60, 'Ruby'], [75, 'Diamond — the master cut; blunderbuss'],
   ],

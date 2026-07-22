@@ -87,9 +87,12 @@ export class World {
         const biome = gen.biomeAt(wx, wz);
         const above = h + 1 < WORLD_H ? blocks[lidx(lx, h + 1, lz)] : B.air;
         const grassy = surfId === B.grass || surfId === B.snow_grass || surfId === B.corrupt_soil;
+        // trees also root on the bare ground of their biomes (highland ash/hickory
+        // on stone, badlands teak on sand) — else those woods would never spawn.
+        const treeGround = grassy || surfId === B.stone || surfId === B.sand;
 
         // trees (kept ≥2 from chunk edge so canopies stay chunk-local)
-        if (lx >= 2 && lx <= 13 && lz >= 2 && lz <= 13 && grassy && above === B.air && h > SEA + 1) {
+        if (lx >= 2 && lx <= 13 && lz >= 2 && lz <= 13 && treeGround && above === B.air && h > SEA + 1) {
           const r = hash2(this.seed + 901, wx, wz);
           let acc = 0, chosen = null;
           for (const t of biome.trees) { acc += t.density; if (r < acc) { chosen = t.type; break; } }

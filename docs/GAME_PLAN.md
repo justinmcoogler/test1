@@ -18,9 +18,14 @@
 > **Build phases:** (1) ✅ catalog `materials.js` + validation → (2) ✅ blocks + items
 > generated from the catalog (`js/world/blocks.js`, `js/game/items.js`, procedural
 > tiles in `js/gfx/textures.js`, icons in `js/gfx/icons.js`, validated by
-> `tests/unit/content.test.mjs`) → (3) nodes, recipes, 1-99 skills → (4) 32×32
-> textures (list in `docs/TEXTURES.md`) → (5) realistic biome generation. Legacy
-> fantasy ids stay wired until phase 3/5 migrate their consumers, then retire.
+> `tests/unit/content.test.mjs`) → (3) ✅ nodes, recipes & skills wired to the
+> catalog (`js/game/nodes.js` generates a tree per wood + an ore per metal +
+> mineral deposits with gems dropping from every ore; `js/game/crafting.js`
+> generates smelting/alloying/gem-cutting/forging/gunsmithing/jewelry; new
+> `crafting` skill; biomes/underground/structures spawn the realistic content;
+> tutorial teaches the copper-first chain — validated by `tests/unit/recipes.test.mjs`)
+> → (4) 32×32 textures (list in `docs/TEXTURES.md`) → (5) realistic biome
+> generation refinement. Legacy non-metal content (herbs/fish/hides/relics) stays.
 
 ---
 

@@ -36,6 +36,7 @@ export class EducationManager {
       dailyFreeMinutes: 0,            // optional no-lesson allowance per day
       lockWhenExhausted: true,
       warnAtSeconds: 120,             // heads-up before the bank empties
+      firearms: false,                // black-powder guns: OFF in education unless a parent/teacher opts in
     };
     this.balanceSec = 0;              // banked play seconds (education mode)
     this.playtimeTotalSec = 0;        // lifetime active-play clock (both modes)
@@ -46,6 +47,10 @@ export class EducationManager {
   }
 
   get isEducation() { return this.mode === 'education'; }
+
+  // Black-powder firearms: always available in free play; in education mode only
+  // when a parent/teacher explicitly enables them via setMode('education', { firearms: true }).
+  get firearmsAllowed() { return this.mode === 'free' || this.config.firearms === true; }
 
   // Switch modes (a parent/teacher surface will call this later).
   setMode(mode, config = {}) {

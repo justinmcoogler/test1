@@ -97,23 +97,31 @@ try {
   const wcXp = await gState(() => window.__game.skills.xp.woodcutting);
   check('woodcutting xp gained', wcXp > 0, `${wcXp} xp`);
 
-  // finish collecting 5 via a second tree if needed
-  if (logs < 5) {
-    const tree2 = await gState(() => {
-      const g = window.__game;
+  // Realistic pine trees deplete at a few logs each, so the tutorial's 5 may need
+  // a second tree. Gather from ready pines until we hold 5 (deterministic, not a
+  // single fixed wait that a low charge roll could leave short).
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const have = await gState(() => window.__game.inventory.count('pine_log'));
+    if (have >= 5) break;
+    const t = await gState(() => {
+      const g = window.__game; let best = null, bd = 1e9;
       for (const n of g.world.nodesById.values()) {
         const st = g.world.nodeState(n.id);
-        if (n.type === 'tree_pine' && st.state === 'ready' && Math.hypot(n.x, n.z) < 45) return { x: n.x, y: n.y, z: n.z };
+        if (n.type === 'tree_pine' && st.state === 'ready' && Math.hypot(n.x, n.z) < 60) {
+          const d = Math.hypot(n.x - g.player.x, n.z - g.player.z);
+          if (d < bd) { bd = d; best = { x: n.x, y: n.y, z: n.z }; }
+        }
       }
-      return null;
+      return best;
     });
-    if (tree2) {
-      await teleportFacing(tree2.x + 0.5 - 2, 65, tree2.z + 0.5, tree2.x, tree2.y + 1, tree2.z);
-      await holdPrimary(true);
-      await page.waitForTimeout(10000);
-      await holdPrimary(false);
-    }
+    if (!t) break;
+    await teleportFacing(t.x + 0.5 - 2, 65, t.z + 0.5, t.x, t.y + 1, t.z);
+    await holdPrimary(true);
+    await page.waitForTimeout(12000);
+    await holdPrimary(false);
   }
+  const collected = await gState(() => window.__game.inventory.count('pine_log'));
+  check('collected 5 logs for the quest', collected >= 5, `${collected} logs`);
 
   // ---- 3. Node depletion & regeneration lifecycle (deterministic) ----
   const lifecycle = await gState(async () => {
