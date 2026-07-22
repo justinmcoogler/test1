@@ -1,4 +1,27 @@
-# Emberveil — Master Content Plan v2 (Minecraft/RuneScape blend)
+# Emberveil — Master Content Plan
+
+> ## ⚙️ REALISTIC SPINE v3 — LOCKED (supersedes the v2 material tiers below)
+>
+> The owner chose a **realistic, pre-industrial world** (medieval → renaissance /
+> black-powder) over the Minecraft/RuneScape blend. The authoritative material
+> catalog now lives in code at **`js/game/materials.js`** (validated by
+> `tests/unit/materials.test.mjs`). The v2 tables below are kept for their skill
+> ladders, economy math, and mob framework, but **material names/tiers are
+> replaced by the realistic spine**:
+>
+> - **Metals (forgeable, real order):** Copper → Tin → **Bronze** → Iron → **Steel** → **Damascus steel** → **Meteoric iron** (rare cap). Fuel: **Coal**. Ammo: **Lead**. No titanium/tungsten (kept out as anachronistic).
+> - **Jewelry metals (Crafting-only, never weapons):** Silver, Gold, Platinum + **Brass** (copper+zinc), **Electrum** (gold+silver), **Pewter** (tin+copper). Supporting alloy ore: **Zinc**.
+> - **Gems (unchanged rule):** dropped randomly while mining any rock, cut by Crafting → jewelry. Quartz/Amethyst → Garnet/Topaz → Emerald/Sapphire/Ruby → **Diamond**.
+> - **Woods (real, soft→dense/rare):** Pine → Cedar → Birch → Oak → Ash → **Hickory** → Maple → **Walnut** → **Yew** → Teak → Ebony → **Lignum Vitae**. Real jobs (ash/hickory handles & bows, yew longbows, walnut gunstocks, teak weatherproof).
+> - **Black-powder firearms (new differentiator):** hand cannon → flintlock pistol → matchlock musket → blunderbuss. Chain: steel/damascus **barrel** + walnut **stock** + **gunpowder** (saltpeter+charcoal+sulfur) + cast **lead** ball/shot. Late-game **Ranged** branch; big damage / slow reload / loud. **OFF by default in Education mode & for schools** (parent/teacher-lockable).
+>
+> **Build phases:** (1) ✅ catalog `materials.js` + validation → (2) blocks + items →
+> (3) nodes, recipes, 1-99 skills → (4) 32×32 textures → (5) realistic biome
+> generation. Old v0/v1/v2 material ids are dead; old saves will not carry over.
+
+---
+
+# Master Content Plan v2 (Minecraft/RuneScape blend) — historical reference
 
 > **v2 replaces v1 wholesale.** Theme mandate: Minecraft-familiar materials and gear
 > structure + RuneScape-style tier rhythm and skilling depth + original Emberveil
