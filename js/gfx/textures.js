@@ -1,10 +1,11 @@
 // Procedural texture atlas. Every tile is painted at 32×32 logical pixels
 // (1px grain) for detailed, fully original seeded art.
 import { mulberry32, hashSeed } from '../core/rng.js';
+import { WOODS, METALS, FIREARMS } from '../game/materials.js';
 
 export const TILE = 32;
 export const ATLAS_COLS = 16;
-export const ATLAS_ROWS = 8;
+export const ATLAS_ROWS = 12; // headroom for the generated realistic wood/ore/mineral tiles
 const G = 1; // grain: logical pixel size
 const LP = TILE / G; // 32 logical pixels per side
 
@@ -412,6 +413,46 @@ const PAINTERS = {
     px(c, x, y, 7, 12, '#6e6659'); px(c, x, y, 8, 12, '#6e6659');
   },
 };
+
+// ---- generated realistic tiles (from js/game/materials.js) -----------------
+// Presentation palettes live here, not in the material spine. Each entry:
+// bark:[base,groove], ring:[base,line], leaf:[base,accent], needle? evergreen.
+const WOOD_TEX = {
+  pine:         { bark: ['#7c5a3a', '#5f4429'], ring: ['#c8a878', '#a98a5c'], leaf: ['#3f6f4a', '#568a5c'], needle: true },
+  cedar:        { bark: ['#8a4f38', '#6a3a28'], ring: ['#c99a72', '#a87a54'], leaf: ['#4a7a54', '#69a06a'], needle: true },
+  birch:        { bark: ['#d9d4c6', '#b7b0a0'], ring: ['#e2d6b6', '#c4b48c'], leaf: ['#7fae53', '#a4c979'] },
+  oak:          { bark: ['#7a6248', '#5f4c38'], ring: ['#b39468', '#96784f'], leaf: ['#4d8f3e', '#66aa50'] },
+  ash:          { bark: ['#9a8c74', '#7a6e58'], ring: ['#c9bd9e', '#a89a78'], leaf: ['#6a9a4e', '#88b96a'] },
+  hickory:      { bark: ['#7d6244', '#5e4931'], ring: ['#c0a074', '#a08052'], leaf: ['#5d8f45', '#79ab5f'] },
+  maple:        { bark: ['#8a6a4a', '#6a4f36'], ring: ['#d2b280', '#b4945c'], leaf: ['#b7702f', '#d99a3f'] },
+  walnut:       { bark: ['#4f3a28', '#3a281a'], ring: ['#8a6a48', '#6c4f34'], leaf: ['#4a7a3e', '#639654'] },
+  yew:          { bark: ['#7a4a3a', '#5a352a'], ring: ['#b98a6a', '#986a4c'], leaf: ['#2f5f3f', '#457a52'], needle: true },
+  teak:         { bark: ['#9a6f42', '#764f2c'], ring: ['#c99a5e', '#a87a42'], leaf: ['#5a8a4a', '#77a662'] },
+  ebony:        { bark: ['#2c2620', '#1a1712'], ring: ['#4a4038', '#332b24'], leaf: ['#33613f', '#4a7a52'] },
+  lignum_vitae: { bark: ['#5a5236', '#403a24'], ring: ['#7a7248', '#5c5636'], leaf: ['#2f5a3a', '#437049'] },
+};
+// ore blob color + glint per mineable metal
+const ORE_TEX = {
+  copper:   ['#c47a3f', '#e8a668'], tin: ['#c9ccd4', '#eef1f6'], iron: ['#b08674', '#d4a893'],
+  lead:     ['#6c7079', '#9298a2'], zinc: ['#b8c0c4', '#dfe6ea'], silver: ['#dfe4ec', '#ffffff'],
+  gold:     ['#e2b13c', '#ffd76a'], platinum: ['#d8dbe0', '#f4f6fa'], meteoric: ['#6b6a72', '#a29fb0'],
+};
+for (const w of WOODS) {
+  const t = WOOD_TEX[w.id]; if (!t) continue;
+  PAINTERS[`${w.id}_bark`] ??= (c, x, y, r) => bark(c, x, y, r, t.bark[0], t.bark[1]);
+  PAINTERS[`${w.id}_ring`] ??= (c, x, y, r) => rings(c, x, y, r, t.ring[0], t.ring[1]);
+  PAINTERS[`${w.id}_leaves`] ??= (c, x, y, r) => leaves(c, x, y, r, t.leaf[0], t.leaf[1], t.needle ? 0.03 : 0.08);
+}
+for (const m of METALS.filter((x) => (x.smelt || []).some((s) => s.endsWith('_ore')))) {
+  const t = ORE_TEX[m.id]; if (!t) continue;
+  PAINTERS[`${m.id}_ore`] ??= (c, x, y, r) => { PAINTERS.stone(c, x, y, r); oreBlobs(c, x, y, r, t[0], t[1], m.rare ? 3 : 4); };
+}
+PAINTERS.coal_seam ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#3a3733', 0.05); oreBlobs(c, x, y, r, '#1e1c1a', '#4a4642', 5); };
+PAINTERS.saltpeter_deposit ??= (c, x, y, r) => { PAINTERS.stone(c, x, y, r); oreBlobs(c, x, y, r, '#e7e2c0', '#f6f2d8', 4); };
+PAINTERS.sulfur_deposit ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#4a4640', 0.05); oreBlobs(c, x, y, r, '#d9c43a', '#f2e05a', 5); };
+PAINTERS.meteor_crater ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#2e2b30', 0.07, { chance: 0.12, color: '#4a4650' }); oreBlobs(c, x, y, r, '#6b6a72', '#a29fb0', 3); };
+
+export const tileNames = () => Object.keys(PAINTERS);
 
 let atlasCanvas = null;
 

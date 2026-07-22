@@ -426,6 +426,39 @@ const SHAPES = {
     p(7, 6, 2, 8, '#8a6a3a');
     p(6, 3, 4, 4, '#ffb347'); p(7, 1, 2, 3, '#e2622a'); p(7, 4, 2, 2, '#fff2b8');
   },
+  // ---- realistic-catalog additions --------------------------------------
+  plank(p, c = '#b8945a', edge = '#8a6a3a') {
+    p(2, 4, 12, 8, c); p(2, 4, 12, 1, edge); p(2, 11, 12, 1, edge);
+    p(2, 7, 12, 1, '#00000022'); p(4, 5, 1, 6, edge);
+  },
+  arrows(p) {
+    for (const dx of [-3, 0, 3]) {
+      p(3 + dx + 3, 3, 1, 10, '#8a6a3a'); // shaft
+      p(2 + dx + 3, 2, 3, 3, '#c9cdd6');  // head
+      p(3 + dx + 3, 12, 1, 2, '#e8e2d0'); // fletch
+    }
+  },
+  quarrel(p) {
+    p(6, 3, 2, 9, '#7a5c38'); p(5, 2, 4, 3, '#9aa0ac'); p(5, 11, 4, 2, '#c05a3f');
+    p(9, 3, 2, 9, '#7a5c38'); p(8, 2, 4, 3, '#9aa0ac');
+  },
+  pistol(p, steel = '#7a808c', wood = '#6a4426') {
+    p(3, 5, 9, 2, steel); p(3, 4, 3, 1, steel);   // barrel
+    p(3, 7, 3, 5, wood); p(4, 12, 3, 2, wood);     // grip
+    p(6, 7, 2, 2, '#c9a24a');                       // brass lock
+  },
+  musket(p, steel = '#7a808c', wood = '#6a4426') {
+    p(2, 6, 12, 2, steel); p(2, 8, 11, 2, wood);   // barrel + stock
+    p(11, 8, 3, 4, wood); p(7, 8, 2, 2, '#c9a24a');
+  },
+  powder(p) {
+    p(5, 5, 6, 8, '#4a3a2a'); p(6, 3, 4, 3, '#3a2c1e'); // horn/pouch
+    p(7, 8, 2, 3, '#2a2622'); p(6, 6, 1, 1, '#e2b13c');
+  },
+  amulet(p, c = '#e6ebf2') {
+    p(5, 2, 6, 1, c); p(4, 3, 2, 4, c); p(10, 3, 2, 4, c);      // chain
+    p(6, 7, 4, 4, c); p(7, 8, 2, 2, '#4fc3e8');                 // pendant + gem
+  },
 };
 
 // ---- concrete icon registry ------------------------------------------------
@@ -501,6 +534,53 @@ const DEFS = {
   it_lantern: ['lantern'], it_torch_item: ['torch'],
 };
 
+// ---- generated icon defs for the realistic catalog (js/game/materials.js) --
+// Presentation colors only; keeps every generated item off the boxicon fallback.
+import { METALS, WOODS, GEMS, FIREARMS, toolMetals, jewelryMetals } from '../game/materials.js';
+const METAL_COL = {
+  copper: '#c47a3f', tin: '#cdd2da', bronze: '#c88a3f', iron: '#c8ccd4', steel: '#9aa4b0',
+  damascus: '#8790a0', meteoric: '#6f6e78', lead: '#6c7079', zinc: '#b8c0c4', silver: '#e6ebf2',
+  gold: '#e2b13c', platinum: '#dfe2e8', brass: '#c9a24a', electrum: '#d9c96a', pewter: '#9a9ba0',
+};
+const WOOD_COL = {
+  pine: ['#7c5a3a', '#c8a878'], cedar: ['#8a4f38', '#c99a72'], birch: ['#d9d4c6', '#e2d6b6'],
+  oak: ['#7a6248', '#b39468'], ash: ['#9a8c74', '#c9bd9e'], hickory: ['#7d6244', '#c0a074'],
+  maple: ['#8a6a4a', '#d2b280'], walnut: ['#4f3a28', '#8a6a48'], yew: ['#7a4a3a', '#b98a6a'],
+  teak: ['#9a6f42', '#c99a5e'], ebony: ['#2c2620', '#4a4038'], lignum_vitae: ['#5a5236', '#7a7248'],
+};
+const GEM_COL = {
+  quartz: '#d8e8f0', amethyst: '#9a6ad0', garnet: '#a33040', topaz: '#e0b040',
+  emerald: '#2fa860', sapphire: '#2f60c0', ruby: '#d0304a', diamond: '#9be8ff',
+};
+const D = (id, def) => { DEFS[`it_${id}`] = def; };
+for (const m of METALS) {
+  const c = METAL_COL[m.id] || '#9aa0ac';
+  if ((m.smelt || []).some((s) => s.endsWith('_ore'))) D(`${m.id}_ore`, ['ore', c]);
+  if (m.role !== 'fuel') D(`${m.id}_bar`, ['bar', c]);
+}
+D('coal', ['stone', '#2c2a28']); D('charcoal', ['stone', '#3a3a3a']);
+D('saltpeter', ['drop', '#e7e2c0']); D('sulfur', ['drop', '#e0c838']);
+for (const g of GEMS) { D(g.id, ['gem', GEM_COL[g.id]]); D(`uncut_${g.id}`, ['crystal', GEM_COL[g.id]]); }
+for (const w of WOODS) { const [bark, ring] = WOOD_COL[w.id] || ['#7a5c38', '#c9a86a']; D(`${w.id}_log`, ['log', bark, ring]); D(`${w.id}_plank`, ['plank', ring, bark]); }
+const TOOL_ICON = { pickaxe: 'pickaxe', axe: 'axe', shovel: 'shovel', hoe: 'hoe', chisel: 'hammer', hammer: 'hammer' };
+const WEAP_ICON = { sword: 'sword', dagger: 'sword', battleaxe: 'axe', spear: 'spear' };
+const ARMOR_ICON = { helmet: 'helmet', chestplate: 'chestplate', leggings: 'leggings', boots: 'boots', shield: 'shield' };
+for (const m of toolMetals()) {
+  const c = METAL_COL[m.id];
+  for (const k in TOOL_ICON) D(`${m.id}_${k}`, [TOOL_ICON[k], c]);
+  for (const k in WEAP_ICON) D(`${m.id}_${k}`, k === 'spear' ? ['spear'] : [WEAP_ICON[k], c]);
+  for (const k in ARMOR_ICON) D(`${m.id}_${k}`, [ARMOR_ICON[k], c]);
+}
+for (const wid of ['ash', 'hickory', 'yew', 'oak', 'lignum_vitae']) {
+  const bark = (WOOD_COL[wid] || ['#7a5c38'])[0];
+  D(`${wid}_shortbow`, ['bow', bark]); D(`${wid}_longbow`, ['bow', bark]);
+}
+D('arrow', ['arrows']); D('bolt', ['quarrel']);
+D(FIREARMS.powder.id, ['powder']);
+for (const a of FIREARMS.ammo) D(a.id, ['ore', '#6c7079']);
+for (const g of FIREARMS.guns) D(g.id, [g.id.includes('musket') || g.id.includes('blunder') ? 'musket' : 'pistol']);
+for (const m of jewelryMetals()) { const c = METAL_COL[m.id]; D(`${m.id}_ring`, ['ring']); D(`${m.id}_necklace`, ['amulet', c]); D(`${m.id}_amulet`, ['amulet', c]); }
+
 export function iconDataURL(name) {
   let url = cache.get(name);
   if (url) return url;
@@ -531,3 +611,7 @@ export function itemIcon(id, size = 18) {
 export function skillIcon(key, size = 16) {
   return icon(DEFS[`sk_${key}`] ? `sk_${key}` : 'sparkle', size);
 }
+
+// True when an item id has a dedicated icon (not the boxicon fallback). Used by
+// tests to guarantee generated catalog items are all covered.
+export function hasItemIcon(id) { return !!DEFS[`it_${id}`]; }

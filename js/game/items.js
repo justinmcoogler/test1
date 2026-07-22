@@ -1,5 +1,7 @@
 // Item registry. All icons are procedural pixel art from gfx/icons.js
 // (block items render their atlas tile via tileIcon).
+import { METALS, WOODS, GEMS, FIREARMS, toolMetals, jewelryMetals } from './materials.js';
+
 export const ITEMS = {};
 
 function it(id, label, opts = {}) {
@@ -165,5 +167,77 @@ blockItem('loom_block', 'Loom', 'loom_block', 'loom');
 blockItem('enchant_altar', 'Runestone Altar', 'enchant_altar', 'altar_top');
 blockItem('construction_bench', 'Construction Bench', 'construction_bench', 'construction_top');
 blockItem('chest_block', 'Storage Chest', 'chest_block', 'chest_front');
+
+// ===========================================================================
+// Generated realistic catalog (from js/game/materials.js). Stats scale off the
+// material's tier; Phase 3 recipes/skills tune the exact numbers. These IDs
+// match docs/TEXTURES.md exactly so the future texture pack drops straight in.
+// ===========================================================================
+
+// ---- raw ores, bars, fuel & gunpowder reagents ----
+for (const m of METALS) {
+  if ((m.smelt || []).some((s) => s.endsWith('_ore')))
+    it(`${m.id}_ore`, `${m.label} Ore`, { desc: 'Raw ore — smelt it into a bar.' });
+  if (m.role !== 'fuel')
+    it(`${m.id}_bar`, `${m.label} Bar`, { desc: m.note });
+}
+it('coal', 'Coal', { desc: 'Forge & furnace fuel.' });
+it('charcoal', 'Charcoal', { desc: 'Burn logs to make it; fuel & gunpowder reagent.' });
+for (const r of FIREARMS.reagents) if (r.id !== 'charcoal') it(r.id, r.label, { desc: r.source });
+
+// ---- gems: uncut (mining drop) + cut (Crafting) ----
+for (const g of GEMS) {
+  it(`uncut_${g.id}`, `Uncut ${g.label}`, { desc: 'A rough stone — cut it with Crafting.' });
+  it(g.id, g.label, { desc: g.note || `A cut ${g.label.toLowerCase()}.`, gemTier: g.tier });
+}
+
+// ---- woods: log (drop / placeable) + plank (worked material) ----
+for (const w of WOODS) {
+  it(`${w.id}_log`, `${w.label} Log`, { type: 'block', block: `${w.id}_log`, tileIcon: `${w.id}_ring`, desc: w.use });
+  it(`${w.id}_plank`, `${w.label} Plank`, { desc: `Worked ${w.label.toLowerCase()} — ${w.use}.` });
+}
+
+// ---- tools / weapons / armor per tool metal ----
+const TOOL_KINDS = ['pickaxe', 'axe', 'shovel', 'hoe', 'chisel', 'hammer'];
+const WEAPON_KINDS = [
+  ['sword', { atk: 2.4, acc: 1.0, spd: 0, crit: 5 }],
+  ['dagger', { atk: 1.5, acc: 1.3, spd: 2, crit: 9 }],
+  ['battleaxe', { atk: 3.1, acc: 0.8, spd: -1, crit: 6 }],
+  ['spear', { atk: 2.2, acc: 1.2, spd: 1, crit: 7 }],
+];
+const ARMOR_SLOTS = [['helmet', 'head', 1.0], ['chestplate', 'body', 1.8], ['leggings', 'legs', 1.3], ['boots', 'feet', 0.7], ['shield', 'off', 1.1]];
+toolMetals().forEach((m, i) => {
+  const t = i + 1; // positional tier 1..6 (copper→meteoric)
+  const power = +(0.85 + t * 0.2).toFixed(2);
+  const dur = 60 + t * 90;
+  for (const k of TOOL_KINDS) it(`${m.id}_${k}`, `${m.label} ${cap(k)}`, { stack: 1, type: 'tool', tool: k, tier: t, power, dur });
+  for (const [wk, s] of WEAPON_KINDS)
+    it(`${m.id}_${wk}`, `${m.label} ${cap(wk)}`, { stack: 1, type: 'weapon', wclass: 'melee', tier: t, dur: Math.round(dur * 1.1), atk: Math.round(2 + t * s.atk), acc: +(3 + t * s.acc).toFixed(1), spd: s.spd, crit: s.crit });
+  for (const [ak, slot, mul] of ARMOR_SLOTS)
+    it(`${m.id}_${ak}`, `${m.label} ${cap(ak)}`, { stack: 1, type: 'armor', slot, tier: t, armor: Math.max(1, Math.round(t * mul)), evasion: slot === 'body' ? -1 : 0, ...(ak === 'shield' ? { block: 6 + t } : {}) });
+});
+
+// ---- bows (per bow-suited wood) + arrows/bolts ----
+for (const wid of ['ash', 'hickory', 'yew', 'oak', 'lignum_vitae']) {
+  const w = WOODS.find((x) => x.id === wid); const t = w.tier;
+  it(`${wid}_shortbow`, `${w.label} Shortbow`, { stack: 1, type: 'weapon', wclass: 'ranged', atk: Math.round(3 + t * 0.5), acc: 8, spd: 1, crit: 7, range: 6, dur: 120 + t * 12 });
+  it(`${wid}_longbow`, `${w.label} Longbow`, { stack: 1, type: 'weapon', wclass: 'ranged', atk: Math.round(4 + t * 0.7), acc: 10, spd: 0, crit: 9, range: 8, dur: 160 + t * 14 });
+}
+it('arrow', 'Arrows', { desc: 'Ammunition for bows.' });
+it('bolt', 'Crossbow Bolts', { desc: 'Ammunition for crossbows.' });
+
+// ---- black-powder firearms (OFF by default in Education mode) ----
+it(FIREARMS.powder.id, 'Gunpowder', { desc: `Made from ${FIREARMS.powder.components.join(' + ')}.`, educationLocked: true });
+for (const a of FIREARMS.ammo) it(a.id, a.label, { desc: `Cast from a ${a.from.replace('_', ' ')}.`, educationLocked: true });
+for (const g of FIREARMS.guns)
+  it(g.id, g.label, { stack: 1, type: 'weapon', wclass: 'ranged', firearm: true, ammo: g.ammo, noise: true, educationLocked: true, atk: Math.round(10 + g.tier * 4), acc: 7 + g.tier, spd: -2, crit: 6, range: 9, dur: 200 + g.tier * 30, desc: g.note });
+
+// ---- jewelry per jewelry metal (gem set at craft time) ----
+jewelryMetals().forEach((m) => {
+  for (const j of [['ring', 'accessory'], ['necklace', 'accessory'], ['amulet', 'accessory']])
+    it(`${m.id}_${j[0]}`, `${m.label} ${cap(j[0])}`, { stack: 1, type: 'accessory', slot: 'accessory', jewelry: m.id, desc: `A ${m.label.toLowerCase()} ${j[0]} — set a cut gem into it.` });
+});
+
+function cap(s) { return s.replace(/\b\w/g, (c) => c.toUpperCase()); }
 
 export function itemDef(id) { return ITEMS[id]; }

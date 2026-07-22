@@ -1,6 +1,7 @@
 // Block registry. Every block face maps to a tile in the procedural atlas.
 // shape: 'cube' | 'cross' (plants) | 'liquid' | 'slab' (low cube, e.g. stump/mound)
 // tiles: {top, side, bottom} atlas tile names (side used for all if only entry)
+import { WOODS, METALS } from '../game/materials.js';
 
 export const B = {}; // name → id
 export const BLOCKS = []; // id → def
@@ -105,6 +106,33 @@ def('corrupt_soil', { hardness: 1.0, tool: 'shovel', drops: 'dirt' });
 def('ashen_soil', { hardness: 1.0, tool: 'shovel', drops: 'dirt' });
 def('basalt', { hardness: 4.0, tool: 'pickaxe', drops: 'rough_stone' });
 def('lava', { shape: 'liquid', solid: false, opaque: false, drops: null, hardness: Infinity, emissive: 1 });
+
+// ---- generated realistic blocks (from js/game/materials.js) ----------------
+// Trees: one log + one leaves block per real wood species. Hardness rises with
+// the wood's density tier; drops are the matching *_log item.
+for (const w of WOODS) {
+  def(`${w.id}_log`, {
+    label: `${w.label} Log`, hardness: 1.8 + w.tier * 0.22, tool: 'axe', drops: `${w.id}_log`,
+    tiles: { top: `${w.id}_ring`, side: `${w.id}_bark` },
+  });
+  def(`${w.id}_leaves`, { label: `${w.label} Leaves`, opaque: false, hardness: 0.4, drops: null, tiles: { all: `${w.id}_leaves` } });
+}
+// Ore blocks for every mineable metal the legacy set doesn't already define
+// (copper/tin/iron stay as-is). minTier & hardness scale with the mine level.
+const oreMinTier = (lvl) => (lvl >= 60 ? 4 : lvl >= 45 ? 3 : lvl >= 30 ? 2 : lvl >= 15 ? 1 : 0);
+for (const m of METALS.filter((x) => (x.smelt || []).some((s) => s.endsWith('_ore')))) {
+  const name = `${m.id}_ore`;
+  if (B[name] !== undefined) continue; // legacy copper_ore/tin_ore/iron_ore
+  def(name, {
+    label: `${m.label} Ore`, hardness: 3.2 + (m.mineLevel || 1) * 0.04, tool: 'pickaxe',
+    minTier: oreMinTier(m.mineLevel || 1), drops: null, tiles: { all: name },
+  });
+}
+// Mineral deposits (fuel & gunpowder reagents)
+def('coal_seam', { label: 'Coal Seam', hardness: 3.4, tool: 'pickaxe', minTier: 1, drops: 'coal', tiles: { all: 'coal_seam' } });
+def('saltpeter_deposit', { label: 'Saltpeter Deposit', hardness: 2.6, tool: 'pickaxe', drops: 'saltpeter', tiles: { all: 'saltpeter_deposit' } });
+def('sulfur_deposit', { label: 'Sulfur Deposit', hardness: 2.8, tool: 'pickaxe', minTier: 1, drops: 'sulfur', tiles: { all: 'sulfur_deposit' } });
+def('meteor_crater', { label: 'Meteor Crater', hardness: 5.5, tool: 'pickaxe', minTier: 3, drops: 'rough_stone', tiles: { all: 'meteor_crater' } });
 
 export function blockByName(name) { return BLOCKS[B[name]]; }
 export function isSolid(id) { return BLOCKS[id]?.solid === true; }

@@ -15,9 +15,12 @@
 > - **Woods (real, soft→dense/rare):** Pine → Cedar → Birch → Oak → Ash → **Hickory** → Maple → **Walnut** → **Yew** → Teak → Ebony → **Lignum Vitae**. Real jobs (ash/hickory handles & bows, yew longbows, walnut gunstocks, teak weatherproof).
 > - **Black-powder firearms (new differentiator):** hand cannon → flintlock pistol → matchlock musket → blunderbuss. Chain: steel/damascus **barrel** + walnut **stock** + **gunpowder** (saltpeter+charcoal+sulfur) + cast **lead** ball/shot. Late-game **Ranged** branch; big damage / slow reload / loud. **OFF by default in Education mode & for schools** (parent/teacher-lockable).
 >
-> **Build phases:** (1) ✅ catalog `materials.js` + validation → (2) blocks + items →
-> (3) nodes, recipes, 1-99 skills → (4) 32×32 textures → (5) realistic biome
-> generation. Old v0/v1/v2 material ids are dead; old saves will not carry over.
+> **Build phases:** (1) ✅ catalog `materials.js` + validation → (2) ✅ blocks + items
+> generated from the catalog (`js/world/blocks.js`, `js/game/items.js`, procedural
+> tiles in `js/gfx/textures.js`, icons in `js/gfx/icons.js`, validated by
+> `tests/unit/content.test.mjs`) → (3) nodes, recipes, 1-99 skills → (4) 32×32
+> textures (list in `docs/TEXTURES.md`) → (5) realistic biome generation. Legacy
+> fantasy ids stay wired until phase 3/5 migrate their consumers, then retire.
 
 ---
 
