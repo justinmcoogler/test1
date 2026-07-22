@@ -41,6 +41,7 @@ def('sand', { hardness: 0.7, tool: 'shovel' });
 def('gravel', { hardness: 0.9, tool: 'shovel' });
 def('clay_block', { label: 'Clay Deposit', hardness: 1.0, tool: 'shovel', drops: 'clay_lump' });
 def('snow_grass', { label: 'Snowy Turf', tiles: { top: 'snow', side: 'snow_side', bottom: 'dirt' }, hardness: 0.9, tool: 'shovel', drops: 'dirt' });
+def('snow', { label: 'Snow', tiles: { all: 'snow' }, hardness: 0.5, tool: 'shovel', drops: null });
 def('ice', { hardness: 1.4, tool: 'pickaxe', drops: null });
 def('water', { shape: 'liquid', solid: false, opaque: false, drops: null, hardness: Infinity });
 def('bedrock', { label: 'Deepshale', hardness: Infinity, drops: null });

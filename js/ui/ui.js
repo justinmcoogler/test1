@@ -419,7 +419,9 @@ export class UI {
           let rgb;
           if (h <= 28) rgb = [52, 88, 148];
           else if (biome.surface === 'sand') rgb = [214, 196, 138];
+          else if (biome.surface === 'snow') rgb = [236, 242, 248];
           else if (biome.surface === 'snow_grass') rgb = [222, 230, 236];
+          else if (biome.surface === 'gravel') rgb = [150, 142, 132];
           else if (biome.surface === 'stone') rgb = [128, 130, 134];
           else if (biome.surface === 'ashen_soil') rgb = [90, 84, 80];
           else if (biome.surface === 'corrupt_soil') rgb = [92, 70, 104];

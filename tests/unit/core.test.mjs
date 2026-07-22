@@ -89,22 +89,26 @@ test('biomes get harsher with distance', () => {
   assert.ok(g.tierAt(2000, 2000) >= 2);
 });
 
-test('biomes: climate model is deterministic, temperate at spawn, exotic far out', () => {
+test('biomes: real-world climate model is deterministic, mild at spawn, complete far out', () => {
   const g = new WorldGen(hashSeed('climate'));
   assert.strictEqual(g.biomeAt(300, -220), g.biomeAt(300, -220), 'biomeAt must be deterministic');
-  // The spawn valley is always mild & livable — never a cold/hot exotic biome.
-  const EXOTIC = new Set(['Boreal Taiga', 'Tropical Jungle', 'Sun-baked Badlands', 'Frostbound Tundra', 'Volcanic Wastes', 'Corrupted Wilderness']);
+  // The spawn ring is always a hospitable temperate biome — never a harsh one.
+  const SPAWN_OK = new Set(['Grassland', 'Temperate Forest', 'Temperate Rainforest', 'Boreal Forest', 'Swamp', 'Marshland']);
   for (let a = 0; a < 16; a++) {
     const x = Math.round(Math.cos(a) * 45), z = Math.round(Math.sin(a) * 45);
-    assert.ok(!EXOTIC.has(g.biomeAt(x, z).label), `spawn area went exotic: ${g.biomeAt(x, z).label}`);
+    assert.ok(SPAWN_OK.has(g.biomeAt(x, z).label), `spawn area not hospitable: ${g.biomeAt(x, z).label}`);
   }
-  // Over a wide span, every climate biome is actually reachable.
+  // Over a wide span, all the major real-world biomes are reachable.
   const seen = new Set();
-  for (let x = -1600; x <= 1600; x += 40) for (let z = -1600; z <= 1600; z += 40) seen.add(g.biomeAt(x, z).label);
-  for (const need of ['Greenwood Plains', 'Ancient Forest', 'Boreal Taiga', 'Tropical Jungle', 'Sun-baked Badlands', 'Frostbound Tundra', 'Rocky Highlands', 'Coastal Shores']) {
-    assert.ok(seen.has(need), `climate biome unreachable: ${need}`);
-  }
-  assert.ok(seen.has('Volcanic Wastes') || seen.has('Corrupted Wilderness'), 'no deep special biome generated');
+  for (let x = -2000; x <= 2000; x += 40) for (let z = -2000; z <= 2000; z += 40) seen.add(g.biomeAt(x, z).label);
+  const need = [
+    'Grassland', 'Temperate Forest', 'Temperate Rainforest', 'Mediterranean Shrubland',
+    'Savanna', 'Monsoon Forest', 'Tropical Rainforest', 'Desert', 'Cold Desert',
+    'Boreal Forest', 'Tundra', 'Polar Ice Cap', 'Swamp', 'Marshland', 'Mangrove Coast',
+    'Mountains', 'Alpine Meadow', 'Snowy Mountains', 'Coast',
+  ];
+  const missing = need.filter((n) => !seen.has(n));
+  assert.deepEqual(missing, [], `unreachable biomes: ${missing.join(', ')}`);
 });
 
 test('node definitions are complete and consistent', () => {
