@@ -16,11 +16,11 @@ import { ITEMS } from './items.js';
 export const QUESTS = [
   {
     id: 'q_arrival', giver: 'maren', name: 'A Place to Land',
-    intro: `Every pair of hands here earns its bread. Ours grow from the grove east of the square — take what the fernwoods offer and put a workbench together. Wood remembers kindness; so do I.`,
+    intro: `Every pair of hands here earns its bread. Ours grow from the grove east of the square — take what the pines offer and put a workbench together. Wood remembers kindness; so do I.`,
     outro: `A workbench of your own! You're no stranger now. Here — coin for honest work.`,
     stages: [
       { type: 'reach', marker: 'grove', radius: 8, text: 'Visit the grove east of Brookhollow square' },
-      { type: 'collect', item: 'fernwood_log', count: 5, text: 'Chop 5 Fernwood Logs (hold left click / action on a tree)' },
+      { type: 'collect', item: 'pine_log', count: 5, text: 'Chop 5 Pine Logs (hold left click / action on a tree)' },
       { type: 'craft', item: 'workbench', count: 1, text: 'Craft a Workbench (open Crafting — no station needed)' },
       { type: 'talk', npc: 'maren', text: 'Return to Elder Maren' },
     ],
@@ -28,15 +28,14 @@ export const QUESTS = [
   },
   {
     id: 'q_sparks', giver: 'maren', name: 'Sparks and Stone', requires: 'q_arrival',
-    intro: `The old mine north of the square still runs rich with copper and tin. Craft yourself a pickaxe, bring up some ore, and coax bronze out of the furnace at the workshop. Metal opens every other door.`,
-    outro: `Warm bronze in your hand — that's the valley taking to you. The anvil at the workshop will shape it into whatever you need.`,
+    intro: `The old mine north of the square still runs rich with copper — the first metal any smith learns. Craft yourself a pickaxe, bring up some ore, and coax copper bars out of the furnace at the workshop. Master copper and tin's your next step, then bronze; metal opens every other door.`,
+    outro: `Warm copper in your hand — that's the valley taking to you. Add tin and you'll have bronze; the anvil at the workshop shapes it into whatever you need.`,
     stages: [
       { type: 'craft', item: 'crude_pickaxe', count: 1, text: 'Craft a Crude Pickaxe at the Workbench' },
       { type: 'reach', marker: 'mineChamber', radius: 8, text: 'Descend into the Brookhollow mine (stairs at the stone arch)' },
-      { type: 'collect', item: 'copper_ore_chunk', count: 3, text: 'Mine 3 Copper Ore' },
-      { type: 'collect', item: 'tin_ore_chunk', count: 2, text: 'Mine 2 Tin Ore' },
-      { type: 'craft', item: 'bronze_bar', count: 2, text: 'Smelt 2 Bronze Bars at the workshop Furnace' },
-      { type: 'talk', npc: 'maren', text: 'Show Maren your bronze' },
+      { type: 'collect', item: 'copper_ore', count: 4, text: 'Mine 4 Copper Ore' },
+      { type: 'craft', item: 'copper_bar', count: 2, text: 'Smelt 2 Copper Bars at the workshop Furnace' },
+      { type: 'talk', npc: 'maren', text: 'Show Maren your copper' },
     ],
     rewards: { coins: 40, items: [{ item: 'minor_healing_tonic', qty: 1 }], xp: [['mining', 80], ['smithing', 60]] },
   },
@@ -346,8 +345,8 @@ export class QuestLog {
     }
     if (stage.type === 'chest' && stage.id === 'rimehowl_chest') return { pos: markers.wolfDen, label: q.name };
     if (stage.type === 'chest') return { pos: markers.bossHall, label: q.name };
-    if (stage.type === 'collect' && ['copper_ore_chunk', 'tin_ore_chunk'].includes(stage.item)) return { pos: markers.mineChamber, label: q.name };
-    if (stage.type === 'collect' && stage.item === 'fernwood_log') return { pos: markers.grove, label: q.name };
+    if (stage.type === 'collect' && ['copper_ore', 'tin_ore'].includes(stage.item)) return { pos: markers.mineChamber, label: q.name };
+    if (stage.type === 'collect' && stage.item === 'pine_log') return { pos: markers.grove, label: q.name };
     if (stage.type === 'collect' && stage.item === 'silverfin') return { pos: markers.pond, label: q.name };
     if (stage.type === 'plant' || (stage.type === 'collect' && stage.item === 'grainsheaf')) return { pos: markers.farm, label: q.name };
     if (stage.type === 'craft') return { pos: markers.workshop, label: q.name };

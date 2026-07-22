@@ -1,73 +1,69 @@
 // Regenerating resource nodes: definitions, visuals per state, drop tables.
 // Node instances live in world chunks; their states persist in the save.
+// The tree/ore/deposit nodes are GENERATED from the realistic material catalog
+// (js/game/materials.js) so they can never drift from the spine; the non-metal
+// gathering nodes (fishing, foraging, digging, farming) stay hand-authored.
 import { B } from '../world/blocks.js';
+import { METALS, WOODS, GEMS } from './materials.js';
+
+// Gems are found RANDOMLY while mining any rock (the owner's realistic rule):
+// every metal-ore node carries an uncut-gem rare table, common gems everywhere,
+// rarer gems weighted lower and slightly richer at deeper (higher-level) ores.
+function gemRareTable(mineLevel) {
+  return GEMS.map((g) => ({
+    item: `uncut_${g.id}`,
+    chance: Math.max(0.0004, Math.min(0.03, (0.004 * (1 + mineLevel / 50)) / g.tier)),
+  }));
+}
+
+const NEEDLE = new Set(['pine', 'cedar', 'yew']);
+const generated = {};
+// One woodcutting node per real wood species.
+for (const w of WOODS) {
+  generated[`tree_${w.id}`] = {
+    label: `${w.label} Tree`, skill: 'woodcutting', level: w.woodLevel, tool: 'axe',
+    xp: Math.round(12 + w.tier * 6), time: +(2.6 + w.tier * 0.25).toFixed(1),
+    charges: [3, 4 + Math.floor(w.tier / 3)], respawn: 40 + w.tier * 20, kind: 'tree',
+    log: `${w.id}_log`, leaves: `${w.id}_leaves`,
+    trunk: [4 + Math.floor(w.tier / 3), 6 + Math.floor(w.tier / 2)],
+    canopy: NEEDLE.has(w.id) ? 'cone' : 'round',
+    drops: [{ item: `${w.id}_log`, qty: [1, 1], weight: 1 }],
+    rare: [],
+  };
+}
+// One mining node per mineable metal (copper…meteoric + lead/zinc/silver/gold/platinum).
+for (const m of METALS.filter((x) => (x.smelt || []).some((s) => s.endsWith('_ore')))) {
+  const lvl = m.mineLevel || 1;
+  generated[`ore_${m.id}`] = {
+    label: `${m.label} Vein`, skill: 'mining', level: lvl, tool: 'pickaxe',
+    xp: Math.round(14 + lvl * 1.2), time: +(3 + lvl * 0.03).toFixed(1),
+    charges: [2, m.rare ? 3 : 4], respawn: 60 + lvl * 4, kind: 'ore',
+    ready: `${m.id}_ore`, depleted: 'depleted_rock',
+    drops: [{ item: `${m.id}_ore`, qty: [1, m.role === 'ammo' ? 2 : 1], weight: 1 }],
+    rare: gemRareTable(lvl),
+  };
+}
+// Mineral deposits: fuel + the black-powder reagents.
+generated.deposit_coal = {
+  label: 'Coal Seam', skill: 'mining', level: 15, tool: 'pickaxe', xp: 26, time: 3.4,
+  charges: [2, 4], respawn: 120, kind: 'ore', ready: 'coal_seam', depleted: 'depleted_rock',
+  drops: [{ item: 'coal', qty: [1, 2], weight: 1 }], rare: [],
+};
+generated.deposit_saltpeter = {
+  label: 'Saltpeter Deposit', skill: 'mining', level: 1, tool: 'pickaxe', xp: 12, time: 2.6,
+  charges: [2, 3], respawn: 90, kind: 'ore', ready: 'saltpeter_deposit', depleted: 'depleted_rock',
+  drops: [{ item: 'saltpeter', qty: [1, 2], weight: 1 }], rare: [],
+};
+generated.deposit_sulfur = {
+  label: 'Sulfur Deposit', skill: 'mining', level: 15, tool: 'pickaxe', xp: 22, time: 3.0,
+  charges: [2, 3], respawn: 150, kind: 'ore', ready: 'sulfur_deposit', depleted: 'depleted_rock',
+  drops: [{ item: 'sulfur', qty: [1, 2], weight: 1 }], rare: [],
+};
 
 // respawn: seconds. charges: [min,max] gathers before depletion.
 // time: base seconds per gather at level 1 with the minimum tool.
 export const NODE_TYPES = {
-  tree_fernwood: {
-    label: 'Fernwood Tree', skill: 'woodcutting', level: 1, tool: 'axe',
-    xp: 15, time: 2.8, charges: [3, 5], respawn: 40, kind: 'tree',
-    log: 'fernwood_log', leaves: 'fernwood_leaves', trunk: [4, 6], canopy: 'round',
-    drops: [{ item: 'fernwood_log', qty: [1, 1], weight: 1 }],
-    rare: [{ item: 'amber_resin', chance: 0.03 }, { item: 'fernwood_seed', chance: 0.05 }],
-  },
-  tree_silverbark: {
-    label: 'Silverbark Tree', skill: 'woodcutting', level: 10, tool: 'axe',
-    xp: 34, time: 3.6, charges: [3, 6], respawn: 100, kind: 'tree',
-    log: 'silverbark_log', leaves: 'silverbark_leaves', trunk: [5, 7], canopy: 'round',
-    drops: [{ item: 'silverbark_log', qty: [1, 1], weight: 1 }],
-    rare: [{ item: 'silverleaf', chance: 0.04 }],
-  },
-  tree_emberpine: {
-    label: 'Emberpine', skill: 'woodcutting', level: 20, tool: 'axe',
-    xp: 55, time: 4.2, charges: [4, 6], respawn: 240, kind: 'tree',
-    log: 'emberpine_log', leaves: 'emberpine_needles', trunk: [5, 8], canopy: 'cone',
-    drops: [{ item: 'emberpine_log', qty: [1, 1], weight: 1 }],
-    rare: [{ item: 'ember_sap', chance: 0.05 }],
-  },
-  ore_copper: {
-    label: 'Copper Vein', skill: 'mining', level: 1, tool: 'pickaxe',
-    xp: 18, time: 3.0, charges: [2, 4], respawn: 60, kind: 'ore',
-    ready: 'copper_ore', depleted: 'depleted_rock',
-    drops: [{ item: 'copper_ore_chunk', qty: [1, 1], weight: 1 }],
-    rare: [{ item: 'rough_gem', chance: 0.02 }],
-  },
-  ore_tin: {
-    label: 'Tin Vein', skill: 'mining', level: 1, tool: 'pickaxe',
-    xp: 18, time: 3.0, charges: [2, 4], respawn: 60, kind: 'ore',
-    ready: 'tin_ore', depleted: 'depleted_rock',
-    drops: [{ item: 'tin_ore_chunk', qty: [1, 1], weight: 1 }],
-    rare: [{ item: 'rough_gem', chance: 0.02 }],
-  },
-  ore_iron: {
-    label: 'Iron Vein', skill: 'mining', level: 10, tool: 'pickaxe',
-    xp: 40, time: 4.0, charges: [2, 5], respawn: 150, kind: 'ore',
-    ready: 'iron_ore', depleted: 'depleted_rock',
-    drops: [{ item: 'iron_ore_chunk', qty: [1, 1], weight: 1 }],
-    rare: [{ item: 'rough_gem', chance: 0.03 }],
-  },
-  ore_silver: {
-    label: 'Silvervein', skill: 'mining', level: 25, tool: 'pickaxe',
-    xp: 70, time: 5.0, charges: [2, 4], respawn: 360, kind: 'ore',
-    ready: 'silvervein', depleted: 'depleted_rock',
-    drops: [{ item: 'silver_ore_chunk', qty: [1, 1], weight: 1 }],
-    rare: [{ item: 'rough_gem', chance: 0.06 }],
-  },
-  ore_emberstone: {
-    label: 'Emberstone Seam', skill: 'mining', level: 40, tool: 'pickaxe',
-    xp: 110, time: 5.5, charges: [2, 4], respawn: 480, kind: 'ore',
-    ready: 'emberstone_ore', depleted: 'depleted_rock',
-    drops: [{ item: 'emberstone_shard', qty: [1, 2], weight: 1 }],
-    rare: [{ item: 'flame_opal', chance: 0.04 }],
-  },
-  crystal_node: {
-    label: 'Veilcrystal Growth', skill: 'mining', level: 50, tool: 'pickaxe',
-    xp: 150, time: 6, charges: [1, 3], respawn: 720, kind: 'ore',
-    ready: 'crystal_cluster', depleted: 'depleted_rock',
-    drops: [{ item: 'veilcrystal', qty: [1, 1], weight: 1 }],
-    rare: [{ item: 'flawless_veilcrystal', chance: 0.05 }],
-  },
+  ...generated,
   fishing_spot: {
     label: 'Fishing Spot', skill: 'fishing', level: 1, tool: 'rod',
     xp: 22, time: 4.5, charges: [3, 6], respawn: 50, kind: 'water',

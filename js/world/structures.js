@@ -110,8 +110,8 @@ export function buildStarterStructures() {
 
   // ---- Grove (woodcutting) ----------------------------------------------
   const groveTrees = [
-    ['tree_fernwood', 20, 4], ['tree_fernwood', 24, -4], ['tree_fernwood', 27, 2],
-    ['tree_fernwood', 21, -8], ['tree_fernwood', 28, 7], ['tree_silverbark', 25, -10],
+    ['tree_pine', 20, 4], ['tree_pine', 24, -4], ['tree_pine', 27, 2],
+    ['tree_pine', 21, -8], ['tree_oak', 28, 7], ['tree_birch', 25, -10],
   ];
   for (const [type, x, z] of groveTrees) {
     nodes.push({ type, x, y: F, z, meta: { h: 5 } });
@@ -221,7 +221,7 @@ export function buildStarterStructures() {
     ],
   });
   set(29, 13, -80, B.enchant_altar);
-  nodes.push({ type: 'crystal_node', x: 19, y: 13, z: -79 });
+  nodes.push({ type: 'ore_gold', x: 19, y: 13, z: -79 });
   nodes.push({ type: 'dig_site', x: 28, y: 13, z: -73 });
 
   // ---- Frostwatch: frontier camp in the forced-tundra ring ---------------
@@ -286,7 +286,7 @@ export function buildStarterStructures() {
     // ore for the trip out
     nodes.push({ type: 'ore_silver', x: CX + 9, y: F2, z: CZ + 8 });
     nodes.push({ type: 'ore_iron', x: CX - 9, y: F2, z: CZ + 9 });
-    nodes.push({ type: 'tree_emberpine', x: CX + 10, y: F2, z: CZ - 4, meta: { h: 6 } });
+    nodes.push({ type: 'tree_yew', x: CX + 10, y: F2, z: CZ - 4, meta: { h: 6 } });
   }
 
   const markers = {

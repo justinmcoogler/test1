@@ -81,7 +81,7 @@ try {
     const g = window.__game;
     let best = null, bd = 1e9;
     for (const n of g.world.nodesById.values()) {
-      if (n.type !== 'tree_fernwood') continue;
+      if (n.type !== 'tree_pine') continue;
       const d = Math.hypot(n.x - 24, n.z);
       if (d < bd) { bd = d; best = { x: n.x, y: n.y, z: n.z, id: n.id }; }
     }
@@ -92,7 +92,7 @@ try {
   await holdPrimary(true);
   await page.waitForTimeout(14000); // several chops (~3.3s each with the worn hatchet)
   await holdPrimary(false);
-  const logs = await gState(() => window.__game.inventory.count('fernwood_log'));
+  const logs = await gState(() => window.__game.inventory.count('pine_log'));
   check('chopped logs', logs >= 3, `${logs} logs`);
   const wcXp = await gState(() => window.__game.skills.xp.woodcutting);
   check('woodcutting xp gained', wcXp > 0, `${wcXp} xp`);
@@ -103,7 +103,7 @@ try {
       const g = window.__game;
       for (const n of g.world.nodesById.values()) {
         const st = g.world.nodeState(n.id);
-        if (n.type === 'tree_fernwood' && st.state === 'ready' && Math.hypot(n.x, n.z) < 45) return { x: n.x, y: n.y, z: n.z };
+        if (n.type === 'tree_pine' && st.state === 'ready' && Math.hypot(n.x, n.z) < 45) return { x: n.x, y: n.y, z: n.z };
       }
       return null;
     });
@@ -122,7 +122,7 @@ try {
     let node = null, bd = 1e9;
     for (const n of g.world.nodesById.values()) {
       const st = g.world.nodeState(n.id);
-      if (n.type === 'tree_fernwood' && st.state === 'ready') {
+      if (n.type === 'tree_pine' && st.state === 'ready') {
         const d = Math.hypot(n.x - g.player.x, n.z - g.player.z);
         if (d < bd) { bd = d; node = n; }
       }
@@ -225,16 +225,15 @@ try {
   await holdPrimary(true);
   await page.waitForTimeout(9000);
   await holdPrimary(false);
-  const copper = await gState(() => window.__game.inventory.count('copper_ore_chunk'));
+  const copper = await gState(() => window.__game.inventory.count('copper_ore'));
   check('mined copper', copper >= 1, `${copper} ore`);
   const miningXp = await gState(() => window.__game.skills.xp.mining);
   check('mining xp gained', miningXp > 0, `${miningXp}`);
 
-  // ---- 8. Smelt bronze at the workshop furnace ----
+  // ---- 8. Smelt copper at the workshop furnace (the first realistic metal) ----
   await gState(() => {
     const g = window.__game;
-    g.inventory.add('copper_ore_chunk', 3);
-    g.inventory.add('tin_ore_chunk', 3);
+    g.inventory.add('copper_ore', 4);
   });
   await teleportFacing(12.5, 65, -12.5, 12, 65, -14); // workshop, near furnace
   await page.waitForTimeout(300);
@@ -242,13 +241,12 @@ try {
     const g = window.__game;
     const stations = g.nearbyStations();
     if (!stations.has('furnace')) return { ok: false, reason: 'no furnace nearby: ' + [...stations] };
-    const { RECIPES } = window.__crafting;
-    const rec = RECIPES.find((r) => r.out === 'bronze_bar');
-    const { craft } = window.__crafting;
+    const { RECIPES, craft } = window.__crafting;
+    const rec = RECIPES.find((r) => r.out === 'copper_bar');
     const res = craft(rec, g.inventory, g.skills, stations);
-    return { ok: res.ok, bars: g.inventory.count('bronze_bar') };
+    return { ok: res.ok, bars: g.inventory.count('copper_bar') };
   });
-  check('smelted bronze at furnace', smelted.ok, JSON.stringify(smelted));
+  check('smelted copper at furnace', smelted.ok, JSON.stringify(smelted));
 
   // ---- 9. Turn-based combat vs the practice dummy ----
   const dummy = await gState(() => {
@@ -336,7 +334,7 @@ try {
     const g = window.__game;
     g.saveGame();
     return {
-      logs: g.inventory.count('fernwood_log'),
+      logs: g.inventory.count('pine_log'),
       wcXp: g.skills.xp.woodcutting,
       coins: g.inventory.coins,
       quest: g.quests.state.q_arrival?.status,
@@ -353,7 +351,7 @@ try {
   const postLoad = await gState(() => {
     const g = window.__game;
     return {
-      logs: g.inventory.count('fernwood_log'),
+      logs: g.inventory.count('pine_log'),
       wcXp: g.skills.xp.woodcutting,
       coins: g.inventory.coins,
       quest: g.quests.state.q_arrival?.status,

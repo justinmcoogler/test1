@@ -98,14 +98,14 @@ test('node definitions are complete and consistent', () => {
     }
     for (const r of def.rare) assert.ok(ITEMS[r.item], `${type} rare drops unknown item ${r.item}`);
     // suggested regeneration ranges from the design
-    if (type === 'tree_fernwood') assert.ok(def.respawn >= 30 && def.respawn <= 60);
+    if (type === 'tree_pine') assert.ok(def.respawn >= 30 && def.respawn <= 60);
     if (type === 'ore_copper') assert.ok(def.respawn >= 45 && def.respawn <= 90);
-    if (type === 'crystal_node') assert.ok(def.respawn >= 600 && def.respawn <= 1200);
+    if (type === 'ore_meteoric') assert.ok(def.respawn >= 300, 'deep ores regenerate slowly');
   }
 });
 
 test('tree nodes stamp trunks and regrow from stumps', () => {
-  const node = { type: 'tree_fernwood', x: 5, y: 31, z: 5, meta: { h: 5 }, def: NODE_TYPES.tree_fernwood };
+  const node = { type: 'tree_pine', x: 5, y: 31, z: 5, meta: { h: 5 }, def: NODE_TYPES.tree_pine };
   const ready = nodeBlocks(node, 'ready');
   const depleted = nodeBlocks(node, 'depleted');
   assert.ok(ready.length > 10, 'tree should have trunk + canopy');

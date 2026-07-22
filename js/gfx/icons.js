@@ -479,7 +479,7 @@ const DEFS = {
   sk_fishing: ['rod'], sk_foraging: ['leaf'], sk_hunting: ['bow'],
   sk_farming: ['grain'], sk_archaeology: ['urn'], sk_smithing: ['hammer'],
   sk_woodworking: ['saw'], sk_cooking: ['pan'], sk_tailoring: ['needle'],
-  sk_alchemy: ['flask'], sk_construction: ['frame'], sk_enchanting: ['orb'],
+  sk_alchemy: ['flask'], sk_construction: ['frame'], sk_crafting: ['gem'], sk_enchanting: ['orb'],
   sk_vitality: ['heart'], sk_strength: ['muscle'], sk_defense: ['shield', '#8f9298'],
   sk_ranged: ['target'], sk_magic: ['sparkle'], sk_healing: ['heartplus'],
   sk_tactics: ['brain'],

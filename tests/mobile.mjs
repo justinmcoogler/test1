@@ -78,7 +78,7 @@ try {
     const g = window.__game;
     let best = null, bd = 1e9;
     for (const n of g.world.nodesById.values()) {
-      if (n.type !== 'tree_fernwood') continue;
+      if (n.type !== 'tree_pine') continue;
       const st = g.world.nodeState(n.id);
       if (st.state !== 'ready') continue;
       const d = Math.hypot(n.x - 24, n.z);
@@ -97,7 +97,7 @@ try {
   await page.waitForTimeout(300);
   const act = await page.locator('#btn-action').boundingBox();
   await touchDrag(act.x + act.width / 2, act.y + act.height / 2, act.x + act.width / 2, act.y + act.height / 2, 1, 9000);
-  const logs = await page.evaluate(() => window.__game.inventory.count('fernwood_log'));
+  const logs = await page.evaluate(() => window.__game.inventory.count('pine_log'));
   check('hold ✦ gathers wood', logs >= 1, `${logs} logs`);
 
   // ---- hotbar + menu buttons are tappable ----

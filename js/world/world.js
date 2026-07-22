@@ -155,11 +155,13 @@ export class World {
       }
       if (!nearAir) continue;
       const tier = gen.tierAt(wx, wz);
-      let type = roll < 0.45 ? 'ore_copper' : roll < 0.85 ? 'ore_tin' : 'ore_iron';
-      if (tier >= 1 && roll > 0.7) type = 'ore_iron';
-      if (tier >= 2 && roll > 0.85) type = 'ore_silver';
-      if (tier >= 2 && ly < 40 && roll > 0.93) type = 'crystal_node';
-      if (tier >= 3 && roll > 0.8) type = 'ore_emberstone';
+      // Realistic underground metals: common near spawn, precious/meteoric deep
+      // & far out. Coal seams appear at any tier to fuel smelting.
+      let type = roll < 0.4 ? 'ore_copper' : roll < 0.7 ? 'ore_tin' : roll < 0.9 ? 'ore_iron' : 'deposit_coal';
+      if (tier >= 1 && roll > 0.6 && roll < 0.72) type = 'ore_lead';
+      if (tier >= 2 && roll > 0.8) type = 'ore_silver';
+      if (tier >= 2 && ly < 40 && roll > 0.93) type = 'ore_gold';
+      if (tier >= 3 && roll > 0.86) type = 'ore_meteoric';
       chunk.nodes.push({ type, x: wx, y: ly, z: wz });
     }
 

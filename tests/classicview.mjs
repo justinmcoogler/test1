@@ -83,7 +83,7 @@ try {
     const g = window.__game;
     let best = null, bd = 1e9;
     for (const n of g.world.nodesById.values()) {
-      if (n.type !== 'tree_fernwood') continue;
+      if (n.type !== 'tree_pine') continue;
       const st = g.world.nodeState(n.id);
       if (st.state !== 'ready') continue;
       const d = Math.hypot(n.x - g.player.x, n.z - g.player.z);
@@ -103,13 +103,13 @@ try {
   await page.waitForTimeout(400);
   const treeScreen = await screenPos(tree.x + 0.5, tree.y + 1, tree.z + 0.5);
   check('tree projects on screen', !!treeScreen);
-  const logsBefore = await gState(() => window.__game.inventory.count('fernwood_log'));
+  const logsBefore = await gState(() => window.__game.inventory.count('pine_log'));
   await page.mouse.click(treeScreen[0], treeScreen[1]);
   await page.waitForTimeout(400);
   const pending = await gState(() => window.__game.pendingInteract?.kind || window.__game.autoGatherNode?.type || 'none');
-  check('tree click queues gather', pending === 'node' || pending === 'tree_fernwood', pending);
+  check('tree click queues gather', pending === 'node' || pending === 'tree_pine', pending);
   await page.waitForTimeout(12000); // walk + a few chops
-  const logsAfter = await gState(() => window.__game.inventory.count('fernwood_log'));
+  const logsAfter = await gState(() => window.__game.inventory.count('pine_log'));
   check('auto-gather chopped logs', logsAfter > logsBefore, `${logsBefore}→${logsAfter}`);
 
   // ---- 4. Click a creature → walks over and engages classic combat ----

@@ -17,6 +17,7 @@ export const SKILL_DEFS = {
   tailoring:    { label: 'Tailoring', group: 'Crafting', desc: 'Weave cloth and stitch hides into armor.' },
   alchemy:      { label: 'Alchemy', group: 'Crafting', desc: 'Brew tonics and salves from herbs.' },
   construction: { label: 'Construction', group: 'Crafting', desc: 'Build structures, stations and settlements.' },
+  crafting:     { label: 'Crafting', group: 'Crafting', desc: 'Cut rough gems, set jewelry, and assemble firearms.' },
   enchanting:   { label: 'Enchanting', group: 'Crafting', desc: 'Bind crystal energies into charms and gear.' },
   // Combat
   vitality: { label: 'Vitality', group: 'Combat', desc: 'Raises maximum health.' },
@@ -31,13 +32,14 @@ export const SKILL_DEFS = {
 // Milestone unlock tables (display + real gates live in recipes/nodes/abilities)
 export const SKILL_UNLOCKS = {
   mining: [
-    [1, 'Copper & tin veins, clay deposits'], [10, 'Iron veins'], [15, 'Faster swing: -10% gather time'],
-    [25, 'Silverveins (needs bronze pick or better)'], [40, 'Emberstone seams (needs iron pick)'],
-    [50, 'Veilcrystal growths'], [70, 'Critical strikes yield double ore'], [90, 'Master miner: rare gem chance doubled'],
+    [1, 'Copper ore, clay & coal'], [10, 'Tin ore'], [20, 'Lead & silver ore'], [25, 'Iron ore'],
+    [30, 'Zinc ore'], [40, 'Gold ore'], [55, 'Platinum ore'], [70, 'Meteoric iron (crater sites)'],
+    [90, 'Master miner: rare gem chance doubled — gems drop while mining any rock'],
   ],
   woodcutting: [
-    [1, 'Fernwood trees'], [10, 'Silverbark trees'], [15, '-10% chop time'], [20, 'Emberpine trees'],
-    [35, 'Chance of double logs'], [60, 'Ancient groves (rare saps)'], [90, 'Living legend of the forests'],
+    [1, 'Pine'], [10, 'Cedar'], [20, 'Birch'], [30, 'Oak'], [35, 'Ash'], [45, 'Hickory'],
+    [50, 'Maple'], [55, 'Walnut (gunstocks)'], [65, 'Yew (longbows)'], [70, 'Teak'], [75, 'Ebony'],
+    [85, 'Lignum Vitae — the densest wood'],
   ],
   fishing: [
     [1, 'Silverfin in calm waters'], [8, 'Mudwhisker'], [20, 'Duskeel at dusk pools'],
@@ -57,11 +59,18 @@ export const SKILL_UNLOCKS = {
     [1, 'Surface dig sites'], [15, 'Relic fragments more common'], [30, 'Dungeon excavations'], [60, 'Lost-age treasures'],
   ],
   smithing: [
-    [1, 'Smelt bronze'], [5, 'Bronze tools & weapons'], [10, 'Smelt iron'], [12, 'Iron gear'],
-    [25, 'Smelt silver'], [40, 'Embersteel'], [70, 'Masterwork forging (+quality)'],
+    [1, 'Smelt copper; copper tools'], [10, 'Smelt tin & lead'], [15, 'Bronze (copper+tin) & bronze gear'],
+    [25, 'Smelt iron; iron gear'], [40, 'Steel (iron+coal)'], [60, 'Damascus steel'],
+    [70, 'Meteoric iron — masterwork forging'],
   ],
   woodworking: [
-    [1, 'Planks, hafts & benches'], [5, 'Bows'], [15, 'Silverbark recurve'], [30, 'Fine furniture'], [60, 'Living-wood shaping'],
+    [1, 'Planks, hafts & benches'], [35, 'Ash & hickory bows'], [55, 'Walnut gunstocks'],
+    [65, 'Yew longbows'], [85, 'Lignum-vitae masterwork'],
+  ],
+  crafting: [
+    [1, 'Cut rock crystal & amethyst'], [20, 'Garnet'], [25, 'Pewter fittings'], [30, 'Topaz'],
+    [35, 'Brass; assemble the hand cannon'], [45, 'Emerald & electrum'], [50, 'Sapphire'],
+    [55, 'Flintlock & matchlock firearms'], [60, 'Ruby'], [75, 'Diamond — the master cut; blunderbuss'],
   ],
   cooking: [
     [1, 'Roast fish & meat'], [5, 'Travel biscuits'], [8, 'Smoked mudwhisker'], [12, 'Hearth loaves'],
