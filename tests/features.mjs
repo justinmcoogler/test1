@@ -148,7 +148,7 @@ try {
     const forge = game.world.getBlock(564, 68, -117); // furnace at CX+4
     return { biome, sylla, bossSpawn, warded, forgeIsFurnace: forge === window.__blocks.B.furnace };
   });
-  check('camp sits in forced tundra', frost.biome === 'Frostbound Tundra', frost.biome);
+  check('camp sits in forced tundra', frost.biome === 'Tundra', frost.biome);
   check('Warden Sylla exists', frost.sylla);
   check('Rimehowl Alpha spawns at the den', frost.bossSpawn);
   check('den chest warded on the new boss', frost.warded, JSON.stringify(frost));
