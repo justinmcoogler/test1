@@ -89,6 +89,24 @@ test('biomes get harsher with distance', () => {
   assert.ok(g.tierAt(2000, 2000) >= 2);
 });
 
+test('biomes: climate model is deterministic, temperate at spawn, exotic far out', () => {
+  const g = new WorldGen(hashSeed('climate'));
+  assert.strictEqual(g.biomeAt(300, -220), g.biomeAt(300, -220), 'biomeAt must be deterministic');
+  // The spawn valley is always mild & livable — never a cold/hot exotic biome.
+  const EXOTIC = new Set(['Boreal Taiga', 'Tropical Jungle', 'Sun-baked Badlands', 'Frostbound Tundra', 'Volcanic Wastes', 'Corrupted Wilderness']);
+  for (let a = 0; a < 16; a++) {
+    const x = Math.round(Math.cos(a) * 45), z = Math.round(Math.sin(a) * 45);
+    assert.ok(!EXOTIC.has(g.biomeAt(x, z).label), `spawn area went exotic: ${g.biomeAt(x, z).label}`);
+  }
+  // Over a wide span, every climate biome is actually reachable.
+  const seen = new Set();
+  for (let x = -1600; x <= 1600; x += 40) for (let z = -1600; z <= 1600; z += 40) seen.add(g.biomeAt(x, z).label);
+  for (const need of ['Greenwood Plains', 'Ancient Forest', 'Boreal Taiga', 'Tropical Jungle', 'Sun-baked Badlands', 'Frostbound Tundra', 'Rocky Highlands', 'Coastal Shores']) {
+    assert.ok(seen.has(need), `climate biome unreachable: ${need}`);
+  }
+  assert.ok(seen.has('Volcanic Wastes') || seen.has('Corrupted Wilderness'), 'no deep special biome generated');
+});
+
 test('node definitions are complete and consistent', () => {
   for (const [type, def] of Object.entries(NODE_TYPES)) {
     assert.ok(def.label && def.skill && def.xp > 0 && def.respawn > 0, type);

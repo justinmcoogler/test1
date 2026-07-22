@@ -99,12 +99,12 @@ test('worldgen: every wood & metal actually spawns on a tree-valid surface', () 
     assert.ok(placedTrees.has(type), `wood ${w.id} is in no biome's trees[] — unobtainable`);
     assert.ok(placedTrees.get(type), `wood ${w.id} only spawns on a non-tree surface — it would never generate`);
   }
-  // underground selection (world.js) covers copper/tin/iron/lead/silver/gold/meteoric + coal;
-  // the rest must appear via a biome nodes[] list.
-  const underground = new Set(['ore_copper', 'ore_tin', 'ore_iron', 'ore_lead', 'ore_silver', 'ore_gold', 'ore_meteoric', 'deposit_coal']);
+  // The underground vein selection (world.js) is the guaranteed source of every
+  // mineable metal — it must cover all of them so nothing depends on a rare
+  // surface biome generating. (Kept in sync with world.js by hand.)
+  const underground = new Set(['ore_copper', 'ore_tin', 'ore_iron', 'ore_lead', 'ore_zinc', 'ore_silver', 'ore_gold', 'ore_platinum', 'ore_meteoric', 'deposit_coal']);
   for (const m of mineable) {
-    const type = `ore_${m.id}`;
-    assert.ok(placedNodes.has(type) || underground.has(type), `metal ${m.id} spawns nowhere (no biome node, not underground)`);
+    assert.ok(underground.has(`ore_${m.id}`), `metal ${m.id} not in the guaranteed underground selection — could be unobtainable on some seeds`);
   }
 });
 

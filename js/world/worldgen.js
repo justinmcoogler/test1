@@ -16,25 +16,60 @@ export const SEA = 62;
 // exists on every seed.
 export const FROST_CAMP = { x: 560, z: -120, ground: 67 };
 
+// Biomes are placed by a realistic climate model (temperature × moisture ×
+// elevation) — NOT by distance alone. biomeAt() biases climate toward mild
+// temperate near spawn and lets it reach extremes far out, so the exotic
+// biomes (boreal, tropical, tundra, desert, volcanic, blighted) that hold the
+// rare high-tier woods & precious ores emerge the farther you travel — the
+// owner's "rarer the further from spawn" rule, expressed through real climate.
+// Keys greenwood_plains / ancient_forest / misty_wetlands / coastal_shores are
+// load-bearing (mob spawn files reference them) — do not rename them.
 export const BIOMES = {
   greenwood_plains: {
-    label: 'Greenwood Plains', tier: 0,
+    label: 'Greenwood Plains', tier: 0, climate: 'temperate grassland',
     surface: 'grass', filler: 'dirt',
-    trees: [{ type: 'tree_pine', density: 0.012 }, { type: 'tree_birch', density: 0.004 }],
+    trees: [{ type: 'tree_pine', density: 0.01 }, { type: 'tree_birch', density: 0.005 }],
     plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'wildflower', d: 0.012 }],
     nodes: [{ type: 'herb_patch', d: 0.004 }, { type: 'berry_bush', d: 0.003 }, { type: 'deposit_saltpeter', d: 0.0016 }],
     enemies: [{ type: 'mudback_boar', d: 0.0022 }, { type: 'thicket_sprite', d: 0.0015 }, { type: 'duskwing', d: 0.0014 }],
   },
   ancient_forest: {
-    label: 'Ancient Forest', tier: 0,
+    label: 'Ancient Forest', tier: 0, climate: 'temperate deciduous forest',
     surface: 'grass', filler: 'dirt',
-    trees: [{ type: 'tree_pine', density: 0.04 }, { type: 'tree_oak', density: 0.014 }, { type: 'tree_cedar', density: 0.01 }],
+    trees: [
+      { type: 'tree_oak', density: 0.02 }, { type: 'tree_birch', density: 0.012 },
+      { type: 'tree_ash', density: 0.01 }, { type: 'tree_hickory', density: 0.008 },
+      { type: 'tree_maple', density: 0.006 }, { type: 'tree_pine', density: 0.006 },
+      { type: 'tree_walnut', density: 0.003 },
+    ],
     plants: [{ block: 'tall_grass', d: 0.03 }, { block: 'mushroom_cap', d: 0.01 }],
     nodes: [{ type: 'herb_patch', d: 0.006 }, { type: 'berry_bush', d: 0.004 }],
     enemies: [{ type: 'thicket_sprite', d: 0.003 }, { type: 'moss_lurker', d: 0.0018 }, { type: 'duskwing', d: 0.0018 }],
   },
+  boreal_forest: {
+    label: 'Boreal Taiga', tier: 2, climate: 'cold coniferous forest',
+    surface: 'grass', filler: 'dirt',
+    trees: [
+      { type: 'tree_pine', density: 0.045 }, { type: 'tree_cedar', density: 0.018 },
+      { type: 'tree_yew', density: 0.004 },
+    ],
+    plants: [{ block: 'mushroom_cap', d: 0.012 }, { block: 'tall_grass', d: 0.01 }],
+    nodes: [{ type: 'herb_patch', d: 0.005 }, { type: 'deposit_coal', d: 0.003 }],
+    enemies: [{ type: 'frostmaw_wolf', d: 0.0022, pack: [2, 3] }, { type: 'rime_shade', d: 0.0014 }],
+  },
+  tropical_forest: {
+    label: 'Tropical Jungle', tier: 3, climate: 'hot humid rainforest',
+    surface: 'grass', filler: 'dirt',
+    trees: [
+      { type: 'tree_teak', density: 0.03 }, { type: 'tree_ebony', density: 0.014 },
+      { type: 'tree_lignum_vitae', density: 0.004 },
+    ],
+    plants: [{ block: 'tall_grass', d: 0.04 }, { block: 'mushroom_cap', d: 0.02 }],
+    nodes: [{ type: 'herb_patch', d: 0.008 }, { type: 'berry_bush', d: 0.004 }],
+    enemies: [{ type: 'moss_lurker', d: 0.003 }, { type: 'thicket_sprite', d: 0.002 }, { type: 'sunscale_serpent', d: 0.0016 }],
+  },
   misty_wetlands: {
-    label: 'Misty Wetlands', tier: 1,
+    label: 'Misty Wetlands', tier: 1, climate: 'warm swamp',
     surface: 'grass', filler: 'clay_block',
     trees: [{ type: 'tree_cedar', density: 0.02 }],
     plants: [{ block: 'reed', d: 0.05 }, { block: 'mushroom_cap', d: 0.02 }],
@@ -42,7 +77,7 @@ export const BIOMES = {
     enemies: [{ type: 'bog_shambler', d: 0.003 }, { type: 'marsh_wisp', d: 0.002 }],
   },
   rocky_highlands: {
-    label: 'Rocky Highlands', tier: 1,
+    label: 'Rocky Highlands', tier: 1, climate: 'montane',
     surface: 'stone', filler: 'stone',
     trees: [{ type: 'tree_ash', density: 0.006 }, { type: 'tree_hickory', density: 0.004 }],
     plants: [{ block: 'tall_grass', d: 0.008 }],
@@ -50,23 +85,23 @@ export const BIOMES = {
     enemies: [{ type: 'craghorn_ram', d: 0.0025 }, { type: 'stone_pecker', d: 0.002 }],
   },
   sunbaked_badlands: {
-    label: 'Sun-baked Badlands', tier: 2,
+    label: 'Sun-baked Badlands', tier: 2, climate: 'hot desert',
     surface: 'sand', filler: 'sand',
-    trees: [{ type: 'tree_teak', density: 0.003 }],
+    trees: [{ type: 'tree_teak', density: 0.0025 }],
     plants: [{ block: 'cactus_flesh', d: 0.006 }],
     nodes: [{ type: 'ore_lead', d: 0.003 }, { type: 'ore_silver', d: 0.003 }, { type: 'deposit_sulfur', d: 0.003 }, { type: 'dig_site', d: 0.004 }],
     enemies: [{ type: 'dune_stalker', d: 0.003 }, { type: 'sunscale_serpent', d: 0.002 }],
   },
   frostbound_tundra: {
-    label: 'Frostbound Tundra', tier: 2,
+    label: 'Frostbound Tundra', tier: 2, climate: 'cold dry tundra',
     surface: 'snow_grass', filler: 'dirt',
-    trees: [{ type: 'tree_maple', density: 0.008 }, { type: 'tree_yew', density: 0.004 }],
+    trees: [{ type: 'tree_yew', density: 0.003 }],
     plants: [],
     nodes: [{ type: 'ore_iron', d: 0.004 }, { type: 'ore_silver', d: 0.002 }, { type: 'deposit_coal', d: 0.002 }],
     enemies: [{ type: 'frostmaw_wolf', d: 0.003, pack: [2, 3] }, { type: 'rime_shade', d: 0.0015 }],
   },
   volcanic_wastes: {
-    label: 'Volcanic Wastes', tier: 3,
+    label: 'Volcanic Wastes', tier: 3, climate: 'volcanic',
     surface: 'ashen_soil', filler: 'basalt',
     trees: [],
     plants: [],
@@ -74,7 +109,7 @@ export const BIOMES = {
     enemies: [{ type: 'cinder_imp', d: 0.004 }, { type: 'magma_hulk', d: 0.0015 }],
   },
   corrupted_wilds: {
-    label: 'Corrupted Wilderness', tier: 3,
+    label: 'Corrupted Wilderness', tier: 3, climate: 'blighted',
     surface: 'corrupt_soil', filler: 'corrupt_soil',
     trees: [{ type: 'tree_walnut', density: 0.008 }, { type: 'tree_ebony', density: 0.005 }, { type: 'tree_lignum_vitae', density: 0.002 }],
     plants: [{ block: 'mushroom_cap', d: 0.03 }],
@@ -82,7 +117,7 @@ export const BIOMES = {
     enemies: [{ type: 'blight_horror', d: 0.003 }, { type: 'hollow_watcher', d: 0.002 }],
   },
   coastal_shores: {
-    label: 'Coastal Shores', tier: 1,
+    label: 'Coastal Shores', tier: 1, climate: 'coast',
     surface: 'sand', filler: 'sand',
     trees: [],
     plants: [{ block: 'reed', d: 0.02 }],
@@ -90,7 +125,7 @@ export const BIOMES = {
     enemies: [{ type: 'shell_snapper', d: 0.0025 }],
   },
   crystal_caverns: {
-    label: 'Crystal Caverns', tier: 2,
+    label: 'Crystal Caverns', tier: 2, climate: 'subterranean',
     surface: 'stone', filler: 'stone',
     trees: [], plants: [], nodes: [], enemies: [],
   },
@@ -156,29 +191,38 @@ export class WorldGen {
     return 3;
   }
 
+  // Whittaker-style climate biomes. Temperature is pulled toward mild/temperate
+  // near spawn and allowed to reach extremes with distance (climate "extremity"),
+  // so the spawn valley is always livable temperate and cold/hot exotic biomes —
+  // and the rare woods/ores they carry — appear the farther out you go.
   biomeAt(x, z) {
     const h = this.heightAt(x, z);
-    const t = this.temperatureAt(x, z);
     const m = this.moistureAt(x, z);
     const tier = this.tierAt(x, z);
 
-    // forced tundra ring around the Frostwatch camp (every seed)
+    // The hand-built Frostwatch frontier is pinned cold on every seed.
     if (Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z) < 90) return BIOMES.frostbound_tundra;
-    if (h <= SEA + 1 && tier >= 1) return BIOMES.coastal_shores;
-    if (tier === 0) {
-      return m > 0.56 ? BIOMES.ancient_forest : BIOMES.greenwood_plains;
+    // Beaches hug the water line at any distance.
+    if (h <= SEA + 1) return BIOMES.coastal_shores;
+
+    // extremity: 0 at spawn → 1 by ~1000 blocks out (jittered by tierAt's noise).
+    const d = Math.hypot(x, z);
+    const ext = smoothstep(clamp((d - 80) / 900, 0, 1));
+    const t = 0.5 + (this.temperatureAt(x, z) - 0.5) * (0.28 + 0.72 * ext);
+
+    // Elevation & water carve montane and swamp out of any climate band.
+    if (h > SEA + 30) return BIOMES.rocky_highlands;
+    if (m > 0.62 && h < SEA + 10) return BIOMES.misty_wetlands;
+
+    // Far, extreme reaches host the two rare "special" biomes.
+    if (tier >= 3) {
+      if (t > 0.66 && m < 0.4) return BIOMES.volcanic_wastes;
+      if (m > 0.6) return BIOMES.corrupted_wilds;
     }
-    if (tier === 1) {
-      if (m > 0.6 && h < SEA + 16) return BIOMES.misty_wetlands;
-      if (h > SEA + 24) return BIOMES.rocky_highlands;
-      return m > 0.5 ? BIOMES.ancient_forest : BIOMES.greenwood_plains;
-    }
-    if (tier === 2) {
-      if (t > 0.58) return BIOMES.sunbaked_badlands;
-      if (t < 0.42) return BIOMES.frostbound_tundra;
-      return BIOMES.rocky_highlands;
-    }
-    return t > 0.5 ? BIOMES.volcanic_wastes : BIOMES.corrupted_wilds;
+    // Climate bands: cold → taiga/tundra, hot → jungle/desert, else temperate.
+    if (t < 0.35) return m > 0.5 ? BIOMES.boreal_forest : BIOMES.frostbound_tundra;
+    if (t > 0.68) return m > 0.5 ? BIOMES.tropical_forest : BIOMES.sunbaked_badlands;
+    return m > 0.5 ? BIOMES.ancient_forest : BIOMES.greenwood_plains;
   }
 
   isCave(x, y, z) {

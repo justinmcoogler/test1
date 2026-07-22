@@ -4,7 +4,7 @@ import { B, BLOCKS, isSolid } from './blocks.js';
 import { CHUNK, WORLD_H, SEA, FROST_CAMP, WorldGen, undergroundNodeCandidates } from './worldgen.js';
 import { buildStarterStructures, indexEditsByChunk } from './structures.js';
 import { NODE_TYPES, nodeBlocks, nodeCells } from '../game/nodes.js';
-import { hash2, hash3 } from '../core/rng.js';
+import { hash2, hash3, hashSeed } from '../core/rng.js';
 import { emit } from '../core/events.js';
 
 const SLAB_BLOCKS = new Set();
@@ -131,7 +131,11 @@ export class World {
         // enemy spawn points (packs place several creatures on one point)
         if (d0 > 60 && above === B.air && surfId !== B.water) {
           for (const e of biome.enemies) {
-            if (hash2(this.seed + 911 + e.type.length * 31, wx, wz) < e.d) {
+            // Per-type salt from the name's hash — NOT its length, which collides
+            // for equal-length names (e.g. moss_lurker vs glimmer_fox) and would
+            // let an earlier same-length enemy permanently shadow a later one.
+            e._salt ??= hashSeed(e.type);
+            if (hash2(this.seed + e._salt, wx, wz) < e.d) {
               const n = e.pack
                 ? e.pack[0] + Math.floor(hash2(this.seed + 913, wx, wz) * (e.pack[1] - e.pack[0] + 1))
                 : 1;
@@ -158,13 +162,21 @@ export class World {
       }
       if (!nearAir) continue;
       const tier = gen.tierAt(wx, wz);
-      // Realistic underground metals: common near spawn, precious/meteoric deep
-      // & far out. Coal seams appear at any tier to fuel smelting.
-      let type = roll < 0.4 ? 'ore_copper' : roll < 0.7 ? 'ore_tin' : roll < 0.9 ? 'ore_iron' : 'deposit_coal';
-      if (tier >= 1 && roll > 0.6 && roll < 0.72) type = 'ore_lead';
-      if (tier >= 2 && roll > 0.8) type = 'ore_silver';
-      if (tier >= 2 && ly < 40 && roll > 0.93) type = 'ore_gold';
-      if (tier >= 3 && roll > 0.86) type = 'ore_meteoric';
+      // Realistic underground metals: common near spawn, precious/meteoric deep &
+      // far out. This is the GUARANTEED source of every metal (zinc & platinum
+      // included), so brass/platinum jewelry stay reachable on every seed even if
+      // their surface biome (corrupted wilds) never generates. Coal is everywhere.
+      let type;
+      if (roll < 0.40) type = 'ore_copper';
+      else if (roll < 0.68) type = 'ore_tin';
+      else if (roll < 0.88) type = 'ore_iron';
+      else type = 'deposit_coal';
+      if (tier >= 1 && roll >= 0.62 && roll < 0.68) type = 'ore_lead';
+      if (tier >= 2 && roll >= 0.80 && roll < 0.86) type = 'ore_zinc';
+      if (tier >= 2 && roll >= 0.86 && roll < 0.93) type = 'ore_silver';
+      if (tier >= 2 && roll >= 0.93 && ly < 40) type = 'ore_gold';
+      if (tier >= 3 && roll >= 0.90 && roll < 0.93) type = 'ore_platinum';
+      if (tier >= 3 && roll >= 0.96) type = 'ore_meteoric';
       chunk.nodes.push({ type, x: wx, y: ly, z: wz });
     }
 

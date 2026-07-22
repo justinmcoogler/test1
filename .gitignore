@@ -1,2 +1,5 @@
 node_modules/
 tests/screenshots/
+
+# session workflow scratch (not part of the game)
+scratchpad/
