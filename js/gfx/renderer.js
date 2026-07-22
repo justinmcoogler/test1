@@ -171,7 +171,8 @@ export class Renderer {
       parts: parts.map((p) => ({
         id: p.id, parent: p.parent || null, pivot: p.pivot || [0, 0, 0],
         rotation: p.rotation || null,
-        mesh: this.buildBoxMesh(p.boxes, p.tex || 'skin_solid'),
+        // locator parts (no boxes) still exist for the pose chain, but draw nothing
+        mesh: (p.boxes && p.boxes.length) ? this.buildBoxMesh(p.boxes, p.tex || 'skin_solid') : null,
       })),
       animations: animations || {},
     });
@@ -312,6 +313,7 @@ export class Renderer {
       if (model.animated) {
         if (model.texture) gl.bindTexture(gl.TEXTURE_2D, model.texture);
         for (const part of model.parts) {
+          if (!part.mesh) continue; // locator/pivot part — no geometry to draw
           const pose = e.pose?.[part.id];
           if (pose) {
             mat4Multiply(partMat, baseMat, pose);

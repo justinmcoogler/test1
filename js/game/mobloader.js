@@ -27,7 +27,9 @@ export function parseMobFile(json) {
     if (!p.id || partIds.has(p.id)) fail(id, `part id missing/duplicate: ${p.id}`);
     partIds.add(p.id);
     if (p.parent && !json.parts.some((q) => q.id === p.parent)) fail(id, `part ${p.id} has unknown parent`);
-    if (!Array.isArray(p.boxes) || !p.boxes.length) fail(id, `part ${p.id} has no boxes`);
+    // a part may carry no boxes — a bare locator/root used only as an animation
+    // pivot (common in exported rigs). It just contributes no geometry.
+    if (!Array.isArray(p.boxes)) fail(id, `part ${p.id}: boxes must be an array`);
     if (p.rotation !== undefined && (!Array.isArray(p.rotation) || p.rotation.length !== 3 || p.rotation.some((v) => typeof v !== 'number'))) {
       fail(id, `part ${p.id}: rotation must be [x,y,z] degrees`);
     }
@@ -40,6 +42,7 @@ export function parseMobFile(json) {
     }
   }
   if (boxCount > 64) fail(id, 'too many boxes (max 64 total)');
+  if (boxCount === 0) fail(id, 'needs at least one box somewhere');
   const tex = json.texture || {};
   if (!tex.rgbaBase64 && !tex.dataUri && !tex.file) fail(id, 'texture needs rgbaBase64, dataUri, or file');
   if (tex.rgbaBase64 && (!(tex.width > 0) || !(tex.height > 0))) fail(id, 'rgbaBase64 textures need width and height');
