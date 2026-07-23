@@ -3,3 +3,6 @@ tests/screenshots/
 
 # session workflow scratch (not part of the game)
 scratchpad/
+
+# Claude Code local settings + agent worktrees (never commit)
+.claude/
