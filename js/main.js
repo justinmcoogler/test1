@@ -559,6 +559,11 @@ class Game {
         felt += this._fireWarmth || 0;
       }
       p.tickTemperature(dt, clamp(felt + warmth, 0, 1), band, warmth * 4);
+
+      // hydration & nutrition (heat and exertion cost water)
+      const hot = p.tempState === 'hot' || p.tempState === 'heatstroke';
+      p.tickHydration(dt, hot, p.sprinting, p.inWater);
+      p.tickNutrition(dt);
     }
 
     // camera
@@ -1458,6 +1463,7 @@ class Game {
     }
     if (def.energy) this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + def.energy);
     if (def.mana) this.player.mana = Math.min(this.player.maxMana, this.player.mana + def.mana);
+    this.player.eat(def); // hydration + food-group nutrition
     this.inventory.removeSlot(slotIdx, 1);
     SFX.pickup();
   }

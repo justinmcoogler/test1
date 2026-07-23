@@ -51,3 +51,55 @@ test('respawn resets body temperature to comfortable', () => {
   assert.equal(p.bodyTemp, 0.5);
   assert.equal(p.tempState, 'ok');
 });
+
+test('hydration drains on land and refills in water', () => {
+  const p = new Player();
+  p.hydration = 100;
+  for (let i = 0; i < 10; i++) p.tickHydration(1, false, false, false);
+  assert.ok(p.hydration < 100, 'thirst grows on dry land');
+  const low = p.hydration;
+  for (let i = 0; i < 5; i++) p.tickHydration(1, false, false, true); // wading
+  assert.ok(p.hydration > low, 'wading lets you drink');
+});
+
+test('heat and sprinting accelerate thirst', () => {
+  const calm = new Player(); const exert = new Player();
+  for (let i = 0; i < 10; i++) {
+    calm.tickHydration(1, false, false, false);
+    exert.tickHydration(1, true, true, false);
+  }
+  assert.ok(exert.hydration < calm.hydration, 'heat + sprint costs more water');
+});
+
+test('dehydration hurts once water runs out', () => {
+  const p = new Player();
+  p.maxHp = 200; p.hp = 200; p.hydration = 8; // already dehydrated
+  for (let i = 0; i < 5; i++) p.tickHydration(1, false, false, false);
+  assert.equal(p.hydState, 'dehydrated');
+  assert.ok(p.hp < 200, 'dehydration costs health');
+});
+
+test('nutrition decays to malnutrition; eating rebalances the groups', () => {
+  const p = new Player();
+  p.nutrition = { carb: 5, protein: 5, fat: 5, vitamin: 5 };
+  p.tickNutrition(1);
+  assert.ok(p.malnourished, 'starved groups read malnourished');
+  assert.ok(!p.wellFed);
+  // a balanced spread of meals lifts every group
+  p.eat({ type: 'food', heal: 10, nutrients: { carb: 60 } });
+  p.eat({ type: 'food', heal: 10, nutrients: { protein: 60 } });
+  p.eat({ type: 'food', heal: 10, nutrients: { fat: 60 } });
+  p.eat({ type: 'food', heal: 10, nutrients: { vitamin: 60 } });
+  p.tickNutrition(1);
+  assert.ok(!p.malnourished, 'a balanced diet clears malnutrition');
+});
+
+test('a plain meal with no tags still feeds, and drink hydrates', () => {
+  const p = new Player();
+  p.nutrition = { carb: 10, protein: 10, fat: 10, vitamin: 10 };
+  p.eat({ type: 'food', heal: 12 }); // untagged meal → default carb+protein
+  assert.ok(p.nutrition.carb > 10 && p.nutrition.protein > 10, 'untagged food still feeds');
+  p.hydration = 30;
+  p.eat({ type: 'potion', hydration: 60 });
+  assert.ok(p.hydration > 30, 'a drink slakes thirst');
+});

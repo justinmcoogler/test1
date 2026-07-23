@@ -87,6 +87,9 @@ body.classic-cam #crosshair { display: none; }
 .vital-bar.energy .vital-fill { background: var(--energy); }
 .vital-bar.mana .vital-fill { background: var(--mana); }
 .vital-bar.breath .vital-fill { background: #6ac8e8; }
+.vital-bar.hydration .vital-fill { background: #3fa9e0; }
+.vital-tag.nut.good { color: #d8ffd0; background: rgba(40, 120, 45, 0.6); border: 1px solid #4fa257; }
+.vital-tag.nut.bad { color: #ffe6b8; background: rgba(150, 100, 20, 0.62); border: 1px solid #c29a3a; }
 #env-badge { position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 12px;
   background: rgba(0, 0, 0, 0.5); border: 1px solid var(--edge); color: var(--ink);

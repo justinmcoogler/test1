@@ -225,6 +225,17 @@ export class UI {
     } else {
       manaBar.style.display = 'none';
     }
+    // hydration bar (lazily created; always shown in real-world play)
+    let hyb = $('hydration-bar');
+    if (!hyb) {
+      hyb = document.createElement('div');
+      hyb.id = 'hydration-bar';
+      hyb.className = 'vital-bar hydration';
+      hyb.innerHTML = '<div class="vital-fill" id="hydration-fill"></div><span id="hydration-text"></span>';
+      $('vitals').appendChild(hyb);
+    }
+    $('hydration-fill').style.width = `${p.hydration}%`;
+    $('hydration-text').textContent = `H2O ${Math.floor(p.hydration)}`;
     // open-wound indicator: only while bleeding, warns to bandage
     let bl = $('bleed-tag');
     if (p.bleeding > 0) {
@@ -250,6 +261,18 @@ export class UI {
       tt.textContent = labels[p.tempState] || '';
       tt.className = `vital-tag temp ${cold ? 'cold' : 'hot'}${severe ? ' severe' : ''}`;
     } else if (tt) tt.remove();
+    // nutrition status (only when notably well-fed or malnourished)
+    let nutt = $('nut-tag');
+    const nutLabel = p.malnourished ? 'Malnourished' : p.wellFed ? 'Well-fed' : null;
+    if (nutLabel) {
+      if (!nutt) {
+        nutt = document.createElement('div');
+        nutt.id = 'nut-tag';
+        $('vitals').appendChild(nutt);
+      }
+      nutt.textContent = nutLabel;
+      nutt.className = `vital-tag nut ${p.malnourished ? 'bad' : 'good'}`;
+    } else if (nutt) nutt.remove();
     // weather + season badge (glyph art pending — text with a weather-tinted dot)
     const wsys = this.game.weather;
     if (wsys) {

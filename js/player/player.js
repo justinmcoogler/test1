@@ -34,6 +34,11 @@ export class Player {
     this.bodyTemp = 0.5;  // 0 = freezing … 0.5 = comfortable … 1 = overheating
     this.tempState = 'ok';// ok | cold | hypothermia | hot | heatstroke
     this._tempTick = 0;
+    this.hydration = 100; // 0–100; drink to refill, thirst then dehydration below
+    this.hydState = 'ok'; // ok | thirsty | dehydrated
+    this.nutrition = { carb: 70, protein: 70, fat: 70, vitamin: 70 }; // food-group balance
+    this.wellFed = false; this.malnourished = false;
+    this._hydTick = 0; this._nutTick = 0;
   }
 
   eye() { return [this.x, this.y + this.eyeHeight, this.z]; }
@@ -44,7 +49,7 @@ export class Player {
 
   update(dt, input, world) {
     dt = Math.min(dt, 0.05);
-    if (this.debug) { this.hp = this.maxHp; this.dead = false; this.bleeding = 0; this.bleedDps = 0; this.bodyTemp = 0.5; this.tempState = 'ok'; this.flyUpdate(dt, input); return; }
+    if (this.debug) { this.hp = this.maxHp; this.dead = false; this.bleeding = 0; this.bleedDps = 0; this.bodyTemp = 0.5; this.tempState = 'ok'; this.hydration = 100; this.hydState = 'ok'; this.malnourished = false; this.flyUpdate(dt, input); return; }
     if (this.dead) return;
 
     // open wounds bleed until dressed (Medicine) or they clot on their own
@@ -228,6 +233,51 @@ export class Player {
     }
   }
 
+  // Hydration drains over time (faster when hot or sprinting), refills while
+  // wading in water; thirst saps stamina and dehydration costs health.
+  tickHydration(dt, hot, sprinting, inWater) {
+    if (inWater) {
+      this.hydration = Math.min(100, this.hydration + 8 * dt);
+    } else {
+      let rate = 0.18;
+      if (hot) rate *= 1.9;
+      if (sprinting) rate += 0.15;
+      this.hydration = Math.max(0, this.hydration - rate * dt);
+    }
+    this.hydState = this.hydration < 10 ? 'dehydrated' : this.hydration < 25 ? 'thirsty' : 'ok';
+    this._hydTick += dt;
+    if (this._hydTick >= 1) {
+      this._hydTick -= 1;
+      if (this.hydState === 'thirsty') this.energy = Math.max(0, this.energy - 3);
+      else if (this.hydState === 'dehydrated') this.damage(2, 'thirst');
+    }
+  }
+
+  // Food groups decay slowly (hunger). A balanced, hydrated diet slowly mends;
+  // a starved group saps stamina.
+  tickNutrition(dt) {
+    const g = this.nutrition;
+    for (const k of ['carb', 'protein', 'fat', 'vitamin']) g[k] = Math.max(0, g[k] - 0.12 * dt);
+    const min = Math.min(g.carb, g.protein, g.fat, g.vitamin);
+    const avg = (g.carb + g.protein + g.fat + g.vitamin) / 4;
+    this.wellFed = min > 45 && avg > 60;
+    this.malnourished = min < 12;
+    this._nutTick += dt;
+    if (this._nutTick >= 3) {
+      this._nutTick -= 3;
+      if (this.malnourished) this.energy = Math.max(0, this.energy - 6);
+      else if (this.wellFed && this.hydration > 50 && this.bleeding <= 0 && this.tempState === 'ok') this.heal(1);
+    }
+  }
+
+  // Consume a food/drink def: hydration + food-group nutrients (a plain meal
+  // with no explicit nutrients feeds a little carb + protein).
+  eat(def) {
+    if (def.hydration) this.hydration = Math.min(100, this.hydration + def.hydration);
+    const n = def.nutrients || (def.type === 'food' ? { carb: (def.heal || 4) * 0.5, protein: (def.heal || 4) * 0.5 } : null);
+    if (n) for (const k in n) if (k in this.nutrition) this.nutrition[k] = Math.min(100, this.nutrition[k] + n[k]);
+  }
+
   tickBleed(dt) {
     if (this.bleeding <= 0) return;
     this.bleeding = Math.max(0, this.bleeding - dt);
@@ -262,6 +312,9 @@ export class Player {
     this.dead = false;
     this.stopBleeding();
     this.bodyTemp = 0.5; this.tempState = 'ok'; this._tempTick = 0;
+    this.hydration = 100; this.hydState = 'ok';
+    this.nutrition = { carb: 70, protein: 70, fat: 70, vitamin: 70 };
+    this.wellFed = false; this.malnourished = false;
   }
 
   serialize() {

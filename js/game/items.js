@@ -60,7 +60,7 @@ it('bitterleaf', 'Bitterleaf');
 it('springroot', 'Springroot');
 it('duskcap', 'Duskcap');
 it('sunpetal', 'Sunpetal');
-it('tartberries', 'Tartberries', { type: 'food', heal: 3 });
+it('tartberries', 'Tartberries', { type: 'food', heal: 3, hydration: 12, nutrients: { vitamin: 16 } });
 it('grainsheaf', 'Grainsheaf');
 it('golden_grain', 'Golden Grain');
 
@@ -71,18 +71,19 @@ it('duskeel', 'Duskeel');
 it('boar_haunch', 'Boar Haunch');
 
 // ---- cooked food ----
-it('roast_silverfin', 'Roast Silverfin', { type: 'food', heal: 8 });
-it('smoked_mudwhisker', 'Smoked Mudwhisker', { type: 'food', heal: 14 });
-it('seared_duskeel', 'Seared Duskeel', { type: 'food', heal: 22 });
-it('roast_haunch', 'Roast Haunch', { type: 'food', heal: 12 });
-it('hearth_loaf', 'Hearth Loaf', { type: 'food', heal: 10 });
-it('travel_biscuit', 'Travel Biscuit', { type: 'food', heal: 6 });
+it('roast_silverfin', 'Roast Silverfin', { type: 'food', heal: 8, nutrients: { protein: 14, fat: 8 } });
+it('smoked_mudwhisker', 'Smoked Mudwhisker', { type: 'food', heal: 14, nutrients: { protein: 18, fat: 10 } });
+it('seared_duskeel', 'Seared Duskeel', { type: 'food', heal: 22, nutrients: { protein: 22, fat: 12 } });
+it('roast_haunch', 'Roast Haunch', { type: 'food', heal: 12, nutrients: { protein: 20, fat: 10 } });
+it('hearth_loaf', 'Hearth Loaf', { type: 'food', heal: 10, nutrients: { carb: 22 } });
+it('travel_biscuit', 'Travel Biscuit', { type: 'food', heal: 6, nutrients: { carb: 14, fat: 4 } });
 
-// ---- potions ----
-it('minor_healing_tonic', 'Minor Healing Tonic', { type: 'potion', heal: 15 });
-it('energy_tonic', 'Energy Tonic', { type: 'potion', energy: 50 });
+// ---- potions & drink ----
+it('minor_healing_tonic', 'Minor Healing Tonic', { type: 'potion', heal: 15, hydration: 8 });
+it('energy_tonic', 'Energy Tonic', { type: 'potion', energy: 50, hydration: 20 });
 it('lesser_mana_tonic', 'Lesser Mana Tonic', { type: 'potion', mana: 15 });
 it('antidote', 'Antidote', { type: 'potion', cures: ['poison'] });
+it('waterskin', 'Waterskin', { type: 'potion', hydration: 60, desc: 'A skin of fresh water — drink to slake thirst.' });
 
 // ---- tools (dur = max durability, power = speed multiplier) ----
 function tool(id, label, kind, tier, power, dur) {
