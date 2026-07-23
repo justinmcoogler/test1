@@ -556,10 +556,15 @@ Shape variants (slabs, stairs, walls, fences, gates, panes, carpets) **reuse the
 
 (Every new building block — colours, natural stone, shapes — is a placeable item that renders its **block tile** as its icon, so no separate item art is needed for those.)
 
-## Still procedural — art still needed (all image-gen)
+## ✅ Fully hand-arted — this batch is DONE
 
-Everything below still renders from the **procedural atlas** (no hand PNG yet) — this
-is the *complete* set left to image-gen so the whole game is real art, nothing already
+> **Status:** every tile/icon/skin below has been image-gen'd and imported. The
+> engine now reports **0 tiles on procedural fallback** — the whole game renders
+> real art, including the player's worn armour. Kept here as the reference for
+> what each file is.
+
+Originally these rendered from the **procedural atlas** (no hand PNG) — the
+*complete* set left to image-gen so the whole game is real art, nothing already
 covered. Tiles/icons are **32×32**. Item icons want a **transparent background + 1px
 outline** (same as the dye icons). Leaves, glass, and the torch post are transparent;
 other block tiles are opaque full-cube faces. Filenames are load-bearing:
@@ -819,12 +824,14 @@ family (~21) if you want crisper in-hand silhouettes.
 > UV-skin render path for the player and a small held-weapon model system. Those are a
 > build step, separate from generating the art.
 
-### Remaining-art totals (files to generate)
-- World / material block tiles: **56** (R1–R6, `block_*` 32×32)
-- Body-material skins: **11** (S1, `skin_*` 32×32, grayscale/tileable)
-- Item icons: **80** (R7–R12, `item_*` 32×32, transparent)
-- Player-worn gear: **9** (P, `skin_*` 64×64 UV; held gear reuses item icons)
-- **Total to generate: 156**
+### Remaining-art totals — ✅ COMPLETE (all 156 generated + imported)
+All batches below have been generated and dropped into `assets/textures/`, and
+`gen-texpack` now embeds them — **the engine reports 0 tiles on procedural fallback.**
+- World / material block tiles: **56** (R1–R6, `block_*` 32×32) ✅
+- Body-material skins: **11** (S1, `skin_*` 32×32) ✅
+- Item icons: **80** (R7–R12, `item_*` 32×32) ✅
+- Player-worn gear: **9** (P, `skin_player_base` + 8 `skin_armor_*` 64×64 UV) ✅
+- Held weapons/shields render as 3D models coloured by material (no PNG needed).
 
 ## Totals (art requested in this manifest)
 - Block tiles: 181
