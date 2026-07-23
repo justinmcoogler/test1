@@ -680,6 +680,110 @@ export const ENEMY_TYPES = {
       box(0, 0.95, -0.1, 0.06, 0.2, 0.06, [0.4, 0.28, 0.5]),
     ]),
   },
+
+  // ---- new creatures added with the textured-remake pass -------------------
+  // (models below are the format-required fallback; MOB_REMAKES paints the real
+  // detailed, textured model for each of these at registration.)
+  meadow_stag: {
+    label: 'Meadow Stag', behavior: 'defensive', tier: 0,
+    hp: 22, atk: 6, acc: 56, evasion: 14, armor: 1, speed: 7, moveRange: 4,
+    abilities: ['skull_rush'], element: null, weak: [], resist: [],
+    xp: 30, huntXp: 24, respawn: 130, aggroRange: 0,
+    drops: [
+      { item: 'boar_haunch', qty: [1, 2], chance: 0.9 },
+      { item: 'boarhide', qty: [1, 2], chance: 0.8 },
+      { item: 'sinew', qty: [1, 2], chance: 0.6 },
+    ],
+    desc: 'A proud meadow stag, crowned with branching antlers and quick to bolt.',
+    recommend: 'Skittish and fast — corner it, or bring a bow.',
+    model: M([
+      box(0, 0.52, 0, 0.44, 0.42, 0.95, [0.54, 0.38, 0.22]),
+      box(0, 1.0, 0.5, 0.28, 0.3, 0.34, [0.58, 0.42, 0.26]),
+    ]),
+  },
+  dust_scarab: {
+    label: 'Dust Scarab', behavior: 'aggressive', tier: 0,
+    hp: 12, atk: 4, acc: 58, evasion: 16, armor: 3, speed: 7, moveRange: 4,
+    abilities: ['gnaw'], element: null, weak: [], resist: [],
+    xp: 18, respawn: 70, aggroRange: 5,
+    drops: [
+      { item: 'sinew', qty: [1, 2], chance: 0.6 },
+      { item: 'rough_gem', qty: [1, 1], chance: 0.12 },
+    ],
+    desc: 'A hard-shelled scarab that scuttles the hot sand, its carapace shimmering like spilled oil.',
+    recommend: 'Small but armoured — a solid hit cracks the shell.',
+    model: M([
+      box(0, 0.1, 0, 0.44, 0.24, 0.5, [0.18, 0.5, 0.36]),
+      box(0, 0.12, 0.34, 0.2, 0.14, 0.16, [0.12, 0.16, 0.12]),
+    ]),
+  },
+  mire_toad: {
+    label: 'Mire Toad', behavior: 'defensive', tier: 1,
+    hp: 24, atk: 6, acc: 56, evasion: 14, armor: 1, speed: 5, moveRange: 3,
+    abilities: ['mire_grip'], element: 'water', weak: ['fire'], resist: ['water'],
+    xp: 38, huntXp: 24, respawn: 120, aggroRange: 0,
+    drops: [
+      { item: 'sinew', qty: [1, 2], chance: 0.8 },
+      { item: 'clay_lump', qty: [1, 2], chance: 0.5 },
+      { item: 'duskcap', qty: [1, 1], chance: 0.25 },
+    ],
+    desc: 'A boulder-sized toad that swallows whatever hops too close.',
+    recommend: 'Slow, but its tongue drags you in. Fire loosens its grip.',
+    model: M([
+      box(0, 0.1, 0, 0.7, 0.32, 0.62, [0.29, 0.42, 0.23]),
+      box(0, 0.14, 0.34, 0.6, 0.28, 0.3, [0.32, 0.46, 0.25]),
+    ]),
+  },
+  crag_bat: {
+    label: 'Crag Bat', behavior: 'aggressive', tier: 1,
+    hp: 14, atk: 5, acc: 66, evasion: 24, armor: 0, speed: 9, moveRange: 5,
+    abilities: ['gnaw'], element: null, weak: ['fire'], resist: [],
+    xp: 38, huntXp: 24, respawn: 120, aggroRange: 6,
+    drops: [
+      { item: 'sinew', qty: [1, 2], chance: 0.8 },
+      { item: 'old_coin', qty: [1, 2], chance: 0.3 },
+      { item: 'rough_gem', qty: [1, 1], chance: 0.06 },
+    ],
+    desc: 'A leather-winged flitter that boils out of the high crags in a shrieking cloud.',
+    recommend: 'Fast and dodgy — pin it down before the colony wakes.',
+    model: M([
+      box(0, 0.5, 0, 0.28, 0.32, 0.28, [0.42, 0.37, 0.32]),
+      box(0, 0.52, 0, 1.1, 0.05, 0.34, [0.35, 0.29, 0.29]),
+    ]),
+  },
+  snow_hare: {
+    label: 'Snow Hare', behavior: 'passive', tier: 0,
+    hp: 6, atk: 2, acc: 50, evasion: 30, armor: 0, speed: 9, moveRange: 4,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 8, huntXp: 12, respawn: 60, aggroRange: 0,
+    drops: [
+      { item: 'sinew', qty: [1, 1], chance: 0.7 },
+      { item: 'cured_hide', qty: [1, 1], chance: 0.4 },
+    ],
+    desc: 'A quick white hare of the snowline, all ears and jangled nerves.',
+    recommend: 'Harmless prey — run it down before it bolts.',
+    model: M([
+      box(0, 0.12, 0, 0.26, 0.24, 0.44, [0.93, 0.95, 0.97]),
+      box(0, 0.32, 0.2, 0.22, 0.22, 0.22, [0.95, 0.97, 0.99]),
+    ]),
+  },
+  ash_salamander: {
+    label: 'Ash Salamander', behavior: 'aggressive', tier: 2,
+    hp: 26, atk: 10, acc: 66, evasion: 16, armor: 2, speed: 6, moveRange: 4,
+    abilities: ['ember_fling'], ranged: true, range: 4, element: 'fire', weak: ['water', 'ice'], resist: ['fire'],
+    xp: 80, respawn: 190, aggroRange: 6,
+    drops: [
+      { item: 'emberstone_shard', qty: [1, 2], chance: 0.6 },
+      { item: 'sinew', qty: [1, 1], chance: 0.5 },
+      { item: 'flame_opal', qty: [1, 1], chance: 0.1 },
+    ],
+    desc: 'A soot-black newt that basks in the lava-shallows and flicks burning ash at intruders.',
+    recommend: 'Water or ice snuffs its embers — then close in fast.',
+    model: M([
+      box(0, 0.08, 0, 0.26, 0.16, 0.5, [0.11, 0.1, 0.12]),
+      box(0, 0.1, 0.34, 0.24, 0.14, 0.22, [0.13, 0.11, 0.12]),
+    ]),
+  },
 };
 
 // ---- Minecraft-proportioned remodel ----------------------------------------

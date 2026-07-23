@@ -21,6 +21,9 @@ const RIGS = {
   scrap_goblin: 'biped', frost_elemental: 'biped', grave_wight: 'biped',
   skeletal_archer: 'biped', stone_golem: 'biped',
   bone_hound: 'quadruped', veil_crawler: 'quadruped',
+  // textured-remake new creatures
+  meadow_stag: 'quadruped', dust_scarab: 'scamper', mire_toad: 'hopper',
+  crag_bat: 'floater', snow_hare: 'scamper', ash_salamander: 'slither',
 };
 
 const cx = (b) => b.x + b.w / 2;
