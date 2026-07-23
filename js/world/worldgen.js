@@ -27,6 +27,11 @@ export const MANOR_PAD = { x: -60, z: 0, ground: 64 };
 // of procedural trees/mobs by world.js. See js/game/lessons.js.
 export const LEARN_MEADOW = { x: 200, z: 200, ground: 64 };
 
+// Greywall — the large imported starter town (a circular walled city baked from
+// a schematic). A big flat pad west of spawn holds its footprint; the player
+// starts in its centre. See js/world/town.js + js/world/town-data.js.
+export const TOWN_PAD = { x: -520, z: 0, ground: 63, R: 363 };
+
 // A real-world climate taxonomy. biomeAt() places each biome by real drivers —
 // elevation (mountains, snow-capped peaks), then temperature × moisture
 // (Whittaker) — with temperature biased toward mild/temperate near spawn so the
@@ -263,6 +268,12 @@ export class WorldGen {
     if (dn < 30) {
       const t2 = smoothstep(clamp((30 - dn) / 6, 0, 1));
       h = lerp(h, LEARN_MEADOW.ground, t2);
+    }
+    // Greywall town pad: a big flat shelf the whole circular city sits on
+    const dtw = Math.hypot(x - TOWN_PAD.x, z - TOWN_PAD.z);
+    if (dtw < TOWN_PAD.R + 10) {
+      const t2 = smoothstep(clamp((TOWN_PAD.R + 10 - dtw) / 14, 0, 1));
+      h = lerp(h, TOWN_PAD.ground, t2);
     }
     // Frostwatch plateau: the frontier camp gets the same treatment
     const df = Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z);

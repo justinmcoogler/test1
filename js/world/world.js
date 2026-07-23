@@ -3,6 +3,7 @@
 import { B, BLOCKS, isSolid, SHAPE_COLLISION } from './blocks.js';
 import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, LEARN_MEADOW, WorldGen, undergroundNodeCandidates } from './worldgen.js';
 import { buildStarterStructures, indexEditsByChunk } from './structures.js';
+import { stampTownColumn, inTown, townReady, townSurfaceAt, TOWN_CENTER, TOWN_BASE } from './town.js';
 import { NODE_TYPES, nodeBlocks, nodeCells } from '../game/nodes.js';
 import { hash2, hash3, hashSeed } from '../core/rng.js';
 import { emit } from '../core/events.js';
@@ -45,6 +46,15 @@ export class World {
     this.markers = s.markers;
     for (const ch of s.chests) this.chestMeta.set(ch.id, ch);
     for (const [x, y, z, f] of s.facings || []) this.blockFacing.set(`${x},${y},${z}`, f & 7);
+
+    // The imported circular town of Greywall is the true starting point: seat
+    // the player + the first NPCs on its central plaza and grow from there.
+    this.markers.spawn = [TOWN_CENTER.x, TOWN_BASE + 4, TOWN_CENTER.z];
+    const relocate = { maren: [0, -3], tam: [3, 1] };
+    for (const n of s.npcs || []) {
+      const off = relocate[n.id];
+      if (off) { n.x = TOWN_CENTER.x + off[0]; n.z = TOWN_CENTER.z + off[1]; n.y = TOWN_BASE + 3; }
+    }
   }
 
   // ---- Chunk generation --------------------------------------------------
@@ -81,10 +91,22 @@ export class World {
       }
     }
 
+    // Stamp the imported town over the flattened pad (block id + facing).
+    if (townReady()) {
+      const setFacing = (x, y, z, f) => this.blockFacing.set(`${x},${y},${z}`, f & 7);
+      for (let lz = 0; lz < CHUNK; lz++) {
+        for (let lx = 0; lx < CHUNK; lx++) {
+          const top = stampTownColumn(cx * CHUNK + lx, cz * CHUNK + lz, lx, lz, setLocal, setFacing);
+          if (top >= 0) bumpTop(top);
+        }
+      }
+    }
+
     // Vegetation + biome node/spawn placement (outside the settlement ring)
     for (let lz = 0; lz < CHUNK; lz++) {
       for (let lx = 0; lx < CHUNK; lx++) {
         const wx = cx * CHUNK + lx, wz = cz * CHUNK + lz;
+        if (inTown(wx, wz)) continue; // the town brings its own ground + no wild growth
         const d0 = Math.hypot(wx, wz);
         if (d0 < 38) continue;
         if (Math.hypot(wx - FROST_CAMP.x, wz - FROST_CAMP.z) < 26) continue; // camp stays hand-built

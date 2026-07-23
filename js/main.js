@@ -27,6 +27,7 @@ import { buildPlayerSkinCanvas, partBoxUV, swatchUV, preloadPlayerSkins } from '
 import { MOB_REMAKES } from './game/mobremakes/index.js';
 import { registerRemadeMob, preloadMobSkins, mobSkinOverride } from './game/mobremake.js';
 import { registerImportedMobs } from './game/mobpack.js';
+import { loadTown } from './world/town.js';
 import { EducationManager } from './game/education.js';
 import { LessonRunner } from './game/lessons.js';
 import { hashSeed } from './core/rng.js';
@@ -103,6 +104,8 @@ class Game {
   // ---------------------------------------------------------------- boot
   async init(onProgress) {
     initSlabSet();
+    onProgress(0, 'Raising Greywall…');
+    await loadTown(); // inflate the imported town grid before its chunks generate
     // spawn placement
     const [sx, sy, sz] = this.world.markers.spawn;
     if (!this._restored) {
