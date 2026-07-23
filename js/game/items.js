@@ -1,6 +1,8 @@
 // Item registry. All icons are procedural pixel art from gfx/icons.js
 // (block items render their atlas tile via tileIcon).
 import { METALS, WOODS, GEMS, FIREARMS, toolMetals, jewelryMetals } from './materials.js';
+import { COLORS } from '../core/colors.js';
+import { BLOCKS } from '../world/blocks.js';
 
 export const ITEMS = {};
 
@@ -168,6 +170,24 @@ blockItem('loom_block', 'Loom', 'loom_block', 'loom');
 blockItem('enchant_altar', 'Runestone Altar', 'enchant_altar', 'altar_top');
 blockItem('construction_bench', 'Construction Bench', 'construction_bench', 'construction_top');
 blockItem('chest_block', 'Storage Chest', 'chest_block', 'chest_front');
+blockItem('stone', 'Stone', 'stone', 'stone');
+
+// ---- dyes (colour wool / glass / clay / concrete) ----
+for (const [c] of COLORS) it(`${c}_dye`, `${cap(c.replace(/_/g, ' '))} Dye`, { desc: 'Colours wool, stained glass, terracotta and concrete.' });
+
+// ---- generated block-items for the building set (colours, natural stone,
+// shape variants) so every placeable block can be held, crafted and placed ----
+const COLOR_BLOCK = new Set();
+for (const [c] of COLORS) for (const k of ['wool', 'carpet', 'concrete', 'concrete_powder', 'terracotta', 'glazed_terracotta', 'stained_glass', 'stained_glass_pane']) COLOR_BLOCK.add(`${c}_${k}`);
+const NATURAL_BLOCK = new Set(['granite', 'andesite', 'marble', 'deepslate', 'sandstone', 'brick', 'copper_block', 'copper_weathered', 'iron_block', 'gold_block', 'terracotta', 'mossy_cobble', 'mossy_stone_brick']);
+const SHAPE_RE = /_(slab|stairs|wall|fence|gate|pane|carpet)$/;
+for (const d of BLOCKS) {
+  if (!d || d.name in ITEMS) continue;
+  const isShape = SHAPE_RE.test(d.name) && d.name !== 'timber_wall';
+  if (!isShape && !NATURAL_BLOCK.has(d.name) && !COLOR_BLOCK.has(d.name)) continue;
+  const tile = d.tiles.all || d.tiles.side || d.tiles.top;
+  it(d.name, d.label, { block: d.name, tileIcon: tile, type: 'block' });
+}
 
 // ===========================================================================
 // Generated realistic catalog (from js/game/materials.js). Stats scale off the

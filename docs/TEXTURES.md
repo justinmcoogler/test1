@@ -1,6 +1,6 @@
 # Emberveil — Realistic Texture Manifest (v3)
 
-Generated from `js/game/materials.js` — 365 textures, all **32×32 PNG**. `block_*.png` = world tiles (opaque, tile seamlessly), `item_*.png` = inventory icons (transparent). Filenames are load-bearing — the texture-pack loader consumes them exactly.
+Generated from `js/game/materials.js` — 381 textures, all **32×32 PNG**. `block_*.png` = world tiles (opaque, tile seamlessly), `item_*.png` = inventory icons (transparent). Filenames are load-bearing — the texture-pack loader consumes them exactly.
 
 ## How to generate (paste this prompt into ChatGPT, then one batch table per session)
 
@@ -533,9 +533,32 @@ their base material's tile, so they need **no** extra art.
 
 Shape variants (slabs, stairs, walls, fences, gates, panes, carpets) **reuse the base material tile above** — no extra art needed.
 
+### Batch I9 — Dyes (16) — palette: the 16 dye colours, small pigment
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `item_white_dye.png` | White dye — pigment | small pile/drop of white pigment, 1px outline | yes |
+| `item_orange_dye.png` | Orange dye — pigment | small pile/drop of orange pigment, 1px outline | yes |
+| `item_magenta_dye.png` | Magenta dye — pigment | small pile/drop of magenta pigment, 1px outline | yes |
+| `item_light_blue_dye.png` | Light Blue dye — pigment | small pile/drop of light blue pigment, 1px outline | yes |
+| `item_yellow_dye.png` | Yellow dye — pigment | small pile/drop of yellow pigment, 1px outline | yes |
+| `item_lime_dye.png` | Lime dye — pigment | small pile/drop of lime pigment, 1px outline | yes |
+| `item_pink_dye.png` | Pink dye — pigment | small pile/drop of pink pigment, 1px outline | yes |
+| `item_gray_dye.png` | Gray dye — pigment | small pile/drop of gray pigment, 1px outline | yes |
+| `item_light_gray_dye.png` | Light Gray dye — pigment | small pile/drop of light gray pigment, 1px outline | yes |
+| `item_cyan_dye.png` | Cyan dye — pigment | small pile/drop of cyan pigment, 1px outline | yes |
+| `item_purple_dye.png` | Purple dye — pigment | small pile/drop of purple pigment, 1px outline | yes |
+| `item_blue_dye.png` | Blue dye — pigment | small pile/drop of blue pigment, 1px outline | yes |
+| `item_brown_dye.png` | Brown dye — pigment | small pile/drop of brown pigment, 1px outline | yes |
+| `item_green_dye.png` | Green dye — pigment | small pile/drop of green pigment, 1px outline | yes |
+| `item_red_dye.png` | Red dye — pigment | small pile/drop of red pigment, 1px outline | yes |
+| `item_black_dye.png` | Black dye — pigment | small pile/drop of black pigment, 1px outline | yes |
+
+(Every new building block — colours, natural stone, shapes — is a placeable item that renders its **block tile** as its icon, so no separate item art is needed for those.)
+
 ## Totals
 - Block tiles: 181
-- Item icons: 184
-- **Total: 365**
+- Item icons: 200
+- **Total: 381**
 
 Not included (carried from the skill plan, generated later): fish, foods, potions, herbs, crops, hides, relics, coins, misc consumables.

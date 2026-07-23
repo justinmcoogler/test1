@@ -538,6 +538,7 @@ const DEFS = {
 // ---- generated icon defs for the realistic catalog (js/game/materials.js) --
 // Presentation colors only; keeps every generated item off the boxicon fallback.
 import { METALS, WOODS, GEMS, FIREARMS, toolMetals, jewelryMetals } from '../game/materials.js';
+import { COLORS } from '../core/colors.js';
 const METAL_COL = {
   copper: '#c47a3f', tin: '#cdd2da', bronze: '#c88a3f', iron: '#c8ccd4', steel: '#9aa4b0',
   damascus: '#8790a0', meteoric: '#6f6e78', lead: '#6c7079', zinc: '#b8c0c4', silver: '#e6ebf2',
@@ -581,6 +582,7 @@ D(FIREARMS.powder.id, ['powder']);
 for (const a of FIREARMS.ammo) D(a.id, ['ore', '#6c7079']);
 for (const g of FIREARMS.guns) D(g.id, [g.id.includes('musket') || g.id.includes('blunder') ? 'musket' : 'pistol']);
 for (const m of jewelryMetals()) { const c = METAL_COL[m.id]; D(`${m.id}_ring`, ['ring']); D(`${m.id}_necklace`, ['amulet', c]); D(`${m.id}_amulet`, ['amulet', c]); }
+for (const [c, hex] of COLORS) D(`${c}_dye`, ['drop', hex]); // colored dye droplet
 
 export function iconDataURL(name) {
   let url = cache.get(name);

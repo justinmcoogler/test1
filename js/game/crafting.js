@@ -4,6 +4,9 @@
 // enchant recipes stay hand-authored.
 import { emit } from '../core/events.js';
 import { METALS, WOODS, GEMS, FIREARMS, toolMetals, jewelryMetals, wood } from './materials.js';
+import { COLORS } from '../core/colors.js';
+import { BLOCKS } from '../world/blocks.js';
+import { ITEMS } from './items.js';
 
 export const STATION_LABELS = {
   null: 'By Hand', workbench: 'Workbench', furnace: 'Furnace', anvil_block: 'Anvil',
@@ -173,6 +176,51 @@ for (const m of jewelryMetals()) {
   push(`${m.id}_ring`, 1, 'workbench', 'crafting', lvl, Math.round(20 + lvl), [[bar, 1]]);
   push(`${m.id}_necklace`, 1, 'workbench', 'crafting', Math.min(99, lvl + 3), Math.round(28 + lvl), [[bar, 2]]);
   push(`${m.id}_amulet`, 1, 'workbench', 'crafting', Math.min(99, lvl + 5), Math.round(36 + lvl), [[bar, 2], ['quartz', 1]]);
+}
+
+// ---- Building set: dyes, colour families, natural stone, shape variants -----
+// Dyes at the alchemy table: seven primaries ground from natural materials, the
+// rest mixed from those (Minecraft-style dye tree).
+const DYE_PRIMARY = { black: 'charcoal', white: 'saltpeter', red: 'tartberries', yellow: 'sunpetal', blue: 'veilcrystal', green: 'bitterleaf', brown: 'duskcap' };
+for (const [c, src] of Object.entries(DYE_PRIMARY)) push(`${c}_dye`, 2, 'alchemy_table', 'alchemy', 1, 6, [[src, 1]]);
+const DYE_MIX = { orange: ['red', 'yellow'], lime: ['green', 'white'], pink: ['red', 'white'], gray: ['black', 'white'], light_gray: ['gray', 'white'], cyan: ['blue', 'green'], purple: ['red', 'blue'], magenta: ['purple', 'pink'], light_blue: ['blue', 'white'] };
+for (const [c, [a, b]] of Object.entries(DYE_MIX)) push(`${c}_dye`, 2, 'alchemy_table', 'alchemy', 1, 6, [[`${a}_dye`, 1], [`${b}_dye`, 1]]);
+
+// Colour a base material with a dye.
+for (const [c] of COLORS) {
+  push(`${c}_wool`, 1, 'loom_block', 'tailoring', 1, 6, [['woven_cloth', 1], [`${c}_dye`, 1]]);
+  push(`${c}_carpet`, 3, 'loom_block', 'tailoring', 1, 4, [[`${c}_wool`, 2]]);
+  push(`${c}_terracotta`, 1, 'construction_bench', 'construction', 1, 5, [['terracotta', 1], [`${c}_dye`, 1]]);
+  push(`${c}_glazed_terracotta`, 1, 'furnace', 'construction', 3, 8, [[`${c}_terracotta`, 1]]);
+  push(`${c}_stained_glass`, 1, 'construction_bench', 'construction', 1, 5, [['glasspane', 1], [`${c}_dye`, 1]]);
+  push(`${c}_stained_glass_pane`, 2, 'construction_bench', 'construction', 1, 4, [[`${c}_stained_glass`, 1]]);
+  push(`${c}_concrete_powder`, 4, 'construction_bench', 'construction', 1, 5, [['sand', 2], ['gravel', 2], [`${c}_dye`, 1]]);
+  push(`${c}_concrete`, 1, 'construction_bench', 'construction', 1, 4, [[`${c}_concrete_powder`, 1]]);
+}
+
+// Base building blocks.
+push('stone', 4, 'construction_bench', 'construction', 1, 4, [['rough_stone', 4]]);
+push('terracotta', 1, 'furnace', 'construction', 1, 5, [['clay_lump', 1]]);
+push('brick', 1, 'furnace', 'construction', 2, 6, [['clay_lump', 2]]);
+push('sandstone', 1, 'construction_bench', 'construction', 1, 5, [['sand', 4]]);
+for (const nat of ['granite', 'andesite', 'marble', 'deepslate']) push(nat, 2, 'construction_bench', 'construction', 3, 6, [['rough_stone', 3]]);
+push('mossy_cobble', 1, 'construction_bench', 'construction', 1, 4, [['cobble', 1]]);
+push('mossy_stone_brick', 1, 'construction_bench', 'construction', 1, 4, [['stone_brick', 1]]);
+push('copper_block', 1, 'construction_bench', 'smithing', 5, 10, [['copper_bar', 9]]);
+push('copper_weathered', 1, 'construction_bench', 'construction', 1, 4, [['copper_block', 1]]);
+push('iron_block', 1, 'construction_bench', 'smithing', 10, 14, [['iron_bar', 9]]);
+push('gold_block', 1, 'construction_bench', 'smithing', 8, 12, [['gold_bar', 9]]);
+
+// Shape variants carved from their base block at the construction bench.
+const SHAPE_RATIO = { slab: [1, 2], stairs: [3, 4], wall: [1, 1], fence: [1, 1], gate: [1, 1], pane: [1, 2] };
+for (const d of BLOCKS) {
+  if (!d) continue;
+  const m = d.name.match(/^(.+)_(slab|stairs|wall|fence|gate|pane)$/);
+  if (!m || m[1].endsWith('_stained_glass')) continue; // colored panes handled above
+  const [base, shape] = [m[1], m[2]];
+  if (!(base in ITEMS) || !(d.name in ITEMS)) continue; // both must be real items
+  const [inQ, outQ] = SHAPE_RATIO[shape];
+  push(d.name, outQ, 'construction_bench', 'construction', 1, 4, [[base, inQ]]);
 }
 
 export function availableRecipes(skills, discoveredItems) {
