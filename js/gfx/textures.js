@@ -96,13 +96,20 @@ function brick(ctx, x0, y0, rand, base, mortar, rows = 4) {
   }
 }
 
+// Minecraft-style leaves: dense clumps of varied green with see-through gaps
+// (transparent pixels the cutout pass discards) so a canopy reads as foliage,
+// not one solid green cube.
 function leaves(ctx, x0, y0, rand, base, accent, accentChance = 0.06) {
   for (let y = 0; y < LP; y++) {
     for (let x = 0; x < LP; x++) {
       const r = rand();
-      if (r < 0.12) px(ctx, x0, y0, x, y, shade(base, -0.13));
-      else if (r < 0.12 + accentChance) px(ctx, x0, y0, x, y, accent);
-      else px(ctx, x0, y0, x, y, shade(base, (rand() - 0.5) * 0.14));
+      if (r < 0.16) continue;                                    // gap → transparent, see-through
+      let c;
+      if (r < 0.34) c = shade(base, -0.17);                      // shaded underside / clump edge
+      else if (r < 0.34 + accentChance) c = accent;              // bright highlight leaf
+      else if (r < 0.46) c = shade(base, 0.11);                  // sunlit leaf face
+      else c = shade(base, (rand() - 0.5) * 0.16);               // base green, varied
+      px(ctx, x0, y0, x, y, c);
     }
   }
 }

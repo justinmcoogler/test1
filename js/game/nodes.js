@@ -16,17 +16,22 @@ function gemRareTable(mineLevel) {
   }));
 }
 
-const NEEDLE = new Set(['pine', 'cedar', 'yew']);
+const NEEDLE = new Set(['pine', 'cedar', 'yew']);            // conifers → tall layered cone
+const TROPICAL = new Set(['teak', 'ebony', 'lignum_vitae']); // rainforest → high spreading crown
 const generated = {};
-// One woodcutting node per real wood species.
+// One woodcutting node per real wood species. Canopy silhouette + trunk height
+// vary by type so a pine reads as a pine and an oak as an oak (see nodeBlocks).
 for (const w of WOODS) {
+  const canopy = NEEDLE.has(w.id) ? 'cone' : TROPICAL.has(w.id) ? 'spread' : 'round';
+  const trunk = canopy === 'cone' ? [6 + Math.floor(w.tier / 4), 8 + Math.floor(w.tier / 3)]
+    : canopy === 'spread' ? [7 + Math.floor(w.tier / 4), 10 + Math.floor(w.tier / 3)]
+      : [4 + Math.floor(w.tier / 4), 6 + Math.floor(w.tier / 3)];
   generated[`tree_${w.id}`] = {
     label: `${w.label} Tree`, skill: 'woodcutting', level: w.woodLevel, tool: 'axe',
     xp: Math.round(12 + w.tier * 6), time: +(2.6 + w.tier * 0.25).toFixed(1),
     charges: [3, 5 + Math.floor(w.tier / 3)], respawn: 40 + w.tier * 20, kind: 'tree',
     log: `${w.id}_log`, leaves: `${w.id}_leaves`,
-    trunk: [4 + Math.floor(w.tier / 3), 6 + Math.floor(w.tier / 2)],
-    canopy: NEEDLE.has(w.id) ? 'cone' : 'round',
+    trunk, canopy, wide: w.id === 'oak',
     drops: [{ item: `${w.id}_log`, qty: [1, 1], weight: 1 }],
     rare: [],
   };
@@ -119,7 +124,15 @@ export const NODE_TYPES = {
   },
 };
 
+// Deterministic 0–1 hash for organic, save-stable canopy raggedness.
+function thash(a, b, c) {
+  const s = Math.sin(a * 12.9898 + b * 78.233 + c * 37.719) * 43758.5453;
+  return s - Math.floor(s);
+}
+
 // Blocks a node occupies for a given state. Coordinates are absolute.
+// Canopies stay within a radius-2 footprint so they never cross into an
+// unloaded neighbour chunk at generation time.
 export function nodeBlocks(node, state) {
   const def = NODE_TYPES[node.type];
   const out = [];
@@ -127,25 +140,47 @@ export function nodeBlocks(node, state) {
   if (def.kind === 'tree') {
     if (state === 'ready') {
       const h = node.meta?.h ?? def.trunk[0];
-      for (let i = 0; i < h; i++) out.push({ x, y: y + i, z, id: B[def.log] });
       const leafId = B[def.leaves];
+      for (let i = 0; i < h; i++) out.push({ x, y: y + i, z, id: B[def.log] });
       const top = y + h - 1;
+      const leaf = (lx, ly, lz) => out.push({ x: lx, y: ly, z: lz, id: leafId });
+
       if (def.canopy === 'cone') {
-        for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
-          if (dx || dz) out.push({ x: x + dx, y: top - 1, z: z + dz, id: leafId });
+        // conifer: stacked rings, wide at the crown base, tapering to a point
+        const baseY = y + Math.max(2, Math.floor(h * 0.42));
+        const tipY = y + h + 1;
+        for (let yy = baseY; yy <= tipY; yy++) {
+          const t = (yy - baseY) / Math.max(1, tipY - baseY);
+          const rad = yy >= tipY ? 0 : (t < 0.5 ? 2 : 1);
+          for (let dx = -rad; dx <= rad; dx++) for (let dz = -rad; dz <= rad; dz++) {
+            if (dx * dx + dz * dz > rad * rad + 0.3) continue;
+            if (dx === 0 && dz === 0 && yy <= top) continue;                 // keep the trunk showing
+            if (rad === 2 && thash(x + dx, yy, z + dz) > 0.80) continue;     // ragged skirt
+            leaf(x + dx, yy, z + dz);
+          }
         }
-        out.push({ x, y: top + 1, z, id: leafId });
-        out.push({ x: x + 1, y: top, z, id: leafId }, { x: x - 1, y: top, z, id: leafId });
-        out.push({ x, y: top, z: z + 1, id: leafId }, { x, y: top, z: z - 1, id: leafId });
+      } else if (def.canopy === 'spread') {
+        // tropical: a high, wide, flattish crown (umbrella)
+        for (let dy = 0; dy <= 1; dy++) {
+          const rad = dy === 0 ? 2 : 1;
+          for (let dx = -rad; dx <= rad; dx++) for (let dz = -rad; dz <= rad; dz++) {
+            if (dx * dx + dz * dz > rad * rad + 0.4) continue;
+            if (dx === 0 && dz === 0 && dy === 0) continue;                  // sits above the trunk top
+            if (rad === 2 && thash(x + dx, top + dy, z + dz) > 0.78) continue;
+            leaf(x + dx, top + dy, z + dz);
+          }
+        }
+        leaf(x + 2, top - 1, z); leaf(x - 2, top - 1, z);                     // a couple of low fronds
       } else {
-        for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
-          if (Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
-          if (dx || dz) out.push({ x: x + dx, y: top - 1, z: z + dz, id: leafId });
+        // broadleaf: a rounded crown centred just above the trunk top
+        for (let dx = -2; dx <= 2; dx++) for (let dy = -1; dy <= 2; dy++) for (let dz = -2; dz <= 2; dz++) {
+          if (dx * dx + dy * dy * 1.3 + dz * dz > (def.wide ? 5.6 : 5.0)) continue; // squashed sphere
+          const yy = top + dy;
+          if (yy <= y) continue;
+          if (dx === 0 && dz === 0 && yy <= top) continue;                    // trunk stays visible
+          if (thash(x + dx, yy, z + dz) > 0.90) continue;                     // slight raggedness
+          leaf(x + dx, yy, z + dz);
         }
-        for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
-          out.push({ x: x + dx, y: top, z: z + dz, id: leafId });
-        }
-        out.push({ x, y: top + 1, z, id: leafId });
       }
     } else {
       out.push({ x, y, z, id: B.stump });

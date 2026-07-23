@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { METALS, WOODS, GEMS, FIREARMS, toolMetals, jewelryMetals } from '../../js/game/materials.js';
 import { RECIPES, STATION_LABELS, canCraft, craft, FUELS } from '../../js/game/crafting.js';
 import { EducationManager } from '../../js/game/education.js';
-import { NODE_TYPES } from '../../js/game/nodes.js';
+import { NODE_TYPES, nodeBlocks } from '../../js/game/nodes.js';
 import { SKILL_DEFS } from '../../js/game/skills.js';
 import { ITEMS } from '../../js/game/items.js';
 import { B } from '../../js/world/blocks.js';
@@ -91,6 +91,20 @@ test('firearms are craftable in free play but blocked in education mode by defau
   // a non-gun recipe is unaffected by the firearms flag
   const bar = RECIPES.find((rc) => rc.out === 'copper_bar');
   assert.equal(canCraft(bar, inv, skills, new Set([bar.station]), false).ok, true, 'copper still craftable with guns off');
+});
+
+test('tree canopies are leafy and stay within a chunk-local radius-2 footprint', () => {
+  for (const [type, def] of Object.entries(NODE_TYPES)) {
+    if (def.kind !== 'tree') continue;
+    assert.ok(['cone', 'round', 'spread'].includes(def.canopy), `${type} has a canopy style`);
+    const node = { type, x: 0, y: 64, z: 0, meta: { h: def.trunk[1] } };
+    const cells = nodeBlocks(node, 'ready');
+    const leaves = cells.filter((c) => c.id === B[def.leaves]);
+    assert.ok(leaves.length >= 6, `${type} grows a real canopy (${leaves.length} leaves)`);
+    for (const c of cells) {
+      assert.ok(Math.abs(c.x) <= 2 && Math.abs(c.z) <= 2, `${type} leaf escapes footprint at ${c.x},${c.z}`);
+    }
+  }
 });
 
 test('nodes: every node references real skills, blocks and drop items', () => {
