@@ -393,7 +393,7 @@ class Game {
     document.documentElement.classList.toggle('left-handed', s.leftHanded);
     this.renderer.renderDistance = s.renderDistance;
     this.renderer.reducedMotion = s.reducedMotion;
-    this.renderer.highQuality = s.graphicsPreset === 'high'; // gradient sky + sun/moon/stars
+    this.renderer.highQuality = s.highGraphics === true || s.graphicsPreset === 'high'; // gradient sky + sun/moon/stars
     document.body.classList.toggle('classic-cam', !!s.classicCamera);
     if (s.classicCamera) document.exitPointerLock?.();
     setVolumes(s);

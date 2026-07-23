@@ -932,6 +932,7 @@ export class UI {
       ${row('XP popups on skill gains', check('xpToasts'))}
       ${row('Reduced motion', check('reducedMotion'))}
       ${row('Screen shake', check('screenShake'))}
+      ${row('High-quality sky &amp; water — gradient sky, sun/moon, night stars (needs a decent GPU)', check('highGraphics'))}
       ${row('Colorblind-friendly colors', check('colorblind'))}
       ${row('Fantasy Frontier — off by default; re-enables magic, mana &amp; spellcasting', check('fantasyFrontier'))}
       ${row('Sprint: toggle instead of hold', check('sprintToggle'))}

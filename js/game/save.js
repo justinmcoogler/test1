@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS = {
   musicVolume: 0.35,
   shadows: true,
   graphicsPreset: 'auto', // auto|low|high
+  highGraphics: false,    // gradient sky, sun/moon, night stars, water shimmer (needs a decent GPU)
   bindings: {},
 };
 
