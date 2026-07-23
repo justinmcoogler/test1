@@ -24,9 +24,9 @@ const NEW_FACE_TILES = new Set([
 
 // Map a pack block basename → engine tile name (or null if we don't use it).
 function aliasBlock(name) {
-  // Leaves render from the detailed, see-through procedural tile (the pack's
-  // solid leaf PNGs read as "one big leaf"), so skip them here.
-  if (name.endsWith('_leaves')) return null;
+  // Every block_<tile>.png that matches an engine tile is honored — including
+  // leaves. Until hand-authored leaf art is dropped in, leaves have no PNG and
+  // fall back to the detailed see-through procedural tile.
   if (tileSet.has(name)) return name;              // exact match
   if (name === 'cobblestone') return 'cobble';
   if (name === 'clay') return 'clay_block';

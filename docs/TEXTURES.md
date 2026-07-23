@@ -1,6 +1,6 @@
 # Emberveil — Realistic Texture Manifest (v3)
 
-Generated from `js/game/materials.js` — 255 textures, all **32×32 PNG**. `block_*.png` = world tiles (opaque, tile seamlessly), `item_*.png` = inventory icons (transparent). Filenames are load-bearing — the texture-pack loader consumes them exactly.
+Generated from `js/game/materials.js` — 363 textures, all **32×32 PNG**. `block_*.png` = world tiles (opaque, tile seamlessly), `item_*.png` = inventory icons (transparent). Filenames are load-bearing — the texture-pack loader consumes them exactly.
 
 ## How to generate (paste this prompt into ChatGPT, then one batch table per session)
 
@@ -374,9 +374,164 @@ Style: realistic-but-readable chunky pixels; grounded medieval → renaissance p
 | `item_pewter_necklace.png` | Pewter necklace | Pewter band/setting; empty socket | yes |
 | `item_pewter_amulet.png` | Pewter amulet | Pewter band/setting; empty socket | yes |
 
+## Building blocks — colours & natural stone (added later)
+
+These cover the wool/concrete/terracotta/glass colour families and the natural
+stone + refined-metal blocks. They currently render from **procedural tiles**, so
+authoring these PNGs replaces the placeholders. (The tree **leaves** in batches
+B3–B5 are also procedural right now — create those PNGs to replace them too.)
+Shape variants — slabs, stairs, walls, fences, gates, panes, carpets — reuse
+their base material's tile, so they need **no** extra art.
+
+### Batch C1 — Wool (16) — palette: the 16 dye colours, soft woven fabric
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_white_wool.png` | White wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_orange_wool.png` | Orange wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_magenta_wool.png` | Magenta wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_light_blue_wool.png` | Light Blue wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_yellow_wool.png` | Yellow wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_lime_wool.png` | Lime wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_pink_wool.png` | Pink wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_gray_wool.png` | Gray wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_light_gray_wool.png` | Light Gray wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_cyan_wool.png` | Cyan wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_purple_wool.png` | Purple wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_blue_wool.png` | Blue wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_brown_wool.png` | Brown wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_green_wool.png` | Green wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_red_wool.png` | Red wool — woven fabric | flat dye colour, faint weave, matte | no |
+| `block_black_wool.png` | Black wool — woven fabric | flat dye colour, faint weave, matte | no |
+
+### Batch C2 — Concrete (16) — palette: the 16 dye colours, flat solid
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_white_concrete.png` | White concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_orange_concrete.png` | Orange concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_magenta_concrete.png` | Magenta concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_light_blue_concrete.png` | Light Blue concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_yellow_concrete.png` | Yellow concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_lime_concrete.png` | Lime concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_pink_concrete.png` | Pink concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_gray_concrete.png` | Gray concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_light_gray_concrete.png` | Light Gray concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_cyan_concrete.png` | Cyan concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_purple_concrete.png` | Purple concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_blue_concrete.png` | Blue concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_brown_concrete.png` | Brown concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_green_concrete.png` | Green concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_red_concrete.png` | Red concrete — smooth solid | flat saturated colour, almost no grain | no |
+| `block_black_concrete.png` | Black concrete — smooth solid | flat saturated colour, almost no grain | no |
+
+### Batch C3 — Concrete Powder (16) — palette: the 16 dye colours, granular
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_white_concrete_powder.png` | White concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_orange_concrete_powder.png` | Orange concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_magenta_concrete_powder.png` | Magenta concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_light_blue_concrete_powder.png` | Light Blue concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_yellow_concrete_powder.png` | Yellow concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_lime_concrete_powder.png` | Lime concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_pink_concrete_powder.png` | Pink concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_gray_concrete_powder.png` | Gray concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_light_gray_concrete_powder.png` | Light Gray concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_cyan_concrete_powder.png` | Cyan concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_purple_concrete_powder.png` | Purple concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_blue_concrete_powder.png` | Blue concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_brown_concrete_powder.png` | Brown concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_green_concrete_powder.png` | Green concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_red_concrete_powder.png` | Red concrete powder — loose grains | sandy granular version of the colour | no |
+| `block_black_concrete_powder.png` | Black concrete powder — loose grains | sandy granular version of the colour | no |
+
+### Batch C4 — Terracotta (16) — palette: dye colour muted toward fired clay
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_white_terracotta.png` | White terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_orange_terracotta.png` | Orange terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_magenta_terracotta.png` | Magenta terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_light_blue_terracotta.png` | Light Blue terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_yellow_terracotta.png` | Yellow terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_lime_terracotta.png` | Lime terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_pink_terracotta.png` | Pink terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_gray_terracotta.png` | Gray terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_light_gray_terracotta.png` | Light Gray terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_cyan_terracotta.png` | Cyan terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_purple_terracotta.png` | Purple terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_blue_terracotta.png` | Blue terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_brown_terracotta.png` | Brown terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_green_terracotta.png` | Green terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_red_terracotta.png` | Red terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+| `block_black_terracotta.png` | Black terracotta — fired clay | earthy, desaturated, faint horizontal banding | no |
+
+### Batch C5 — Glazed Terracotta (16) — palette: brighter dye colour + geometric accent
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_white_glazed_terracotta.png` | White glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_orange_glazed_terracotta.png` | Orange glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_magenta_glazed_terracotta.png` | Magenta glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_light_blue_glazed_terracotta.png` | Light Blue glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_yellow_glazed_terracotta.png` | Yellow glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_lime_glazed_terracotta.png` | Lime glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_pink_glazed_terracotta.png` | Pink glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_gray_glazed_terracotta.png` | Gray glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_light_gray_glazed_terracotta.png` | Light Gray glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_cyan_glazed_terracotta.png` | Cyan glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_purple_glazed_terracotta.png` | Purple glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_blue_glazed_terracotta.png` | Blue glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_brown_glazed_terracotta.png` | Brown glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_green_glazed_terracotta.png` | Green glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_red_glazed_terracotta.png` | Red glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+| `block_black_glazed_terracotta.png` | Black glazed terracotta — patterned tile | glossy, a symmetric diagonal motif that tiles | no |
+
+### Batch C6 — Stained Glass (16) — palette: translucent dye colour + frame (TRANSPARENT)
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_white_stained_glass.png` | White stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_orange_stained_glass.png` | Orange stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_magenta_stained_glass.png` | Magenta stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_light_blue_stained_glass.png` | Light Blue stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_yellow_stained_glass.png` | Yellow stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_lime_stained_glass.png` | Lime stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_pink_stained_glass.png` | Pink stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_gray_stained_glass.png` | Gray stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_light_gray_stained_glass.png` | Light Gray stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_cyan_stained_glass.png` | Cyan stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_purple_stained_glass.png` | Purple stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_blue_stained_glass.png` | Blue stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_brown_stained_glass.png` | Brown stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_green_stained_glass.png` | Green stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_red_stained_glass.png` | Red stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+| `block_black_stained_glass.png` | Black stained glass | translucent colour wash, darker 1px frame, small highlight | yes |
+
+(Plain, uncoloured **`block_terracotta.png`** — earthy orange fired clay — also needed.)
+
+### Batch N1 — Natural stone + refined metal (12) — palette: real rock + metal hues
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_granite.png` | Granite — pink-grey speckled stone | feldspar speckle, warm grey-pink | no |
+| `block_andesite.png` | Andesite — mottled mid-grey stone | neutral grey, subtle speckle | no |
+| `block_marble.png` | Marble — near-white with faint veins | off-white, thin grey veining | no |
+| `block_deepslate.png` | Deepslate — dark charcoal deep rock | near-black grey, fine horizontal banding | no |
+| `block_sandstone.png` | Sandstone side — layered tan | tan with horizontal strata bands | no |
+| `block_sandstone_top.png` | Sandstone top/bottom — smooth tan | even tan, faint grain (cap face) | no |
+| `block_brick.png` | Bricks — fired red-clay courses | red bricks, pale mortar, running bond | no |
+| `block_copper_block.png` | Copper block — polished copper | warm orange metal, faint sheen | no |
+| `block_copper_weathered.png` | Weathered copper — green patina | verdigris green with copper flecks | no |
+| `block_iron_block.png` | Iron block — brushed steel | light cool grey, faint vertical brushing | no |
+| `block_gold_block.png` | Gold block — bright gold | warm yellow metal, soft highlights | no |
+
+Shape variants (slabs, stairs, walls, fences, gates, panes, carpets) **reuse the base material tile above** — no extra art needed.
+
 ## Totals
-- Block tiles: 71
+- Block tiles: 179
 - Item icons: 184
-- **Total: 255**
+- **Total: 363**
 
 Not included (carried from the skill plan, generated later): fish, foods, potions, herbs, crops, hides, relics, coins, misc consumables.
