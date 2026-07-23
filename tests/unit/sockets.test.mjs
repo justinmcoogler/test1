@@ -28,7 +28,7 @@ test('socketing merges the bonus, consumes the gem, and equips through', () => {
   assert.equal(inv.slots[idx].gem, 'ruby');
   inv.equipFromSlot(idx);
   const w = inv.weapon('melee');
-  assert.equal(w.atk, base + GEM_SOCKET.ruby.atk, 'atk bonus applied');
+  assert.equal(w.atk, base + GEM_SOCKET.ruby.weapon.atk, 'atk bonus applied');
   assert.equal(w.socketGem, 'ruby', 'weapon exposes its gem');
 });
 
@@ -43,10 +43,10 @@ test('a second gem is refused; unsocket returns the gem', () => {
   assert.equal(inv.count('ruby'), 1, 'gem recovered');
 });
 
-test('non-weapons cannot be socketed', () => {
+test('non-gear (materials/food) cannot be socketed', () => {
   const inv = new Inventory();
-  inv.add('hide_cap'); inv.add('ruby');
-  const idx = inv.slots.findIndex((s) => s && s.item === 'hide_cap');
+  inv.add('rough_stone'); inv.add('ruby');
+  const idx = inv.slots.findIndex((s) => s && s.item === 'rough_stone');
   assert.equal(inv.socketGem(idx, 'ruby').ok, false);
 });
 
@@ -59,6 +59,17 @@ test('a socketed gem survives serialize/deserialize (equipped + in bag)', () => 
   inv.socketGem(bi, 'sapphire');                          // in bag, gemmed
   const inv2 = new Inventory(); inv2.deserialize(inv.serialize());
   assert.equal(inv2.equipment.main.gem, 'ruby', 'equipped gem persisted');
-  assert.equal(inv2.weapon('melee').atk, ITEMS.bronze_sword.atk + GEM_SOCKET.ruby.atk);
+  assert.equal(inv2.weapon('melee').atk, ITEMS.bronze_sword.atk + GEM_SOCKET.ruby.weapon.atk);
   assert.equal(inv2.slots.find((s) => s && s.item === 'iron_sword').gem, 'sapphire', 'bag gem persisted');
+});
+
+test('armour takes a gem and its defensive bonus flows into equipStats', () => {
+  const inv = new Inventory();
+  inv.add('bronze_helmet'); inv.add('ruby');
+  const idx = inv.slots.findIndex((s) => s && s.item === 'bronze_helmet');
+  assert.equal(inv.socketGem(idx, 'ruby').ok, true, 'armour is socketable');
+  inv.equipFromSlot(idx);
+  const st = inv.equipStats();
+  const baseHp = ITEMS.bronze_helmet.hp || 0;
+  assert.equal(st.hp, baseHp + GEM_SOCKET.ruby.armor.hp, 'ruby adds hp to armour');
 });

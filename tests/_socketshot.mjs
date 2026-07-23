@@ -14,13 +14,13 @@ await page.waitForSelector('#hud:not(.hidden)', { timeout: 60000 });
 await page.evaluate(() => {
   const g = window.__game, inv = g.inventory;
   // give a spread of weapons + gems, socket each with a different gem
-  const pairs = [['bronze_sword','ruby'],['iron_sword','emerald'],['bronze_battleaxe','sapphire'],['bronze_dagger','diamond'],['bronze_spear','topaz'],['ash_shortbow','amethyst']];
+  const pairs = [['bronze_sword','ruby'],['bronze_helmet','ruby'],['bronze_chestplate','sapphire'],['bronze_leggings','emerald'],['hide_boots','topaz'],['timber_shield','diamond']];
   for (const [w,gm] of pairs) { inv.add(w); inv.add(gm); const i = inv.slots.findIndex(s=>s&&s.item===w); inv.socketGem(i, gm); }
   // also leave one un-socketed weapon + loose gems so the socket UI shows
-  inv.add('iron_battleaxe'); inv.add('garnet'); inv.add('quartz');
+  inv.add('bronze_helmet'); inv.add('garnet'); inv.add('quartz'); inv.add('diamond');
   g.ui.toggleWindow('inventory');
   // select the un-socketed weapon so its socket buttons show
-  const wi = inv.slots.findIndex(s=>s&&s.item==='iron_battleaxe');
+  const wi = inv.slots.findIndex(s=>s&&s.item==='bronze_helmet');
   g.ui.selectedInvSlot = wi; g.ui.renderWindowBody();
 });
 await page.waitForTimeout(600);

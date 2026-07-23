@@ -650,17 +650,19 @@ export class UI {
       const canEquip = ['weapon', 'armor', 'accessory', 'utility'].includes(selDef.type);
       const statline = ['atk', 'acc', 'crit', 'armor', 'evasion', 'speed', 'magic', 'magicResist', 'mana', 'hp', 'block', 'heal']
         .filter((k) => selDef[k]).map((k) => `${k} ${selDef[k] > 0 ? '+' : ''}${selDef[k]}`).join(' · ');
-      // gem socketing for weapons: show the set gem's power, or offer to socket one
+      // gem socketing for gear (weapons + armour/accessories): show the set gem's
+      // power, or offer to socket one
       let socketHTML = '';
-      if (selDef.type === 'weapon') {
+      if (['weapon', 'armor', 'accessory'].includes(selDef.type)) {
         const cap = (s) => s.replace(/\b\w/g, (c) => c.toUpperCase());
+        const kind = selDef.type === 'weapon' ? 'weapon' : 'armor';
         if (sel.gem) {
-          socketHTML = `<div class="ia-socket">◆ ${cap(sel.gem)}: ${socketDesc(sel.gem)} <button data-act="unsocket">Remove gem</button></div>`;
+          socketHTML = `<div class="ia-socket">◆ ${cap(sel.gem)}: ${socketDesc(sel.gem, kind)} <button data-act="unsocket">Remove gem</button></div>`;
         } else {
           const gems = SOCKETABLE_GEMS.filter((g) => inv.count(g) > 0);
           socketHTML = gems.length
-            ? `<div class="ia-socket">Socket a gem: ${gems.map((g) => `<button class="ia-gem" data-socket="${g}" title="${socketDesc(g)}">${itemIconHTML(g, 14)} ${cap(g)}</button>`).join(' ')}</div>`
-            : '<div class="ia-socket ia-dim">◇ Empty socket — cut a gem to set a power into this weapon.</div>';
+            ? `<div class="ia-socket">Socket a gem: ${gems.map((g) => `<button class="ia-gem" data-socket="${g}" title="${socketDesc(g, kind)}">${itemIconHTML(g, 14)} ${cap(g)}</button>`).join(' ')}</div>`
+            : '<div class="ia-socket ia-dim">◇ Empty socket — cut a gem to set a power into this gear.</div>';
         }
       }
       actions = `<div class="item-actions">

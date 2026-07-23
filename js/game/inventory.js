@@ -1,7 +1,7 @@
 // Inventory (32 slots, first 8 = hotbar), equipment (11 slots), durability.
 import { ITEMS } from './items.js';
 import { emit } from '../core/events.js';
-import { gemBonus } from './sockets.js';
+import { gemBonus, gemArmorBonus, socketableType } from './sockets.js';
 
 export const INV_SIZE = 32;
 export const HOTBAR_SIZE = 8;
@@ -186,7 +186,7 @@ export class Inventory {
   socketGem(idx, gemId) {
     const s = this.slots[idx];
     if (!s) return { ok: false, reason: 'No item selected' };
-    if (ITEMS[s.item]?.type !== 'weapon') return { ok: false, reason: 'Only weapons take gems' };
+    if (!socketableType(ITEMS[s.item]?.type)) return { ok: false, reason: 'Only gear takes gems' };
     if (s.gem) return { ok: false, reason: 'Already socketed' };
     if (!gemBonus(gemId)) return { ok: false, reason: 'Not a socketable gem' };
     if (this.count(gemId) < 1) return { ok: false, reason: 'You have no cut ' + gemId };
@@ -217,6 +217,12 @@ export class Inventory {
       if (!e) continue;
       const def = ITEMS[e.item];
       for (const k of Object.keys(st)) if (def[k]) st[k] += def[k];
+      // a gem set into armour/accessory adds its defensive bonus (weapon gems
+      // apply through weapon() instead, so skip those here)
+      if (e.gem && def.type !== 'weapon') {
+        const gb = gemArmorBonus(e.gem);
+        if (gb) for (const k of Object.keys(st)) if (gb[k]) st[k] += gb[k];
+      }
     }
     return st;
   }
