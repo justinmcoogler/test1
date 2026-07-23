@@ -316,6 +316,23 @@ export class World {
     return null;
   }
 
+  // Highest standing surface at or below fromY, scanning down to maxDrop blocks.
+  // Used for mob gravity so a creature settles onto whatever ground is beneath
+  // it — over a ledge, after terrain changes, or when idle — instead of floating.
+  groundBelow(x, z, fromY, maxDrop = 32) {
+    const top = Math.min(WORLD_H - 2, Math.floor(fromY));
+    const bottom = Math.max(1, top - maxDrop);
+    for (let y = top; y >= bottom; y--) {
+      if (this.collisionHeight(x, y - 1, z) > 0 &&
+          this.collisionHeight(x, y, z) === 0 &&
+          this.collisionHeight(x, y + 1, z) === 0 &&
+          this.getBlock(x, y, z) !== B.water) {
+        return y;
+      }
+    }
+    return null;
+  }
+
   // ---- Nodes -------------------------------------------------------------
   nodeAt(x, y, z) {
     const id = this.nodeAtCell.get(cellKey(x, y, z));

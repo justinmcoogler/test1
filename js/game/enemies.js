@@ -767,6 +767,13 @@ export class EnemyManager {
 
   update(dt, player, inCombat) {
     for (const e of this.entities.values()) {
+      // Gravity / ground-follow: every mob settles onto the surface directly
+      // beneath it each frame, so it never floats over a ledge, after terrain
+      // changes, while idle, or mid-combat. Falls smoothly; movement handles
+      // step-ups. Runs for ALL entities (stationary & combat-engaged included).
+      const landing = this.world.groundBelow(Math.floor(e.x), Math.floor(e.z), e.y);
+      if (landing !== null && landing < e.y) e.y = Math.max(landing, e.y - 14 * dt);
+
       if (e.def.moveRange === 0) continue; // stationary (dummy)
       if (e.rsEngaged) continue;           // classic combat drives these
       e.wanderT -= dt;
