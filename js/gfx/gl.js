@@ -70,6 +70,8 @@ uniform float uCutout;   // 1 → discard transparent texels
 uniform float uOpacity;
 uniform float uDaylight; // 0.25 night … 1 noon
 uniform float uTime;
+uniform vec3 uCamPos;
+uniform float uWater;    // 1 → animated fresnel shimmer (high quality water)
 out vec4 fragColor;
 void main() {
   vec4 tex = texture(uAtlas, vUV);
@@ -83,6 +85,13 @@ void main() {
   vec3 col = tex.rgb * light;
   float warmth = clamp(blk - vLight.r * uDaylight, 0.0, 1.0);
   col += vec3(0.10, 0.045, -0.02) * warmth * flicker;
+  // water: a fresnel sheen at grazing angles + a slow ripple of sun/sky glint
+  if (uWater > 0.5) {
+    vec3 vd = normalize(uCamPos - vWorld);
+    float fres = pow(1.0 - clamp(vd.y, 0.0, 1.0), 3.0);
+    float ripple = 0.06 * sin(vWorld.x * 2.0 + uTime * 1.5) * sin(vWorld.z * 2.0 + uTime * 1.1);
+    col += (vec3(0.10, 0.15, 0.22) * fres + ripple) * uDaylight;
+  }
   col = clamp(col, 0.0, 1.0);
   float fog = clamp((vDist - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
   fragColor = vec4(mix(col, uFogColor, fog), tex.a * uOpacity);
@@ -141,6 +150,47 @@ void main() {
   float fog = clamp((vDist - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
   vec3 col = clamp(vColor + uTint, 0.0, 1.0);
   fragColor = vec4(mix(col, uFogColor, fog), uOpacity);
+}`;
+
+// Sky dome (high quality only): a fullscreen quad whose four corner rays are
+// supplied as world-space directions; the fragment paints a horizon→zenith
+// gradient that meets the terrain fog, a sun/moon disc + glow, and night stars.
+export const SKY_VS = `#version 300 es
+precision highp float;
+layout(location=0) in vec2 aPos;      // clip-space corner
+layout(location=1) in float aCorner;  // 0..3 → uRays index
+uniform vec3 uRays[4];
+out vec3 vRay;
+void main() {
+  vRay = uRays[int(aCorner)];
+  gl_Position = vec4(aPos, 1.0, 1.0);  // z=w → far plane, behind everything
+}`;
+
+export const SKY_FS = `#version 300 es
+precision highp float;
+in vec3 vRay;
+uniform vec3 uFogColor;  // horizon colour (matches terrain fog)
+uniform vec3 uSunDir;
+uniform float uDaylight; // 0.25 night … 1 noon
+out vec4 fragColor;
+void main() {
+  vec3 rd = normalize(vRay);
+  vec3 sun = normalize(uSunDir);
+  float up = clamp(rd.y * 0.5 + 0.5, 0.0, 1.0);
+  vec3 zenith = mix(vec3(0.02, 0.03, 0.09), vec3(0.24, 0.44, 0.82), uDaylight);
+  vec3 col = mix(uFogColor, zenith, pow(up, 0.75));
+  float sd = max(dot(rd, sun), 0.0);
+  col += uDaylight * vec3(1.0, 0.92, 0.72) * pow(sd, 500.0);        // sun disc
+  col += uDaylight * vec3(1.0, 0.80, 0.55) * pow(sd, 6.0) * 0.25;   // sun glow
+  float md = max(dot(rd, -sun), 0.0);
+  col += (1.0 - uDaylight) * vec3(0.85, 0.88, 0.98) * pow(md, 700.0); // moon disc
+  float night = clamp(1.0 - uDaylight * 1.6, 0.0, 1.0);
+  if (rd.y > 0.04) {
+    vec2 g = floor((rd.xz / max(rd.y, 0.15)) * 60.0);
+    float h = fract(sin(dot(g, vec2(12.989, 78.233))) * 43758.545);
+    col += vec3(step(0.992, h) * night * 0.9);
+  }
+  fragColor = vec4(col, 1.0);
 }`;
 
 // Interleaved mesh (pos3, uv2, light3) → VAO

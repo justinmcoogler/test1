@@ -1,7 +1,7 @@
 // Renderer: camera, chunk meshes, entities, overlays, particles.
 import {
   createGL, compileProgram, WORLD_VS, WORLD_FS, TERRAIN_FS, COLOR_VS, COLOR_FS,
-  uploadWorldMesh, uploadColorMesh, deleteMesh, createAtlasTexture,
+  SKY_VS, SKY_FS, uploadWorldMesh, uploadColorMesh, deleteMesh, createAtlasTexture,
 } from './gl.js';
 import { meshChunk } from './mesher.js';
 import { CHUNK, WORLD_H } from '../world/worldgen.js';
@@ -22,6 +22,25 @@ export class Renderer {
     this.terrainProg = compileProgram(gl, WORLD_VS, TERRAIN_FS);
     this.worldProg = compileProgram(gl, WORLD_VS, WORLD_FS);
     this.colorProg = compileProgram(gl, COLOR_VS, COLOR_FS);
+    this.skyProg = compileProgram(gl, SKY_VS, SKY_FS);
+    this.skyVAO = (() => {
+      const vao = gl.createVertexArray();
+      gl.bindVertexArray(vao);
+      const vbo = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 0, 1, -1, 1, 1, 1, 2, -1, 1, 3]), gl.STATIC_DRAW);
+      const ibo = gl.createBuffer();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 0, 2, 3]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 3 * 4, 0);
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 3 * 4, 2 * 4);
+      gl.bindVertexArray(null);
+      return vao;
+    })();
+    this.highQuality = false;      // gradient sky + sun/moon/stars, gated by graphics preset
+    this.sunDir = [0.4, 0.85, 0.2];
     this.daylight = 1; // 0.25 night … 1 noon, driven by the world clock
     this.atlasTex = createAtlasTexture(gl, getAtlasCanvas());
     this.chunkMeshes = new Map(); // chunkKey → {opaque, cutout, water}
@@ -96,6 +115,33 @@ export class Renderer {
   }
 
   hasMesh(cx, cz) { return this.chunkMeshes.has(`${cx},${cz}`); }
+
+  // Gradient sky + sun/moon + stars (high quality only). Four screen-corner rays
+  // are reconstructed from the camera basis; the fragment paints the dome.
+  drawSky(fog) {
+    const gl = this.gl, v = this.view;
+    const right = [v[0], v[4], v[8]], up = [v[1], v[5], v[9]], fwd = [-v[2], -v[6], -v[10]];
+    const th = Math.tan(this.fov / 2), aspect = this.canvas.width / this.canvas.height;
+    const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+    const rays = new Float32Array(12);
+    for (let i = 0; i < 4; i++) {
+      const cx = corners[i][0], cy = corners[i][1];
+      for (let k = 0; k < 3; k++) rays[i * 3 + k] = fwd[k] + right[k] * cx * th * aspect + up[k] * cy * th;
+    }
+    const sp = this.skyProg;
+    gl.useProgram(sp.prog);
+    gl.uniform3fv(sp.uniforms.uRays, rays);
+    gl.uniform3fv(sp.uniforms.uFogColor, fog);
+    gl.uniform3fv(sp.uniforms.uSunDir, this.sunDir);
+    gl.uniform1f(sp.uniforms.uDaylight, this.daylight);
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
+    gl.bindVertexArray(this.skyVAO);
+    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+    gl.bindVertexArray(null);
+  }
 
   // re-upload the atlas after custom mob skins are blitted in
   refreshAtlas() {
@@ -293,6 +339,8 @@ export class Renderer {
     }
     gl.clearColor(fog[0], fog[1], fog[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // high-quality gradient sky over open ground (caves keep the flat clear)
+    if (this.highQuality && this.fogMix < 0.9) this.drawSky(fog);
 
     // heavy weather pulls the fog wall closer for a shut-in feel
     let fogFar = this.renderDistance * CHUNK * 0.95;
@@ -314,6 +362,7 @@ export class Renderer {
     gl.uniform1f(tp.uniforms.uOpacity, 1);
     gl.uniform1f(tp.uniforms.uDaylight, this.daylight);
     gl.uniform1f(tp.uniforms.uTime, this.reducedMotion ? 0 : this.time);
+    gl.uniform1f(tp.uniforms.uWater, 0); // opaque/cutout terrain: no water shimmer
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
     gl.uniform1i(tp.uniforms.uAtlas, 0);
@@ -412,12 +461,14 @@ export class Renderer {
     gl.disable(gl.CULL_FACE);
     gl.uniform1f(tp.uniforms.uCutout, 0);
     gl.uniform1f(tp.uniforms.uOpacity, 0.78);
+    gl.uniform1f(tp.uniforms.uWater, this.highQuality ? 1 : 0); // fresnel shimmer on water
     for (const m of visible) {
       if (!m.water) continue;
       gl.bindVertexArray(m.water.vao);
       gl.drawElements(gl.TRIANGLES, m.water.count, gl.UNSIGNED_INT, 0);
     }
     gl.uniform1f(tp.uniforms.uOpacity, 1);
+    gl.uniform1f(tp.uniforms.uWater, 0);
 
     // --- overlays: tile highlights, selection box, particles, markers ---
     gl.useProgram(cp.prog);

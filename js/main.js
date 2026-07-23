@@ -393,6 +393,7 @@ class Game {
     document.documentElement.classList.toggle('left-handed', s.leftHanded);
     this.renderer.renderDistance = s.renderDistance;
     this.renderer.reducedMotion = s.reducedMotion;
+    this.renderer.highQuality = s.graphicsPreset === 'high'; // gradient sky + sun/moon/stars
     document.body.classList.toggle('classic-cam', !!s.classicCamera);
     if (s.classicCamera) document.exitPointerLock?.();
     setVolumes(s);
@@ -531,6 +532,9 @@ class Game {
 
     // day/night clock drives sky light, fog and the music mood (weather dims it)
     this.renderer.daylight = this.world.daylight() * wr.day;
+    // sun sweeps east→overhead→west across the day; the sky shader draws the disc
+    const sa = (this.world.dayPhase() - 0.25) * Math.PI * 2;
+    this.renderer.sunDir = [Math.cos(sa), Math.sin(sa), 0.25];
     if ((this._moodTick = (this._moodTick || 0) + dt) > 1) {
       this._moodTick = 0;
       const night = this.world.isNight();
