@@ -29,6 +29,7 @@ export function buildStarterStructures() {
   const spawns = [];
   const npcs = [];
   const chests = [];
+  const facings = []; // [worldX, worldY, worldZ, facing] for directional structure blocks
 
   // every block write is lifted; callers author at the legacy scale
   const set = (x, y, z, id) => edits.set(key(x, y + LIFT, z), id);
@@ -310,10 +311,13 @@ export function buildStarterStructures() {
     const OX = -78, OZ = -14, OY = 26;
     const pal = MANOR.palette.map((n) => B[n]);
     const cells = MANOR.cells;
+    const stride = MANOR.stride || 4;
     let mc = 0;
-    for (let i = 0; i < cells.length; i += 4) {
+    for (let i = 0; i < cells.length; i += stride) {
       const x = OX + cells[i], y = OY + cells[i + 1], z = OZ + cells[i + 2], id = pal[cells[i + 3]];
+      const facing = stride >= 5 ? cells[i + 4] : 255;
       set(x, y, z, id);
+      if (facing !== 255) facings.push([x, y + LIFT, z, facing]); // real y (set() lifted the block)
       if (id === B.chest_block) {
         chests.push({ id: `manor_chest_${mc}`, x, y, z, loot: MANOR_CHEST_LOOT[mc] || [] });
         mc++;
@@ -351,7 +355,7 @@ export function buildStarterStructures() {
   for (const n of npcs) n.y += LIFT;
   for (const m of Object.values(markers)) m[1] += LIFT;
 
-  return { edits, nodes, spawns, npcs, chests, markers };
+  return { edits, nodes, spawns, npcs, chests, facings, markers };
 }
 
 // Index structure edits by chunk for fast application during generation.

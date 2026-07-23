@@ -22,6 +22,11 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { mapBlock, normalizeId } from './mc-block-map.mjs';
 import { LEGACY_IDS } from './mc-legacy-ids.mjs';
+import { B, BLOCKS } from '../js/world/blocks.js';
+
+// Minecraft blockstate facing → our facing index (0=+Z/south 1=+X/east 2=-Z/north 3=-X/west)
+const MC_FACE = { south: 0, east: 1, north: 2, west: 3 };
+function mcFacing(rawId) { const m = /facing=(north|south|east|west)/.exec(String(rawId)); return m ? MC_FACE[m[1]] : undefined; }
 
 // ── NBT reader ──────────────────────────────────────────────────────────────
 // Big-endian named binary tags. gzip- or zlib-compressed on disk, or raw.
@@ -195,7 +200,10 @@ export function convertSchematic(buf, ext = '.schem') {
       const e = approx.get(m.id) || { block: m.block, count: 0 };
       e.count++; approx.set(m.id, e);
     } else exact++;
-    cells.push({ x: c.x, y: c.y, z: c.z, block: m.block });
+    // carry a facing for directional blocks (stairs, gates) so orientation survives
+    const cell = { x: c.x, y: c.y, z: c.z, block: m.block };
+    if (BLOCKS[B[m.block]]?.directional) { const f = mcFacing(c.id); if (f !== undefined) cell.f = f; }
+    cells.push(cell);
   }
   return {
     size: { w: raw.w, h: raw.h, l: raw.l },

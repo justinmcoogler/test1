@@ -22,6 +22,7 @@ export function pasteSchematic(world, data, ox, oy, oz, opts = {}) {
     if (wy < 0 || wy >= WORLD_H) { skipped++; continue; }
     if (!overwrite && world.getBlock(wx, wy, wz) !== B.air) { skipped++; continue; }
     world.setBlock(wx, wy, wz, id, record);
+    if (cell.f !== undefined) world.setFacing(wx, wy, wz, cell.f); // stairs/gates keep orientation
     placed++;
   }
   return { placed, skipped, missing: [...missing] };

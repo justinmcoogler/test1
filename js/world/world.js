@@ -44,6 +44,7 @@ export class World {
     this.structEditsByChunk = indexEditsByChunk(s.edits, CHUNK);
     this.markers = s.markers;
     for (const ch of s.chests) this.chestMeta.set(ch.id, ch);
+    for (const [x, y, z, f] of s.facings || []) this.blockFacing.set(`${x},${y},${z}`, f & 3);
   }
 
   // ---- Chunk generation --------------------------------------------------

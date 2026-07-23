@@ -10,12 +10,13 @@ import { WorldGen, MANOR_PAD } from '../../js/world/worldgen.js';
 import { B } from '../../js/world/blocks.js';
 
 test('baked manor module is well-formed and uses only real blocks', () => {
-  assert.ok(MANOR.cells.length % 4 === 0, 'cells is a flat [x,y,z,pi] run');
-  assert.equal(MANOR.count, MANOR.cells.length / 4, 'count matches cell run');
+  const stride = MANOR.stride || 4;
+  assert.ok(MANOR.cells.length % stride === 0, 'cells is a flat stride-aligned run');
+  assert.equal(MANOR.count, MANOR.cells.length / stride, 'count matches cell run');
   for (const name of MANOR.palette) assert.ok(name in B, `palette block "${name}" is real`);
   // normalized to a (0,0,0) minimum corner, within the declared bounds
   let minx = Infinity, miny = Infinity, minz = Infinity, maxx = 0, maxy = 0, maxz = 0;
-  for (let i = 0; i < MANOR.cells.length; i += 4) {
+  for (let i = 0; i < MANOR.cells.length; i += stride) {
     const x = MANOR.cells[i], y = MANOR.cells[i + 1], z = MANOR.cells[i + 2], pi = MANOR.cells[i + 3];
     minx = Math.min(minx, x); maxx = Math.max(maxx, x);
     miny = Math.min(miny, y); maxy = Math.max(maxy, y);

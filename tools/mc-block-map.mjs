@@ -5,6 +5,9 @@
 //   'approx' — a reasonable stand-in (shape/colour lost, e.g. stairs→base, wool→cloth)
 //   'none'   — no equivalent; becomes air and is reported as unmapped
 
+import { B } from '../js/world/blocks.js';
+import { COLORS } from '../js/core/colors.js';
+
 // Direct id → our block. Keys are the modern id without the "minecraft:" prefix.
 export const MC_MAP = {
   air: 'air', cave_air: 'air', void_air: 'air', barrier: 'air', structure_void: 'air',
@@ -95,6 +98,18 @@ const APPROX_CONTAINS = [
 ];
 // shape variants → strip the suffix and re-map the base material
 const SHAPE_SUFFIX = /_(stairs|slab|wall|fence_gate|fence|pressure_plate|button|door|trapdoor|sign|hanging_sign)$/;
+// Minecraft shape suffix → our shape name (only those we actually model)
+const SHAPE_TO_OURS = { stairs: 'stairs', slab: 'slab', wall: 'wall', fence: 'fence', fence_gate: 'gate' };
+
+// The 16 dye colours match Minecraft's ids exactly, so wire every colour family
+// straight through to the block of the same name. Generated so it can't drift.
+for (const [c] of COLORS) {
+  for (const k of ['wool', 'carpet', 'concrete', 'concrete_powder', 'terracotta', 'glazed_terracotta', 'stained_glass', 'stained_glass_pane']) {
+    MC_MAP[`${c}_${k}`] = `${c}_${k}`;
+  }
+}
+MC_MAP.terracotta = 'terracotta';
+MC_MAP.glass_pane = 'glasspane_pane';
 // Some shape ids leave a bare stem that isn't itself a block id: "oak_stairs" →
 // "oak" (the material is oak *planks*), "stone_brick_slab" → "stone_brick" (the
 // block is "stone_bricks"). Resolve those stems to the right material.
@@ -115,13 +130,20 @@ export function normalizeId(raw) {
 export function mapBlock(rawId) {
   const id = normalizeId(rawId);
   if (id in MC_MAP) return { block: MC_MAP[id], quality: id === 'air' ? 'exact' : 'exact', id };
-  // shape variants (stairs/slabs/walls…) → base material, shape lost
+  // shape variants: resolve the base material, then keep the shape if we model it
+  // (e.g. oak_stairs → planks_stairs, cobblestone_wall → cobble_wall). If we have
+  // the material but not that shape, fall back to the plain material block.
   const shape = id.match(SHAPE_SUFFIX);
   if (shape) {
     const stem = id.slice(0, shape.index);
     const base = mapBlock(stem);
-    if (base.quality !== 'none') return { block: base.block, quality: 'approx', id };
-    if (stem in STEM_MAP) return { block: STEM_MAP[stem], quality: 'approx', id };
+    const baseName = base.quality !== 'none' ? base.block : STEM_MAP[stem];
+    if (baseName) {
+      const ours = SHAPE_TO_OURS[shape[1]];
+      const shaped = ours && `${baseName}_${ours}`;
+      if (shaped && shaped in B) return { block: shaped, quality: 'exact', id }; // material + shape kept (orientation not carried)
+      return { block: baseName, quality: 'approx', id }; // shape we don't model → plain material
+    }
   }
   for (const [re, block] of APPROX_CONTAINS) if (re.test(id)) return { block, quality: 'approx', id };
   return { block: 'air', quality: 'none', id };

@@ -36,14 +36,23 @@ test('common ids map the way a builder expects', () => {
   }
 });
 
-test('shape variants approximate to their base material, unknowns report as none', () => {
+test('shape variants keep material + shape when we model it, else fall back', () => {
+  // we model these shapes → material AND shape preserved
   const stairs = mapBlock('minecraft:oak_stairs');
-  assert.equal(stairs.block, 'planks');
-  assert.equal(stairs.quality, 'approx');
+  assert.equal(stairs.block, 'planks_stairs');
+  assert.equal(stairs.quality, 'exact');
 
   const slab = mapBlock('minecraft:stone_brick_slab');
-  assert.equal(slab.block, 'stone_brick');
-  assert.equal(slab.quality, 'approx');
+  assert.equal(slab.block, 'stone_brick_slab');
+  assert.equal(slab.quality, 'exact');
+
+  const wall = mapBlock('minecraft:cobblestone_wall');
+  assert.equal(wall.block, 'cobble_wall');
+
+  // a shape we don't model on that material → plain material, shape lost
+  const sandSlab = mapBlock('minecraft:sandstone_slab');
+  assert.equal(sandSlab.block, 'sand');
+  assert.equal(sandSlab.quality, 'approx');
 
   const unknown = mapBlock('minecraft:beacon');
   assert.equal(unknown.block, 'air');
@@ -118,6 +127,17 @@ test('a synthetic Sponge .schem round-trips into placed cells + report', () => {
   const c1 = conv.cells.find((c) => c.x === 1 && c.y === 0 && c.z === 0);
   assert.equal(c0.block, 'stone');
   assert.equal(c1.block, 'planks');
+});
+
+test('directional blocks carry a facing parsed from the blockstate', () => {
+  const palette = { 'minecraft:air': 0, 'minecraft:oak_stairs[facing=east,half=bottom]': 1, 'minecraft:stone': 2 };
+  const buf = nbt({ w: 2, h: 1, l: 1, palette, _indices: [1, 2] });
+  const conv = convertSchematic(buf, '.schem');
+  const stair = conv.cells.find((c) => c.block === 'planks_stairs');
+  assert.ok(stair, 'oak_stairs mapped to planks_stairs');
+  assert.equal(stair.f, 1, 'facing=east → our facing index 1 (+X)');
+  const plain = conv.cells.find((c) => c.block === 'stone');
+  assert.equal(plain.f, undefined, 'non-directional blocks carry no facing');
 });
 
 // ── game-side loader (pasteSchematic) with a fake world ─────────────────────
