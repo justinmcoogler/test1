@@ -266,6 +266,23 @@ class Game {
       this._plNoteShown = true;
       this.ui.toast('Free-look: the view follows your mouse (no capture here). Click and hold to gather or fight.', '');
     });
+    on('toggleDebug', () => {
+      const p = this.player;
+      p.debug = !p.debug;
+      if (p.debug) { p.dead = false; p.hp = p.maxHp; }
+      let badge = document.getElementById('debug-badge');
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'debug-badge';
+        badge.style.cssText = 'position:fixed;top:6px;left:50%;transform:translateX(-50%);z-index:60;' +
+          'background:rgba(226,177,60,0.92);color:#241a04;font:700 12px system-ui,sans-serif;' +
+          'padding:3px 12px;border-radius:6px;pointer-events:none;letter-spacing:1px;white-space:nowrap;';
+        badge.textContent = '✈ DEBUG — Space up · Shift down · invulnerable · noclip';
+        document.body.appendChild(badge);
+      }
+      badge.style.display = p.debug ? 'block' : 'none';
+      this.ui?.toast?.(`Debug mode ${p.debug ? 'ON' : 'OFF'}`, p.debug ? 'gold' : 'warn');
+    });
     on('toggleCamera', () => {
       this.settings.classicCamera = !this.settings.classicCamera;
       this.applySettings();
@@ -1481,7 +1498,7 @@ class Game {
         }
       }
       this.autosaveTimer = Math.min(this.autosaveTimer, 2);
-    } else if (result === 'lost') {
+    } else if (result === 'lost' && !this.player.debug) {
       SFX.defeat();
       this.player.dead = true;
       this.player.hp = 0;

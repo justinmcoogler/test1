@@ -542,6 +542,7 @@ export class Combat {
     this.addLog(`${isCrit ? 'CRITICAL! ' : ''}${tlabel} take${target.kind === 'player' ? '' : 's'} ${dmg} damage${label ? ` from ${label}` : ''}.`);
     emit('combatFx', { kind: 'damage', target, dmg, crit: isCrit });
     if (target.kind === 'player') {
+      if (this.game.player.debug) { target.hp = target.maxHp; return; } // debug: invulnerable
       this.game.player.hp = target.hp;
       this.damageTaken += dmg;
       if (target.defending) this.game.skills.addXp('defense', Math.round(dmg * 1.5));

@@ -113,6 +113,7 @@ export class Controls {
     if (!down) return;
     const b = this.bindings;
     if (e.code === 'Escape') { emit('escapePressed'); return; }
+    if (e.code === 'Backquote') { emit('toggleDebug'); return; } // ` = debug fly/god mode
     if (/^Digit[1-8]$/.test(e.code)) { emit('hotbarSelect', parseInt(e.code.slice(5), 10) - 1); return; }
     if (!this.enabled) {
       // window shortcuts still toggle their window closed

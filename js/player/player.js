@@ -27,6 +27,7 @@ export class Player {
     this.sprinting = false;
     this.fallStartVy = 0;
     this.dead = false;
+    this.debug = false;   // debug/creative: fly (noclip) + invulnerable
   }
 
   eye() { return [this.x, this.y + this.eyeHeight, this.z]; }
@@ -36,8 +37,9 @@ export class Player {
   }
 
   update(dt, input, world) {
-    if (this.dead) return;
     dt = Math.min(dt, 0.05);
+    if (this.debug) { this.hp = this.maxHp; this.dead = false; this.flyUpdate(dt, input); return; }
+    if (this.dead) return;
 
     // water state from waist position
     const wasInWater = this.inWater;
@@ -124,6 +126,33 @@ export class Player {
     if (this.y < 0.5) { this.y = 0.5; this.vy = 0; this.onGround = true; }
   }
 
+  // Debug/creative flight: no gravity, no collision (noclip). Look-relative
+  // horizontal movement; Space climbs, Shift descends. Invulnerability is
+  // handled in update()/damage(); this just moves the camera freely.
+  flyUpdate(dt, input) {
+    this.inWater = false; this.headUnder = false; this.onGround = false;
+    this.air = this.maxAir; this.energy = this.maxEnergy; this.sprinting = false;
+    let dx, dz;
+    if (input.worldMove) { [dx, dz] = input.worldMove; }
+    else {
+      const [mx, mz] = input.moveVector();
+      const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
+      dx = (-sy * mx) + (cy * mz);
+      dz = (-cy * mx) + (-sy * mz);
+    }
+    const dl = Math.hypot(dx, dz);
+    if (dl > 1) { dx /= dl; dz /= dl; }
+    const SPEED = 15;
+    let dy = 0;
+    if (input.jump) dy += 1;
+    if (input.sprint) dy -= 1;
+    this.x += dx * SPEED * dt;
+    this.z += dz * SPEED * dt;
+    this.y = clamp(this.y + dy * SPEED * dt, 1, 600);
+    this.vx = this.vy = this.vz = 0;
+    this.mana = Math.min(this.maxMana, this.mana + 0.4 * dt);
+  }
+
   moveAxis(world, ax, ay, az) {
     this.x += ax; this.y += ay; this.z += az;
     if (ay < 0) this.onGround = false;
@@ -157,7 +186,7 @@ export class Player {
   }
 
   damage(amount, source = 'damage') {
-    if (this.dead) return;
+    if (this.dead || this.debug) return;
     this.hp = Math.max(0, this.hp - amount);
     emit('playerDamaged', { amount, source });
     if (this.hp <= 0) {
