@@ -88,15 +88,15 @@ def('glasspane', { label: 'Glass', opaque: false, hardness: 0.5, drops: null });
 def('torch_post', { label: 'Torch Post', shape: 'cross', solid: false, opaque: false, hardness: 0.2, emissive: 1, drops: 'torch_item' });
 
 // Stations & interactables
-def('workbench', { hardness: 2.2, tool: 'axe', tiles: { top: 'workbench_top', side: 'workbench_side' } });
-def('furnace', { hardness: 3.2, tool: 'pickaxe', tiles: { side: 'furnace_front', top: 'stone_brick' }, emissive: 0.3 });
-def('anvil_block', { label: 'Anvil', shape: 'slab', hardness: 3.5, tool: 'pickaxe', tiles: { all: 'anvil' } });
-def('campfire', { shape: 'slab', solid: false, hardness: 1.0, emissive: 0.8, tiles: { all: 'campfire' } });
+def('workbench', { hardness: 2.2, tool: 'axe', directional: true, tiles: { top: 'workbench_top', side: 'workbench_side', front: 'workbench' } });
+def('furnace', { hardness: 3.2, tool: 'pickaxe', directional: true, tiles: { top: 'furnace_top', side: 'furnace_side', front: 'furnace_front' }, emissive: 0.3 });
+def('anvil_block', { label: 'Anvil', shape: 'slab', hardness: 3.5, tool: 'pickaxe', tiles: { top: 'anvil', side: 'anvil_side' } });
+def('campfire', { shape: 'slab', solid: false, hardness: 1.0, emissive: 0.8, tiles: { top: 'campfire', side: 'campfire_side' } });
 def('alchemy_table', { hardness: 2.2, tool: 'axe', tiles: { top: 'alchemy_top', side: 'workbench_side' } });
-def('loom_block', { label: 'Loom', hardness: 2.2, tool: 'axe', tiles: { all: 'loom' } });
+def('loom_block', { label: 'Loom', hardness: 2.2, tool: 'axe', directional: true, tiles: { top: 'loom_top', side: 'loom_side', front: 'loom' } });
 def('enchant_altar', { label: 'Runestone Altar', hardness: 4, tool: 'pickaxe', emissive: 0.5, tiles: { top: 'altar_top', side: 'altar_side' } });
 def('construction_bench', { hardness: 2.2, tool: 'axe', tiles: { top: 'construction_top', side: 'workbench_side' } });
-def('chest_block', { label: 'Storage Chest', hardness: 2.0, tool: 'axe', tiles: { side: 'chest_front', top: 'chest_top' } });
+def('chest_block', { label: 'Storage Chest', hardness: 2.0, tool: 'axe', directional: true, tiles: { top: 'chest_top', side: 'chest_side', front: 'chest_front' } });
 
 // Dungeon / special
 def('ruin_brick', { label: 'Ancient Brick', hardness: 4.5, tool: 'pickaxe', drops: 'rough_stone' });

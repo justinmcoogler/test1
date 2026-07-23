@@ -35,6 +35,7 @@ export class World {
     this.chestContents = new Map();   // chestId → [{item,qty}]
     this.chestMeta = new Map();       // chestId → def (incl. requiresBossDead)
     this.crops = new Map();           // "x,y,z" → ripeAt (player-planted crops)
+    this.blockFacing = new Map();     // "x,y,z" → 0-3 facing for directional blocks
     this.time = 0;                    // world-time seconds, persisted
     this.dirtyChunks = new Set();     // chunk keys needing remesh
 
@@ -256,6 +257,15 @@ export class World {
   }
 
   // record=true → player edit (persisted); false → derived (node stamps)
+  // Facing (0=+Z 1=+X 2=-Z 3=-X) for directional blocks; drives which side shows
+  // the `front` tile. Persisted with the world.
+  facingAt(x, y, z) { return this.blockFacing.get(`${x},${y},${z}`) ?? 0; }
+  setFacing(x, y, z, facing) {
+    const key = `${x},${y},${z}`;
+    if (facing) this.blockFacing.set(key, facing & 3); else this.blockFacing.delete(key);
+    this.dirtyChunks.add(chunkKey(Math.floor(x / CHUNK), Math.floor(z / CHUNK)));
+  }
+
   setBlock(x, y, z, id, record = true) {
     if (y < 0 || y >= WORLD_H) return;
     const cx = Math.floor(x / CHUNK), cz = Math.floor(z / CHUNK);
@@ -265,6 +275,7 @@ export class World {
     const idx = lidx(x - cx * CHUNK, y, z - cz * CHUNK);
     if (c.blocks[idx] === id && !record) return;
     c.blocks[idx] = id;
+    this.blockFacing.delete(`${x},${y},${z}`); // stale facing goes with the old block
     if (id !== B.air && y + 1 > (c.contentTop || 0)) c.contentTop = Math.min(WORLD_H, y + 1); // building upward raises the mesh ceiling
     c.mapStamp = (c.mapStamp || 0) + 1; // invalidates cached map tiles
     if (record) {
@@ -518,7 +529,9 @@ export class World {
     for (const [id, c] of this.chestContents) chests[id] = c;
     const crops = {};
     for (const [k, at] of this.crops) crops[k] = Math.round(at);
-    return { seed: this.seed, time: Math.round(this.time), edits, nodeStates, chests, crops };
+    const facing = {};
+    for (const [k, f] of this.blockFacing) facing[k] = f;
+    return { seed: this.seed, time: Math.round(this.time), edits, nodeStates, chests, crops, facing };
   }
 
   deserialize(data) {
@@ -535,6 +548,8 @@ export class World {
     }
     this.crops.clear();
     for (const [k, at] of Object.entries(data.crops || {})) this.crops.set(k, at);
+    this.blockFacing.clear();
+    for (const [k, f] of Object.entries(data.facing || {})) this.blockFacing.set(k, f);
     this.chestContents.clear();
     for (const [id, c] of Object.entries(data.chests || {})) {
       this.chestContents.set(id, c);

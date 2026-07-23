@@ -1402,6 +1402,12 @@ class Game {
         px + 1 > minX && px < maxX && py + 1 > minY && py < maxY && pz + 1 > minZ && pz < maxZ) return;
     if (this.world.nodeAt(px, py, pz)) return;
     this.world.setBlock(px, py, pz, B[def.block], true);
+    // directional stations (furnace, chest, workbench, loom) turn their front to face you
+    if (blockDef.directional) {
+      const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5);
+      const facing = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 0 : 2);
+      this.world.setFacing(px, py, pz, facing);
+    }
     this.inventory.removeSlot(this.inventory.selected, 1);
     if (def.block === 'chest_block') this.world.registerPlayerChest(px, py, pz);
     this.skills.addXp('construction', 2);

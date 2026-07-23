@@ -14,6 +14,9 @@ const FACES = [
   { n: [-1, 0, 0], b: 0.68, c: [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]] }, // west -x
 ];
 
+// facing index → the horizontal [nx, nz] a directional block's `front` points at
+const FRONT_N = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // 0=+Z 1=+X 2=-Z 3=-X
+
 class MeshBuilder {
   constructor() { this.verts = []; this.indices = []; this.vcount = 0; }
   quad(p, uv, light) {
@@ -175,6 +178,7 @@ export function meshChunk(world, cx, cz) {
 
         const isSlab = def.shape === 'slab';
         const target = def.opaque ? opaque : cutout;
+        const facing = def.directional ? world.facingAt(wx, y, wz) : 0;
         for (const face of FACES) {
           const nx = x + face.n[0], ny = y + face.n[1], nz = z + face.n[2];
           const nid = get(nx, ny, nz);
@@ -188,7 +192,7 @@ export function meshChunk(world, cx, cz) {
             s.blk = Math.max(s.blk, def.emissive);
             return s;
           };
-          addFace(target, def, face, wx, y, wz, sky, shadeFn, 1, isSlab ? 0.6 : 1);
+          addFace(target, def, face, wx, y, wz, sky, shadeFn, 1, isSlab ? 0.6 : 1, facing);
         }
       }
     }
@@ -227,8 +231,15 @@ function cornerSample(occludes, blockAt, x, y, z, face, cornerIdx) {
 // Vertex light layout for terrain: (skyLight, blockLight, –). The terrain
 // shader resolves final light = max(sky × daylight, block × flicker).
 // shadeFn(corner) → { ao, blk } supplies per-vertex occlusion + smooth light.
-function addFace(builder, def, face, x, y, z, sky, shadeFn, alpha = 1, hScale = 1) {
-  const uv = faceUV(def, face.n[1] === 1 ? 'top' : face.n[1] === -1 ? 'bottom' : 'side');
+function addFace(builder, def, face, x, y, z, sky, shadeFn, alpha = 1, hScale = 1, facing = 0) {
+  // Directional blocks show their `front` tile on the face pointing `facing`
+  // (0=+Z,1=+X,2=-Z,3=-X); other horizontal faces use `side`.
+  let fstr;
+  if (face.n[1] === 1) fstr = 'top';
+  else if (face.n[1] === -1) fstr = 'bottom';
+  else if (def.tiles.front && FRONT_N[facing] && face.n[0] === FRONT_N[facing][0] && face.n[2] === FRONT_N[facing][1]) fstr = 'front';
+  else fstr = 'side';
+  const uv = faceUV(def, fstr);
   const p = [];
   const uvs = [];
   const light = [];
