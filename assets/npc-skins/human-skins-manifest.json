@@ -1,0 +1,1610 @@
+{
+  "format": "emberveil-human-skins",
+  "version": 1,
+  "count": 100,
+  "texture_format": "standard 64x64 classic-arm humanoid skin atlas",
+  "generation_mode": "built-in image generation sheets",
+  "prompt_summary": "Original front-facing voxel people in an exact 4x4 sheet, classic 16x32 logical proportions, flat magenta background, diverse grounded medieval-fantasy clothing, no text or copyrighted characters.",
+  "skins": [
+    {
+      "number": 1,
+      "slug": "field_farmer",
+      "label": "Field Farmer",
+      "description": "field farmer in moss-green tunic, brown trousers, straw hat",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 0,
+      "filename": "human_001_field_farmer.png",
+      "sha256": "d66c98218a790f85411bed3c43da423a35d8f553273ec26cb02520c7c45efe5b",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 2,
+      "slug": "hill_shepherd",
+      "label": "Hill Shepherd",
+      "description": "hill shepherd in grey wool cloak, cream shirt, crook-ready gloves",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 1,
+      "filename": "human_002_hill_shepherd.png",
+      "sha256": "d8284df58ea98294b1bb38c0fa7d9252a4eee04f951bafd4ccaf94bed382aa57",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 3,
+      "slug": "coastal_fisher",
+      "label": "Coastal Fisher",
+      "description": "coastal fisher in navy knit cap, weathered blue coat, rope belt",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 2,
+      "filename": "human_003_coastal_fisher.png",
+      "sha256": "d1b4afeac7fd1d36ba7908ab61c5f2e234ebaea24675acbc5a84aa71f1668961",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 4,
+      "slug": "village_baker",
+      "label": "Village Baker",
+      "description": "village baker in flour-white apron over rust shirt",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 3,
+      "filename": "human_004_village_baker.png",
+      "sha256": "66136fba33d85f8b55958930a803bf7ec357b1824ebada4c5d2c38c22f48eead",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 5,
+      "slug": "warm_innkeeper",
+      "label": "Warm Innkeeper",
+      "description": "friendly innkeeper in burgundy vest, rolled cream sleeves",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 4,
+      "filename": "human_005_warm_innkeeper.png",
+      "sha256": "7d647cf5466e67dc05399242cf5cfd192583b0f4656dee3eee23e30fb79fdc79",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 6,
+      "slug": "stable_hand",
+      "label": "Stable Hand",
+      "description": "stable hand in tan work shirt, leather suspenders, muddy boots",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 5,
+      "filename": "human_006_stable_hand.png",
+      "sha256": "08b17eaf1ce550f1b26e86f8b347855df0760c3099d61df8c6353276ee60ba4d",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 7,
+      "slug": "market_gardener",
+      "label": "Market Gardener",
+      "description": "market gardener in leaf-green apron, patched brown clothes",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 6,
+      "filename": "human_007_market_gardener.png",
+      "sha256": "b227c4bed3309aeb572f5336df6c3edb1602250803fa0b23d64376b0609d5b13",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 8,
+      "slug": "hedge_herbalist",
+      "label": "Hedge Herbalist",
+      "description": "hedge herbalist in sage hood, many small herb pouches",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 7,
+      "filename": "human_008_hedge_herbalist.png",
+      "sha256": "178566dd05fdff1358bd02ab7fff96d7abe7398706293321275578b7babb2a59",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 9,
+      "slug": "timber_carpenter",
+      "label": "Timber Carpenter",
+      "description": "timber carpenter in ochre work vest, leather tool belt",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 8,
+      "filename": "human_009_timber_carpenter.png",
+      "sha256": "5873d131142f0c99be7de3fbda812550fc365427b13aa6f48a15edd0c0159ae8",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 10,
+      "slug": "clay_potter",
+      "label": "Clay Potter",
+      "description": "clay potter in terracotta apron, indigo undershirt",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 9,
+      "filename": "human_010_clay_potter.png",
+      "sha256": "5c535bd376fd22fa04eb8c35859eb4fa8723bbf5520cf759e23b4d1b74fa4158",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 11,
+      "slug": "linen_weaver",
+      "label": "Linen Weaver",
+      "description": "linen weaver in patterned blue-and-cream tunic",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 10,
+      "filename": "human_011_linen_weaver.png",
+      "sha256": "6431d49edc65f8d1547cdc856db3eb0a0b74f486f76a04b2ef9d21aa0eba8b14",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 12,
+      "slug": "cellar_brewer",
+      "label": "Cellar Brewer",
+      "description": "cellar brewer in dark green vest, rolled sleeves, stained apron",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 11,
+      "filename": "human_012_cellar_brewer.png",
+      "sha256": "3ddd513d01237710c8519cbe2549d9b52f417c4e4fc59e06af7c7e64a246d194",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 13,
+      "slug": "hearth_cook",
+      "label": "Hearth Cook",
+      "description": "hearth cook in red kerchief, charcoal tunic, cream apron",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 12,
+      "filename": "human_013_hearth_cook.png",
+      "sha256": "4d74f30b9872e8aeade55008f8bcaf04085efea729aeffe010201f81c7413db3",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 14,
+      "slug": "road_messenger",
+      "label": "Road Messenger",
+      "description": "road messenger in blue tabard, satchel strap, sturdy boots",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 13,
+      "filename": "human_014_road_messenger.png",
+      "sha256": "2868d27f62df182a2b3d332bbf0e8dc12ffed6ede00246ecaa637fd517fad253",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 15,
+      "slug": "dock_worker",
+      "label": "Dock Worker",
+      "description": "dock worker in striped shirt, red sash, dark work trousers",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 14,
+      "filename": "human_015_dock_worker.png",
+      "sha256": "566c039b61c5f3e1d78b61de6b45df108aaf73bd58ad201e67948d0a80e9b55c",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 16,
+      "slug": "windmill_miller",
+      "label": "Windmill Miller",
+      "description": "windmill miller in wheat-colored hood and flour-dusted smock",
+      "category": "Townsfolk",
+      "source_sheet": "h1_townsfolk.png",
+      "source_cell": 15,
+      "filename": "human_016_windmill_miller.png",
+      "sha256": "23fb6a2209a720e0f482a8447468b7ed0dc78bf7015aaf49cbd9c7bd62e2c44d",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 17,
+      "slug": "forge_blacksmith",
+      "label": "Forge Blacksmith",
+      "description": "blacksmith in soot-dark apron, orange undershirt, heavy gloves",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 0,
+      "filename": "human_017_forge_blacksmith.png",
+      "sha256": "a70719b1c0da440039961654f7d6e968eab40f91410103db8ec1e42c9b0df5e6",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 18,
+      "slug": "town_armorer",
+      "label": "Town Armorer",
+      "description": "armorer in quilted charcoal coat with modest iron shoulder plates",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 1,
+      "filename": "human_018_town_armorer.png",
+      "sha256": "5dabe6b32bf29c748dda71afd70e04a58f08c2210dff4ea89020c8f1fbfc1fae",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 19,
+      "slug": "blade_smith",
+      "label": "Blade Smith",
+      "description": "weaponsmith in deep red leather apron and wrapped forearms",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 2,
+      "filename": "human_019_blade_smith.png",
+      "sha256": "f45a2bd2c28e684dcf66efa893483ae6135a1e27ab30221439264e0cec6107a7",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 20,
+      "slug": "deep_miner",
+      "label": "Deep Miner",
+      "description": "miner in ochre hood, lamp-colored trim, reinforced dark trousers",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 3,
+      "filename": "human_020_deep_miner.png",
+      "sha256": "a46cab7a7745a8985852d90c8af9ab20a820f9456f241a60daa36b5d61401f2d",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 21,
+      "slug": "stone_mason",
+      "label": "Stone Mason",
+      "description": "stonemason in slate tunic, dusty apron, leather knee pads",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 4,
+      "filename": "human_021_stone_mason.png",
+      "sha256": "4ca0bee00f9f2c9561142c712c5aa7a69113109b1d1eca32a493fff6f251fb5e",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 22,
+      "slug": "gem_jeweler",
+      "label": "Gem Jeweler",
+      "description": "jeweler in plum vest, white sleeves, delicate gold trim",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 5,
+      "filename": "human_022_gem_jeweler.png",
+      "sha256": "88bdf3a7e967e9a6a562116888df380fc3362da5f4c09aa1c0426376a3ecd90c",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 23,
+      "slug": "cloth_merchant",
+      "label": "Cloth Merchant",
+      "description": "cloth merchant in teal coat with layered colorful sash",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 6,
+      "filename": "human_023_cloth_merchant.png",
+      "sha256": "487d445624650932194b46de0b953c18ad7f8d255ed9f3293d8f866c3620d2eb",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 24,
+      "slug": "map_cartographer",
+      "label": "Map Cartographer",
+      "description": "cartographer in parchment coat, blue scarf, ink-stained cuffs",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 7,
+      "filename": "human_024_map_cartographer.png",
+      "sha256": "b20cf2fd3dd40b2b0d833c01f90a8e26881c09c955bf2982bb081f82f2f0dace",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 25,
+      "slug": "court_scribe",
+      "label": "Court Scribe",
+      "description": "scribe in brown robe, cream collar, ink-dark sleeves",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 8,
+      "filename": "human_025_court_scribe.png",
+      "sha256": "5f959eff861ff46f0b8b5b5471e3a958f3b4b83f00cdc9f469a4d92d13015325",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 26,
+      "slug": "archive_librarian",
+      "label": "Archive Librarian",
+      "description": "librarian in forest-green robe with bronze clasps",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 9,
+      "filename": "human_026_archive_librarian.png",
+      "sha256": "2a2358741847fe60ccdda4c12b0fdb035ccc3a4d7973225621c6e4332e81ba65",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 27,
+      "slug": "town_apothecary",
+      "label": "Town Apothecary",
+      "description": "apothecary in muted violet coat with green bottle pouches",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 10,
+      "filename": "human_027_town_apothecary.png",
+      "sha256": "bed1b35e9ee032730f173d93da710a30e59629c367964eab054e4d75fea5695f",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 28,
+      "slug": "guild_alchemist",
+      "label": "Guild Alchemist",
+      "description": "alchemist in amber coat, dark gloves, brass buckles",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 11,
+      "filename": "human_028_guild_alchemist.png",
+      "sha256": "5aed8a98074d548cbccd072df9d9aadec75e9c75bb3b81f9f8943c4c6b1311c0",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 29,
+      "slug": "hide_tanner",
+      "label": "Hide Tanner",
+      "description": "tanner in rugged umber apron and russet work clothes",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 12,
+      "filename": "human_029_hide_tanner.png",
+      "sha256": "ce8cdfae858b03c8786932207528639e49ea96c735943bb63448d02c094fa454",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 30,
+      "slug": "fine_tailor",
+      "label": "Fine Tailor",
+      "description": "tailor in cobalt fitted coat with silver needle-like trim",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 13,
+      "filename": "human_030_fine_tailor.png",
+      "sha256": "b43e4108b2bd30e4b85a416b840e60d5832dd9c7aa2d5ed4bcff51fc680ed47a",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 31,
+      "slug": "leather_cobbler",
+      "label": "Leather Cobbler",
+      "description": "cobbler in walnut vest, rolled sleeves, patchwork apron",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 14,
+      "filename": "human_031_leather_cobbler.png",
+      "sha256": "d12b8a710c3a80e57d60eebff82c88d5760b56634d2d0174a4a9ded9d0891671",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 32,
+      "slug": "locksmith",
+      "label": "Locksmith",
+      "description": "locksmith in steel-blue jacket with small brass key motifs",
+      "category": "Tradespeople",
+      "source_sheet": "h2_trades.png",
+      "source_cell": 15,
+      "filename": "human_032_locksmith.png",
+      "sha256": "a76116dc95894241740281b4e445121813108f85f9b9db0a168d2bcaa3dc31ea",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 33,
+      "slug": "forest_ranger",
+      "label": "Forest Ranger",
+      "description": "forest ranger in layered green hood and brown leather jerkin",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 0,
+      "filename": "human_033_forest_ranger.png",
+      "sha256": "972987e7d777a5a13b4a94ea735ed979f1c83492988400d67ab69226ec31bf60",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 34,
+      "slug": "desert_scout",
+      "label": "Desert Scout",
+      "description": "desert scout in sand wraps, pale blue scarf, light leather gear",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 1,
+      "filename": "human_034_desert_scout.png",
+      "sha256": "4390660764c5ffc1f52911411cbc93075ea674b7ce4b5a55c0a6869efee5023f",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 35,
+      "slug": "tundra_hunter",
+      "label": "Tundra Hunter",
+      "description": "tundra hunter in white-grey fur hood and dark blue layers",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 2,
+      "filename": "human_035_tundra_hunter.png",
+      "sha256": "4b69af35d2bda4a9d5bc51e72235d86dda74a3fdcf40fef51c9d36576864b475",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 36,
+      "slug": "swamp_guide",
+      "label": "Swamp Guide",
+      "description": "swamp guide in reed-green cloak, waterproof dark boots",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 3,
+      "filename": "human_036_swamp_guide.png",
+      "sha256": "59c6a4376a799c6b2e84c31c1b76a673d61a2ce9985fd640a4a0c59a216d9060",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 37,
+      "slug": "mountain_climber",
+      "label": "Mountain Climber",
+      "description": "mountain climber in rust coat, rope harness, grey gloves",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 4,
+      "filename": "human_037_mountain_climber.png",
+      "sha256": "2b052ffdbd2e3c131fba93604abb25d843b165c1818833397994513afa227fbf",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 38,
+      "slug": "cave_explorer",
+      "label": "Cave Explorer",
+      "description": "cave explorer in charcoal hood with amber lamp accents",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 5,
+      "filename": "human_038_cave_explorer.png",
+      "sha256": "bf019684c01a44bf77a5f8b5fec3231f2bec88ba5dff110cf826911800926c94",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 39,
+      "slug": "relic_hunter",
+      "label": "Relic Hunter",
+      "description": "relic hunter in tan jacket, crimson scarf, many small straps",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 6,
+      "filename": "human_039_relic_hunter.png",
+      "sha256": "161801ac930dde854d01f09edc30d9e2440ae296e5775f278a2d9db1eed4eed3",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 40,
+      "slug": "monster_tracker",
+      "label": "Monster Tracker",
+      "description": "monster tracker in dark pine cloak and reinforced leather",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 7,
+      "filename": "human_040_monster_tracker.png",
+      "sha256": "42a2081efdc0cc517dbefb7dad752ef842d9aee322f57f3f48674ba1bb2707d4",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 41,
+      "slug": "wandering_pilgrim",
+      "label": "Wandering Pilgrim",
+      "description": "pilgrim in simple cream-and-brown travel robes",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 8,
+      "filename": "human_041_wandering_pilgrim.png",
+      "sha256": "cdb6c33a9b8167b8715b50d957881ba69ade5bf416560ba0c4b82a8ce8ed915c",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 42,
+      "slug": "caravan_guard",
+      "label": "Caravan Guard",
+      "description": "caravan guard in red-brown padded coat and bronze cap",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 9,
+      "filename": "human_042_caravan_guard.png",
+      "sha256": "33acbd0818b2b4a2530f84c7e07a5f023dd3e5e890b3bbe379dda942377d2880",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 43,
+      "slug": "sea_adventurer",
+      "label": "Sea Adventurer",
+      "description": "sea adventurer in navy pea coat and weathered red scarf",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 10,
+      "filename": "human_043_sea_adventurer.png",
+      "sha256": "c347573c8022e789c5508967daa00a746a85ab4c54a413d8d28e50e5716df45d",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 44,
+      "slug": "ship_captain",
+      "label": "Ship Captain",
+      "description": "ship captain in dark teal coat with restrained brass trim",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 11,
+      "filename": "human_044_ship_captain.png",
+      "sha256": "b4395c314d14351ccfb01b315be66f68243c5adc62e9ed89415f8d719dbafb0a",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 45,
+      "slug": "ruin_archaeologist",
+      "label": "Ruin Archaeologist",
+      "description": "archaeologist in khaki field clothes and indigo neck cloth",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 12,
+      "filename": "human_045_ruin_archaeologist.png",
+      "sha256": "0448cef66cc841649f779c024f89346a687b7eb93b7c14d1aed3143d6d4acbef",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 46,
+      "slug": "beast_handler",
+      "label": "Beast Handler",
+      "description": "beast handler in heavy leather vest and green work trousers",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 13,
+      "filename": "human_046_beast_handler.png",
+      "sha256": "9f3995037991719debb4dd8d5a99b595f1b30d8da92f6b3db2cafcfbc9148dbc",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 47,
+      "slug": "wandering_bard",
+      "label": "Wandering Bard",
+      "description": "bard in plum-and-mustard patchwork coat with feathered cap",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 14,
+      "filename": "human_047_wandering_bard.png",
+      "sha256": "a97c8f54145dd8a3b333b1ab4aa21363a931593d0cafcef92e098e3507c68473",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 48,
+      "slug": "camp_medic",
+      "label": "Camp Medic",
+      "description": "travel medic in off-white tabard with green sash and satchel belt",
+      "category": "Adventurers",
+      "source_sheet": "h3_adventurers.png",
+      "source_cell": 15,
+      "filename": "human_048_camp_medic.png",
+      "sha256": "d64b0db180dc48ea950ff758e47817dd807efda78cfaecf509a443017c845896",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 49,
+      "slug": "town_guard",
+      "label": "Town Guard",
+      "description": "town guard in blue tabard over chainmail and iron cap",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 0,
+      "filename": "human_049_town_guard.png",
+      "sha256": "b6f34ae68c65491667efa2dba81e06a8e1cd6237950a3c227488aa57fa73333c",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 50,
+      "slug": "royal_guard",
+      "label": "Royal Guard",
+      "description": "royal guard in crimson tabard, polished steel trim, closed helm",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 1,
+      "filename": "human_050_royal_guard.png",
+      "sha256": "52ece220647c15938729c05e31a3689a03035c3b4530e82c46db58c7ff8e908e",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 51,
+      "slug": "militia_spear",
+      "label": "Militia Spear",
+      "description": "militia spearman in simple brown gambeson and kettle hat",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 2,
+      "filename": "human_051_militia_spear.png",
+      "sha256": "6c11945938d37008cc5e22f9464deb4b967402ba092a1020c2a7ebda29aab154",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 52,
+      "slug": "veteran_sword",
+      "label": "Veteran Sword",
+      "description": "veteran swordsman in scarred dark leather and iron pauldrons",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 3,
+      "filename": "human_052_veteran_sword.png",
+      "sha256": "dc46aa08e520d51d0e673956cf7344c58a425d7d168584c0f4cc64d24b9b225e",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 53,
+      "slug": "shield_warrior",
+      "label": "Shield Warrior",
+      "description": "shield warrior in forest-green brigandine and braided hair",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 4,
+      "filename": "human_053_shield_warrior.png",
+      "sha256": "ba451659d9c9b369020b66dc6c2398b0e6488272448fce4a183f000a40b2c766",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 54,
+      "slug": "longbow_archer",
+      "label": "Longbow Archer",
+      "description": "archer in olive hood, leather bracer, fitted brown tunic",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 5,
+      "filename": "human_054_longbow_archer.png",
+      "sha256": "0ce2ab26ae4c148e8d9c959db3cdfb42b85b354e4baa542ad0f9c6c37b05688c",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 55,
+      "slug": "crossbow_guard",
+      "label": "Crossbow Guard",
+      "description": "crossbow guard in burgundy padded coat and steel sallet",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 6,
+      "filename": "human_055_crossbow_guard.png",
+      "sha256": "811aca84e9c15f807ad0ea02c6be5ab111f4e8de801a2dbbc6832800a60e0c35",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 56,
+      "slug": "cavalry_scout",
+      "label": "Cavalry Scout",
+      "description": "cavalry scout in tan riding coat and dark green half-cloak",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 7,
+      "filename": "human_056_cavalry_scout.png",
+      "sha256": "defedf50c0f3f09a3551fe0bc210713f4e538d0c12caee5e8abc95e2b556d306",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 57,
+      "slug": "bronze_mercenary",
+      "label": "Bronze Mercenary",
+      "description": "mercenary in warm bronze scale vest and black underlayer",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 8,
+      "filename": "human_057_bronze_mercenary.png",
+      "sha256": "92a9c88f7019b46e3f79efe36b9c26461d4b224f2892aef2ec3b705af2d85d70",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 58,
+      "slug": "iron_knight",
+      "label": "Iron Knight",
+      "description": "iron knight in practical grey plate over blue cloth",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 9,
+      "filename": "human_058_iron_knight.png",
+      "sha256": "5a3d09523cfe8b58b527825e73e887be1aba12f21d023e6b2f2c48a01e222e37",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 59,
+      "slug": "steel_knight",
+      "label": "Steel Knight",
+      "description": "steel knight in bright plate with deep red cloth panels",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 10,
+      "filename": "human_059_steel_knight.png",
+      "sha256": "924ab021725cd5455afa273ac571982d3da3433247b3181981d42a135a9aeebd",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 60,
+      "slug": "city_duelist",
+      "label": "City Duelist",
+      "description": "duelist in fitted black-and-gold jacket and high boots",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 11,
+      "filename": "human_060_city_duelist.png",
+      "sha256": "7140bcbb7514936b54830318ca6ccd93bbd9b05708b028b5ea6c7b6e7479ef42",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 61,
+      "slug": "monastic_fighter",
+      "label": "Monastic Fighter",
+      "description": "monastic fighter in saffron wraps and dark hand bindings",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 12,
+      "filename": "human_061_monastic_fighter.png",
+      "sha256": "44720371bd18993c23a8a9f0902bd080a6378122d08762d6fb3c5278df44c6b2",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 62,
+      "slug": "battle_mage",
+      "label": "Battle Mage",
+      "description": "battle mage in violet coat with light steel chest plates",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 13,
+      "filename": "human_062_battle_mage.png",
+      "sha256": "5252af6fd9e190f999c1179f6fa7e635b66e03dbbd49d8bae785a4a3bfca907c",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 63,
+      "slug": "frost_warrior",
+      "label": "Frost Warrior",
+      "description": "frost warrior in pale fur, blue steel, and white cloth",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 14,
+      "filename": "human_063_frost_warrior.png",
+      "sha256": "89c9b14f4ede7701e910fb8460c0cfa471d2f6af0242c6535c30c89f9fa7d7b2",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 64,
+      "slug": "volcanic_sentinel",
+      "label": "Volcanic Sentinel",
+      "description": "volcanic sentinel in blackened armor with restrained ember-red seams",
+      "category": "Warriors",
+      "source_sheet": "h4_warriors.png",
+      "source_cell": 15,
+      "filename": "human_064_volcanic_sentinel.png",
+      "sha256": "2f6d45555eb03b385d38024c9b85fc1c1c6da78f5432c69408ebdb7440670e6e",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 65,
+      "slug": "novice_mage",
+      "label": "Novice Mage",
+      "description": "novice mage in plain blue robe and cream belt",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 0,
+      "filename": "human_065_novice_mage.png",
+      "sha256": "36ba34f575b55f5e954c08b27b340a5bfd2f14b5e4f29d04524850f0b85821b0",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 66,
+      "slug": "fire_mage",
+      "label": "Fire Mage",
+      "description": "fire mage in deep red robe with orange-gold hems",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 1,
+      "filename": "human_066_fire_mage.png",
+      "sha256": "0a77567fac208f9014323edd009eba006b0e51798d64686eee94822af841c47a",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 67,
+      "slug": "water_mage",
+      "label": "Water Mage",
+      "description": "water mage in layered cobalt and turquoise robes",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 2,
+      "filename": "human_067_water_mage.png",
+      "sha256": "ca0a20bcd88a7c2ee4484b0cfb3552361d99ed27769f08c8edb1ab8d303a2557",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 68,
+      "slug": "earth_mage",
+      "label": "Earth Mage",
+      "description": "earth mage in umber and moss robes with stone-grey trim",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 3,
+      "filename": "human_068_earth_mage.png",
+      "sha256": "6e59c1d3a06b8f6b84d5032163f6b7228d6f89fc6ee37efbb34464fd58bdde01",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 69,
+      "slug": "air_mage",
+      "label": "Air Mage",
+      "description": "air mage in pale grey-blue robe with white scarf",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 4,
+      "filename": "human_069_air_mage.png",
+      "sha256": "e4bb704bd3ae252a37c4975893afc3a34c38c255c25167f2b164a64095e246d7",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 70,
+      "slug": "shadow_mage",
+      "label": "Shadow Mage",
+      "description": "shadow mage in charcoal and muted purple hooded robe",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 5,
+      "filename": "human_070_shadow_mage.png",
+      "sha256": "61288f50b8205deae32da315d761d713ea888a7df1e4389a731ea4cc06a8f099",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 71,
+      "slug": "grove_druid",
+      "label": "Grove Druid",
+      "description": "grove druid in leaf-green mantle and bark-brown robes",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 6,
+      "filename": "human_071_grove_druid.png",
+      "sha256": "872f5384966242bf07c675af40cb34ee13a7af4132d8cbb919709e66f2429e4b",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 72,
+      "slug": "rune_scholar",
+      "label": "Rune Scholar",
+      "description": "rune scholar in navy academic robe with small silver glyph trim",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 7,
+      "filename": "human_072_rune_scholar.png",
+      "sha256": "52636e55879162f2512c87d5c576856e51e0864c9af31c67dea21e98b0681f28",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 73,
+      "slug": "star_astronomer",
+      "label": "Star Astronomer",
+      "description": "astronomer in midnight-blue coat with sparse gold star dots",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 8,
+      "filename": "human_073_star_astronomer.png",
+      "sha256": "7f11d8e842e93314388bbe3c18239c8b14e65c3f0d87a5bf1218b7ed15a7bf90",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 74,
+      "slug": "temple_healer",
+      "label": "Temple Healer",
+      "description": "healer in ivory robe with calm sage-green sash",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 9,
+      "filename": "human_074_temple_healer.png",
+      "sha256": "ff5ecafac6c1c2360d57b5006cc51df0f325383b9a1ab5f1925c5622a94e3a3b",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 75,
+      "slug": "plague_physician",
+      "label": "Plague Physician",
+      "description": "plague physician in dark brown coat and short beaked mask",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 10,
+      "filename": "human_075_plague_physician.png",
+      "sha256": "1c0dc91156ddfde667dbfe9cba23748513e21275940e3d5e82e9322ec03eb644",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 76,
+      "slug": "clockwork_engineer",
+      "label": "Clockwork Engineer",
+      "description": "engineer in steel-blue coveralls with brass goggles on forehead",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 11,
+      "filename": "human_076_clockwork_engineer.png",
+      "sha256": "192f41a6b5cab454517547e42a93acc93903f22b9abb909251ff38323b062b63",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 77,
+      "slug": "academy_professor",
+      "label": "Academy Professor",
+      "description": "elder professor in maroon robe with cream collar",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 12,
+      "filename": "human_077_academy_professor.png",
+      "sha256": "c55fb8c4294133ab880f91387bf5c975b0ed2779bb486af8465d078062cb8403",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 78,
+      "slug": "vault_archivist",
+      "label": "Vault Archivist",
+      "description": "archivist in charcoal robe with copper clasps and gloves",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 13,
+      "filename": "human_078_vault_archivist.png",
+      "sha256": "4deef07a2fea5a66dfba5dc095981dc1b6050f32792b1a85b9c0623b34bf23e4",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 79,
+      "slug": "veiled_oracle",
+      "label": "Veiled Oracle",
+      "description": "oracle in layered white, gold, and muted lavender veils",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 14,
+      "filename": "human_079_veiled_oracle.png",
+      "sha256": "639578557de9600e82f7e79b748b1320f4d2dc5347eccbeeb99d8d67e5bdcb63",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 80,
+      "slug": "crypt_mystic",
+      "label": "Crypt Mystic",
+      "description": "crypt mystic in faded black-green robes with bone-white trim",
+      "category": "Scholars and Mages",
+      "source_sheet": "h5_scholars_mages.png",
+      "source_cell": 15,
+      "filename": "human_080_crypt_mystic.png",
+      "sha256": "526ab912973dd65d1b08362dc59c37213f79ca9b1a074df98643d8495c6c2917",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 81,
+      "slug": "greenwood_settler",
+      "label": "Greenwood Settler",
+      "description": "greenwood settler in fresh green wool and oak-brown leather",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 0,
+      "filename": "human_081_greenwood_settler.png",
+      "sha256": "24748f3790496d291aaa4960fa86599c69967befddfc325a08dc63ac67cc4e8a",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 82,
+      "slug": "forest_warden",
+      "label": "Forest Warden",
+      "description": "ancient-forest warden in deep moss cloak and bark-pattern vest",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 1,
+      "filename": "human_082_forest_warden.png",
+      "sha256": "0b6ffefebf594af412851732f474b6d9e66d6fb4db794d5c784fc02c3b2c0c77",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 83,
+      "slug": "wetland_reedworker",
+      "label": "Wetland Reedworker",
+      "description": "wetland reedworker in olive waders and woven tan vest",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 2,
+      "filename": "human_083_wetland_reedworker.png",
+      "sha256": "42bb39f64fed6f19282632df583ec4823fac672c964ca524e99d58936cea2903",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 84,
+      "slug": "rocky_highlander",
+      "label": "Rocky Highlander",
+      "description": "rocky highlander in grey tartan, rust cloak, sturdy boots",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 3,
+      "filename": "human_084_rocky_highlander.png",
+      "sha256": "767f86cd9e3d9db8a25873e25ece7a7594c72e17688d773ed836d8a22b03401b",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 85,
+      "slug": "badlands_nomad",
+      "label": "Badlands Nomad",
+      "description": "badlands nomad in terracotta wraps and cream head scarf",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 4,
+      "filename": "human_085_badlands_nomad.png",
+      "sha256": "cfaa4910a5b9225134b52ff00323ba35c44266947b858b63fa7b7ce6c60138b0",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 86,
+      "slug": "tundra_trapper",
+      "label": "Tundra Trapper",
+      "description": "tundra trapper in layered grey fur and ice-blue cloth",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 5,
+      "filename": "human_086_tundra_trapper.png",
+      "sha256": "596bbcda63ba621c7b6f45de0852764ab5d06be2b24d226cacbe5b5460193322",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 87,
+      "slug": "volcanic_prospector",
+      "label": "Volcanic Prospector",
+      "description": "volcanic prospector in soot-black coat with copper buckles",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 6,
+      "filename": "human_087_volcanic_prospector.png",
+      "sha256": "3ae952dc3bb156446565984e814a1db8d9b952d06c19e911ab4f09c423c4fb96",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 88,
+      "slug": "wilds_survivor",
+      "label": "Wilds Survivor",
+      "description": "corrupted-wilds survivor in patched charcoal and muted magenta gear",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 7,
+      "filename": "human_088_wilds_survivor.png",
+      "sha256": "7351f4be6440a457891782a60aba07805d02debe2c0e1f25eaf1008e9a4d70ab",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 89,
+      "slug": "coastal_diver",
+      "label": "Coastal Diver",
+      "description": "coastal pearl diver in teal wraps and dark waterproof shorts",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 8,
+      "filename": "human_089_coastal_diver.png",
+      "sha256": "e34f5b49319dbf14441a709f1519a442e55dec3babb42f6b036850fa1e678eba",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 90,
+      "slug": "island_fisher",
+      "label": "Island Fisher",
+      "description": "islander fisher in sea-green shirt, woven sash, bare lower legs",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 9,
+      "filename": "human_090_island_fisher.png",
+      "sha256": "4a1b094b32d5103ec4996a56e7a02c04bd275ad4fea4789aedec979bf05487c9",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 91,
+      "slug": "desert_astronomer",
+      "label": "Desert Astronomer",
+      "description": "desert astronomer in indigo robes and sand-colored veil",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 10,
+      "filename": "human_091_desert_astronomer.png",
+      "sha256": "b49854c2497fffad8cdf3695ce16fcf0db9acb204036fb67f38d3964fefb9901",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 92,
+      "slug": "snowbound_trader",
+      "label": "Snowbound Trader",
+      "description": "snowbound trader in blue fur coat with warm amber scarf",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 11,
+      "filename": "human_092_snowbound_trader.png",
+      "sha256": "792c3b320ad10cc0bf4517d5c4e18016245a1d32498eb7447cd067220a8e5135",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 93,
+      "slug": "mountain_hermit",
+      "label": "Mountain Hermit",
+      "description": "mountain hermit in weathered brown-grey robes and long beard",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 12,
+      "filename": "human_093_mountain_hermit.png",
+      "sha256": "72872f13019168f646b71a63f784ba01a55ee366a5f17773984dfc813c57abe1",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 94,
+      "slug": "river_ferryman",
+      "label": "River Ferryman",
+      "description": "river ferryman in dark blue vest, striped shirt, red cap",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 13,
+      "filename": "human_094_river_ferryman.png",
+      "sha256": "b2c077b4201bcbbdf2bcb6154bb40e859b60673197b2cf77482266dc00edb627",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 95,
+      "slug": "mushroom_farmer",
+      "label": "Mushroom Farmer",
+      "description": "cave mushroom farmer in purple-brown smock and pale hood",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 14,
+      "filename": "human_095_mushroom_farmer.png",
+      "sha256": "2524bace32cc5405f786e90acb61576ecb2da3f030a6c1f23c4834172d60543a",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 96,
+      "slug": "storm_coast_keeper",
+      "label": "Storm Coast Keeper",
+      "description": "storm-coast lighthouse keeper in yellow oilskin and navy trousers",
+      "category": "Biome Folk",
+      "source_sheet": "h6_biomes.png",
+      "source_cell": 15,
+      "filename": "human_096_storm_coast_keeper.png",
+      "sha256": "279254f675a53b1555f537f2978adb606bce3279c5c5534393d9e575e799e218",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 97,
+      "slug": "young_noble",
+      "label": "Young Noble",
+      "description": "young noble in emerald doublet with restrained gold trim",
+      "category": "Society and Rogues",
+      "source_sheet": "h7_society.png",
+      "source_cell": 0,
+      "filename": "human_097_young_noble.png",
+      "sha256": "396dea1d68bd929fafc633ab5c12e4b5bbfbc467b1b107741e81c6cd998094d3",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 98,
+      "slug": "elder_noble",
+      "label": "Elder Noble",
+      "description": "elder noble in burgundy velvet coat with silver hair",
+      "category": "Society and Rogues",
+      "source_sheet": "h7_society.png",
+      "source_cell": 1,
+      "filename": "human_098_elder_noble.png",
+      "sha256": "3c3a19fe205ab188b66ed7019a6b03ac28b2c34952a1b99d240db06a9d8a6ef4",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 99,
+      "slug": "masked_rogue",
+      "label": "Masked Rogue",
+      "description": "masked rogue in layered charcoal cloth and dark teal scarf",
+      "category": "Society and Rogues",
+      "source_sheet": "h7_society.png",
+      "source_cell": 2,
+      "filename": "human_099_masked_rogue.png",
+      "sha256": "52488bbb2e420f9a7c5f88b37e0772cdb71076760032b7cad5fbd0f9b818d188",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    },
+    {
+      "number": 100,
+      "slug": "traveling_performer",
+      "label": "Traveling Performer",
+      "description": "traveling performer in lively red, blue, and mustard patchwork",
+      "category": "Society and Rogues",
+      "source_sheet": "h7_society.png",
+      "source_cell": 3,
+      "filename": "human_100_traveling_performer.png",
+      "sha256": "745f806fc6b44bf7ced1189c35cae4d2495d093387d056b8c3cc4cde34ed0dc8",
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA"
+    }
+  ]
+}
