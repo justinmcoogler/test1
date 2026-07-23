@@ -12,14 +12,17 @@ import { COLORS } from '../js/core/colors.js';
 export const MC_MAP = {
   air: 'air', cave_air: 'air', void_air: 'air', barrier: 'air', structure_void: 'air',
 
-  // stone family
-  stone: 'stone', smooth_stone: 'stone', granite: 'stone', diorite: 'stone', andesite: 'stone',
-  tuff: 'stone', deepslate: 'stone', calcite: 'stone', dripstone_block: 'stone', blackstone: 'stone',
-  polished_granite: 'stone', polished_diorite: 'stone', polished_andesite: 'stone', polished_deepslate: 'stone',
+  // stone family — distinct rock types now have their own blocks
+  stone: 'stone', smooth_stone: 'stone', tuff: 'stone', dripstone_block: 'stone',
+  granite: 'granite', polished_granite: 'granite',
+  andesite: 'andesite', polished_andesite: 'andesite',
+  diorite: 'marble', polished_diorite: 'marble', calcite: 'marble', quartz_block: 'marble',
+  chiseled_quartz_block: 'marble', quartz_bricks: 'marble', smooth_quartz: 'marble',
+  deepslate: 'deepslate', polished_deepslate: 'deepslate', blackstone: 'deepslate', polished_blackstone: 'deepslate',
   cobblestone: 'cobble', mossy_cobblestone: 'cobble', cobbled_deepslate: 'cobble',
   stone_bricks: 'stone_brick', mossy_stone_bricks: 'stone_brick', cracked_stone_bricks: 'stone_brick',
   chiseled_stone_bricks: 'stone_brick', deepslate_bricks: 'stone_brick', deepslate_tiles: 'stone_brick',
-  bricks: 'stone_brick', polished_blackstone_bricks: 'stone_brick', nether_bricks: 'stone_brick',
+  bricks: 'brick', polished_blackstone_bricks: 'stone_brick', nether_bricks: 'stone_brick',
   obsidian: 'bedrock', crying_obsidian: 'bedrock', bedrock: 'bedrock',
 
   // soils & loose ground
@@ -27,8 +30,9 @@ export const MC_MAP = {
   packed_mud: 'dirt', mud_bricks: 'stone_brick',
   grass_block: 'grass', moss_block: 'grass',
   farmland: 'farmland', dirt_path: 'grass',
-  sand: 'sand', red_sand: 'sand', sandstone: 'sand', smooth_sandstone: 'sand', cut_sandstone: 'sand',
-  chiseled_sandstone: 'sand', red_sandstone: 'sand',
+  sand: 'sand', red_sand: 'sand',
+  sandstone: 'sandstone', smooth_sandstone: 'sandstone', cut_sandstone: 'sandstone',
+  chiseled_sandstone: 'sandstone', red_sandstone: 'sandstone', smooth_red_sandstone: 'sandstone',
   gravel: 'gravel', clay: 'clay_block',
   snow_block: 'snow', snow: 'snow', powder_snow: 'snow',
   ice: 'ice', packed_ice: 'ice', blue_ice: 'ice', frosted_ice: 'ice',
@@ -73,6 +77,14 @@ export const MC_MAP = {
   copper_ore: 'copper_ore', deepslate_copper_ore: 'copper_ore',
   gold_ore: 'gold_ore', deepslate_gold_ore: 'gold_ore', nether_gold_ore: 'gold_ore',
 
+  // refined metal blocks + copper weathering stages
+  iron_block: 'iron_block', raw_iron_block: 'iron_block',
+  gold_block: 'gold_block', raw_gold_block: 'gold_block',
+  copper_block: 'copper_block', cut_copper: 'copper_block', chiseled_copper: 'copper_block',
+  waxed_copper_block: 'copper_block', waxed_cut_copper: 'copper_block', raw_copper_block: 'copper_block',
+  exposed_copper: 'copper_weathered', weathered_copper: 'copper_weathered', oxidized_copper: 'copper_weathered',
+  exposed_cut_copper: 'copper_weathered', weathered_cut_copper: 'copper_weathered', oxidized_cut_copper: 'copper_weathered',
+
   // farm / plant-ish
   hay_block: 'thatch', wheat: 'crop_ripe', tall_grass: 'tall_grass', grass: 'tall_grass',
   short_grass: 'tall_grass', fern: 'tall_grass', large_fern: 'tall_grass', dead_bush: 'tall_grass',
@@ -92,7 +104,8 @@ const APPROX_CONTAINS = [
   [/_planks$/, 'planks'], [/_log$|_wood$|_stem$|_hyphae$/, 'oak_log'], [/_leaves$/, 'oak_leaves'],
   [/glass/, 'glasspane'], [/concrete_powder$/, 'sand'], [/concrete$/, 'stone_brick'],
   [/terracotta$/, 'stone_brick'], [/_wool$|^wool$/, 'thatch'], [/_carpet$/, 'thatch'],
-  [/prismarine|purpur|quartz/, 'stone_brick'], [/copper$|copper_block/, 'copper_ore'],
+  [/prismarine|purpur/, 'stone_brick'], [/quartz/, 'marble'],
+  [/oxidized.*copper|weathered.*copper|exposed.*copper/, 'copper_weathered'], [/copper/, 'copper_block'],
   [/^potted_/, 'wildflower'], [/_candle$/, 'torch_post'], [/mushroom_block$|mushroom_stem$/, 'mushroom_cap'],
   [/planks|log|wood/, 'planks'],
 ];

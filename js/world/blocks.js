@@ -168,6 +168,22 @@ for (const s of ['slab', 'stairs', 'fence', 'gate']) defShape('planks', s);
 defShape('thatch', 'slab');
 defShape('glasspane', 'pane', { label: 'Glass Pane', transparent: true });
 
+// ---- Tier-1 natural building stone + refined metal blocks -------------------
+def('granite', { hardness: 3.0, tool: 'pickaxe', drops: 'rough_stone' });
+def('andesite', { hardness: 3.0, tool: 'pickaxe', drops: 'rough_stone' });
+def('marble', { hardness: 3.0, tool: 'pickaxe', drops: 'rough_stone' });
+def('deepslate', { hardness: 3.4, tool: 'pickaxe', drops: 'rough_stone' });
+def('sandstone', { hardness: 2.4, tool: 'pickaxe', tiles: { top: 'sandstone_top', side: 'sandstone', bottom: 'sandstone_top' } });
+def('brick', { label: 'Bricks', hardness: 2.8, tool: 'pickaxe' });
+def('copper_block', { label: 'Copper Block', hardness: 3.0, tool: 'pickaxe' });
+def('copper_weathered', { label: 'Weathered Copper', hardness: 3.0, tool: 'pickaxe' });
+def('iron_block', { label: 'Iron Block', hardness: 4.0, tool: 'pickaxe' });
+def('gold_block', { label: 'Gold Block', hardness: 3.0, tool: 'pickaxe' });
+for (const base of ['granite', 'andesite', 'marble', 'deepslate', 'sandstone', 'brick']) {
+  for (const s of ['slab', 'stairs', 'wall']) defShape(base, s);
+}
+for (const s of ['slab', 'stairs']) { defShape('copper_block', s); defShape('copper_weathered', s); }
+
 // ---- Colored block families (16 dyes) ---------------------------------------
 // wool/carpet (soft), concrete + powder, terracotta + glazed, and stained glass
 // + panes. Tinted tiles are generated in gfx/textures.js from the same COLORS.

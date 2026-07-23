@@ -49,10 +49,16 @@ test('shape variants keep material + shape when we model it, else fall back', ()
   const wall = mapBlock('minecraft:cobblestone_wall');
   assert.equal(wall.block, 'cobble_wall');
 
-  // a shape we don't model on that material → plain material, shape lost
+  // natural stone gets its own shaped blocks too
+  const andesite = mapBlock('minecraft:andesite_stairs');
+  assert.equal(andesite.block, 'andesite_stairs');
   const sandSlab = mapBlock('minecraft:sandstone_slab');
-  assert.equal(sandSlab.block, 'sand');
-  assert.equal(sandSlab.quality, 'approx');
+  assert.equal(sandSlab.block, 'sandstone_slab');
+
+  // a shape we don't model on that material → plain material, shape lost
+  const fence = mapBlock('minecraft:nether_brick_fence');
+  assert.equal(fence.block, 'stone_brick');
+  assert.equal(fence.quality, 'approx');
 
   const unknown = mapBlock('minecraft:beacon');
   assert.equal(unknown.block, 'air');

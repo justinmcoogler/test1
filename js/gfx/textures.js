@@ -461,6 +461,22 @@ PAINTERS.saltpeter_deposit ??= (c, x, y, r) => { PAINTERS.stone(c, x, y, r); ore
 PAINTERS.sulfur_deposit ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#4a4640', 0.05); oreBlobs(c, x, y, r, '#d9c43a', '#f2e05a', 5); };
 PAINTERS.meteor_crater ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#2e2b30', 0.07, { chance: 0.12, color: '#4a4650' }); oreBlobs(c, x, y, r, '#6b6a72', '#a29fb0', 3); };
 
+// ---- Tier-1 natural building stone + refined metal blocks -------------------
+PAINTERS.granite ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#9b6b5c', 0.06, { chance: 0.10, color: '#c8a58f' }); oreBlobs(c, x, y, r, '#6f4a40', '#d8c4b0', 3); };
+PAINTERS.andesite ??= (c, x, y, r) => noisyFill(c, x, y, r, '#8c8f8b', 0.06, { chance: 0.10, color: '#b2b5b1' });
+PAINTERS.marble ??= (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#e7e5df', 0.03);
+  for (let i = 0; i < 3; i++) { let vx = Math.floor(r() * LP); for (let yy = 0; yy < LP; yy++) { vx = ((vx + Math.round((r() - 0.5) * 2)) % LP + LP) % LP; px(c, x, y, vx, yy, '#c7c5bd'); } }
+};
+PAINTERS.deepslate ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#3c3e44', 0.05); for (let yy = 0; yy < LP; yy += 3) for (let xx = 0; xx < LP; xx++) if (r() < 0.4) px(c, x, y, xx, yy, shade('#3c3e44', -0.08)); };
+PAINTERS.sandstone_top ??= (c, x, y, r) => noisyFill(c, x, y, r, '#d8c48f', 0.035);
+PAINTERS.sandstone ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#d8c48f', 0.04); for (let yy = 0; yy < LP; yy += 8) for (let xx = 0; xx < LP; xx++) px(c, x, y, xx, yy, shade('#c9b075', -0.06)); };
+PAINTERS.brick ??= (c, x, y, r) => brick(c, x, y, r, '#9e4b3b', '#ccc2b6');
+PAINTERS.copper_block ??= (c, x, y, r) => noisyFill(c, x, y, r, '#c17a44', 0.05, { chance: 0.08, color: '#e0a06a' });
+PAINTERS.copper_weathered ??= (c, x, y, r) => noisyFill(c, x, y, r, '#54a082', 0.05, { chance: 0.12, color: '#7ab89a' });
+PAINTERS.iron_block ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#d3d3d6', 0.03); for (let xx = 2; xx < LP; xx += 6) for (let yy = 0; yy < LP; yy++) if (r() < 0.5) px(c, x, y, xx, yy, shade('#d3d3d6', -0.06)); };
+PAINTERS.gold_block ??= (c, x, y, r) => noisyFill(c, x, y, r, '#e6c132', 0.04, { chance: 0.08, color: '#fff08a' });
+
 // ---- Colored block families: tint one base pattern per dye colour -----------
 function hexToRgb(hex) { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
 function mix(a, b, t) {
