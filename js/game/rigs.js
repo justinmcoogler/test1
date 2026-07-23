@@ -24,6 +24,9 @@ const RIGS = {
   // textured-remake new creatures
   meadow_stag: 'quadruped', dust_scarab: 'scamper', mire_toad: 'hopper',
   crag_bat: 'floater', snow_hare: 'scamper', ash_salamander: 'slither',
+  // farm animals
+  cow: 'quadruped', pig: 'quadruped', sheep: 'quadruped', goat: 'quadruped', horse: 'quadruped',
+  chicken: 'pecker', duck: 'pecker', rabbit: 'scamper',
 };
 
 const cx = (b) => b.x + b.w / 2;

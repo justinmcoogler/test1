@@ -41,7 +41,7 @@ export const BIOMES = {
     trees: [{ type: 'tree_pine', density: 0.01 }, { type: 'tree_birch', density: 0.005 }],
     plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'wildflower', d: 0.012 }],
     nodes: [{ type: 'herb_patch', d: 0.004 }, { type: 'berry_bush', d: 0.003 }, { type: 'deposit_saltpeter', d: 0.0016 }],
-    enemies: [{ type: 'mudback_boar', d: 0.0022 }, { type: 'thicket_sprite', d: 0.0015 }, { type: 'duskwing', d: 0.0014 }, { type: 'pixie', d: 0.0016 }, { type: 'meadow_stag', d: 0.0016 }],
+    enemies: [{ type: 'mudback_boar', d: 0.0022 }, { type: 'thicket_sprite', d: 0.0015 }, { type: 'duskwing', d: 0.0014 }, { type: 'pixie', d: 0.0016 }, { type: 'meadow_stag', d: 0.0016 }, { type: 'cow', d: 0.0022 }, { type: 'pig', d: 0.002 }, { type: 'sheep', d: 0.0022 }, { type: 'chicken', d: 0.0024, pack: [2, 3] }, { type: 'horse', d: 0.0016 }, { type: 'rabbit', d: 0.0026 }],
   },
   ancient_forest: {
     label: 'Temperate Forest', tier: 0, climate: 'temperate deciduous forest',
@@ -54,7 +54,7 @@ export const BIOMES = {
     ],
     plants: [{ block: 'tall_grass', d: 0.03 }, { block: 'mushroom_cap', d: 0.01 }],
     nodes: [{ type: 'herb_patch', d: 0.006 }, { type: 'berry_bush', d: 0.004 }],
-    enemies: [{ type: 'thicket_sprite', d: 0.003 }, { type: 'moss_lurker', d: 0.0018 }, { type: 'duskwing', d: 0.0018 }, { type: 'pixie', d: 0.0018 }, { type: 'meadow_stag', d: 0.0014 }],
+    enemies: [{ type: 'thicket_sprite', d: 0.003 }, { type: 'moss_lurker', d: 0.0018 }, { type: 'duskwing', d: 0.0018 }, { type: 'pixie', d: 0.0018 }, { type: 'meadow_stag', d: 0.0014 }, { type: 'cow', d: 0.0018 }, { type: 'pig', d: 0.0018 }, { type: 'sheep', d: 0.0018 }, { type: 'chicken', d: 0.002, pack: [2, 3] }, { type: 'horse', d: 0.0014 }, { type: 'rabbit', d: 0.0024 }],
   },
   temperate_rainforest: {
     label: 'Temperate Rainforest', tier: 1, climate: 'mild, very wet coniferous rainforest',
@@ -120,7 +120,7 @@ export const BIOMES = {
     trees: [{ type: 'tree_cedar', density: 0.02 }],
     plants: [{ block: 'reed', d: 0.05 }, { block: 'mushroom_cap', d: 0.02 }],
     nodes: [{ type: 'herb_patch', d: 0.01 }, { type: 'clay_deposit', d: 0.006 }, { type: 'fishing_spot', d: 0.004 }],
-    enemies: [{ type: 'bog_shambler', d: 0.003 }, { type: 'marsh_wisp', d: 0.002 }, { type: 'blight_horror', d: 0.0012 }, { type: 'bog_ooze', d: 0.0022 }, { type: 'will_o_wisp', d: 0.0018 }, { type: 'grave_wight', d: 0.0012 }, { type: 'mire_toad', d: 0.0018 }],
+    enemies: [{ type: 'bog_shambler', d: 0.003 }, { type: 'marsh_wisp', d: 0.002 }, { type: 'blight_horror', d: 0.0012 }, { type: 'bog_ooze', d: 0.0022 }, { type: 'will_o_wisp', d: 0.0018 }, { type: 'grave_wight', d: 0.0012 }, { type: 'mire_toad', d: 0.0018 }, { type: 'duck', d: 0.0024, pack: [2, 3] }],
   },
   rocky_highlands: {
     label: 'Mountains', tier: 1, climate: 'montane / alpine rock',
@@ -128,7 +128,7 @@ export const BIOMES = {
     trees: [{ type: 'tree_ash', density: 0.006 }, { type: 'tree_hickory', density: 0.004 }],
     plants: [{ block: 'tall_grass', d: 0.008 }],
     nodes: [{ type: 'ore_iron', d: 0.005 }, { type: 'ore_copper', d: 0.004 }, { type: 'ore_tin', d: 0.004 }, { type: 'deposit_coal', d: 0.003 }, { type: 'dig_site', d: 0.0015 }],
-    enemies: [{ type: 'craghorn_ram', d: 0.0025 }, { type: 'stone_pecker', d: 0.002 }, { type: 'scrap_goblin', d: 0.002 }, { type: 'cave_slime', d: 0.0016 }, { type: 'skeletal_archer', d: 0.0014 }, { type: 'stone_golem', d: 0.0009 }, { type: 'crag_bat', d: 0.0018, pack: [2, 3] }],
+    enemies: [{ type: 'craghorn_ram', d: 0.0025 }, { type: 'stone_pecker', d: 0.002 }, { type: 'scrap_goblin', d: 0.002 }, { type: 'cave_slime', d: 0.0016 }, { type: 'skeletal_archer', d: 0.0014 }, { type: 'stone_golem', d: 0.0009 }, { type: 'crag_bat', d: 0.0018, pack: [2, 3] }, { type: 'goat', d: 0.0022 }],
   },
   snowy_peaks: {
     label: 'Snowy Mountains', tier: 2, climate: 'alpine snow / glacier',
@@ -160,7 +160,7 @@ export const BIOMES = {
     trees: [{ type: 'tree_oak', density: 0.005 }, { type: 'tree_pine', density: 0.004 }],
     plants: [{ block: 'tall_grass', d: 0.04 }, { block: 'wildflower', d: 0.02 }],
     nodes: [{ type: 'herb_patch', d: 0.006 }, { type: 'berry_bush', d: 0.003 }, { type: 'deposit_saltpeter', d: 0.0016 }],
-    enemies: [{ type: 'dune_stalker', d: 0.002 }, { type: 'sunscale_serpent', d: 0.0016 }, { type: 'thicket_sprite', d: 0.0016 }, { type: 'scrap_goblin', d: 0.0018 }],
+    enemies: [{ type: 'dune_stalker', d: 0.002 }, { type: 'sunscale_serpent', d: 0.0016 }, { type: 'thicket_sprite', d: 0.0016 }, { type: 'scrap_goblin', d: 0.0018 }, { type: 'rabbit', d: 0.0024 }],
   },
   cold_desert: {
     label: 'Cold Desert', tier: 2, climate: 'cold semi-arid steppe',
@@ -176,7 +176,7 @@ export const BIOMES = {
     trees: [],
     plants: [{ block: 'reed', d: 0.08 }, { block: 'tall_grass', d: 0.03 }],
     nodes: [{ type: 'herb_patch', d: 0.008 }, { type: 'clay_deposit', d: 0.006 }, { type: 'fishing_spot', d: 0.005 }],
-    enemies: [{ type: 'bog_shambler', d: 0.0025 }, { type: 'marsh_wisp', d: 0.0022 }, { type: 'duskwing', d: 0.0016 }, { type: 'bog_ooze', d: 0.002 }, { type: 'will_o_wisp', d: 0.0018 }, { type: 'mire_toad', d: 0.0016 }],
+    enemies: [{ type: 'bog_shambler', d: 0.0025 }, { type: 'marsh_wisp', d: 0.0022 }, { type: 'duskwing', d: 0.0016 }, { type: 'bog_ooze', d: 0.002 }, { type: 'will_o_wisp', d: 0.0018 }, { type: 'mire_toad', d: 0.0016 }, { type: 'duck', d: 0.0024, pack: [2, 3] }],
   },
   mangrove: {
     label: 'Mangrove Coast', tier: 2, climate: 'tropical coastal wetland',
@@ -192,7 +192,7 @@ export const BIOMES = {
     trees: [],
     plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'wildflower', d: 0.02 }],
     nodes: [{ type: 'ore_copper', d: 0.003 }, { type: 'ore_tin', d: 0.003 }, { type: 'herb_patch', d: 0.006 }, { type: 'deposit_coal', d: 0.002 }],
-    enemies: [{ type: 'craghorn_ram', d: 0.0026 }, { type: 'stone_pecker', d: 0.0018 }, { type: 'rime_shade', d: 0.0012 }, { type: 'stone_golem', d: 0.001 }],
+    enemies: [{ type: 'craghorn_ram', d: 0.0026 }, { type: 'stone_pecker', d: 0.0018 }, { type: 'rime_shade', d: 0.0012 }, { type: 'stone_golem', d: 0.001 }, { type: 'goat', d: 0.0024 }],
   },
   ice_sheet: {
     label: 'Polar Ice Cap', tier: 3, climate: 'polar ice / permanent frost',
@@ -208,7 +208,7 @@ export const BIOMES = {
     trees: [],
     plants: [{ block: 'reed', d: 0.02 }],
     nodes: [{ type: 'fishing_spot', d: 0.006 }, { type: 'clay_deposit', d: 0.004 }, { type: 'deposit_saltpeter', d: 0.002 }],
-    enemies: [{ type: 'shell_snapper', d: 0.0025 }],
+    enemies: [{ type: 'shell_snapper', d: 0.0025 }, { type: 'duck', d: 0.0022, pack: [2, 3] }],
   },
   crystal_caverns: {
     label: 'Crystal Caverns', tier: 2, climate: 'subterranean',

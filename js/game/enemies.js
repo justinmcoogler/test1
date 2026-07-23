@@ -784,6 +784,140 @@ export const ENEMY_TYPES = {
       box(0, 0.1, 0.34, 0.24, 0.14, 0.22, [0.13, 0.11, 0.12]),
     ]),
   },
+  // ---- farm animals (remade visually by js/game/mobremakes/batch_farm.js) ----
+  cow: {
+    label: 'Cow', behavior: 'defensive', tier: 0,
+    hp: 24, atk: 5, acc: 54, evasion: 6, armor: 2, speed: 4, moveRange: 3,
+    abilities: ['skull_rush'], element: null, weak: [], resist: [],
+    xp: 26, huntXp: 20, respawn: 120, aggroRange: 0,
+    drops: [
+      { item: 'boar_haunch', qty: [1, 3], chance: 1 },
+      { item: 'boarhide', qty: [1, 2], chance: 0.9 },
+      { item: 'sinew', qty: [1, 1], chance: 0.6 },
+    ],
+    desc: 'A placid black-and-white grazer, slow to anger but quick to lower its horns.',
+    recommend: 'Harmless if left alone — corner it and it will shove back.',
+    model: M([
+      box(0, 0.52, 0, 0.64, 0.5, 1.1, [0.9, 0.9, 0.86]),
+      box(0, 0.7, 0.55, 0.36, 0.36, 0.4, [0.85, 0.85, 0.8]),
+    ]),
+  },
+  pig: {
+    label: 'Pig', behavior: 'defensive', tier: 0,
+    hp: 18, atk: 4, acc: 52, evasion: 8, armor: 1, speed: 4, moveRange: 3,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 20, huntXp: 16, respawn: 100, aggroRange: 0,
+    drops: [
+      { item: 'boar_haunch', qty: [1, 2], chance: 1 },
+      { item: 'boarhide', qty: [1, 2], chance: 0.8 },
+    ],
+    desc: 'A round pink porker snuffling for roots, with a flat snout and a curly tail.',
+    recommend: 'Skittish but stubborn — a couple of solid hits settle it.',
+    model: M([
+      box(0, 0.4, 0, 0.6, 0.44, 1.0, [0.9, 0.63, 0.63]),
+      box(0, 0.5, 0.5, 0.4, 0.38, 0.34, [0.9, 0.64, 0.64]),
+    ]),
+  },
+  sheep: {
+    label: 'Sheep', behavior: 'defensive', tier: 0,
+    hp: 18, atk: 3, acc: 50, evasion: 8, armor: 1, speed: 4, moveRange: 3,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 20, huntXp: 16, respawn: 100, aggroRange: 0,
+    drops: [
+      { item: 'white_wool', qty: [1, 3], chance: 1 },
+      { item: 'boar_haunch', qty: [1, 2], chance: 0.7 },
+      { item: 'sinew', qty: [1, 1], chance: 0.5 },
+    ],
+    desc: 'A cloud of cream fleece on stubby dark legs, forever chewing.',
+    recommend: 'Shear it or spare it — either way it barely fights back.',
+    model: M([
+      box(0, 0.5, 0, 0.64, 0.54, 1.0, [0.9, 0.87, 0.79]),
+      box(0, 0.66, 0.52, 0.3, 0.3, 0.32, [0.2, 0.18, 0.16]),
+    ]),
+  },
+  goat: {
+    label: 'Goat', behavior: 'defensive', tier: 0,
+    hp: 18, atk: 5, acc: 56, evasion: 12, armor: 1, speed: 6, moveRange: 4,
+    abilities: ['skull_rush'], element: null, weak: [], resist: [],
+    xp: 22, huntXp: 18, respawn: 110, aggroRange: 0,
+    drops: [
+      { item: 'boar_haunch', qty: [1, 2], chance: 0.9 },
+      { item: 'boarhide', qty: [1, 2], chance: 0.8 },
+      { item: 'sinew', qty: [1, 1], chance: 0.6 },
+    ],
+    desc: 'A wiry grey nanny with back-swept horns and a stubborn chin-beard.',
+    recommend: 'Nimble and butts hard — watch the horns when it charges.',
+    model: M([
+      box(0, 0.5, 0, 0.48, 0.42, 0.95, [0.54, 0.49, 0.4]),
+      box(0, 0.7, 0.5, 0.3, 0.3, 0.34, [0.56, 0.5, 0.42]),
+    ]),
+  },
+  horse: {
+    label: 'Horse', behavior: 'defensive', tier: 0,
+    hp: 30, atk: 6, acc: 58, evasion: 14, armor: 1, speed: 9, moveRange: 5,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 34, huntXp: 26, respawn: 140, aggroRange: 0,
+    drops: [
+      { item: 'boarhide', qty: [1, 2], chance: 0.9 },
+      { item: 'cured_hide', qty: [1, 1], chance: 0.4 },
+      { item: 'sinew', qty: [1, 2], chance: 0.6 },
+    ],
+    desc: 'A tall bay with a black mane and long legs, more likely to bolt than to bite.',
+    recommend: 'Fast and strong — pin it down before it kicks and runs.',
+    model: M([
+      box(0, 0.72, 0, 0.52, 0.5, 1.2, [0.49, 0.29, 0.16]),
+      box(0, 1.3, 0.55, 0.26, 0.26, 0.44, [0.49, 0.29, 0.16]),
+    ]),
+  },
+  chicken: {
+    label: 'Chicken', behavior: 'passive', tier: 0,
+    hp: 8, atk: 1, acc: 48, evasion: 20, armor: 0, speed: 6, moveRange: 3,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 8, huntXp: 10, respawn: 60, aggroRange: 0,
+    drops: [
+      { item: 'boar_haunch', qty: [1, 1], chance: 1 },
+      { item: 'sinew', qty: [1, 1], chance: 0.4 },
+    ],
+    desc: 'A fussy white hen with a red comb, all cluck and no threat.',
+    recommend: 'Harmless — one swing is plenty.',
+    model: M([
+      box(0, 0.34, 0, 0.32, 0.36, 0.5, [0.94, 0.92, 0.88]),
+      box(0, 0.68, 0.1, 0.26, 0.24, 0.24, [0.95, 0.93, 0.89]),
+    ]),
+  },
+  duck: {
+    label: 'Duck', behavior: 'passive', tier: 0,
+    hp: 8, atk: 1, acc: 48, evasion: 20, armor: 0, speed: 6, moveRange: 3,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 8, huntXp: 10, respawn: 60, aggroRange: 0,
+    drops: [
+      { item: 'boar_haunch', qty: [1, 1], chance: 1 },
+      { item: 'sinew', qty: [1, 1], chance: 0.4 },
+    ],
+    desc: 'A waddling farm duck with a flat orange bill and webbed feet.',
+    recommend: 'Harmless — it flaps more than it fights.',
+    model: M([
+      box(0, 0.3, 0, 0.34, 0.32, 0.6, [0.93, 0.94, 0.92]),
+      box(0, 0.62, 0.2, 0.22, 0.2, 0.24, [0.48, 0.35, 0.21]),
+    ]),
+  },
+  rabbit: {
+    label: 'Rabbit', behavior: 'passive', tier: 0,
+    hp: 6, atk: 1, acc: 48, evasion: 30, armor: 0, speed: 9, moveRange: 4,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 8, huntXp: 12, respawn: 55, aggroRange: 0,
+    drops: [
+      { item: 'boar_haunch', qty: [1, 1], chance: 0.8 },
+      { item: 'cured_hide', qty: [1, 1], chance: 0.4 },
+      { item: 'sinew', qty: [1, 1], chance: 0.5 },
+    ],
+    desc: 'A brown coney with long ears and a cotton tail, gone in a bound.',
+    recommend: 'Quick prey — run it down before it bolts.',
+    model: M([
+      box(0, 0.14, 0, 0.26, 0.26, 0.44, [0.54, 0.42, 0.28]),
+      box(0, 0.3, 0.18, 0.24, 0.22, 0.22, [0.56, 0.44, 0.3]),
+    ]),
+  },
 };
 
 // ---- Minecraft-proportioned remodel ----------------------------------------
