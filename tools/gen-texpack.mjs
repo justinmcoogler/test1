@@ -29,6 +29,7 @@ function aliasBlock(name) {
   // fall back to the detailed see-through procedural tile.
   if (tileSet.has(name)) return name;              // exact match
   if (name === 'cobblestone') return 'cobble';
+  if (name === 'coal_lump') return 'coal_seam';       // manifest name → engine tile
   if (name === 'mossy_cobblestone') return 'mossy_cobble';
   if (name === 'mossy_stone_bricks') return 'mossy_stone_brick';
   if (name === 'clay') return 'clay_block';

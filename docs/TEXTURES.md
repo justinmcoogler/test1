@@ -556,9 +556,221 @@ Shape variants (slabs, stairs, walls, fences, gates, panes, carpets) **reuse the
 
 (Every new building block — colours, natural stone, shapes — is a placeable item that renders its **block tile** as its icon, so no separate item art is needed for those.)
 
-## Totals
+## Still procedural — art still needed (all image-gen)
+
+Everything below still renders from the **procedural atlas** (no hand PNG yet). These
+are the remaining tiles/icons to image-gen so the whole game is real art. All are
+**32×32**. Item icons want a **transparent background + 1px outline** (same as the
+dye icons). Leaves, glass, and the torch post are transparent; other block tiles are
+opaque full-cube faces. Filenames are load-bearing — `block_<name>.png` / `item_<id>.png`.
+
+> The 11 `skin_*` atlas tiles (mob/player body materials — bark, cloth, face, fur,
+> glow, hide, metal, scales, solid, stone, straw) are **not** part of the
+> block/item PNG pipeline and stay procedural; there is no `block_`/`item_` slot for
+> them, so they are excluded from the counts below.
+
+### Batch R1 — Leaves & needles (15) — transparent cutout foliage
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_oak_leaves.png` | Oak leaves | dense classic green, small sky gaps | yes |
+| `block_birch_leaves.png` | Birch leaves | lighter yellow-green, airy | yes |
+| `block_pine_leaves.png` | Pine needles | dark blue-green needle clusters | yes |
+| `block_maple_leaves.png` | Maple leaves | rich green lobed leaves | yes |
+| `block_ash_leaves.png` | Ash leaves | medium green compound leaflets | yes |
+| `block_cedar_leaves.png` | Cedar sprays | dark green flat sprays | yes |
+| `block_ebony_leaves.png` | Ebony leaves | very dark near-black green | yes |
+| `block_hickory_leaves.png` | Hickory leaves | yellow-green, broad | yes |
+| `block_walnut_leaves.png` | Walnut leaves | deep green, long leaflets | yes |
+| `block_teak_leaves.png` | Teak leaves | broad tropical green | yes |
+| `block_yew_leaves.png` | Yew needles | dark evergreen flat needles | yes |
+| `block_lignum_vitae_leaves.png` | Lignum vitae leaves | glossy dark tropical green | yes |
+| `block_silverbark_leaves.png` | Silverbark leaves (fantasy) | pale silvery-green, faint shimmer | yes |
+| `block_fernwood_leaves.png` | Fernwood fronds (fantasy) | feathery fern-like green fronds | yes |
+| `block_emberpine_needles.png` | Emberpine needles (fantasy) | dark needles glowing ember-orange | yes |
+
+### Batch R2 — Fantasy bark & log rings (6)
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_silverbark_bark.png` | Silverbark bark | smooth silvery-white bark, dark lenticels | no |
+| `block_silverbark_ring.png` | Silverbark log end | pale silvery cross-section rings | no |
+| `block_fernwood_bark.png` | Fernwood bark | greenish-brown fibrous bark | no |
+| `block_fernwood_ring.png` | Fernwood log end | green-tinged cross-section rings | no |
+| `block_emberpine_bark.png` | Emberpine bark | charcoal bark veined with glowing ember cracks | no |
+| `block_emberpine_ring.png` | Emberpine log end | dark rings with ember-glow core | no |
+
+### Batch R3 — Crafting-station faces (5)
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_workbench_top.png` | Workbench top | wooden table top, saw marks + tool grooves | no |
+| `block_construction_top.png` | Construction bench top | sturdy carpentry top, plans + nails | no |
+| `block_alchemy_top.png` | Alchemy table top | stained wood, runes + small bottles | no |
+| `block_altar_top.png` | Altar top | carved stone, rune circle / offering bowl | no |
+| `block_altar_side.png` | Altar side | carved stone side, glyph band | no |
+
+### Batch R4 — Terrain & stone (9)
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_basalt.png` | Basalt | dark grey columnar rock, vertical striations | no |
+| `block_ashen_soil.png` | Ashen soil | grey-black ashy dirt, fine grain | no |
+| `block_corrupt_soil.png` | Corrupt soil | sickly purple-black earth, dark veins | no |
+| `block_rootstone.png` | Rootstone | grey stone laced with pale root tendrils | no |
+| `block_depleted_rock.png` | Depleted rock | dull grey mined-out rock, empty ore pits | no |
+| `block_ice.png` | Ice | pale blue translucent, cracks + sheen | no |
+| `block_lava.png` | Lava | molten orange-red with dark crust cracks | no |
+| `block_silvervein.png` | Silver ore | grey stone with bright silver veins | no |
+| `block_emberstone_ore.png` | Emberstone ore | dark stone with glowing ember-orange chunks | no |
+
+### Batch R5 — Plants & harvest nodes (12)
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_berry_bush.png` | Berry bush | green bush dotted with red berries | no |
+| `block_berry_bush_bare.png` | Berry bush (picked) | same bush, green leaves, no berries | no |
+| `block_crop_young.png` | Young crop | green sprouts in tilled rows | no |
+| `block_crop_ripe.png` | Ripe crop | golden grain, heavy heads | no |
+| `block_herb_patch.png` | Herb patch | leafy green cluster with small flowers | no |
+| `block_herb_patch_cut.png` | Herb patch (cut) | trimmed low stubs in soil | no |
+| `block_wildflower.png` | Wildflowers | mixed colourful blooms in grass | no |
+| `block_mushroom_cap.png` | Mushroom cap | large round cap, spotted | no |
+| `block_cactus_flesh.png` | Cactus flesh | ridged green cactus interior | no |
+| `block_reed.png` | Reeds | tall green riverside reeds | no |
+| `block_crystal_cluster.png` | Crystal cluster | translucent glowing gem crystals | no |
+| `block_dig_mound.png` | Dig mound | loose dirt mound, pebbles, dig spot | no |
+
+### Batch R6 — Building materials (9)
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_planks.png` | Wood planks | warm brown planks, grain + seams | no |
+| `block_stone_brick.png` | Stone bricks | cut grey blocks, mortar lines | no |
+| `block_ruin_brick.png` | Ruined brick | cracked weathered ancient brick | no |
+| `block_mossy_ruin.png` | Mossy ruin | ruined brick overgrown with green moss | no |
+| `block_timber_wall.png` | Timber-frame wall | wood beams + pale plaster infill | no |
+| `block_thatch.png` | Thatch | golden bundled straw/reed roofing | no |
+| `block_glasspane.png` | Glass | clear glass with thin frame | yes |
+| `block_obsidian_glass.png` | Obsidian glass | dark smoky translucent volcanic glass | yes |
+| `block_torch_post.png` | Torch post | wooden post with lit flame on top | yes |
+
+### Batch R7 — Item icons: materials & resources (27) — transparent, 1px outline
+
+| filename | what it is | style hint |
+|---|---|---|
+| `item_rough_stone.png` | Rough stone | grey stone chunk |
+| `item_rough_gem.png` | Rough gem | dull uncut gemstone |
+| `item_clay_lump.png` | Clay lump | grey-brown wet clay ball |
+| `item_pottery_shard.png` | Pottery shard | broken terracotta fragment |
+| `item_plant_fibre.png` | Plant fibre | loose stringy green-tan fibres |
+| `item_cord.png` | Cord | coiled fibre rope |
+| `item_sinew.png` | Sinew | pale stringy animal sinew |
+| `item_boarhide.png` | Boar hide | brown bristled pelt |
+| `item_cured_hide.png` | Cured hide | folded tan leather sheet |
+| `item_woven_cloth.png` | Woven cloth | folded tan fabric square |
+| `item_coke.png` | Coke | glossy black fuel chunks |
+| `item_amber_resin.png` | Amber resin | golden translucent droplet |
+| `item_bone_needle.png` | Bone needle | thin sharpened bone needle |
+| `item_grain_seeds.png` | Grain seeds | small pale seeds |
+| `item_grainsheaf.png` | Grain sheaf | tied bundle of golden wheat |
+| `item_golden_grain.png` | Golden grain | handful of gold kernels |
+| `item_fernwood_seed.png` | Fernwood seed | small green pod/seed |
+| `item_fernwood_log.png` | Fernwood log | greenish-brown log section |
+| `item_emberpine_log.png` | Emberpine log | dark log with ember-glow cracks |
+| `item_springroot.png` | Springroot | pale knotted root with sprout |
+| `item_silverleaf.png` | Silverleaf | silvery-white herb leaf |
+| `item_sunpetal.png` | Sunpetal | bright yellow bloom |
+| `item_bitterleaf.png` | Bitterleaf | jagged bitter green leaf |
+| `item_emberstone_shard.png` | Emberstone shard | glowing ember-orange crystal shard |
+| `item_old_coin.png` | Old coin | tarnished ancient coin |
+| `item_relic_fragment.png` | Relic fragment | ornate broken artifact piece |
+| `item_boar_haunch.png` | Boar haunch (raw) | raw pink-red meat on bone |
+
+### Batch R8 — Item icons: fantasy gems & quest (5) — transparent, 1px outline
+
+| filename | what it is | style hint |
+|---|---|---|
+| `item_veilcrystal.png` | Veilcrystal | translucent pale-violet crystal |
+| `item_flawless_veilcrystal.png` | Flawless veilcrystal | brilliant faceted violet, glowing |
+| `item_flame_opal.png` | Flame opal | fiery orange-red iridescent opal |
+| `item_rootbound_heart.png` | Rootbound heart (quest) | gnarled root-wrapped glowing heart |
+| `item_waterlogged_cache.png` | Waterlogged cache | soggy dripping wooden chest/bundle |
+
+### Batch R9 — Item icons: tools & utility (9) — transparent, 1px outline
+
+| filename | what it is | style hint |
+|---|---|---|
+| `item_crude_pickaxe.png` | Crude pickaxe | lashed stone pick on stick |
+| `item_crude_axe.png` | Crude axe | lashed stone axe head |
+| `item_crude_shovel.png` | Crude shovel | lashed stone spade |
+| `item_crude_hoe.png` | Crude hoe | lashed stone hoe |
+| `item_worn_hatchet.png` | Worn hatchet | small chipped hatchet |
+| `item_fishing_rod.png` | Fishing rod | wooden rod, line + hook |
+| `item_lantern.png` | Lantern | metal lantern, warm glow |
+| `item_waterskin.png` | Waterskin | leather water flask |
+| `item_coin.png` | Coin | single gold coin |
+
+### Batch R10 — Item icons: weapons (8) — transparent, 1px outline
+
+| filename | what it is | style hint |
+|---|---|---|
+| `item_wooden_cudgel.png` | Wooden cudgel | crude wooden club |
+| `item_boneshard_spear.png` | Boneshard spear | shaft tipped with jagged bone |
+| `item_bronze_blade.png` | Bronze blade | bronze short sword |
+| `item_iron_blade.png` | Iron blade | grey steel sword |
+| `item_frostbrand_blade.png` | Frostbrand blade | icy-blue enchanted sword, frost aura |
+| `item_ember_staff.png` | Ember staff | wooden staff with ember gem tip |
+| `item_thornwood_bow.png` | Thornwood bow | gnarled thorny wood bow |
+| `item_recurve_silverbow.png` | Recurve silverbow | elegant silver recurve bow |
+
+### Batch R11 — Item icons: armour & shield (12) — transparent, 1px outline
+
+| filename | what it is | style hint |
+|---|---|---|
+| `item_bronze_helm.png` | Bronze helm | bronze helmet |
+| `item_bronze_cuirass.png` | Bronze cuirass | bronze chest plate |
+| `item_bronze_greaves.png` | Bronze greaves | bronze leg guards |
+| `item_hide_cap.png` | Hide cap | leather cap |
+| `item_hide_jerkin.png` | Hide jerkin | leather chest jerkin |
+| `item_hide_leggings.png` | Hide leggings | leather leggings |
+| `item_hide_boots.png` | Hide boots | leather boots |
+| `item_hide_gloves.png` | Hide gloves | leather gloves |
+| `item_woven_hood.png` | Woven hood | cloth hood |
+| `item_woven_robe.png` | Woven robe | cloth robe |
+| `item_timber_shield.png` | Timber shield | round wooden plank shield |
+| `item_forager_band.png` | Forager band | simple ring with leaf motif |
+
+### Batch R12 — Item icons: charms, food & potions (19) — transparent, 1px outline
+
+| filename | what it is | style hint |
+|---|---|---|
+| `item_ironbud_charm.png` | Ironbud charm | iron pendant charm |
+| `item_keen_charm.png` | Keen charm | sharp-edged amulet |
+| `item_veilcharm.png` | Veilcharm | violet-crystal amulet |
+| `item_ward_talisman.png` | Ward talisman | rune-etched protective talisman |
+| `item_hearth_loaf.png` | Hearth loaf | round baked bread |
+| `item_travel_biscuit.png` | Travel biscuit | hard tan cracker |
+| `item_roast_haunch.png` | Roast haunch | golden-brown cooked meat |
+| `item_roast_silverfin.png` | Roast silverfin | cooked silver fish, grill marks |
+| `item_seared_duskeel.png` | Seared duskeel | cooked dark eel fillet |
+| `item_smoked_mudwhisker.png` | Smoked mudwhisker | smoked whiskered fish |
+| `item_tartberries.png` | Tartberries | cluster of tart red-purple berries |
+| `item_silverfin.png` | Silverfin (raw) | silvery live fish |
+| `item_duskeel.png` | Duskeel (raw) | dark slippery eel |
+| `item_mudwhisker.png` | Mudwhisker (raw) | mud-brown whiskered fish |
+| `item_duskcap.png` | Duskcap | dusky purple mushroom |
+| `item_minor_healing_tonic.png` | Minor healing tonic | red potion vial |
+| `item_lesser_mana_tonic.png` | Lesser mana tonic | blue potion vial |
+| `item_energy_tonic.png` | Energy tonic | glowing yellow-orange vial |
+| `item_antidote.png` | Antidote | green cure vial |
+
+### Remaining-art totals
+- Block tiles still procedural: **56** (R1–R6)
+- Item icons still procedural: **80** (R7–R12)
+- **Remaining: 136**  ·  `skin_*` mob/player tiles (11) excluded — not PNG-addressable.
+
+## Totals (art requested in this manifest)
 - Block tiles: 181
 - Item icons: 200
 - **Total: 381**
-
-Not included (carried from the skill plan, generated later): fish, foods, potions, herbs, crops, hides, relics, coins, misc consumables.
