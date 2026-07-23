@@ -227,9 +227,17 @@ export class Player {
     this._tempTick += dt;
     if (this._tempTick >= 1) {
       this._tempTick -= 1;
-      if (state === 'cold' || state === 'hot') this.energy = Math.max(0, this.energy - 4);
-      else if (state === 'hypothermia') this.damage(Math.max(1, Math.round(cold * 3)), 'the cold');
-      else if (state === 'heatstroke') this.damage(Math.max(1, Math.round(hot * 3)), 'the heat');
+      if (state === 'cold' || state === 'hot') {
+        this.energy = Math.max(0, this.energy - 4);
+      } else if (state === 'hypothermia' || state === 'heatstroke') {
+        // Exposure weakens but won't kill outright: it can't drop you below 20%
+        // HP. You're incapacitated and must warm up / cool down — cold alone
+        // never finishes an unprepared player, but it leaves you easy prey.
+        const floor = this.maxHp * 0.2;
+        const sev = state === 'hypothermia' ? cold : hot;
+        const dmg = Math.min(Math.max(1, Math.round(sev * 2)), this.hp - floor);
+        if (dmg > 0) this.damage(dmg, state === 'hypothermia' ? 'the cold' : 'the heat');
+      }
     }
   }
 

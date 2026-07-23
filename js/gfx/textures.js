@@ -2,6 +2,7 @@
 // (1px grain) for detailed, fully original seeded art.
 import { mulberry32, hashSeed } from '../core/rng.js';
 import { WOODS, METALS, FIREARMS } from '../game/materials.js';
+import { TEXPACK_TILES } from './texpack.js';
 
 export const TILE = 32;
 export const ATLAS_COLS = 16;
@@ -452,6 +453,12 @@ PAINTERS.saltpeter_deposit ??= (c, x, y, r) => { PAINTERS.stone(c, x, y, r); ore
 PAINTERS.sulfur_deposit ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#4a4640', 0.05); oreBlobs(c, x, y, r, '#d9c43a', '#f2e05a', 5); };
 PAINTERS.meteor_crater ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#2e2b30', 0.07, { chance: 0.12, color: '#4a4650' }); oreBlobs(c, x, y, r, '#6b6a72', '#a29fb0', 3); };
 
+// Reserve atlas slots for any pack-only tiles (new station faces) so they get a
+// UV; the real art is blitted over the placeholder by applyTexturePack().
+for (const name of Object.keys(TEXPACK_TILES)) {
+  if (!PAINTERS[name]) PAINTERS[name] = (c, x, y, r) => noisyFill(c, x, y, r, '#8a8580', 0.05);
+}
+
 export const tileNames = () => Object.keys(PAINTERS);
 
 let atlasCanvas = null;
@@ -486,6 +493,30 @@ export function buildAtlas() {
 export function getAtlasCanvas() {
   if (!atlasCanvas) buildAtlas();
   return atlasCanvas;
+}
+
+// Blit the real 32×32 art pack over the procedural atlas, then the caller
+// re-uploads the texture. Async (decodes embedded PNGs); missing/failed tiles
+// simply keep their procedural art. Resolves once every tile is drawn.
+let texpackApplied = false;
+export function applyTexturePack() {
+  if (typeof Image === 'undefined') return Promise.resolve(false); // no DOM (unit tests)
+  if (!atlasCanvas) buildAtlas();
+  const ctx = atlasCanvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const entries = Object.entries(TEXPACK_TILES).filter(([n]) => tileUV[n]);
+  return Promise.all(entries.map(([name, uri]) => new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const uv = tileUV[name];
+      const col = Math.round(uv.u0 * ATLAS_COLS - 0.01), row = Math.round(uv.v0 * ATLAS_ROWS - 0.01);
+      ctx.clearRect(col * TILE, row * TILE, TILE, TILE);
+      ctx.drawImage(img, col * TILE, row * TILE, TILE, TILE);
+      resolve();
+    };
+    img.onerror = () => resolve();
+    img.src = uri;
+  }))).then(() => { texpackApplied = true; return true; });
 }
 
 // UVs for a block face. face: 'top' | 'bottom' | 'side'

@@ -1,0 +1,4583 @@
+{
+  "source": "built-in image generation",
+  "width": 32,
+  "height": 32,
+  "output_size": [
+    32,
+    32
+  ],
+  "manifest_rows": [
+    {
+      "filename": "block_grass_top.png",
+      "what": "grass top \u2014 mowed green",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_grass_side.png",
+      "what": "grass side \u2014 soil + green fringe",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_dirt.png",
+      "what": "plain soil",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_stone.png",
+      "what": "grey stone",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_cobblestone.png",
+      "what": "broken stone",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_sand.png",
+      "what": "pale sand",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_gravel.png",
+      "what": "loose pebbles",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_clay.png",
+      "what": "grey-brown clay",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_snow.png",
+      "what": "snow top",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_snow_side.png",
+      "what": "snowy grass side",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_water.png",
+      "what": "water surface",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_bedrock.png",
+      "what": "dark deep stone",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_farmland.png",
+      "what": "tilled wet soil",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_tall_grass.png",
+      "what": "wild grass tuft (transparent cross)",
+      "hint": "natural earthy tones",
+      "transparent": true,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_copper_ore.png",
+      "what": "Copper ore \u2014 stone with copper-colored inclusions",
+      "hint": "stone-grey base; Copper hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_tin_ore.png",
+      "what": "Tin ore \u2014 stone with tin-colored inclusions",
+      "hint": "stone-grey base; Tin hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_iron_ore.png",
+      "what": "Iron ore \u2014 stone with iron-colored inclusions",
+      "hint": "stone-grey base; Iron hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_meteoric_ore.png",
+      "what": "Meteoric Iron ore \u2014 stone with meteoric iron-colored inclusions",
+      "hint": "stone-grey base; Meteoric Iron hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_lead_ore.png",
+      "what": "Lead ore \u2014 stone with lead-colored inclusions",
+      "hint": "stone-grey base; Lead hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_zinc_ore.png",
+      "what": "Zinc ore \u2014 stone with zinc-colored inclusions",
+      "hint": "stone-grey base; Zinc hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_silver_ore.png",
+      "what": "Silver ore \u2014 stone with silver-colored inclusions",
+      "hint": "stone-grey base; Silver hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_gold_ore.png",
+      "what": "Gold ore \u2014 stone with gold-colored inclusions",
+      "hint": "stone-grey base; Gold hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_platinum_ore.png",
+      "what": "Platinum ore \u2014 stone with platinum-colored inclusions",
+      "hint": "stone-grey base; Platinum hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_meteor_crater.png",
+      "what": "meteor-crater floor \u2014 scorched fused rock (meteoric iron site)",
+      "hint": "charred dark rock, faint metallic flecks",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_saltpeter_deposit.png",
+      "what": "saltpeter/nitre deposit \u2014 pale crusty mineral",
+      "hint": "chalky white-yellow crust on stone",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_sulfur_deposit.png",
+      "what": "sulfur deposit \u2014 yellow volcanic mineral",
+      "hint": "bright sulfur yellow on dark rock",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_coal_lump.png",
+      "what": "exposed coal seam",
+      "hint": "near-black with dull facets",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_pine_log.png",
+      "what": "Pine log \u2014 bark",
+      "hint": "Pine bark color/character",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_pine_log_top.png",
+      "what": "Pine log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_pine_leaves.png",
+      "what": "Pine leaves/needles",
+      "hint": "needled evergreen",
+      "transparent": true,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_cedar_log.png",
+      "what": "Cedar log \u2014 bark",
+      "hint": "Cedar bark color/character",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_cedar_log_top.png",
+      "what": "Cedar log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_cedar_leaves.png",
+      "what": "Cedar leaves/needles",
+      "hint": "needled evergreen",
+      "transparent": true,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_birch_log.png",
+      "what": "Birch log \u2014 bark",
+      "hint": "Birch bark color/character",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_birch_log_top.png",
+      "what": "Birch log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_birch_leaves.png",
+      "what": "Birch leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_oak_log.png",
+      "what": "Oak log \u2014 bark",
+      "hint": "Oak bark color/character",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_oak_log_top.png",
+      "what": "Oak log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_oak_leaves.png",
+      "what": "Oak leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_ash_log.png",
+      "what": "Ash log \u2014 bark",
+      "hint": "Ash bark color/character",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_ash_log_top.png",
+      "what": "Ash log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_ash_leaves.png",
+      "what": "Ash leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_hickory_log.png",
+      "what": "Hickory log \u2014 bark",
+      "hint": "Hickory bark color/character",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_hickory_log_top.png",
+      "what": "Hickory log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_hickory_leaves.png",
+      "what": "Hickory leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_maple_log.png",
+      "what": "Maple log \u2014 bark",
+      "hint": "Maple bark color/character",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_maple_log_top.png",
+      "what": "Maple log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_maple_leaves.png",
+      "what": "Maple leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_walnut_log.png",
+      "what": "Walnut log \u2014 bark",
+      "hint": "Walnut bark color/character",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_walnut_log_top.png",
+      "what": "Walnut log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_walnut_leaves.png",
+      "what": "Walnut leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_yew_log.png",
+      "what": "Yew log \u2014 bark",
+      "hint": "Yew bark color/character",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_yew_log_top.png",
+      "what": "Yew log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_yew_leaves.png",
+      "what": "Yew leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_teak_log.png",
+      "what": "Teak log \u2014 bark",
+      "hint": "Teak bark color/character",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_teak_log_top.png",
+      "what": "Teak log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_teak_leaves.png",
+      "what": "Teak leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_ebony_log.png",
+      "what": "Ebony log \u2014 bark",
+      "hint": "Ebony bark color/character",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_ebony_log_top.png",
+      "what": "Ebony log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_ebony_leaves.png",
+      "what": "Ebony leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_lignum_vitae_log.png",
+      "what": "Lignum Vitae log \u2014 bark",
+      "hint": "Lignum Vitae bark color/character",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_lignum_vitae_log_top.png",
+      "what": "Lignum Vitae log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_lignum_vitae_leaves.png",
+      "what": "Lignum Vitae leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_furnace.png",
+      "what": "furnace side/front \u2014 masonry firebox",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_furnace_top.png",
+      "what": "furnace top \u2014 soot-dark stone cap and flue rim",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_anvil.png",
+      "what": "anvil top \u2014 iron working face",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_anvil_side.png",
+      "what": "anvil side \u2014 horn, waist, and support profile",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_workbench.png",
+      "what": "workbench top \u2014 scarred timber work surface",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_workbench_side.png",
+      "what": "workbench side \u2014 timber apron, legs, and iron braces",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_loom.png",
+      "what": "loom side/front \u2014 frame, warp threads, woven cloth",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_loom_top.png",
+      "what": "loom top \u2014 crossbars, warp, and shuttle channel",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_campfire.png",
+      "what": "campfire top \u2014 crossed logs and stone ring",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_campfire_side.png",
+      "what": "campfire side \u2014 low stone ring, logs, and restrained flame",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_chest_front.png",
+      "what": "storage chest side/front \u2014 timber boards, iron bands, latch",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_chest_top.png",
+      "what": "storage chest top \u2014 timber lid and iron bands",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_grindstone.png",
+      "what": "grindstone side/front \u2014 wheel, axle, and timber support",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_grindstone_top.png",
+      "what": "grindstone top \u2014 wheel edge, axle, and support rails",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_tanning_rack.png",
+      "what": "tanning rack side/front \u2014 stretched hide and timber frame",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_tanning_rack_top.png",
+      "what": "tanning rack top \u2014 frame rails, ties, and hide edge",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_furnace_side.png",
+      "what": "furnace generic side/back \u2014 masonry shell without firebox",
+      "hint": "worked stone + iron fittings",
+      "transparent": false,
+      "batch": "B7 \u2014 Station Profiles",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_chest_side.png",
+      "what": "storage chest generic side/back \u2014 timber panels without latch",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B7 \u2014 Station Profiles",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_loom_side.png",
+      "what": "loom generic side/back \u2014 timber slats without broad cloth panel",
+      "hint": "worked timber joinery",
+      "transparent": false,
+      "batch": "B7 \u2014 Station Profiles",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_grindstone_side.png",
+      "what": "grindstone narrow side/profile \u2014 wheel edge and support",
+      "hint": "worked stone + timber support",
+      "transparent": false,
+      "batch": "B7 \u2014 Station Profiles",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_tanning_rack_side.png",
+      "what": "tanning rack narrow side/profile \u2014 frame and tied hide edge",
+      "hint": "worked timber + leather",
+      "transparent": false,
+      "batch": "B7 \u2014 Station Profiles",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "item_copper_bar.png",
+      "what": "Copper bar",
+      "hint": "Copper metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_tin_bar.png",
+      "what": "Tin bar",
+      "hint": "Tin metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_bronze_bar.png",
+      "what": "Bronze bar",
+      "hint": "Bronze metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_iron_bar.png",
+      "what": "Iron bar",
+      "hint": "Iron metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_steel_bar.png",
+      "what": "Steel bar",
+      "hint": "Steel metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_damascus_bar.png",
+      "what": "Damascus Steel bar",
+      "hint": "Damascus Steel metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_meteoric_bar.png",
+      "what": "Meteoric Iron bar",
+      "hint": "Meteoric Iron metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_lead_bar.png",
+      "what": "Lead bar",
+      "hint": "Lead metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_zinc_bar.png",
+      "what": "Zinc bar",
+      "hint": "Zinc metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_silver_bar.png",
+      "what": "Silver bar",
+      "hint": "Silver metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_gold_bar.png",
+      "what": "Gold bar",
+      "hint": "Gold metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_platinum_bar.png",
+      "what": "Platinum bar",
+      "hint": "Platinum metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_brass_bar.png",
+      "what": "Brass bar",
+      "hint": "Brass metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_electrum_bar.png",
+      "what": "Electrum bar",
+      "hint": "Electrum metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_pewter_bar.png",
+      "what": "Pewter bar",
+      "hint": "Pewter metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_coal.png",
+      "what": "coal lump",
+      "hint": "black shiny lump",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_charcoal.png",
+      "what": "charcoal",
+      "hint": "matte black chunk",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_copper_ore.png",
+      "what": "raw Copper ore chunk",
+      "hint": "rough rock with Copper hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_tin_ore.png",
+      "what": "raw Tin ore chunk",
+      "hint": "rough rock with Tin hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_iron_ore.png",
+      "what": "raw Iron ore chunk",
+      "hint": "rough rock with Iron hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_meteoric_ore.png",
+      "what": "raw Meteoric Iron ore chunk",
+      "hint": "rough rock with Meteoric Iron hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_lead_ore.png",
+      "what": "raw Lead ore chunk",
+      "hint": "rough rock with Lead hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_zinc_ore.png",
+      "what": "raw Zinc ore chunk",
+      "hint": "rough rock with Zinc hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_silver_ore.png",
+      "what": "raw Silver ore chunk",
+      "hint": "rough rock with Silver hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_gold_ore.png",
+      "what": "raw Gold ore chunk",
+      "hint": "rough rock with Gold hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_platinum_ore.png",
+      "what": "raw Platinum ore chunk",
+      "hint": "rough rock with Platinum hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_saltpeter.png",
+      "what": "Saltpeter",
+      "hint": "mineral/reagent",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_sulfur.png",
+      "what": "Sulfur",
+      "hint": "mineral/reagent",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_charcoal.png",
+      "what": "Charcoal",
+      "hint": "mineral/reagent",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_uncut_quartz.png",
+      "what": "uncut Rock Crystal",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_quartz.png",
+      "what": "cut Rock Crystal",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_amethyst.png",
+      "what": "uncut Amethyst",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_amethyst.png",
+      "what": "cut Amethyst",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_garnet.png",
+      "what": "uncut Garnet",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_garnet.png",
+      "what": "cut Garnet",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_topaz.png",
+      "what": "uncut Topaz",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_topaz.png",
+      "what": "cut Topaz",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_emerald.png",
+      "what": "uncut Emerald",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_emerald.png",
+      "what": "cut Emerald",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_sapphire.png",
+      "what": "uncut Sapphire",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_sapphire.png",
+      "what": "cut Sapphire",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_ruby.png",
+      "what": "uncut Ruby",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_ruby.png",
+      "what": "cut Ruby",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_diamond.png",
+      "what": "uncut Diamond",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_diamond.png",
+      "what": "cut Diamond",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_pine_plank.png",
+      "what": "Pine plank",
+      "hint": "Pine tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks A",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_cedar_plank.png",
+      "what": "Cedar plank",
+      "hint": "Cedar tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks A",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_birch_plank.png",
+      "what": "Birch plank",
+      "hint": "Birch tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks A",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_oak_plank.png",
+      "what": "Oak plank",
+      "hint": "Oak tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks A",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_ash_plank.png",
+      "what": "Ash plank",
+      "hint": "Ash tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks A",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_hickory_plank.png",
+      "what": "Hickory plank",
+      "hint": "Hickory tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks A",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_maple_plank.png",
+      "what": "Maple plank",
+      "hint": "Maple tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks B",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_walnut_plank.png",
+      "what": "Walnut plank",
+      "hint": "Walnut tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks B",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_yew_plank.png",
+      "what": "Yew plank",
+      "hint": "Yew tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks B",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_teak_plank.png",
+      "what": "Teak plank",
+      "hint": "Teak tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks B",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_ebony_plank.png",
+      "what": "Ebony plank",
+      "hint": "Ebony tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks B",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_lignum_vitae_plank.png",
+      "what": "Lignum Vitae plank",
+      "hint": "Lignum Vitae tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks B",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_copper_pickaxe.png",
+      "what": "Copper pickaxe",
+      "hint": "Copper head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_axe.png",
+      "what": "Copper axe",
+      "hint": "Copper head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_shovel.png",
+      "what": "Copper shovel",
+      "hint": "Copper head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_hoe.png",
+      "what": "Copper hoe",
+      "hint": "Copper head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_chisel.png",
+      "what": "Copper chisel",
+      "hint": "Copper head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_hammer.png",
+      "what": "Copper hammer",
+      "hint": "Copper head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_sword.png",
+      "what": "Copper sword",
+      "hint": "Copper blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_dagger.png",
+      "what": "Copper dagger",
+      "hint": "Copper blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_battleaxe.png",
+      "what": "Copper battleaxe",
+      "hint": "Copper blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_spear.png",
+      "what": "Copper spear",
+      "hint": "Copper blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_helmet.png",
+      "what": "Copper helmet",
+      "hint": "Copper plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_chestplate.png",
+      "what": "Copper chestplate",
+      "hint": "Copper plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_leggings.png",
+      "what": "Copper leggings",
+      "hint": "Copper plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_boots.png",
+      "what": "Copper boots",
+      "hint": "Copper plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_shield.png",
+      "what": "Copper shield",
+      "hint": "Copper plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_pickaxe.png",
+      "what": "Bronze pickaxe",
+      "hint": "Bronze head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_axe.png",
+      "what": "Bronze axe",
+      "hint": "Bronze head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_shovel.png",
+      "what": "Bronze shovel",
+      "hint": "Bronze head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_hoe.png",
+      "what": "Bronze hoe",
+      "hint": "Bronze head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_chisel.png",
+      "what": "Bronze chisel",
+      "hint": "Bronze head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_hammer.png",
+      "what": "Bronze hammer",
+      "hint": "Bronze head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_sword.png",
+      "what": "Bronze sword",
+      "hint": "Bronze blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_dagger.png",
+      "what": "Bronze dagger",
+      "hint": "Bronze blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_battleaxe.png",
+      "what": "Bronze battleaxe",
+      "hint": "Bronze blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_spear.png",
+      "what": "Bronze spear",
+      "hint": "Bronze blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_helmet.png",
+      "what": "Bronze helmet",
+      "hint": "Bronze plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_chestplate.png",
+      "what": "Bronze chestplate",
+      "hint": "Bronze plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_leggings.png",
+      "what": "Bronze leggings",
+      "hint": "Bronze plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_boots.png",
+      "what": "Bronze boots",
+      "hint": "Bronze plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_shield.png",
+      "what": "Bronze shield",
+      "hint": "Bronze plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_iron_pickaxe.png",
+      "what": "Iron pickaxe",
+      "hint": "Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_axe.png",
+      "what": "Iron axe",
+      "hint": "Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_shovel.png",
+      "what": "Iron shovel",
+      "hint": "Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_hoe.png",
+      "what": "Iron hoe",
+      "hint": "Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_chisel.png",
+      "what": "Iron chisel",
+      "hint": "Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_hammer.png",
+      "what": "Iron hammer",
+      "hint": "Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_sword.png",
+      "what": "Iron sword",
+      "hint": "Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_dagger.png",
+      "what": "Iron dagger",
+      "hint": "Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_battleaxe.png",
+      "what": "Iron battleaxe",
+      "hint": "Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_spear.png",
+      "what": "Iron spear",
+      "hint": "Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_helmet.png",
+      "what": "Iron helmet",
+      "hint": "Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_chestplate.png",
+      "what": "Iron chestplate",
+      "hint": "Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_leggings.png",
+      "what": "Iron leggings",
+      "hint": "Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_boots.png",
+      "what": "Iron boots",
+      "hint": "Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_shield.png",
+      "what": "Iron shield",
+      "hint": "Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_steel_pickaxe.png",
+      "what": "Steel pickaxe",
+      "hint": "Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_axe.png",
+      "what": "Steel axe",
+      "hint": "Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_shovel.png",
+      "what": "Steel shovel",
+      "hint": "Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_hoe.png",
+      "what": "Steel hoe",
+      "hint": "Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_chisel.png",
+      "what": "Steel chisel",
+      "hint": "Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_hammer.png",
+      "what": "Steel hammer",
+      "hint": "Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_sword.png",
+      "what": "Steel sword",
+      "hint": "Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_dagger.png",
+      "what": "Steel dagger",
+      "hint": "Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_battleaxe.png",
+      "what": "Steel battleaxe",
+      "hint": "Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_spear.png",
+      "what": "Steel spear",
+      "hint": "Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_helmet.png",
+      "what": "Steel helmet",
+      "hint": "Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_chestplate.png",
+      "what": "Steel chestplate",
+      "hint": "Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_leggings.png",
+      "what": "Steel leggings",
+      "hint": "Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_boots.png",
+      "what": "Steel boots",
+      "hint": "Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_shield.png",
+      "what": "Steel shield",
+      "hint": "Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_pickaxe.png",
+      "what": "Damascus Steel pickaxe",
+      "hint": "Damascus Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_axe.png",
+      "what": "Damascus Steel axe",
+      "hint": "Damascus Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_shovel.png",
+      "what": "Damascus Steel shovel",
+      "hint": "Damascus Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_hoe.png",
+      "what": "Damascus Steel hoe",
+      "hint": "Damascus Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_chisel.png",
+      "what": "Damascus Steel chisel",
+      "hint": "Damascus Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_hammer.png",
+      "what": "Damascus Steel hammer",
+      "hint": "Damascus Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_sword.png",
+      "what": "Damascus Steel sword",
+      "hint": "Damascus Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_dagger.png",
+      "what": "Damascus Steel dagger",
+      "hint": "Damascus Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_battleaxe.png",
+      "what": "Damascus Steel battleaxe",
+      "hint": "Damascus Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_spear.png",
+      "what": "Damascus Steel spear",
+      "hint": "Damascus Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_helmet.png",
+      "what": "Damascus Steel helmet",
+      "hint": "Damascus Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_chestplate.png",
+      "what": "Damascus Steel chestplate",
+      "hint": "Damascus Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_leggings.png",
+      "what": "Damascus Steel leggings",
+      "hint": "Damascus Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_boots.png",
+      "what": "Damascus Steel boots",
+      "hint": "Damascus Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_shield.png",
+      "what": "Damascus Steel shield",
+      "hint": "Damascus Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_pickaxe.png",
+      "what": "Meteoric Iron pickaxe",
+      "hint": "Meteoric Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_axe.png",
+      "what": "Meteoric Iron axe",
+      "hint": "Meteoric Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_shovel.png",
+      "what": "Meteoric Iron shovel",
+      "hint": "Meteoric Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_hoe.png",
+      "what": "Meteoric Iron hoe",
+      "hint": "Meteoric Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_chisel.png",
+      "what": "Meteoric Iron chisel",
+      "hint": "Meteoric Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_hammer.png",
+      "what": "Meteoric Iron hammer",
+      "hint": "Meteoric Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_sword.png",
+      "what": "Meteoric Iron sword",
+      "hint": "Meteoric Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_dagger.png",
+      "what": "Meteoric Iron dagger",
+      "hint": "Meteoric Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_battleaxe.png",
+      "what": "Meteoric Iron battleaxe",
+      "hint": "Meteoric Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_spear.png",
+      "what": "Meteoric Iron spear",
+      "hint": "Meteoric Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_helmet.png",
+      "what": "Meteoric Iron helmet",
+      "hint": "Meteoric Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_chestplate.png",
+      "what": "Meteoric Iron chestplate",
+      "hint": "Meteoric Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_leggings.png",
+      "what": "Meteoric Iron leggings",
+      "hint": "Meteoric Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_boots.png",
+      "what": "Meteoric Iron boots",
+      "hint": "Meteoric Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_shield.png",
+      "what": "Meteoric Iron shield",
+      "hint": "Meteoric Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_ash_shortbow.png",
+      "what": "ash shortbow",
+      "hint": "curved stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_ash_longbow.png",
+      "what": "ash longbow",
+      "hint": "tall stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_hickory_shortbow.png",
+      "what": "hickory shortbow",
+      "hint": "curved stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_hickory_longbow.png",
+      "what": "hickory longbow",
+      "hint": "tall stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_yew_shortbow.png",
+      "what": "yew shortbow",
+      "hint": "curved stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_yew_longbow.png",
+      "what": "yew longbow",
+      "hint": "tall stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_oak_shortbow.png",
+      "what": "oak shortbow",
+      "hint": "curved stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_oak_longbow.png",
+      "what": "oak longbow",
+      "hint": "tall stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_lignum_vitae_shortbow.png",
+      "what": "lignum_vitae shortbow",
+      "hint": "curved stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_lignum_vitae_longbow.png",
+      "what": "lignum_vitae longbow",
+      "hint": "tall stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_arrow.png",
+      "what": "arrows (fan of 3)",
+      "hint": "shaft + metal tip",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_bolt.png",
+      "what": "crossbow bolts",
+      "hint": "stubby quarrels",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_hand_cannon.png",
+      "what": "Hand Cannon",
+      "hint": "iron barrel + walnut stock",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_flintlock_pistol.png",
+      "what": "Flintlock Pistol",
+      "hint": "steel barrel + walnut stock",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_matchlock_musket.png",
+      "what": "Matchlock Musket",
+      "hint": "steel barrel + walnut stock",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_blunderbuss.png",
+      "what": "Blunderbuss",
+      "hint": "damascus barrel + walnut stock",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_lead_ball.png",
+      "what": "Lead Ball",
+      "hint": "grey lead",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_lead_shot.png",
+      "what": "Lead Shot",
+      "hint": "grey lead",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_gunpowder.png",
+      "what": "gunpowder",
+      "hint": "dark grainy powder in a horn/pouch",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_silver_ring.png",
+      "what": "Silver ring",
+      "hint": "Silver band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_silver_necklace.png",
+      "what": "Silver necklace",
+      "hint": "Silver band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_silver_amulet.png",
+      "what": "Silver amulet",
+      "hint": "Silver band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_gold_ring.png",
+      "what": "Gold ring",
+      "hint": "Gold band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_gold_necklace.png",
+      "what": "Gold necklace",
+      "hint": "Gold band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_gold_amulet.png",
+      "what": "Gold amulet",
+      "hint": "Gold band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_platinum_ring.png",
+      "what": "Platinum ring",
+      "hint": "Platinum band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_platinum_necklace.png",
+      "what": "Platinum necklace",
+      "hint": "Platinum band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_platinum_amulet.png",
+      "what": "Platinum amulet",
+      "hint": "Platinum band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_brass_ring.png",
+      "what": "Brass ring",
+      "hint": "Brass band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_brass_necklace.png",
+      "what": "Brass necklace",
+      "hint": "Brass band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_brass_amulet.png",
+      "what": "Brass amulet",
+      "hint": "Brass band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_electrum_ring.png",
+      "what": "Electrum ring",
+      "hint": "Electrum band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_electrum_necklace.png",
+      "what": "Electrum necklace",
+      "hint": "Electrum band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_electrum_amulet.png",
+      "what": "Electrum amulet",
+      "hint": "Electrum band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_pewter_ring.png",
+      "what": "Pewter ring",
+      "hint": "Pewter band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_pewter_necklace.png",
+      "what": "Pewter necklace",
+      "hint": "Pewter band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_pewter_amulet.png",
+      "what": "Pewter amulet",
+      "hint": "Pewter band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    }
+  ],
+  "textures": [
+    {
+      "filename": "block_grass_top.png",
+      "what": "grass top \u2014 mowed green",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_grass_side.png",
+      "what": "grass side \u2014 soil + green fringe",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_dirt.png",
+      "what": "plain soil",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_stone.png",
+      "what": "grey stone",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_cobblestone.png",
+      "what": "broken stone",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_sand.png",
+      "what": "pale sand",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_gravel.png",
+      "what": "loose pebbles",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_clay.png",
+      "what": "grey-brown clay",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_snow.png",
+      "what": "snow top",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_snow_side.png",
+      "what": "snowy grass side",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_water.png",
+      "what": "water surface",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_bedrock.png",
+      "what": "dark deep stone",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_farmland.png",
+      "what": "tilled wet soil",
+      "hint": "natural earthy tones",
+      "transparent": false,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_tall_grass.png",
+      "what": "wild grass tuft (transparent cross)",
+      "hint": "natural earthy tones",
+      "transparent": true,
+      "batch": "B1 \u2014 Terrain",
+      "palette": "earth browns, greens, cool water blue"
+    },
+    {
+      "filename": "block_copper_ore.png",
+      "what": "Copper ore \u2014 stone with copper-colored inclusions",
+      "hint": "stone-grey base; Copper hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_tin_ore.png",
+      "what": "Tin ore \u2014 stone with tin-colored inclusions",
+      "hint": "stone-grey base; Tin hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_iron_ore.png",
+      "what": "Iron ore \u2014 stone with iron-colored inclusions",
+      "hint": "stone-grey base; Iron hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_meteoric_ore.png",
+      "what": "Meteoric Iron ore \u2014 stone with meteoric iron-colored inclusions",
+      "hint": "stone-grey base; Meteoric Iron hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_lead_ore.png",
+      "what": "Lead ore \u2014 stone with lead-colored inclusions",
+      "hint": "stone-grey base; Lead hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_zinc_ore.png",
+      "what": "Zinc ore \u2014 stone with zinc-colored inclusions",
+      "hint": "stone-grey base; Zinc hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_silver_ore.png",
+      "what": "Silver ore \u2014 stone with silver-colored inclusions",
+      "hint": "stone-grey base; Silver hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_gold_ore.png",
+      "what": "Gold ore \u2014 stone with gold-colored inclusions",
+      "hint": "stone-grey base; Gold hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_platinum_ore.png",
+      "what": "Platinum ore \u2014 stone with platinum-colored inclusions",
+      "hint": "stone-grey base; Platinum hue must read at a distance",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_meteor_crater.png",
+      "what": "meteor-crater floor \u2014 scorched fused rock (meteoric iron site)",
+      "hint": "charred dark rock, faint metallic flecks",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_saltpeter_deposit.png",
+      "what": "saltpeter/nitre deposit \u2014 pale crusty mineral",
+      "hint": "chalky white-yellow crust on stone",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_sulfur_deposit.png",
+      "what": "sulfur deposit \u2014 yellow volcanic mineral",
+      "hint": "bright sulfur yellow on dark rock",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_coal_lump.png",
+      "what": "exposed coal seam",
+      "hint": "near-black with dull facets",
+      "transparent": false,
+      "batch": "B2 \u2014 Ores",
+      "palette": "stone grey + each metal\u2019s hue"
+    },
+    {
+      "filename": "block_pine_log.png",
+      "what": "Pine log \u2014 bark",
+      "hint": "Pine bark color/character",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_pine_log_top.png",
+      "what": "Pine log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_pine_leaves.png",
+      "what": "Pine leaves/needles",
+      "hint": "needled evergreen",
+      "transparent": true,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_cedar_log.png",
+      "what": "Cedar log \u2014 bark",
+      "hint": "Cedar bark color/character",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_cedar_log_top.png",
+      "what": "Cedar log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_cedar_leaves.png",
+      "what": "Cedar leaves/needles",
+      "hint": "needled evergreen",
+      "transparent": true,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_birch_log.png",
+      "what": "Birch log \u2014 bark",
+      "hint": "Birch bark color/character",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_birch_log_top.png",
+      "what": "Birch log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_birch_leaves.png",
+      "what": "Birch leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_oak_log.png",
+      "what": "Oak log \u2014 bark",
+      "hint": "Oak bark color/character",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_oak_log_top.png",
+      "what": "Oak log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_oak_leaves.png",
+      "what": "Oak leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B3 \u2014 Trees A",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_ash_log.png",
+      "what": "Ash log \u2014 bark",
+      "hint": "Ash bark color/character",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_ash_log_top.png",
+      "what": "Ash log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_ash_leaves.png",
+      "what": "Ash leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_hickory_log.png",
+      "what": "Hickory log \u2014 bark",
+      "hint": "Hickory bark color/character",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_hickory_log_top.png",
+      "what": "Hickory log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_hickory_leaves.png",
+      "what": "Hickory leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_maple_log.png",
+      "what": "Maple log \u2014 bark",
+      "hint": "Maple bark color/character",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_maple_log_top.png",
+      "what": "Maple log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_maple_leaves.png",
+      "what": "Maple leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_walnut_log.png",
+      "what": "Walnut log \u2014 bark",
+      "hint": "Walnut bark color/character",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_walnut_log_top.png",
+      "what": "Walnut log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_walnut_leaves.png",
+      "what": "Walnut leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B4 \u2014 Trees B",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_yew_log.png",
+      "what": "Yew log \u2014 bark",
+      "hint": "Yew bark color/character",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_yew_log_top.png",
+      "what": "Yew log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_yew_leaves.png",
+      "what": "Yew leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_teak_log.png",
+      "what": "Teak log \u2014 bark",
+      "hint": "Teak bark color/character",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_teak_log_top.png",
+      "what": "Teak log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_teak_leaves.png",
+      "what": "Teak leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_ebony_log.png",
+      "what": "Ebony log \u2014 bark",
+      "hint": "Ebony bark color/character",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_ebony_log_top.png",
+      "what": "Ebony log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_ebony_leaves.png",
+      "what": "Ebony leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_lignum_vitae_log.png",
+      "what": "Lignum Vitae log \u2014 bark",
+      "hint": "Lignum Vitae bark color/character",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_lignum_vitae_log_top.png",
+      "what": "Lignum Vitae log \u2014 end grain rings",
+      "hint": "concentric growth rings",
+      "transparent": false,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_lignum_vitae_leaves.png",
+      "what": "Lignum Vitae leaves/needles",
+      "hint": "broadleaf canopy",
+      "transparent": true,
+      "batch": "B5 \u2014 Trees C",
+      "palette": "per-species real wood tones"
+    },
+    {
+      "filename": "block_furnace.png",
+      "what": "furnace side/front \u2014 masonry firebox",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_furnace_top.png",
+      "what": "furnace top \u2014 soot-dark stone cap and flue rim",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_anvil.png",
+      "what": "anvil top \u2014 iron working face",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_anvil_side.png",
+      "what": "anvil side \u2014 horn, waist, and support profile",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_workbench.png",
+      "what": "workbench top \u2014 scarred timber work surface",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_workbench_side.png",
+      "what": "workbench side \u2014 timber apron, legs, and iron braces",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_loom.png",
+      "what": "loom side/front \u2014 frame, warp threads, woven cloth",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_loom_top.png",
+      "what": "loom top \u2014 crossbars, warp, and shuttle channel",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_campfire.png",
+      "what": "campfire top \u2014 crossed logs and stone ring",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_campfire_side.png",
+      "what": "campfire side \u2014 low stone ring, logs, and restrained flame",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_chest_front.png",
+      "what": "storage chest side/front \u2014 timber boards, iron bands, latch",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_chest_top.png",
+      "what": "storage chest top \u2014 timber lid and iron bands",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_grindstone.png",
+      "what": "grindstone side/front \u2014 wheel, axle, and timber support",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_grindstone_top.png",
+      "what": "grindstone top \u2014 wheel edge, axle, and support rails",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_tanning_rack.png",
+      "what": "tanning rack side/front \u2014 stretched hide and timber frame",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_tanning_rack_top.png",
+      "what": "tanning rack top \u2014 frame rails, ties, and hide edge",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B6 \u2014 Stations",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_furnace_side.png",
+      "what": "furnace generic side/back \u2014 masonry shell without firebox",
+      "hint": "worked stone + iron fittings",
+      "transparent": false,
+      "batch": "B7 \u2014 Station Profiles",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_chest_side.png",
+      "what": "storage chest generic side/back \u2014 timber panels without latch",
+      "hint": "worked timber + iron fittings",
+      "transparent": false,
+      "batch": "B7 \u2014 Station Profiles",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_loom_side.png",
+      "what": "loom generic side/back \u2014 timber slats without broad cloth panel",
+      "hint": "worked timber joinery",
+      "transparent": false,
+      "batch": "B7 \u2014 Station Profiles",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_grindstone_side.png",
+      "what": "grindstone narrow side/profile \u2014 wheel edge and support",
+      "hint": "worked stone + timber support",
+      "transparent": false,
+      "batch": "B7 \u2014 Station Profiles",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "block_tanning_rack_side.png",
+      "what": "tanning rack narrow side/profile \u2014 frame and tied hide edge",
+      "hint": "worked timber + leather",
+      "transparent": false,
+      "batch": "B7 \u2014 Station Profiles",
+      "palette": "timber + iron"
+    },
+    {
+      "filename": "item_copper_bar.png",
+      "what": "Copper bar",
+      "hint": "Copper metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_tin_bar.png",
+      "what": "Tin bar",
+      "hint": "Tin metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_bronze_bar.png",
+      "what": "Bronze bar",
+      "hint": "Bronze metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_iron_bar.png",
+      "what": "Iron bar",
+      "hint": "Iron metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_steel_bar.png",
+      "what": "Steel bar",
+      "hint": "Steel metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_damascus_bar.png",
+      "what": "Damascus Steel bar",
+      "hint": "Damascus Steel metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_meteoric_bar.png",
+      "what": "Meteoric Iron bar",
+      "hint": "Meteoric Iron metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_lead_bar.png",
+      "what": "Lead bar",
+      "hint": "Lead metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_zinc_bar.png",
+      "what": "Zinc bar",
+      "hint": "Zinc metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_silver_bar.png",
+      "what": "Silver bar",
+      "hint": "Silver metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_gold_bar.png",
+      "what": "Gold bar",
+      "hint": "Gold metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_platinum_bar.png",
+      "what": "Platinum bar",
+      "hint": "Platinum metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_brass_bar.png",
+      "what": "Brass bar",
+      "hint": "Brass metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_electrum_bar.png",
+      "what": "Electrum bar",
+      "hint": "Electrum metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_pewter_bar.png",
+      "what": "Pewter bar",
+      "hint": "Pewter metal hue; shared bar silhouette",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_coal.png",
+      "what": "coal lump",
+      "hint": "black shiny lump",
+      "transparent": true,
+      "batch": "I1 \u2014 Bars & fuel",
+      "palette": "metal hues; one bar shape"
+    },
+    {
+      "filename": "item_charcoal.png",
+      "what": "Charcoal",
+      "hint": "mineral/reagent",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_copper_ore.png",
+      "what": "raw Copper ore chunk",
+      "hint": "rough rock with Copper hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_tin_ore.png",
+      "what": "raw Tin ore chunk",
+      "hint": "rough rock with Tin hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_iron_ore.png",
+      "what": "raw Iron ore chunk",
+      "hint": "rough rock with Iron hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_meteoric_ore.png",
+      "what": "raw Meteoric Iron ore chunk",
+      "hint": "rough rock with Meteoric Iron hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_lead_ore.png",
+      "what": "raw Lead ore chunk",
+      "hint": "rough rock with Lead hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_zinc_ore.png",
+      "what": "raw Zinc ore chunk",
+      "hint": "rough rock with Zinc hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_silver_ore.png",
+      "what": "raw Silver ore chunk",
+      "hint": "rough rock with Silver hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_gold_ore.png",
+      "what": "raw Gold ore chunk",
+      "hint": "rough rock with Gold hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_platinum_ore.png",
+      "what": "raw Platinum ore chunk",
+      "hint": "rough rock with Platinum hue",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_saltpeter.png",
+      "what": "Saltpeter",
+      "hint": "mineral/reagent",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_sulfur.png",
+      "what": "Sulfur",
+      "hint": "mineral/reagent",
+      "transparent": true,
+      "batch": "I2 \u2014 Raw ore & minerals",
+      "palette": "ore lumps"
+    },
+    {
+      "filename": "item_uncut_quartz.png",
+      "what": "uncut Rock Crystal",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_quartz.png",
+      "what": "cut Rock Crystal",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_amethyst.png",
+      "what": "uncut Amethyst",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_amethyst.png",
+      "what": "cut Amethyst",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_garnet.png",
+      "what": "uncut Garnet",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_garnet.png",
+      "what": "cut Garnet",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_topaz.png",
+      "what": "uncut Topaz",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_topaz.png",
+      "what": "cut Topaz",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_emerald.png",
+      "what": "uncut Emerald",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_emerald.png",
+      "what": "cut Emerald",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_sapphire.png",
+      "what": "uncut Sapphire",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_sapphire.png",
+      "what": "cut Sapphire",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_ruby.png",
+      "what": "uncut Ruby",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_ruby.png",
+      "what": "cut Ruby",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_uncut_diamond.png",
+      "what": "uncut Diamond",
+      "hint": "rough crystal",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_diamond.png",
+      "what": "cut Diamond",
+      "hint": "faceted gem, bright core",
+      "transparent": true,
+      "batch": "I3 \u2014 Gems",
+      "palette": "faceted gem hues"
+    },
+    {
+      "filename": "item_pine_plank.png",
+      "what": "Pine plank",
+      "hint": "Pine tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks A",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_cedar_plank.png",
+      "what": "Cedar plank",
+      "hint": "Cedar tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks A",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_birch_plank.png",
+      "what": "Birch plank",
+      "hint": "Birch tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks A",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_oak_plank.png",
+      "what": "Oak plank",
+      "hint": "Oak tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks A",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_ash_plank.png",
+      "what": "Ash plank",
+      "hint": "Ash tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks A",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_hickory_plank.png",
+      "what": "Hickory plank",
+      "hint": "Hickory tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks A",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_maple_plank.png",
+      "what": "Maple plank",
+      "hint": "Maple tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks B",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_walnut_plank.png",
+      "what": "Walnut plank",
+      "hint": "Walnut tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks B",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_yew_plank.png",
+      "what": "Yew plank",
+      "hint": "Yew tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks B",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_teak_plank.png",
+      "what": "Teak plank",
+      "hint": "Teak tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks B",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_ebony_plank.png",
+      "what": "Ebony plank",
+      "hint": "Ebony tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks B",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_lignum_vitae_plank.png",
+      "what": "Lignum Vitae plank",
+      "hint": "Lignum Vitae tone",
+      "transparent": true,
+      "batch": "I4 \u2014 Planks B",
+      "palette": "wood tones"
+    },
+    {
+      "filename": "item_copper_pickaxe.png",
+      "what": "Copper pickaxe",
+      "hint": "Copper head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_axe.png",
+      "what": "Copper axe",
+      "hint": "Copper head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_shovel.png",
+      "what": "Copper shovel",
+      "hint": "Copper head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_hoe.png",
+      "what": "Copper hoe",
+      "hint": "Copper head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_chisel.png",
+      "what": "Copper chisel",
+      "hint": "Copper head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_hammer.png",
+      "what": "Copper hammer",
+      "hint": "Copper head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_sword.png",
+      "what": "Copper sword",
+      "hint": "Copper blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_dagger.png",
+      "what": "Copper dagger",
+      "hint": "Copper blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_battleaxe.png",
+      "what": "Copper battleaxe",
+      "hint": "Copper blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_spear.png",
+      "what": "Copper spear",
+      "hint": "Copper blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_helmet.png",
+      "what": "Copper helmet",
+      "hint": "Copper plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_chestplate.png",
+      "what": "Copper chestplate",
+      "hint": "Copper plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_leggings.png",
+      "what": "Copper leggings",
+      "hint": "Copper plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_boots.png",
+      "what": "Copper boots",
+      "hint": "Copper plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_copper_shield.png",
+      "what": "Copper shield",
+      "hint": "Copper plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Copper gear",
+      "palette": "Copper metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_pickaxe.png",
+      "what": "Bronze pickaxe",
+      "hint": "Bronze head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_axe.png",
+      "what": "Bronze axe",
+      "hint": "Bronze head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_shovel.png",
+      "what": "Bronze shovel",
+      "hint": "Bronze head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_hoe.png",
+      "what": "Bronze hoe",
+      "hint": "Bronze head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_chisel.png",
+      "what": "Bronze chisel",
+      "hint": "Bronze head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_hammer.png",
+      "what": "Bronze hammer",
+      "hint": "Bronze head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_sword.png",
+      "what": "Bronze sword",
+      "hint": "Bronze blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_dagger.png",
+      "what": "Bronze dagger",
+      "hint": "Bronze blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_battleaxe.png",
+      "what": "Bronze battleaxe",
+      "hint": "Bronze blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_spear.png",
+      "what": "Bronze spear",
+      "hint": "Bronze blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_helmet.png",
+      "what": "Bronze helmet",
+      "hint": "Bronze plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_chestplate.png",
+      "what": "Bronze chestplate",
+      "hint": "Bronze plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_leggings.png",
+      "what": "Bronze leggings",
+      "hint": "Bronze plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_boots.png",
+      "what": "Bronze boots",
+      "hint": "Bronze plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_bronze_shield.png",
+      "what": "Bronze shield",
+      "hint": "Bronze plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Bronze gear",
+      "palette": "Bronze metal + wood haft"
+    },
+    {
+      "filename": "item_iron_pickaxe.png",
+      "what": "Iron pickaxe",
+      "hint": "Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_axe.png",
+      "what": "Iron axe",
+      "hint": "Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_shovel.png",
+      "what": "Iron shovel",
+      "hint": "Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_hoe.png",
+      "what": "Iron hoe",
+      "hint": "Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_chisel.png",
+      "what": "Iron chisel",
+      "hint": "Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_hammer.png",
+      "what": "Iron hammer",
+      "hint": "Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_sword.png",
+      "what": "Iron sword",
+      "hint": "Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_dagger.png",
+      "what": "Iron dagger",
+      "hint": "Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_battleaxe.png",
+      "what": "Iron battleaxe",
+      "hint": "Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_spear.png",
+      "what": "Iron spear",
+      "hint": "Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_helmet.png",
+      "what": "Iron helmet",
+      "hint": "Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_chestplate.png",
+      "what": "Iron chestplate",
+      "hint": "Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_leggings.png",
+      "what": "Iron leggings",
+      "hint": "Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_boots.png",
+      "what": "Iron boots",
+      "hint": "Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_iron_shield.png",
+      "what": "Iron shield",
+      "hint": "Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Iron gear",
+      "palette": "Iron metal + wood haft"
+    },
+    {
+      "filename": "item_steel_pickaxe.png",
+      "what": "Steel pickaxe",
+      "hint": "Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_axe.png",
+      "what": "Steel axe",
+      "hint": "Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_shovel.png",
+      "what": "Steel shovel",
+      "hint": "Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_hoe.png",
+      "what": "Steel hoe",
+      "hint": "Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_chisel.png",
+      "what": "Steel chisel",
+      "hint": "Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_hammer.png",
+      "what": "Steel hammer",
+      "hint": "Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_sword.png",
+      "what": "Steel sword",
+      "hint": "Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_dagger.png",
+      "what": "Steel dagger",
+      "hint": "Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_battleaxe.png",
+      "what": "Steel battleaxe",
+      "hint": "Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_spear.png",
+      "what": "Steel spear",
+      "hint": "Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_helmet.png",
+      "what": "Steel helmet",
+      "hint": "Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_chestplate.png",
+      "what": "Steel chestplate",
+      "hint": "Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_leggings.png",
+      "what": "Steel leggings",
+      "hint": "Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_boots.png",
+      "what": "Steel boots",
+      "hint": "Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_steel_shield.png",
+      "what": "Steel shield",
+      "hint": "Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Steel gear",
+      "palette": "Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_pickaxe.png",
+      "what": "Damascus Steel pickaxe",
+      "hint": "Damascus Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_axe.png",
+      "what": "Damascus Steel axe",
+      "hint": "Damascus Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_shovel.png",
+      "what": "Damascus Steel shovel",
+      "hint": "Damascus Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_hoe.png",
+      "what": "Damascus Steel hoe",
+      "hint": "Damascus Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_chisel.png",
+      "what": "Damascus Steel chisel",
+      "hint": "Damascus Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_hammer.png",
+      "what": "Damascus Steel hammer",
+      "hint": "Damascus Steel head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_sword.png",
+      "what": "Damascus Steel sword",
+      "hint": "Damascus Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_dagger.png",
+      "what": "Damascus Steel dagger",
+      "hint": "Damascus Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_battleaxe.png",
+      "what": "Damascus Steel battleaxe",
+      "hint": "Damascus Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_spear.png",
+      "what": "Damascus Steel spear",
+      "hint": "Damascus Steel blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_helmet.png",
+      "what": "Damascus Steel helmet",
+      "hint": "Damascus Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_chestplate.png",
+      "what": "Damascus Steel chestplate",
+      "hint": "Damascus Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_leggings.png",
+      "what": "Damascus Steel leggings",
+      "hint": "Damascus Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_boots.png",
+      "what": "Damascus Steel boots",
+      "hint": "Damascus Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_damascus_shield.png",
+      "what": "Damascus Steel shield",
+      "hint": "Damascus Steel plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Damascus Steel gear",
+      "palette": "Damascus Steel metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_pickaxe.png",
+      "what": "Meteoric Iron pickaxe",
+      "hint": "Meteoric Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_axe.png",
+      "what": "Meteoric Iron axe",
+      "hint": "Meteoric Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_shovel.png",
+      "what": "Meteoric Iron shovel",
+      "hint": "Meteoric Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_hoe.png",
+      "what": "Meteoric Iron hoe",
+      "hint": "Meteoric Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_chisel.png",
+      "what": "Meteoric Iron chisel",
+      "hint": "Meteoric Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_hammer.png",
+      "what": "Meteoric Iron hammer",
+      "hint": "Meteoric Iron head, wood haft",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_sword.png",
+      "what": "Meteoric Iron sword",
+      "hint": "Meteoric Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_dagger.png",
+      "what": "Meteoric Iron dagger",
+      "hint": "Meteoric Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_battleaxe.png",
+      "what": "Meteoric Iron battleaxe",
+      "hint": "Meteoric Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_spear.png",
+      "what": "Meteoric Iron spear",
+      "hint": "Meteoric Iron blade",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_helmet.png",
+      "what": "Meteoric Iron helmet",
+      "hint": "Meteoric Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_chestplate.png",
+      "what": "Meteoric Iron chestplate",
+      "hint": "Meteoric Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_leggings.png",
+      "what": "Meteoric Iron leggings",
+      "hint": "Meteoric Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_boots.png",
+      "what": "Meteoric Iron boots",
+      "hint": "Meteoric Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_meteoric_shield.png",
+      "what": "Meteoric Iron shield",
+      "hint": "Meteoric Iron plate",
+      "transparent": true,
+      "batch": "I5 \u2014 Meteoric Iron gear",
+      "palette": "Meteoric Iron metal + wood haft"
+    },
+    {
+      "filename": "item_ash_shortbow.png",
+      "what": "ash shortbow",
+      "hint": "curved stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_ash_longbow.png",
+      "what": "ash longbow",
+      "hint": "tall stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_hickory_shortbow.png",
+      "what": "hickory shortbow",
+      "hint": "curved stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_hickory_longbow.png",
+      "what": "hickory longbow",
+      "hint": "tall stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_yew_shortbow.png",
+      "what": "yew shortbow",
+      "hint": "curved stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_yew_longbow.png",
+      "what": "yew longbow",
+      "hint": "tall stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_oak_shortbow.png",
+      "what": "oak shortbow",
+      "hint": "curved stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_oak_longbow.png",
+      "what": "oak longbow",
+      "hint": "tall stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_lignum_vitae_shortbow.png",
+      "what": "lignum_vitae shortbow",
+      "hint": "curved stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_lignum_vitae_longbow.png",
+      "what": "lignum_vitae longbow",
+      "hint": "tall stave + string",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_arrow.png",
+      "what": "arrows (fan of 3)",
+      "hint": "shaft + metal tip",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_bolt.png",
+      "what": "crossbow bolts",
+      "hint": "stubby quarrels",
+      "transparent": true,
+      "batch": "I6 \u2014 Bows & ammo",
+      "palette": "wood + cream string"
+    },
+    {
+      "filename": "item_hand_cannon.png",
+      "what": "Hand Cannon",
+      "hint": "iron barrel + walnut stock",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_flintlock_pistol.png",
+      "what": "Flintlock Pistol",
+      "hint": "steel barrel + walnut stock",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_matchlock_musket.png",
+      "what": "Matchlock Musket",
+      "hint": "steel barrel + walnut stock",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_blunderbuss.png",
+      "what": "Blunderbuss",
+      "hint": "damascus barrel + walnut stock",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_lead_ball.png",
+      "what": "Lead Ball",
+      "hint": "grey lead",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_lead_shot.png",
+      "what": "Lead Shot",
+      "hint": "grey lead",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_gunpowder.png",
+      "what": "gunpowder",
+      "hint": "dark grainy powder in a horn/pouch",
+      "transparent": true,
+      "batch": "I7 \u2014 Firearms",
+      "palette": "dark steel + walnut, brass fittings"
+    },
+    {
+      "filename": "item_silver_ring.png",
+      "what": "Silver ring",
+      "hint": "Silver band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_silver_necklace.png",
+      "what": "Silver necklace",
+      "hint": "Silver band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_silver_amulet.png",
+      "what": "Silver amulet",
+      "hint": "Silver band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_gold_ring.png",
+      "what": "Gold ring",
+      "hint": "Gold band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_gold_necklace.png",
+      "what": "Gold necklace",
+      "hint": "Gold band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_gold_amulet.png",
+      "what": "Gold amulet",
+      "hint": "Gold band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_platinum_ring.png",
+      "what": "Platinum ring",
+      "hint": "Platinum band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_platinum_necklace.png",
+      "what": "Platinum necklace",
+      "hint": "Platinum band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_platinum_amulet.png",
+      "what": "Platinum amulet",
+      "hint": "Platinum band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_brass_ring.png",
+      "what": "Brass ring",
+      "hint": "Brass band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_brass_necklace.png",
+      "what": "Brass necklace",
+      "hint": "Brass band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_brass_amulet.png",
+      "what": "Brass amulet",
+      "hint": "Brass band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_electrum_ring.png",
+      "what": "Electrum ring",
+      "hint": "Electrum band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_electrum_necklace.png",
+      "what": "Electrum necklace",
+      "hint": "Electrum band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_electrum_amulet.png",
+      "what": "Electrum amulet",
+      "hint": "Electrum band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_pewter_ring.png",
+      "what": "Pewter ring",
+      "hint": "Pewter band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_pewter_necklace.png",
+      "what": "Pewter necklace",
+      "hint": "Pewter band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    },
+    {
+      "filename": "item_pewter_amulet.png",
+      "what": "Pewter amulet",
+      "hint": "Pewter band/setting; empty socket",
+      "transparent": true,
+      "batch": "I8 \u2014 Jewelry",
+      "palette": "silver cool / gold warm / brass / platinum / electrum / pewter"
+    }
+  ],
+  "unique_filenames": [
+    "block_grass_top.png",
+    "block_grass_side.png",
+    "block_dirt.png",
+    "block_stone.png",
+    "block_cobblestone.png",
+    "block_sand.png",
+    "block_gravel.png",
+    "block_clay.png",
+    "block_snow.png",
+    "block_snow_side.png",
+    "block_water.png",
+    "block_bedrock.png",
+    "block_farmland.png",
+    "block_tall_grass.png",
+    "block_copper_ore.png",
+    "block_tin_ore.png",
+    "block_iron_ore.png",
+    "block_meteoric_ore.png",
+    "block_lead_ore.png",
+    "block_zinc_ore.png",
+    "block_silver_ore.png",
+    "block_gold_ore.png",
+    "block_platinum_ore.png",
+    "block_meteor_crater.png",
+    "block_saltpeter_deposit.png",
+    "block_sulfur_deposit.png",
+    "block_coal_lump.png",
+    "block_pine_log.png",
+    "block_pine_log_top.png",
+    "block_pine_leaves.png",
+    "block_cedar_log.png",
+    "block_cedar_log_top.png",
+    "block_cedar_leaves.png",
+    "block_birch_log.png",
+    "block_birch_log_top.png",
+    "block_birch_leaves.png",
+    "block_oak_log.png",
+    "block_oak_log_top.png",
+    "block_oak_leaves.png",
+    "block_ash_log.png",
+    "block_ash_log_top.png",
+    "block_ash_leaves.png",
+    "block_hickory_log.png",
+    "block_hickory_log_top.png",
+    "block_hickory_leaves.png",
+    "block_maple_log.png",
+    "block_maple_log_top.png",
+    "block_maple_leaves.png",
+    "block_walnut_log.png",
+    "block_walnut_log_top.png",
+    "block_walnut_leaves.png",
+    "block_yew_log.png",
+    "block_yew_log_top.png",
+    "block_yew_leaves.png",
+    "block_teak_log.png",
+    "block_teak_log_top.png",
+    "block_teak_leaves.png",
+    "block_ebony_log.png",
+    "block_ebony_log_top.png",
+    "block_ebony_leaves.png",
+    "block_lignum_vitae_log.png",
+    "block_lignum_vitae_log_top.png",
+    "block_lignum_vitae_leaves.png",
+    "block_furnace.png",
+    "block_furnace_top.png",
+    "block_anvil.png",
+    "block_anvil_side.png",
+    "block_workbench.png",
+    "block_workbench_side.png",
+    "block_loom.png",
+    "block_loom_top.png",
+    "block_campfire.png",
+    "block_campfire_side.png",
+    "block_chest_front.png",
+    "block_chest_top.png",
+    "block_grindstone.png",
+    "block_grindstone_top.png",
+    "block_tanning_rack.png",
+    "block_tanning_rack_top.png",
+    "block_furnace_side.png",
+    "block_chest_side.png",
+    "block_loom_side.png",
+    "block_grindstone_side.png",
+    "block_tanning_rack_side.png",
+    "item_copper_bar.png",
+    "item_tin_bar.png",
+    "item_bronze_bar.png",
+    "item_iron_bar.png",
+    "item_steel_bar.png",
+    "item_damascus_bar.png",
+    "item_meteoric_bar.png",
+    "item_lead_bar.png",
+    "item_zinc_bar.png",
+    "item_silver_bar.png",
+    "item_gold_bar.png",
+    "item_platinum_bar.png",
+    "item_brass_bar.png",
+    "item_electrum_bar.png",
+    "item_pewter_bar.png",
+    "item_coal.png",
+    "item_charcoal.png",
+    "item_copper_ore.png",
+    "item_tin_ore.png",
+    "item_iron_ore.png",
+    "item_meteoric_ore.png",
+    "item_lead_ore.png",
+    "item_zinc_ore.png",
+    "item_silver_ore.png",
+    "item_gold_ore.png",
+    "item_platinum_ore.png",
+    "item_saltpeter.png",
+    "item_sulfur.png",
+    "item_uncut_quartz.png",
+    "item_quartz.png",
+    "item_uncut_amethyst.png",
+    "item_amethyst.png",
+    "item_uncut_garnet.png",
+    "item_garnet.png",
+    "item_uncut_topaz.png",
+    "item_topaz.png",
+    "item_uncut_emerald.png",
+    "item_emerald.png",
+    "item_uncut_sapphire.png",
+    "item_sapphire.png",
+    "item_uncut_ruby.png",
+    "item_ruby.png",
+    "item_uncut_diamond.png",
+    "item_diamond.png",
+    "item_pine_plank.png",
+    "item_cedar_plank.png",
+    "item_birch_plank.png",
+    "item_oak_plank.png",
+    "item_ash_plank.png",
+    "item_hickory_plank.png",
+    "item_maple_plank.png",
+    "item_walnut_plank.png",
+    "item_yew_plank.png",
+    "item_teak_plank.png",
+    "item_ebony_plank.png",
+    "item_lignum_vitae_plank.png",
+    "item_copper_pickaxe.png",
+    "item_copper_axe.png",
+    "item_copper_shovel.png",
+    "item_copper_hoe.png",
+    "item_copper_chisel.png",
+    "item_copper_hammer.png",
+    "item_copper_sword.png",
+    "item_copper_dagger.png",
+    "item_copper_battleaxe.png",
+    "item_copper_spear.png",
+    "item_copper_helmet.png",
+    "item_copper_chestplate.png",
+    "item_copper_leggings.png",
+    "item_copper_boots.png",
+    "item_copper_shield.png",
+    "item_bronze_pickaxe.png",
+    "item_bronze_axe.png",
+    "item_bronze_shovel.png",
+    "item_bronze_hoe.png",
+    "item_bronze_chisel.png",
+    "item_bronze_hammer.png",
+    "item_bronze_sword.png",
+    "item_bronze_dagger.png",
+    "item_bronze_battleaxe.png",
+    "item_bronze_spear.png",
+    "item_bronze_helmet.png",
+    "item_bronze_chestplate.png",
+    "item_bronze_leggings.png",
+    "item_bronze_boots.png",
+    "item_bronze_shield.png",
+    "item_iron_pickaxe.png",
+    "item_iron_axe.png",
+    "item_iron_shovel.png",
+    "item_iron_hoe.png",
+    "item_iron_chisel.png",
+    "item_iron_hammer.png",
+    "item_iron_sword.png",
+    "item_iron_dagger.png",
+    "item_iron_battleaxe.png",
+    "item_iron_spear.png",
+    "item_iron_helmet.png",
+    "item_iron_chestplate.png",
+    "item_iron_leggings.png",
+    "item_iron_boots.png",
+    "item_iron_shield.png",
+    "item_steel_pickaxe.png",
+    "item_steel_axe.png",
+    "item_steel_shovel.png",
+    "item_steel_hoe.png",
+    "item_steel_chisel.png",
+    "item_steel_hammer.png",
+    "item_steel_sword.png",
+    "item_steel_dagger.png",
+    "item_steel_battleaxe.png",
+    "item_steel_spear.png",
+    "item_steel_helmet.png",
+    "item_steel_chestplate.png",
+    "item_steel_leggings.png",
+    "item_steel_boots.png",
+    "item_steel_shield.png",
+    "item_damascus_pickaxe.png",
+    "item_damascus_axe.png",
+    "item_damascus_shovel.png",
+    "item_damascus_hoe.png",
+    "item_damascus_chisel.png",
+    "item_damascus_hammer.png",
+    "item_damascus_sword.png",
+    "item_damascus_dagger.png",
+    "item_damascus_battleaxe.png",
+    "item_damascus_spear.png",
+    "item_damascus_helmet.png",
+    "item_damascus_chestplate.png",
+    "item_damascus_leggings.png",
+    "item_damascus_boots.png",
+    "item_damascus_shield.png",
+    "item_meteoric_pickaxe.png",
+    "item_meteoric_axe.png",
+    "item_meteoric_shovel.png",
+    "item_meteoric_hoe.png",
+    "item_meteoric_chisel.png",
+    "item_meteoric_hammer.png",
+    "item_meteoric_sword.png",
+    "item_meteoric_dagger.png",
+    "item_meteoric_battleaxe.png",
+    "item_meteoric_spear.png",
+    "item_meteoric_helmet.png",
+    "item_meteoric_chestplate.png",
+    "item_meteoric_leggings.png",
+    "item_meteoric_boots.png",
+    "item_meteoric_shield.png",
+    "item_ash_shortbow.png",
+    "item_ash_longbow.png",
+    "item_hickory_shortbow.png",
+    "item_hickory_longbow.png",
+    "item_yew_shortbow.png",
+    "item_yew_longbow.png",
+    "item_oak_shortbow.png",
+    "item_oak_longbow.png",
+    "item_lignum_vitae_shortbow.png",
+    "item_lignum_vitae_longbow.png",
+    "item_arrow.png",
+    "item_bolt.png",
+    "item_hand_cannon.png",
+    "item_flintlock_pistol.png",
+    "item_matchlock_musket.png",
+    "item_blunderbuss.png",
+    "item_lead_ball.png",
+    "item_lead_shot.png",
+    "item_gunpowder.png",
+    "item_silver_ring.png",
+    "item_silver_necklace.png",
+    "item_silver_amulet.png",
+    "item_gold_ring.png",
+    "item_gold_necklace.png",
+    "item_gold_amulet.png",
+    "item_platinum_ring.png",
+    "item_platinum_necklace.png",
+    "item_platinum_amulet.png",
+    "item_brass_ring.png",
+    "item_brass_necklace.png",
+    "item_brass_amulet.png",
+    "item_electrum_ring.png",
+    "item_electrum_necklace.png",
+    "item_electrum_amulet.png",
+    "item_pewter_ring.png",
+    "item_pewter_necklace.png",
+    "item_pewter_amulet.png"
+  ],
+  "qa": {
+    "status": "manifest check passed",
+    "output_size": [
+      32,
+      32
+    ],
+    "manifest_rows": 268,
+    "unique_filenames": 267,
+    "block_rows": 84,
+    "item_rows": 184,
+    "duplicate_filenames": {
+      "item_charcoal.png": 2
+    },
+    "raw_source_sizes": [
+      [
+        1254,
+        1254
+      ]
+    ],
+    "errors": []
+  }
+}

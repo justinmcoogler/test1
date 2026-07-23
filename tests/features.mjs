@@ -48,7 +48,8 @@ try {
     rendererDaylight: +window.__game.renderer.daylight.toFixed(2),
   }));
   check('daylight full in the morning', clock.day.light === 1 && !clock.day.night, JSON.stringify(clock.day));
-  check('night: daylight 0.25 and renderer follows', nightState.night && nightState.light === 0.25 && nightState.rendererDaylight === 0.25, JSON.stringify(nightState));
+  // renderer.daylight follows the clock, but weather (cloud/storm) may dim it below the raw value
+  check('night: daylight 0.25 and renderer follows', nightState.night && nightState.light === 0.25 && nightState.rendererDaylight > 0.1 && nightState.rendererDaylight <= 0.26, JSON.stringify(nightState));
 
   // ---- 2. Nocturnal spawns: appear at night, fade at dawn ----
   const noct = await g(() => {

@@ -1,6 +1,7 @@
 // Procedural 16×16 pixel-art icons — the game's entire icon set (no emoji).
 // Each shape is drawn once onto a canvas and cached as a data URL; the <img>
 // tags render with image-rendering: pixelated (class "pix").
+import { TEXPACK_ITEMS } from './texpack.js';
 
 const SIZE = 16;
 const cache = new Map(); // icon name → data URL
@@ -603,8 +604,11 @@ export function icon(name, size = 18, cls = '') {
   return `<img class="pix ${cls}" src="${url}" width="${size}" height="${size}" alt="">`;
 }
 
-// pixel icon for an item id (block items use their atlas tile elsewhere)
+// pixel icon for an item id (block items use their atlas tile elsewhere).
+// Real 32×32 pack art wins when present, else the procedural icon.
 export function itemIcon(id, size = 18) {
+  const uri = TEXPACK_ITEMS[id];
+  if (uri) return `<img class="pix" src="${uri}" width="${size}" height="${size}" alt="">`;
   return icon(DEFS[`it_${id}`] ? `it_${id}` : 'boxicon', size);
 }
 
@@ -614,4 +618,4 @@ export function skillIcon(key, size = 16) {
 
 // True when an item id has a dedicated icon (not the boxicon fallback). Used by
 // tests to guarantee generated catalog items are all covered.
-export function hasItemIcon(id) { return !!DEFS[`it_${id}`]; }
+export function hasItemIcon(id) { return !!DEFS[`it_${id}`] || !!TEXPACK_ITEMS[id]; }

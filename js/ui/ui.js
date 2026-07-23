@@ -284,7 +284,11 @@ export class UI {
       }
       const wd = wsys.def();
       const dot = wd.tint ? `rgb(${wd.tint.map((v) => Math.round(v * 255)).join(',')})` : '#ffd98a';
-      eb.innerHTML = `<span class="env-dot" style="background:${dot}"></span>${wd.label} · ${wsys.season}`;
+      const key = `${wd.label}|${wsys.season}|${dot}`;
+      if (this._envKey !== key) { // only touch the DOM when it actually changes
+        this._envKey = key;
+        eb.innerHTML = `<span class="env-dot" style="background:${dot}"></span>${wd.label} · ${wsys.season}`;
+      }
     }
     // breath bar only surfaces while diving (or catching your breath)
     let bb = $('breath-bar');

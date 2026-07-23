@@ -21,6 +21,7 @@ import { UI } from './ui/ui.js';
 import { registerMob, injectSpawnRules, fetchMobFiles, evaluatePose } from './game/mobloader.js';
 import { findPath } from './game/pathfind.js';
 import { icon as pixelIcon } from './gfx/icons.js';
+import { applyTexturePack } from './gfx/textures.js';
 import { buildRig, playerAnimations } from './game/rigs.js';
 import { EducationManager } from './game/education.js';
 import { hashSeed } from './core/rng.js';
@@ -40,6 +41,8 @@ class Game {
     this.settings = loadSettings();
     this.canvas = $('game-canvas');
     this.renderer = new Renderer(this.canvas);
+    // blit the real 32×32 art pack over the procedural atlas, then re-upload
+    applyTexturePack().then((ok) => { if (ok) this.renderer.refreshAtlas(); });
     this.world = new World(hashSeed(seedText));
     this.weather = new Weather(this.world.seed);
     this.player = new Player();
@@ -538,14 +541,18 @@ class Game {
     const underground = eyeY < surf - 3 || (eyeY < SEA - 2);
     this.renderer.fogMix += ((underground ? 1 : 0) - this.renderer.fogMix) * Math.min(1, dt * 2);
 
-    // body temperature: felt climate (biome + season/weather + night + altitude +
-    // water) offset by clothing insulation and nearby fire; caves stay cool & stable
-    if (!p.debug && !p.dead) {
-      this._fireWarmT = (this._fireWarmT || 0) - dt;
-      if (this._fireWarmT <= 0) { this._fireWarmT = 0.5; this._fireWarmth = this.computeFireWarmth(p); }
+    // Survival (temperature, hydration, nutrition) is throttled to ~5 Hz with an
+    // accumulated dt — same integrated result at a fraction of the per-frame cost,
+    // which keeps the frame budget (and click-to-move travel) healthy on weak GPUs.
+    this._survAccum = (this._survAccum || 0) + dt;
+    if (this._survAccum >= 0.2 && !p.debug && !p.dead) {
+      const sdt = this._survAccum; this._survAccum = 0;
+      this._fireWarmth = this.computeFireWarmth(p);
       const est = this.inventory.equipStats();
       const warmth = (est.warmth || 0) * 0.03 + est.armor * 0.012; // insulation proxy
-      const band = 0.15 + this.skills.level('vitality') * 0.0015;   // Constitution widens comfort
+      // Wide comfort band: unprepared cold/heat is a slow pressure (find a fire /
+      // clothes), not a quick death. Constitution widens it further.
+      const band = 0.24 + this.skills.level('vitality') * 0.0012;
       let felt;
       if (underground) {
         felt = 0.45;
@@ -558,12 +565,12 @@ class Game {
         if (p.sprinting) felt += 0.02;
         felt += this._fireWarmth || 0;
       }
-      p.tickTemperature(dt, clamp(felt + warmth, 0, 1), band, warmth * 4);
-
-      // hydration & nutrition (heat and exertion cost water)
+      p.tickTemperature(sdt, clamp(felt + warmth, 0, 1), band, warmth * 4);
       const hot = p.tempState === 'hot' || p.tempState === 'heatstroke';
-      p.tickHydration(dt, hot, p.sprinting, p.inWater);
-      p.tickNutrition(dt);
+      p.tickHydration(sdt, hot, p.sprinting, p.inWater);
+      p.tickNutrition(sdt);
+    } else if (this._survAccum >= 0.2) {
+      this._survAccum = 0; // discard accrued time while dead/in debug
     }
 
     // camera
