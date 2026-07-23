@@ -14,6 +14,10 @@ export function initSlabSet() {
 
 export const DAY_LEN = 480; // seconds per full day/night cycle
 
+// Global wildlife-spawn multiplier applied to every biome's per-block enemy
+// density. Lower = sparser, more realistic wildlife. Tune here in one place.
+const MOB_SPAWN_RATE = 0.4;
+
 export const chunkKey = (cx, cz) => `${cx},${cz}`;
 export const cellKey = (x, y, z) => `${x},${y},${z}`;
 const lidx = (lx, y, lz) => (y * CHUNK + lz) * CHUNK + lx;
@@ -135,7 +139,7 @@ export class World {
             // for equal-length names (e.g. moss_lurker vs glimmer_fox) and would
             // let an earlier same-length enemy permanently shadow a later one.
             e._salt ??= hashSeed(e.type);
-            if (hash2(this.seed + e._salt, wx, wz) < e.d) {
+            if (hash2(this.seed + e._salt, wx, wz) < e.d * MOB_SPAWN_RATE) {
               const n = e.pack
                 ? e.pack[0] + Math.floor(hash2(this.seed + 913, wx, wz) * (e.pack[1] - e.pack[0] + 1))
                 : 1;
