@@ -360,7 +360,7 @@ export class WorldGen {
   }
 
   // ---- Column assembly ---------------------------------------------------
-  // Writes one column into a chunk-local Uint8Array. Returns surface info.
+  // Writes one column into the chunk-local block array (Uint16). Returns surface info.
   column(blocks, lx, lz, wx, wz, setLocal) {
     const h = this.heightAt(wx, wz);
     const biome = this.biomeAt(wx, wz);

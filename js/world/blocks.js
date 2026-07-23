@@ -2,6 +2,7 @@
 // shape: 'cube' | 'cross' (plants) | 'liquid' | 'slab' (low cube, e.g. stump/mound)
 // tiles: {top, side, bottom} atlas tile names (side used for all if only entry)
 import { WOODS, METALS } from '../game/materials.js';
+import { COLORS } from '../core/colors.js';
 
 export const B = {}; // name → id
 export const BLOCKS = []; // id → def
@@ -166,6 +167,23 @@ for (const base of ['stone', 'cobble', 'stone_brick']) {
 for (const s of ['slab', 'stairs', 'fence', 'gate']) defShape('planks', s);
 defShape('thatch', 'slab');
 defShape('glasspane', 'pane', { label: 'Glass Pane', transparent: true });
+
+// ---- Colored block families (16 dyes) ---------------------------------------
+// wool/carpet (soft), concrete + powder, terracotta + glazed, and stained glass
+// + panes. Tinted tiles are generated in gfx/textures.js from the same COLORS.
+const CAP = (s) => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+for (const [id, ] of COLORS) {
+  const C = CAP(id);
+  def(`${id}_wool`, { label: `${C} Wool`, hardness: 0.9, tool: null });
+  def(`${id}_carpet`, { label: `${C} Carpet`, shape: 'carpet', hardness: 0.4, tiles: { all: `${id}_wool` }, drops: `${id}_carpet` });
+  def(`${id}_concrete`, { label: `${C} Concrete`, hardness: 1.8, tool: 'pickaxe' });
+  def(`${id}_concrete_powder`, { label: `${C} Concrete Powder`, hardness: 0.7, tool: 'shovel' });
+  def(`${id}_terracotta`, { label: `${C} Terracotta`, hardness: 1.4, tool: 'pickaxe' });
+  def(`${id}_glazed_terracotta`, { label: `${C} Glazed Terracotta`, hardness: 1.4, tool: 'pickaxe' });
+  def(`${id}_stained_glass`, { label: `${C} Stained Glass`, opaque: false, transparent: true, hardness: 0.4, drops: null });
+  def(`${id}_stained_glass_pane`, { label: `${C} Glass Pane`, shape: 'pane', transparent: true, hardness: 0.4, tiles: { all: `${id}_stained_glass` }, drops: null });
+}
+def('terracotta', { label: 'Terracotta', hardness: 1.4, tool: 'pickaxe' }); // plain fired clay
 
 export function blockByName(name) { return BLOCKS[B[name]]; }
 export function isSolid(id) { return BLOCKS[id]?.solid === true; }

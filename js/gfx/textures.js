@@ -2,11 +2,12 @@
 // (1px grain) for detailed, fully original seeded art.
 import { mulberry32, hashSeed } from '../core/rng.js';
 import { WOODS, METALS, FIREARMS } from '../game/materials.js';
+import { COLORS } from '../core/colors.js';
 import { TEXPACK_TILES } from './texpack.js';
 
 export const TILE = 32;
 export const ATLAS_COLS = 16;
-export const ATLAS_ROWS = 12; // headroom for the generated realistic wood/ore/mineral tiles
+export const ATLAS_ROWS = 22; // headroom for wood/ore/mineral + the 16-colour tinted families
 const G = 1; // grain: logical pixel size
 const LP = TILE / G; // 32 logical pixels per side
 
@@ -459,6 +460,41 @@ PAINTERS.coal_seam ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#3a3733', 0.05);
 PAINTERS.saltpeter_deposit ??= (c, x, y, r) => { PAINTERS.stone(c, x, y, r); oreBlobs(c, x, y, r, '#e7e2c0', '#f6f2d8', 4); };
 PAINTERS.sulfur_deposit ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#4a4640', 0.05); oreBlobs(c, x, y, r, '#d9c43a', '#f2e05a', 5); };
 PAINTERS.meteor_crater ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#2e2b30', 0.07, { chance: 0.12, color: '#4a4650' }); oreBlobs(c, x, y, r, '#6b6a72', '#a29fb0', 3); };
+
+// ---- Colored block families: tint one base pattern per dye colour -----------
+function hexToRgb(hex) { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function mix(a, b, t) {
+  const A = hexToRgb(a), B = hexToRgb(b);
+  const r = Math.round(A[0] + (B[0] - A[0]) * t), g = Math.round(A[1] + (B[1] - A[1]) * t), bl = Math.round(A[2] + (B[2] - A[2]) * t);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + bl).toString(16).slice(1)}`;
+}
+function rgba(hex, a) { const [r, g, b] = hexToRgb(hex); return `rgba(${r},${g},${b},${a})`; }
+
+const COLOR_PAINTERS = {
+  wool: (hex) => (c, x, y, r) => {
+    noisyFill(c, x, y, r, hex, 0.07);
+    for (let j = 0; j < LP; j++) for (let i = 0; i < LP; i++) if ((i + j) % 2 === 0 && r() < 0.4) px(c, x, y, i, j, shade(hex, -0.06));
+  },
+  concrete: (hex) => (c, x, y, r) => noisyFill(c, x, y, r, hex, 0.025),
+  concrete_powder: (hex) => (c, x, y, r) => noisyFill(c, x, y, r, hex, 0.11, { chance: 0.10, color: mix(hex, '#ffffff', 0.16) }),
+  terracotta: (hex) => { const base = mix(hex, '#8a5a40', 0.5); return (c, x, y, r) => { noisyFill(c, x, y, r, base, 0.05); for (let yy = 0; yy < LP; yy += 6) for (let xx = 0; xx < LP; xx++) if (r() < 0.5) px(c, x, y, xx, yy, shade(base, -0.08)); }; },
+  glazed_terracotta: (hex) => { const lite = mix(hex, '#ffffff', 0.14); return (c, x, y, r) => { noisyFill(c, x, y, r, lite, 0.02); for (let i = 0; i < LP; i++) { px(c, x, y, i, i, shade(hex, -0.22)); px(c, x, y, i, (i + 8) % LP, shade(hex, 0.14)); px(c, x, y, LP - 1 - i, i, shade(hex, -0.1)); } }; },
+  stained_glass: (hex) => (c, x, y, r) => {
+    c.clearRect(x, y, TILE, TILE); c.fillStyle = rgba(hex, 0.42); c.fillRect(x, y, TILE, TILE);
+    const fr = shade(hex, -0.15);
+    for (let i = 0; i < LP; i++) { px(c, x, y, i, 0, fr); px(c, x, y, i, LP - 1, fr); px(c, x, y, 0, i, fr); px(c, x, y, LP - 1, i, fr); }
+    px(c, x, y, 3, 3, 'rgba(255,255,255,0.6)'); px(c, x, y, 4, 4, 'rgba(255,255,255,0.4)');
+  },
+};
+for (const [id, hex] of COLORS) {
+  PAINTERS[`${id}_wool`] ??= COLOR_PAINTERS.wool(hex);
+  PAINTERS[`${id}_concrete`] ??= COLOR_PAINTERS.concrete(hex);
+  PAINTERS[`${id}_concrete_powder`] ??= COLOR_PAINTERS.concrete_powder(hex);
+  PAINTERS[`${id}_terracotta`] ??= COLOR_PAINTERS.terracotta(hex);
+  PAINTERS[`${id}_glazed_terracotta`] ??= COLOR_PAINTERS.glazed_terracotta(hex);
+  PAINTERS[`${id}_stained_glass`] ??= COLOR_PAINTERS.stained_glass(hex);
+}
+PAINTERS.terracotta ??= COLOR_PAINTERS.terracotta('#9a6045'); // plain fired clay
 
 // Reserve atlas slots for any pack-only tiles (new station faces) so they get a
 // UV; the real art is blitted over the placeholder by applyTexturePack().

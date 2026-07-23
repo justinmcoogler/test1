@@ -60,7 +60,7 @@ export class World {
   getChunk(cx, cz) { return this.chunks.get(chunkKey(cx, cz)); }
 
   generateChunk(cx, cz) {
-    const blocks = new Uint8Array(CHUNK * CHUNK * WORLD_H);
+    const blocks = new Uint16Array(CHUNK * CHUNK * WORLD_H); // 16-bit: >256 block ids (colored families, shapes)
     const chunk = { cx, cz, blocks, nodes: [], spawns: [], surfaceH: new Int16Array(CHUNK * CHUNK) };
     const setLocal = (lx, y, lz, id) => { blocks[lidx(lx, y, lz)] = id; };
     const gen = this.gen;
