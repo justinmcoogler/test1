@@ -95,7 +95,7 @@ export const NODE_TYPES = {
       { item: 'springroot', qty: [1, 1], weight: 2 },
       { item: 'duskcap', qty: [1, 1], weight: 1, level: 12 },
     ],
-    rare: [{ item: 'sunpetal', chance: 0.03 }],
+    rare: [{ item: 'sunpetal', chance: 0.03 }, { item: 'silverleaf', chance: 0.03 }],
   },
   berry_bush: {
     label: 'Tartberry Bush', skill: 'foraging', level: 1, tool: null,

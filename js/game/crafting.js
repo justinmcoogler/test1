@@ -223,6 +223,22 @@ for (const d of BLOCKS) {
   push(d.name, outQ, 'construction_bench', 'construction', 1, 4, [[base, inQ]]);
 }
 
+// ---- Audit fixes: give every remaining hand-authored item an honest source ---
+// Ammunition (fletching), a waterskin, the named flavour weapons/armour and the
+// only magic weapon — all were catalogued but had no recipe or drop.
+push('arrow', 8, 'workbench', 'woodworking', 1, 6, [['planks', 1], ['plant_fibre', 1]]);
+push('bolt', 6, 'workbench', 'woodworking', 3, 8, [['planks', 1], ['sinew', 1]]);
+push('waterskin', 1, 'loom_block', 'tailoring', 2, 10, [['cured_hide', 1], ['cord', 1]]);
+push('bronze_blade', 1, 'anvil_block', 'smithing', 8, 30, [['bronze_bar', 2], ['planks', 1]]);
+push('iron_blade', 1, 'anvil_block', 'smithing', 15, 44, [['iron_bar', 2], ['planks', 1]]);
+push('bronze_helm', 1, 'anvil_block', 'smithing', 8, 28, [['bronze_bar', 3]]);
+push('bronze_cuirass', 1, 'anvil_block', 'smithing', 10, 40, [['bronze_bar', 5]]);
+push('bronze_greaves', 1, 'anvil_block', 'smithing', 9, 34, [['bronze_bar', 4]]);
+push('boneshard_spear', 1, 'workbench', 'woodworking', 5, 26, [['bone_needle', 2], ['planks', 2]]);
+push('thornwood_bow', 1, 'workbench', 'woodworking', 3, 22, [['planks', 3], ['cord', 2]]);
+push('recurve_silverbow', 1, 'workbench', 'woodworking', 12, 40, [['silver_bar', 1], ['planks', 3], ['cord', 2]]);
+push('ember_staff', 1, 'construction_bench', 'crafting', 10, 40, [['emberstone_shard', 2], ['planks', 2]]);
+
 export function availableRecipes(skills, discoveredItems) {
   return RECIPES.filter((rec) => !rec.discover || discoveredItems.has(rec.discover));
 }

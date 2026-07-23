@@ -63,8 +63,8 @@ export const NPC_DEFS = {
       ],
       // Merchant pays roughly 40% of a fair market value
       buys: {
-        fernwood_log: 2, silverbark_log: 5, emberpine_log: 8,
-        copper_ore_chunk: 3, tin_ore_chunk: 3, iron_ore_chunk: 6, silver_ore_chunk: 12,
+        fernwood_log: 2, emberpine_log: 8,
+        copper_ore: 3, tin_ore: 3, iron_ore: 6, silver_ore: 12,
         silverfin: 3, mudwhisker: 5, duskeel: 10, boar_haunch: 3, boarhide: 3,
         bitterleaf: 2, springroot: 2, tartberries: 1, pottery_shard: 4, old_coin: 6,
         bone_needle: 5, rough_gem: 15, amber_resin: 8, clay_lump: 2, grainsheaf: 2, golden_grain: 20,

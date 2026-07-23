@@ -52,7 +52,7 @@ def('bedrock', { label: 'Deepshale', hardness: Infinity, drops: null });
 // Trees — three original species
 def('fernwood_log', { tiles: { top: 'fernwood_ring', side: 'fernwood_bark' }, hardness: 2.2, tool: 'axe' });
 def('fernwood_leaves', { opaque: false, hardness: 0.4, drops: null, tiles: { all: 'fernwood_leaves' } });
-def('silverbark_log', { tiles: { top: 'silverbark_ring', side: 'silverbark_bark' }, hardness: 2.6, tool: 'axe' });
+def('silverbark_log', { tiles: { top: 'silverbark_ring', side: 'silverbark_bark' }, hardness: 2.6, tool: 'axe', drops: null });
 def('silverbark_leaves', { opaque: false, hardness: 0.4, drops: null });
 def('emberpine_log', { tiles: { top: 'emberpine_ring', side: 'emberpine_bark' }, hardness: 3.0, tool: 'axe' });
 def('emberpine_needles', { opaque: false, hardness: 0.4, drops: null });
@@ -105,7 +105,7 @@ def('chest_block', { label: 'Storage Chest', hardness: 2.0, tool: 'axe', directi
 def('ruin_brick', { label: 'Ancient Brick', hardness: 4.5, tool: 'pickaxe', drops: 'rough_stone' });
 def('rootstone', { hardness: 5, tool: 'pickaxe', drops: 'rough_stone' });
 def('mossy_ruin', { label: 'Mossy Ruin', hardness: 4.5, tool: 'pickaxe', drops: 'rough_stone' });
-def('obsidian_glass', { label: 'Nightglass', hardness: 9, tool: 'pickaxe', minTier: 4 });
+def('obsidian_glass', { label: 'Nightglass', hardness: 9, tool: 'pickaxe', minTier: 4, drops: 'rough_stone' });
 def('corrupt_soil', { hardness: 1.0, tool: 'shovel', drops: 'dirt' });
 def('ashen_soil', { hardness: 1.0, tool: 'shovel', drops: 'dirt' });
 def('basalt', { hardness: 4.0, tool: 'pickaxe', drops: 'rough_stone' });
