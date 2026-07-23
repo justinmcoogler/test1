@@ -242,6 +242,7 @@ try {
   await gState(() => {
     const g = window.__game;
     g.inventory.add('copper_ore', 4);
+    g.inventory.add('charcoal', 4); // fuel hot enough to smelt copper
   });
   await teleportFacing(12.5, 65, -12.5, 12, 65, -14); // workshop, near furnace
   await page.waitForTimeout(300);
@@ -249,12 +250,17 @@ try {
     const g = window.__game;
     const stations = g.nearbyStations();
     if (!stations.has('furnace')) return { ok: false, reason: 'no furnace nearby: ' + [...stations] };
-    const { RECIPES, craft } = window.__crafting;
+    const { RECIPES, craft, canCraft } = window.__crafting;
     const rec = RECIPES.find((r) => r.out === 'copper_bar');
+    // without fuel it must refuse; with charcoal it smelts and burns one
+    g.inventory.consumeAll([{ item: 'charcoal', qty: g.inventory.count('charcoal') }]);
+    const noFuel = canCraft(rec, g.inventory, g.skills, stations).ok;
+    g.inventory.add('charcoal', 4);
+    const before = g.inventory.count('charcoal');
     const res = craft(rec, g.inventory, g.skills, stations);
-    return { ok: res.ok, bars: g.inventory.count('copper_bar') };
+    return { ok: res.ok, noFuel, bars: g.inventory.count('copper_bar'), fuelBurned: before - g.inventory.count('charcoal') };
   });
-  check('smelted copper at furnace', smelted.ok, JSON.stringify(smelted));
+  check('smelted copper at furnace (fuel-gated + burned)', smelted.ok && smelted.noFuel === false && smelted.fuelBurned === 1, JSON.stringify(smelted));
 
   // ---- 9. Turn-based combat vs the practice dummy ----
   const dummy = await gState(() => {

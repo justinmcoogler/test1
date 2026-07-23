@@ -88,30 +88,55 @@ export const RECIPES = [
 // Generated realistic recipes (from js/game/materials.js). Levels come from the
 // catalog; quantities/xp use simple tier formulas Phase 3 tuning can revisit.
 // ===========================================================================
-const push = (...a) => RECIPES.push(r(...a));
+const push = (...a) => { const rec = r(...a); RECIPES.push(rec); return rec; };
 const lockedGun = (...a) => { const rec = r(...a); rec.educationLocked = true; RECIPES.push(rec); };
+
+// ---- fuel-temperature smelting -------------------------------------------
+// Each fuel burns to a temperature; a metal only smelts when a fuel that hot (or
+// hotter) is on hand, consumed with the ore. Real ladder: charcoal for the
+// bronze-age metals, coal for iron & steel, coke for the hottest (platinum,
+// meteoric). The recipe stores a `fuelTemp`; the UI shows the minimum fuel.
+export const FUELS = { charcoal: 1150, coal: 1400, coke: 1800 };
+const SMELT_TEMP = { copper: 1085, tin: 950, lead: 800, zinc: 1000, silver: 960, gold: 1064, iron: 1250, platinum: 1768, meteoric: 1500 };
+const ALLOY_TEMP = { bronze: 950, steel: 1400, damascus: 1450, brass: 950, electrum: 1000, pewter: 400 };
+
+// the cheapest fuel the player has that burns hot enough, or null
+function bestFuel(inv, temp) {
+  let best = null, bestHeat = Infinity;
+  for (const [item, heat] of Object.entries(FUELS)) {
+    if (heat >= temp && heat < bestHeat && (inv.count ? inv.count(item) : 1) >= 1) { best = item; bestHeat = heat; }
+  }
+  return best;
+}
+// the minimum fuel that reaches a temperature (for UI hints)
+export function minFuel(temp) {
+  let name = 'coke', heat = Infinity;
+  for (const [item, h] of Object.entries(FUELS)) if (h >= temp && h < heat) { name = item; heat = h; }
+  return name;
+}
 
 // planks: generic (bootstrap woods) + one worked plank per species
 push('planks', 4, null, 'woodworking', 1, 6, [['pine_log', 1]]);
 push('planks', 4, null, 'woodworking', 1, 6, [['oak_log', 1]]);
 for (const w of WOODS) push(`${w.id}_plank`, 4, null, 'woodworking', w.woodLevel, Math.round(5 + w.tier * 2), [[`${w.id}_log`, 1]]);
 push('charcoal', 1, 'furnace', 'crafting', 1, 6, [['pine_log', 1]]);
+push('coke', 1, 'furnace', 'smithing', 40, 16, [['coal', 2]]).fuelTemp = FUELS.charcoal; // bake coal airless into the hottest fuel
 
-// smelting: ore → bar (iron/steel-line need coal in the furnace)
+// smelting: ore → bar, gated by a hot-enough fuel (charcoal → coal → coke)
 for (const m of METALS) {
   if (!(m.smelt || []).some((s) => s.endsWith('_ore'))) continue;
   const lvl = m.mineLevel || 1;
-  const inputs = [[`${m.id}_ore`, 2]];
-  if ((m.smelt || []).includes('coal')) inputs.push(['coal', 1]);
-  push(`${m.id}_bar`, 1, 'furnace', 'smithing', lvl, Math.round(18 + lvl * 1.5), inputs);
+  const rec = push(`${m.id}_bar`, 1, 'furnace', 'smithing', lvl, Math.round(18 + lvl * 1.5), [[`${m.id}_ore`, 2]]);
+  rec.fuelTemp = SMELT_TEMP[m.id] || FUELS.charcoal;
 }
-// alloys: combine bars (recipe straight from the catalog's alloy list)
+// alloys: combine bars (coal, where the catalog lists it, becomes the fuel)
 for (const m of METALS) {
   if (!m.alloy) continue;
   const tally = {};
-  for (const ref of m.alloy) tally[ref] = (tally[ref] || 0) + 1;
+  for (const ref of m.alloy) if (ref !== 'coal') tally[ref] = (tally[ref] || 0) + 1;
   const lvl = m.smithLevel || 1;
-  push(`${m.id}_bar`, 1, 'furnace', 'smithing', lvl, Math.round(30 + lvl * 2), Object.entries(tally));
+  const rec = push(`${m.id}_bar`, 1, 'furnace', 'smithing', lvl, Math.round(30 + lvl * 2), Object.entries(tally));
+  rec.fuelTemp = ALLOY_TEMP[m.id] || FUELS.charcoal;
 }
 // gem cutting (Crafting): uncut → cut
 for (const g of GEMS) push(g.id, 1, 'workbench', 'crafting', g.cutLevel, Math.round(10 + g.cutLevel * 2), [[`uncut_${g.id}`, 1]]);
@@ -159,17 +184,21 @@ export function canCraft(rec, inv, skills, nearbyStations, firearmsAllowed = tru
   if (rec.station && !nearbyStations.has(rec.station)) return { ok: false, reason: `Needs ${STATION_LABELS[rec.station]}` };
   if (skills.level(rec.skill) < rec.level) return { ok: false, reason: `Needs ${rec.skill} ${rec.level}` };
   if (!inv.hasAll(rec.inputs)) return { ok: false, reason: 'Missing materials' };
+  if (rec.fuelTemp && !bestFuel(inv, rec.fuelTemp)) return { ok: false, reason: `Needs ${minFuel(rec.fuelTemp)} to reach ${rec.fuelTemp}°C` };
   return { ok: true };
 }
 
 export function craft(rec, inv, skills, nearbyStations, firearmsAllowed = true) {
   const check = canCraft(rec, inv, skills, nearbyStations, firearmsAllowed);
   if (!check.ok) return check;
+  const fuel = rec.fuelTemp ? bestFuel(inv, rec.fuelTemp) : null;
   inv.consumeAll(rec.inputs);
+  if (fuel) inv.consumeAll([{ item: fuel, qty: 1 }]); // burn one unit of the hot-enough fuel
   // consuming inputs may have freed the space; if the result still can't fit,
   // refund rather than silently vaporizing the output
   if (!inv.canFit(rec.out, rec.outQty)) {
     for (const inp of rec.inputs) inv.add(inp.item, inp.qty);
+    if (fuel) inv.add(fuel, 1);
     return { ok: false, reason: 'Inventory full' };
   }
   inv.add(rec.out, rec.outQty);

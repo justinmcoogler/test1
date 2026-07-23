@@ -1,7 +1,7 @@
 // All DOM UI: HUD, windows, dialogue, shop, chest, combat interface, labels.
 import { ITEMS } from '../game/items.js';
 import { SKILL_DEFS, SKILL_UNLOCKS, xpForLevel } from '../game/skills.js';
-import { RECIPES, STATION_LABELS, canCraft, craft } from '../game/crafting.js';
+import { RECIPES, STATION_LABELS, canCraft, craft, minFuel } from '../game/crafting.js';
 import { EQUIP_SLOTS, EQUIP_LABELS, HOTBAR_SIZE, INV_SIZE } from '../game/inventory.js';
 import { QUESTS } from '../game/quests.js';
 import { NPC_DEFS, DIALOGUES } from '../game/npcs.js';
@@ -789,6 +789,11 @@ export class UI {
           const have = g.inventory.count(inp.item);
           return `<div class="cd-input ${have >= inp.qty ? 'have' : 'missing'}"><span>${ITEMS[inp.item].label}</span><span>${have}/${inp.qty}</span></div>`;
         }).join('')}
+        ${rec.fuelTemp ? (() => {
+          const fuel = minFuel(rec.fuelTemp);
+          const have = g.inventory.count(fuel);
+          return `<div class="cd-input ${have >= 1 ? 'have' : 'missing'}"><span>${icon('flame', 11)} Fuel: ${ITEMS[fuel].label}+ (${rec.fuelTemp}°C)</span><span>${have}/1</span></div>`;
+        })() : ''}
         <div style="margin-top:10px">
           <button data-craft="1" ${check.ok ? '' : 'disabled'}>Craft</button>
           <button data-craft="5" ${check.ok ? '' : 'disabled'}>Craft ×5</button>

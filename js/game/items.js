@@ -182,8 +182,9 @@ for (const m of METALS) {
   if (m.role !== 'fuel')
     it(`${m.id}_bar`, `${m.label} Bar`, { desc: m.note });
 }
-it('coal', 'Coal', { desc: 'Forge & furnace fuel.' });
+it('coal', 'Coal', { desc: 'Forge & furnace fuel — hot enough for iron & steel.' });
 it('charcoal', 'Charcoal', { desc: 'Burn logs to make it; fuel & gunpowder reagent.' });
+it('coke', 'Coke', { desc: 'Coal baked hot and airless — the hottest fuel, for platinum & meteoric iron.' });
 for (const r of FIREARMS.reagents) if (r.id !== 'charcoal') it(r.id, r.label, { desc: r.source });
 
 // ---- gems: uncut (mining drop) + cut (Crafting) ----

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { METALS, WOODS, GEMS, FIREARMS, toolMetals, jewelryMetals } from '../../js/game/materials.js';
-import { RECIPES, STATION_LABELS, canCraft, craft } from '../../js/game/crafting.js';
+import { RECIPES, STATION_LABELS, canCraft, craft, FUELS } from '../../js/game/crafting.js';
 import { EducationManager } from '../../js/game/education.js';
 import { NODE_TYPES } from '../../js/game/nodes.js';
 import { SKILL_DEFS } from '../../js/game/skills.js';
@@ -25,6 +25,30 @@ test('recipes: every recipe has real out/inputs, valid station, skill and level'
     assert.ok(rc.level >= 1 && rc.level <= 99, `bad level ${rc.level} for ${rc.out}`);
     for (const inp of rc.inputs) assert.ok(item(inp.item), `recipe ${rc.out} needs missing item ${inp.item}`);
   }
+});
+
+test('smelting is gated by fuel temperature (charcoal → coal → coke)', () => {
+  const skills = { level: () => 99, addXp() {} };
+  const mkInv = (bag) => ({
+    count: (i) => bag[i] || 0,
+    hasAll: (reqs) => reqs.every((rq) => (bag[rq.item] || 0) >= rq.qty),
+    canFit: () => true, add() {}, consumeAll() {},
+  });
+  const smeltRec = (out) => RECIPES.find((rc) => rc.out === out && rc.fuelTemp);
+
+  const iron = smeltRec('iron_bar');
+  assert.ok(iron && iron.fuelTemp > FUELS.charcoal, 'iron needs more than charcoal');
+  assert.equal(canCraft(iron, mkInv({ iron_ore: 9, charcoal: 9 }), skills, new Set([iron.station])).ok, false, 'charcoal too cool for iron');
+  assert.equal(canCraft(iron, mkInv({ iron_ore: 9, coal: 9 }), skills, new Set([iron.station])).ok, true, 'coal smelts iron');
+
+  const met = smeltRec('meteoric_bar');
+  assert.ok(met && met.fuelTemp > FUELS.coal, 'meteoric needs more than coal');
+  assert.equal(canCraft(met, mkInv({ meteoric_ore: 9, coal: 9 }), skills, new Set([met.station])).ok, false, 'coal too cool for meteoric');
+  assert.equal(canCraft(met, mkInv({ meteoric_ore: 9, coke: 9 }), skills, new Set([met.station])).ok, true, 'coke smelts meteoric');
+
+  const cu = smeltRec('copper_bar');
+  assert.equal(canCraft(cu, mkInv({ copper_ore: 9, charcoal: 9 }), skills, new Set([cu.station])).ok, true, 'charcoal smelts copper');
+  assert.equal(canCraft(cu, mkInv({ copper_ore: 9 }), skills, new Set([cu.station])).ok, false, 'no fuel, no smelt');
 });
 
 test('recipes: full metal ladder is craftable (smelt/alloy → bars → gear)', () => {
@@ -59,7 +83,7 @@ test('firearms are craftable in free play but blocked in education mode by defau
   // a gun recipe must be blocked by canCraft when firearms are off, allowed when on
   const gunRec = RECIPES.find((rc) => rc.educationLocked && FIREARMS.guns.some((g) => g.id === rc.out));
   assert.ok(gunRec, 'a gun recipe exists');
-  const inv = { hasAll: () => true, canFit: () => true, add() {}, consumeAll() {} };
+  const inv = { hasAll: () => true, canFit: () => true, add() {}, consumeAll() {}, count: () => 99 };
   const skills = { level: () => 99, addXp() {} };
   const stations = new Set([gunRec.station]);
   assert.equal(canCraft(gunRec, inv, skills, stations, false).ok, false, 'guns off → not craftable');
