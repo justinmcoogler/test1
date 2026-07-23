@@ -96,7 +96,7 @@ test('firearms are craftable in free play but blocked in education mode by defau
 test('tree canopies are leafy and stay within a chunk-local radius-2 footprint', () => {
   for (const [type, def] of Object.entries(NODE_TYPES)) {
     if (def.kind !== 'tree') continue;
-    assert.ok(['cone', 'round', 'spread'].includes(def.canopy), `${type} has a canopy style`);
+    assert.ok(['cone', 'round', 'spread', 'slim'].includes(def.canopy), `${type} has a canopy style`);
     const node = { type, x: 0, y: 64, z: 0, meta: { h: def.trunk[1] } };
     const cells = nodeBlocks(node, 'ready');
     const leaves = cells.filter((c) => c.id === B[def.leaves]);
