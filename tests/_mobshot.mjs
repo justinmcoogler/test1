@@ -43,7 +43,12 @@ try {
       const def = window.__enemies.ENEMY_TYPES[type];
       if (!def) return false;
       let maxY = 0.6, maxR = 0.4;
-      for (const b of def.model) { maxY = Math.max(maxY, b.y + b.h); maxR = Math.max(maxR, Math.abs(b.x) + b.w, Math.abs(b.z) + b.d); }
+      // remade mobs carry their boxes in parts; legacy mobs in def.model
+      const rm = window.__remakes?.[type];
+      const boxes = rm
+        ? rm.parts.flatMap((p) => p.boxes.map((b) => ({ x: b.from[0], y: b.from[1], z: b.from[2], w: b.size[0], h: b.size[1], d: b.size[2] })))
+        : def.model;
+      for (const b of boxes) { maxY = Math.max(maxY, b.y + b.h); maxR = Math.max(maxR, Math.abs(b.x) + b.w, Math.abs(b.z) + b.d); }
       const e = g.spawnMobNear(type);
       if (!e) return false;
       const p = g.player;

@@ -24,6 +24,8 @@ import { icon as pixelIcon } from './gfx/icons.js';
 import { applyTexturePack } from './gfx/textures.js';
 import { buildRig, playerAnimations } from './game/rigs.js';
 import { buildPlayerSkinCanvas, partBoxUV, swatchUV, preloadPlayerSkins } from './gfx/playerskin.js';
+import { MOB_REMAKES } from './game/mobremakes/index.js';
+import { registerRemadeMob, preloadMobSkins, mobSkinOverride } from './game/mobremake.js';
 import { EducationManager } from './game/education.js';
 import { LessonRunner } from './game/lessons.js';
 import { hashSeed } from './core/rng.js';
@@ -149,8 +151,10 @@ class Game {
   }
 
   registerModels() {
+    window.__remakes = MOB_REMAKES; // dev/harness access (framing, audits)
     for (const [type, def] of Object.entries(ENEMY_TYPES)) {
       if (def.custom) continue; // imported mobs register through the mob loader
+      if (MOB_REMAKES[type]) { registerRemadeMob(this.renderer, type, MOB_REMAKES[type]); continue; }
       const rig = buildRig(type, def);
       if (rig) this.renderer.registerAnimatedModel(type, rig.parts, rig.animations);
       else this.renderer.registerModel(type, def.model, def.skin);
@@ -178,6 +182,14 @@ class Game {
     // If real 64×64 player art (skin_player_base / skin_armor_*) is bundled,
     // decode it once and repaint the skin; a no-op until those PNGs exist.
     preloadPlayerSkins().then((n) => { if (n) this.registerPlayerModel(); });
+    // Same for per-creature mob skins (mob_<type>.png) — re-register any remade
+    // mob whose real art just decoded.
+    preloadMobSkins().then((n) => {
+      if (!n) return;
+      for (const [type, def] of Object.entries(MOB_REMAKES)) {
+        if (mobSkinOverride(type)) registerRemadeMob(this.renderer, type, def);
+      }
+    });
   }
 
   registerPlayerModel() {

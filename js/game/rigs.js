@@ -191,6 +191,120 @@ export function buildRig(type, def) {
   return { parts, animations: anims };
 }
 
+// ---- explicit-parts rigs (mob remakes) -------------------------------------
+// Remade mobs declare their parts outright (no geometry heuristics), so the
+// animation set is generated from part IDS: 'body' (required), 'head', 'tail',
+// legs match /^leg/, arms match /^arm/. Same movement vocabulary as buildRig.
+export function buildPartAnimations(style, parts, overrides = null) {
+  const anims = { idle: { length: 3.2, parts: {} }, walk: { length: 0.7, parts: {} }, attack: { length: 0.5, loop: false, parts: {} } };
+  const A = (part, anim, ch, keys) => {
+    if (!anims[anim]) return;
+    if (!anims[anim].parts[part]) anims[anim].parts[part] = {};
+    anims[anim].parts[part][ch] = keys;
+  };
+  const ids = new Set(parts.map((p) => p.id));
+  const legs = parts.filter((p) => /^leg/.test(p.id));
+  const arms = parts.filter((p) => /^arm/.test(p.id));
+  const head = ids.has('head'), tail = ids.has('tail');
+
+  if (style === 'quadruped' || style === 'pecker') {
+    legs.forEach((p) => {
+      const fore = (p.pivot?.[2] || 0) > 0, left = (p.pivot?.[0] || 0) < 0;
+      const phase = (fore === left) ? 1 : -1; // diagonal pairs together
+      A(p.id, 'walk', 'rotate', phase > 0 ? swing(0.7, 24) : swing(0.7, -24));
+    });
+    if (head) {
+      A('head', 'idle', 'rotate', [[0, [0, -10, 0]], [1.6, [0, 10, 0]], [3.2, [0, -10, 0]]]);
+      A('head', 'walk', 'rotate', swing(0.7, 4));
+      A('head', 'attack', 'rotate', style === 'pecker'
+        ? [[0, [0, 0, 0]], [0.12, [55, 0, 0]], [0.3, [-10, 0, 0]], [0.5, [0, 0, 0]]]
+        : [[0, [0, 0, 0]], [0.15, [-28, 0, 0]], [0.32, [22, 0, 0]], [0.5, [0, 0, 0]]]);
+    }
+    if (tail) {
+      A('tail', 'idle', 'rotate', [[0, [0, -14, 0]], [1.6, [0, 14, 0]], [3.2, [0, -14, 0]]]);
+      A('tail', 'walk', 'rotate', swing(0.7, 0, 18));
+    }
+    A('body', 'idle', 'translate', swingT(3.2, 0, 0.015, 0));
+    A('body', 'walk', 'translate', [[0, [0, 0.03, 0]], [0.18, [0, 0, 0]], [0.35, [0, 0.03, 0]], [0.52, [0, 0, 0]], [0.7, [0, 0.03, 0]]]);
+    A('body', 'attack', 'translate', [[0, [0, 0, 0]], [0.15, [0, 0.02, 0.14]], [0.5, [0, 0, 0]]]);
+  } else if (style === 'biped') {
+    arms.forEach((p) => {
+      const left = (p.pivot?.[0] || 0) < 0;
+      A(p.id, 'idle', 'rotate', swing(3.2, left ? 2.5 : -2.5));
+      A(p.id, 'walk', 'rotate', left ? swing(0.7, 18) : swing(0.7, -18));
+      A(p.id, 'attack', 'rotate', [[0, [0, 0, 0]], [0.12, [-100, 0, 0]], [0.3, [30, 0, 0]], [0.5, [0, 0, 0]]]);
+    });
+    legs.forEach((p) => {
+      const left = (p.pivot?.[0] || 0) < 0;
+      A(p.id, 'walk', 'rotate', left ? swing(0.7, 22) : swing(0.7, -22));
+    });
+    if (head) {
+      A('head', 'idle', 'rotate', [[0, [0, -8, 0]], [1.6, [0, 8, 0]], [3.2, [0, -8, 0]]]);
+      A('head', 'attack', 'rotate', [[0, [0, 0, 0]], [0.15, [-16, 0, 0]], [0.5, [0, 0, 0]]]);
+    }
+    A('body', 'idle', 'translate', swingT(3.2, 0, 0.02, 0));
+    A('body', 'walk', 'rotate', swing(0.7, 0, 0, 3));
+    A('body', 'walk', 'translate', [[0, [0, 0.035, 0]], [0.18, [0, 0, 0]], [0.35, [0, 0.035, 0]], [0.52, [0, 0, 0]], [0.7, [0, 0.035, 0]]]);
+    A('body', 'attack', 'translate', [[0, [0, 0, 0]], [0.15, [0, 0, 0.12]], [0.5, [0, 0, 0]]]);
+  } else if (style === 'floater') {
+    A('body', 'idle', 'translate', swingT(2.6, 0, 0.07, 0));
+    A('body', 'idle', 'rotate', swing(2.6, 0, 0, 4));
+    A('body', 'walk', 'translate', swingT(1.1, 0, 0.09, 0));
+    A('body', 'walk', 'rotate', [[0, [8, 0, 3]], [0.55, [8, 0, -3]], [1.1, [8, 0, 3]]]);
+    A('body', 'attack', 'translate', [[0, [0, 0, 0]], [0.14, [0, 0.05, 0.3]], [0.5, [0, 0, 0]]]);
+    A('body', 'attack', 'rotate', [[0, [0, 0, 0]], [0.14, [-14, 0, 0]], [0.5, [0, 0, 0]]]);
+    anims.walk.length = 1.1;
+    if (head) A('head', 'idle', 'rotate', [[0, [0, -12, 0]], [1.3, [0, 12, 0]], [2.6, [0, -12, 0]]]);
+  } else if (style === 'hopper') {
+    if (head) A('head', 'idle', 'rotate', [[0, [0, -10, 0]], [1.6, [0, 10, 0]], [3.2, [0, -10, 0]]]);
+    A('body', 'idle', 'translate', swingT(3.2, 0, 0.015, 0));
+    A('body', 'walk', 'translate', [[0, [0, 0, 0]], [0.25, [0, 0.14, 0]], [0.5, [0, 0, 0]]]);
+    A('body', 'walk', 'rotate', [[0, [4, 0, 0]], [0.25, [-6, 0, 0]], [0.5, [4, 0, 0]]]);
+    anims.walk.length = 0.5;
+    A('body', 'attack', 'translate', [[0, [0, 0, 0]], [0.13, [0, 0.1, 0.25]], [0.5, [0, 0, 0]]]);
+  } else if (style === 'scamper' || style === 'slither') {
+    if (head) {
+      A('head', 'idle', 'rotate', [[0, [-6, -8, 0]], [1.6, [4, 8, 0]], [3.2, [-6, -8, 0]]]);
+      A('head', 'attack', 'rotate', [[0, [0, 0, 0]], [0.13, [-24, 0, 0]], [0.3, [18, 0, 0]], [0.5, [0, 0, 0]]]);
+    }
+    if (tail) {
+      A('tail', 'idle', 'rotate', [[0, [0, -20, 0]], [1.6, [0, 20, 0]], [3.2, [0, -20, 0]]]);
+      A('tail', 'walk', 'rotate', swing(0.45, 0, 26));
+    }
+    const sway = style === 'slither' ? 12 : 6;
+    A('body', 'walk', 'rotate', swing(0.45, 0, sway));
+    A('body', 'walk', 'translate', swingT(0.45, 0.02, 0.01, 0));
+    anims.walk.length = 0.45;
+    A('body', 'idle', 'rotate', swing(3.2, 0, style === 'slither' ? 6 : 2));
+    A('body', 'attack', 'translate', [[0, [0, 0, 0]], [0.12, [0, 0.04, 0.3]], [0.5, [0, 0, 0]]]);
+  } else if (style === 'lumberer') {
+    A('body', 'idle', 'translate', swingT(3.6, 0, 0.02, 0));
+    anims.idle.length = 3.6;
+    A('body', 'walk', 'rotate', swing(0.9, 0, 0, 6));
+    A('body', 'walk', 'translate', [[0, [0, 0.03, 0]], [0.22, [0, 0, 0]], [0.45, [0, 0.03, 0]], [0.68, [0, 0, 0]], [0.9, [0, 0.03, 0]]]);
+    anims.walk.length = 0.9;
+    A('body', 'attack', 'rotate', [[0, [0, 0, 0]], [0.16, [22, 0, 0]], [0.5, [0, 0, 0]]]);
+    if (head) A('head', 'attack', 'rotate', [[0, [0, 0, 0]], [0.14, [-26, 0, 0]], [0.34, [16, 0, 0]], [0.5, [0, 0, 0]]]);
+  } else if (style === 'sway') {
+    A('body', 'idle', 'rotate', swing(3.6, 0, 0, 2));
+    anims.idle.length = 3.6;
+    delete anims.walk;
+    A('body', 'attack', 'rotate', [[0, [0, 0, 0]], [0.2, [0, 0, 8]], [0.5, [0, 0, 0]]]);
+  }
+
+  // per-def overrides merge on top (add/replace channels, adjust lengths)
+  if (overrides) {
+    for (const [anim, spec] of Object.entries(overrides)) {
+      if (!anims[anim]) anims[anim] = { length: spec.length || 1, parts: {}, ...(spec.loop === false ? { loop: false } : {}) };
+      if (spec.length) anims[anim].length = spec.length;
+      for (const [pid, chans] of Object.entries(spec.parts || {})) {
+        for (const [ch, keys] of Object.entries(chans)) A(pid, anim, ch, keys);
+      }
+    }
+  }
+  return anims;
+}
+
 // ---- the player -----------------------------------------------------------
 // Hand-rigged blocky humanoid. Boxes are grouped by the caller (main.js knows
 // the geometry + equipment overlays); this provides the animation set.
