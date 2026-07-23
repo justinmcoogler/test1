@@ -87,6 +87,13 @@ body.classic-cam #crosshair { display: none; }
 .vital-bar.energy .vital-fill { background: var(--energy); }
 .vital-bar.mana .vital-fill { background: var(--mana); }
 .vital-bar.breath .vital-fill { background: #6ac8e8; }
+#env-badge { position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 12px;
+  background: rgba(0, 0, 0, 0.5); border: 1px solid var(--edge); color: var(--ink);
+  font-size: calc(12px * var(--text-scale)); font-weight: 700; letter-spacing: 0.3px;
+  pointer-events: none; white-space: nowrap; }
+#env-badge .env-dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 4px rgba(255,255,255,0.4); }
+@media (max-width: 640px) { #env-badge { top: calc(6px + env(safe-area-inset-top, 0px)); font-size: 11px; padding: 2px 7px; } }
 .vital-tag { font-size: calc(11px * var(--text-scale)); font-weight: 700; letter-spacing: 0.4px;
   padding: 2px 6px; border-radius: 4px; align-self: flex-start; }
 .vital-tag.bleed { color: #ffd7d7; background: rgba(150, 20, 20, 0.62); border: 1px solid #c23a3a;

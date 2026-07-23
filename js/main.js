@@ -2,6 +2,7 @@
 import { buildAtlas } from './gfx/textures.js';
 import { Renderer } from './gfx/renderer.js';
 import { World, initSlabSet } from './world/world.js';
+import { Weather } from './world/weather.js';
 import { CHUNK, WORLD_H, SEA } from './world/worldgen.js';
 import { B, BLOCKS } from './world/blocks.js';
 import { NODE_TYPES, rollNodeDrops } from './game/nodes.js';
@@ -40,6 +41,7 @@ class Game {
     this.canvas = $('game-canvas');
     this.renderer = new Renderer(this.canvas);
     this.world = new World(hashSeed(seedText));
+    this.weather = new Weather(this.world.seed);
     this.player = new Player();
     this.inventory = new Inventory();
     this.skills = new Skills();
@@ -495,8 +497,16 @@ class Game {
       this.saveGame();
     }
 
-    // day/night clock drives sky light, fog and the music mood
-    this.renderer.daylight = this.world.daylight();
+    // weather & seasons: local biome climate drives a slow-moving weather front
+    const cx = Math.floor(p.x), cz = Math.floor(p.z);
+    this.weather.update(dt, this.world.time, {
+      temp: this.world.gen.temperatureAt(cx, cz),
+      moist: this.world.gen.moistureAt(cx, cz),
+    });
+    const wr = this.weather.renderState();
+
+    // day/night clock drives sky light, fog and the music mood (weather dims it)
+    this.renderer.daylight = this.world.daylight() * wr.day;
     if ((this._moodTick = (this._moodTick || 0) + dt) > 1) {
       this._moodTick = 0;
       const night = this.world.isNight();
@@ -539,6 +549,8 @@ class Game {
       selection: this.currentSelection,
       markers: this.collectMarkers(),
       dots: (!this.combat.active && this.trailDots) || null,
+      // weather only over open sky — caves keep their own darkness
+      weather: underground ? null : wr,
     });
 
     // HUD

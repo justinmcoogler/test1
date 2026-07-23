@@ -36,6 +36,7 @@ export class Renderer {
     this.renderDistance = 5; // chunks
     this.fogMix = 0;         // 0 surface … 1 cave
     this.particles = [];
+    this.precip = { type: null, intensity: 0, wind: 0, pool: [] }; // rain/snow field around the camera
     this.time = 0;
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
@@ -219,6 +220,49 @@ export class Renderer {
     }
   }
 
+  // ---- precipitation: a recycled rain/snow field around the camera ----
+  syncPrecip(w, openMix) {
+    const type = (w && openMix > 0.2) ? w.precip : null;
+    this.precip.type = type;
+    this.precip.intensity = type ? (w.intensity || 0) * openMix : 0;
+    this.precip.wind = w ? (w.wind || 0) : 0;
+  }
+
+  updatePrecip(dt) {
+    const pr = this.precip;
+    if (!pr.type && !pr.pool.length) return;   // nothing to do; don't touch the camera
+    if (!this.camPos) { pr.pool.length = 0; return; }
+    const snow = pr.type === 'snow';
+    let target = 0;
+    if (pr.type) {
+      const base = snow ? 90 : 150;
+      target = Math.round(base * Math.min(1, pr.intensity) * (this.reducedMotion ? 0.3 : 1));
+    }
+    const R = 15;
+    const cx = this.camPos[0], cy = this.camPos[1], cz = this.camPos[2];
+    const pool = pr.pool;
+    while (pool.length < target) {
+      pool.push({
+        x: cx + (Math.random() * 2 - 1) * R,
+        y: cy + 3 + Math.random() * 16,
+        z: cz + (Math.random() * 2 - 1) * R,
+        sway: Math.random() * Math.PI * 2,
+      });
+    }
+    if (pool.length > target) pool.length = target;
+    const fall = snow ? 3.4 : 22;
+    const wind = pr.wind * (snow ? 1.2 : 2.2);
+    for (const p of pool) {
+      p.y -= fall * dt;
+      p.x += wind * dt + (snow ? Math.sin((p.sway += dt * 1.5)) * 0.6 * dt : 0);
+      if (p.y < cy - 8 || Math.abs(p.x - cx) > R + 3 || Math.abs(p.z - cz) > R + 3) {
+        p.x = cx + (Math.random() * 2 - 1) * R;
+        p.y = cy + 8 + Math.random() * 12;
+        p.z = cz + (Math.random() * 2 - 1) * R;
+      }
+    }
+  }
+
   // ---- main draw ----
   draw(world, opts) {
     const gl = this.gl;
@@ -236,11 +280,23 @@ export class Renderer {
       skyFog[1] + (CAVE_FOG[1] - skyFog[1]) * this.fogMix,
       skyFog[2] + (CAVE_FOG[2] - skyFog[2]) * this.fogMix,
     ];
+    // weather tints the sky/fog toward its palette (only over open ground)
+    const wthr = opts.weather;
+    const openMix = 1 - this.fogMix;
+    if (wthr && wthr.tint && openMix > 0.02) {
+      const amt = Math.min(0.85, ((wthr.fog || 0) + wthr.intensity * 0.28) * openMix);
+      for (let i = 0; i < 3; i++) fog[i] += (wthr.tint[i] - fog[i]) * amt;
+    }
     gl.clearColor(fog[0], fog[1], fog[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    const fogFar = this.renderDistance * CHUNK * 0.95;
+    // heavy weather pulls the fog wall closer for a shut-in feel
+    let fogFar = this.renderDistance * CHUNK * 0.95;
+    if (wthr && wthr.fog) fogFar *= 1 - 0.35 * wthr.fog * openMix;
     const fogNear = fogFar * 0.55;
+
+    this.syncPrecip(wthr, openMix);
+    this.updatePrecip(opts.dt || 0.016);
 
     // --- world passes (terrain program: sky/block light channels) ---
     const tp = this.terrainProg;
@@ -402,6 +458,30 @@ export class Renderer {
         ],
         p.color
       );
+    }
+    // precipitation: rain streaks / snow flakes recycled around the camera
+    if (this.precip.pool.length) {
+      const snow = this.precip.type === 'snow';
+      const rx = [this.view[0], this.view[4], this.view[8]]; // camera-right in world space
+      if (snow) {
+        const ry = [this.view[1], this.view[5], this.view[9]];
+        const s = 0.05;
+        for (const p of this.precip.pool) {
+          quad([
+            [p.x - rx[0] * s - ry[0] * s, p.y - rx[1] * s - ry[1] * s, p.z - rx[2] * s - ry[2] * s],
+            [p.x + rx[0] * s - ry[0] * s, p.y + rx[1] * s - ry[1] * s, p.z + rx[2] * s - ry[2] * s],
+            [p.x + rx[0] * s + ry[0] * s, p.y + rx[1] * s + ry[1] * s, p.z + rx[2] * s + ry[2] * s],
+            [p.x - rx[0] * s + ry[0] * s, p.y - rx[1] * s + ry[1] * s, p.z - rx[2] * s + ry[2] * s],
+          ], [0.95, 0.96, 1.0]);
+        }
+      } else {
+        const w = 0.02, len = 0.75;
+        for (const p of this.precip.pool) {
+          const x0 = p.x - rx[0] * w, z0 = p.z - rx[2] * w;
+          const x1 = p.x + rx[0] * w, z1 = p.z + rx[2] * w;
+          quad([[x0, p.y, z0], [x1, p.y, z1], [x1, p.y - len, z1], [x0, p.y - len, z0]], [0.62, 0.70, 0.82]);
+        }
+      }
     }
     // quest-trail guide dots: little pixels laid along the path on the ground
     for (const d of opts.dots || []) {

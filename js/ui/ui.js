@@ -236,6 +236,19 @@ export class UI {
       }
       bl.textContent = `Bleeding — ${Math.ceil(p.bleeding)}s`;
     } else if (bl) bl.remove();
+    // weather + season badge (glyph art pending — text with a weather-tinted dot)
+    const wsys = this.game.weather;
+    if (wsys) {
+      let eb = $('env-badge');
+      if (!eb) {
+        eb = document.createElement('div');
+        eb.id = 'env-badge';
+        $('hud').appendChild(eb);
+      }
+      const wd = wsys.def();
+      const dot = wd.tint ? `rgb(${wd.tint.map((v) => Math.round(v * 255)).join(',')})` : '#ffd98a';
+      eb.innerHTML = `<span class="env-dot" style="background:${dot}"></span>${wd.label} · ${wsys.season}`;
+    }
     // breath bar only surfaces while diving (or catching your breath)
     let bb = $('breath-bar');
     if (p.air < p.maxAir - 0.05) {
