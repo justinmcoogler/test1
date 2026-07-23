@@ -287,6 +287,10 @@ export class Renderer {
       const amt = Math.min(0.85, ((wthr.fog || 0) + wthr.intensity * 0.28) * openMix);
       for (let i = 0; i < 3; i++) fog[i] += (wthr.tint[i] - fog[i]) * amt;
     }
+    // per-biome atmospheric grade warms/cools the sky + distance haze
+    if (opts.grade && openMix > 0.02) {
+      for (let i = 0; i < 3; i++) fog[i] = Math.min(1, Math.max(0, fog[i] * (1 + (opts.grade[i] - 1) * openMix)));
+    }
     gl.clearColor(fog[0], fog[1], fog[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 

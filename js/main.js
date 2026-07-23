@@ -520,11 +520,14 @@ class Game {
 
     // weather & seasons: local biome climate drives a slow-moving weather front
     const cx = Math.floor(p.x), cz = Math.floor(p.z);
+    const btemp = this.world.gen.temperatureAt(cx, cz);
     this.weather.update(dt, this.world.time, {
-      temp: this.world.gen.temperatureAt(cx, cz),
+      temp: btemp,
       moist: this.world.gen.moistureAt(cx, cz),
     });
     const wr = this.weather.renderState();
+    // per-biome atmospheric colour grade: warm/amber in the heat, cool/blue in the cold
+    const grade = [1 + (btemp - 0.5) * 0.16, 1 + (btemp - 0.5) * 0.02, 1 - (btemp - 0.5) * 0.16];
 
     // day/night clock drives sky light, fog and the music mood (weather dims it)
     this.renderer.daylight = this.world.daylight() * wr.day;
@@ -604,6 +607,7 @@ class Game {
       dots: (!this.combat.active && this.trailDots) || null,
       // weather only over open sky — caves keep their own darkness
       weather: underground ? null : wr,
+      grade: underground ? null : grade,
     });
 
     // HUD
