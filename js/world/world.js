@@ -44,7 +44,7 @@ export class World {
     this.structEditsByChunk = indexEditsByChunk(s.edits, CHUNK);
     this.markers = s.markers;
     for (const ch of s.chests) this.chestMeta.set(ch.id, ch);
-    for (const [x, y, z, f] of s.facings || []) this.blockFacing.set(`${x},${y},${z}`, f & 3);
+    for (const [x, y, z, f] of s.facings || []) this.blockFacing.set(`${x},${y},${z}`, f & 7);
   }
 
   // ---- Chunk generation --------------------------------------------------
@@ -264,7 +264,7 @@ export class World {
   facingAt(x, y, z) { return this.blockFacing.get(`${x},${y},${z}`) ?? 0; }
   setFacing(x, y, z, facing) {
     const key = `${x},${y},${z}`;
-    if (facing) this.blockFacing.set(key, facing & 3); else this.blockFacing.delete(key);
+    if (facing) this.blockFacing.set(key, facing & 7); else this.blockFacing.delete(key); // bits: 0-1 dir, 2 top-half
     this.dirtyChunks.add(chunkKey(Math.floor(x / CHUNK), Math.floor(z / CHUNK)));
   }
 

@@ -1410,10 +1410,22 @@ class Game {
         px + 1 > minX && px < maxX && py + 1 > minY && py < maxY && pz + 1 > minZ && pz < maxZ) return;
     if (this.world.nodeAt(px, py, pz)) return;
     this.world.setBlock(px, py, pz, B[def.block], true);
-    // directional stations (furnace, chest, workbench, loom) turn their front to face you
-    if (blockDef.directional) {
-      const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5);
-      const facing = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 0 : 2);
+    // orientation: stairs face the way you look (step on that side) and go
+    // upside-down when placed against a ceiling / upper half; slabs pick top or
+    // bottom; stations (furnace, chest, gate) turn their front toward you.
+    if (blockDef.directional || blockDef.shape === 'slab') {
+      const topHalf = hit.face[1] === -1 || (hit.face[1] === 0 && p.pitch > 0.15);
+      let facing;
+      if (blockDef.shape === 'stairs') {
+        const lx = -Math.sin(p.yaw), lz = -Math.cos(p.yaw);
+        const dir = Math.abs(lx) > Math.abs(lz) ? (lx > 0 ? 1 : 3) : (lz > 0 ? 0 : 2);
+        facing = dir | (topHalf ? 4 : 0);
+      } else if (blockDef.shape === 'slab') {
+        facing = topHalf ? 4 : 0;
+      } else {
+        const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5);
+        facing = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 0 : 2);
+      }
       this.world.setFacing(px, py, pz, facing);
     }
     this.inventory.removeSlot(this.inventory.selected, 1);

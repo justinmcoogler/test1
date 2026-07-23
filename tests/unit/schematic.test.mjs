@@ -146,6 +146,21 @@ test('directional blocks carry a facing parsed from the blockstate', () => {
   assert.equal(plain.f, undefined, 'non-directional blocks carry no facing');
 });
 
+test('upside-down stairs and top slabs set the top-half bit', () => {
+  const palette = {
+    'minecraft:oak_stairs[facing=north,half=top]': 0,
+    'minecraft:stone_brick_slab[type=top]': 1,
+    'minecraft:stone_brick_slab[type=bottom]': 2,
+  };
+  const buf = nbt({ w: 3, h: 1, l: 1, palette, _indices: [0, 1, 2] });
+  const conv = convertSchematic(buf, '.schem');
+  const upStair = conv.cells.find((c) => c.block === 'planks_stairs');
+  assert.equal(upStair.f, 2 | 4, 'facing=north (2) + top half (4) = 6');
+  const topSlab = conv.cells.filter((c) => c.block === 'stone_brick_slab');
+  assert.ok(topSlab.some((c) => c.f === 4), 'type=top slab → facing 4');
+  assert.ok(topSlab.some((c) => c.f === undefined), 'type=bottom slab → no facing');
+});
+
 // ── game-side loader (pasteSchematic) with a fake world ─────────────────────
 import { pasteSchematic } from '../../js/world/schematic.js';
 

@@ -54,22 +54,30 @@ export const CONNECTS = {
 // connecting shapes. Returns nothing; pushes quads.
 export function emitShape(target, def, wx, y, wz, light, facing, sides) {
   switch (def.shape) {
-    case 'slab':
-      box(target, def, wx, y, wz, 0, 0, 0, 1, 0.5, 1, light, facing);
+    case 'slab': {
+      const top = (facing >> 2) & 1; // bit 2 = top half (upside-down)
+      if (top) box(target, def, wx, y, wz, 0, 0.5, 0, 1, 1, 1, light, 0);
+      else box(target, def, wx, y, wz, 0, 0, 0, 1, 0.5, 1, light, 0);
       break;
+    }
 
     case 'carpet':
-      box(target, def, wx, y, wz, 0, 0, 0, 1, 1 / 16, 1, light, facing);
+      box(target, def, wx, y, wz, 0, 0, 0, 1, 1 / 16, 1, light, 0);
       break;
 
     case 'stairs': {
-      box(target, def, wx, y, wz, 0, 0, 0, 1, 0.5, 1, light, facing); // full lower slab
-      // upper step fills the half AWAY from the facing (low edge faces `facing`)
-      const [fx, fz] = FRONT_N[facing];
+      const dir = facing & 3, top = (facing >> 2) & 1;
+      // full slab — bottom half, or top half when upside-down (half=top)
+      if (top) box(target, def, wx, y, wz, 0, 0.5, 0, 1, 1, 1, light, dir);
+      else box(target, def, wx, y, wz, 0, 0, 0, 1, 0.5, 1, light, dir);
+      // the raised step sits on the SAME side as `facing` (Minecraft convention),
+      // in the vertical half opposite the slab
+      const [fx, fz] = FRONT_N[dir];
       let x0 = 0, z0 = 0, x1 = 1, z1 = 1;
-      if (fx === 1) x1 = 0.5; else if (fx === -1) x0 = 0.5;
-      else if (fz === 1) z1 = 0.5; else if (fz === -1) z0 = 0.5;
-      box(target, def, wx, y, wz, x0, 0.5, z0, x1, 1, z1, light, facing);
+      if (fx === 1) x0 = 0.5; else if (fx === -1) x1 = 0.5;
+      else if (fz === 1) z0 = 0.5; else if (fz === -1) z1 = 0.5;
+      if (top) box(target, def, wx, y, wz, x0, 0, z0, x1, 0.5, z1, light, dir);
+      else box(target, def, wx, y, wz, x0, 0.5, z0, x1, 1, z1, light, dir);
       break;
     }
 
@@ -99,7 +107,7 @@ export function emitShape(target, def, wx, y, wz, light, facing, sides) {
 
     case 'gate': {
       // a closed gate: two jamb posts + two rails spanning the axis across `facing`
-      const [fx] = FRONT_N[facing];
+      const [fx] = FRONT_N[facing & 3];
       const across = fx !== 0; // front points along X → gate bars run along Z
       const t0 = 0.4375, t1 = 0.5625;
       if (across) {
