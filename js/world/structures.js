@@ -2,8 +2,17 @@
 // and the Rootgrave dungeon beneath it. Produces explicit block edits +
 // node/NPC/enemy placements that worldgen applies on top of terrain.
 import { B } from './blocks.js';
+import { MANOR } from './starter-manor.js';
 
 const key = (x, y, z) => `${x},${y},${z}`;
+
+// Starter loot for the manor's built-in chests (in cell-iteration order). Any
+// chest past this list is left empty — free home storage.
+const MANOR_CHEST_LOOT = [
+  [{ item: 'travel_biscuit', qty: 3 }, { item: 'torch_item', qty: 6 }],
+  [{ item: 'plant_fibre', qty: 6 }, { item: 'rough_stone', qty: 6 }],
+  [{ item: 'coin', qty: 40 }],
+];
 
 // The whole settlement, mine, dungeon, pond and Frostwatch camp are authored
 // at the legacy 64-tall vertical scale (ground≈30) and lifted uniformly into
@@ -289,7 +298,33 @@ export function buildStarterStructures() {
     nodes.push({ type: 'tree_yew', x: CX + 10, y: F2, z: CZ - 4, meta: { h: 6 } });
   }
 
+  // ---- Ashford Manor: the grand starter house west of town ---------------
+  // Converted from a Minecraft schematic (assets/schematics/z7_recolored) and
+  // baked to a (0,0,0)-cornered cell list by tools/bake-manor.mjs. Placed so the
+  // build's terrace (its layer y=4) lands on the plateau surface: the foundation
+  // (y<4) buries and you walk in at ground level. Worldgen pins MANOR_PAD flat
+  // and keeps procedural trees/mobs off it. Its built-in chests become storage.
+  {
+    // origin: normalized y=0 → authored 26 → real 60 (set() adds LIFT); terrace
+    // y=4 → real 64. Footprint 36×28 centered on the pad at world (-60, 0).
+    const OX = -78, OZ = -14, OY = 26;
+    const pal = MANOR.palette.map((n) => B[n]);
+    const cells = MANOR.cells;
+    let mc = 0;
+    for (let i = 0; i < cells.length; i += 4) {
+      const x = OX + cells[i], y = OY + cells[i + 1], z = OZ + cells[i + 2], id = pal[cells[i + 3]];
+      set(x, y, z, id);
+      if (id === B.chest_block) {
+        chests.push({ id: `manor_chest_${mc}`, x, y, z, loot: MANOR_CHEST_LOOT[mc] || [] });
+        mc++;
+      }
+    }
+    // gravel lane linking the town's west path to the manor terrace
+    for (let x = -42; x <= -31; x++) for (let z = 0; z <= 1; z++) set(x, GROUND, z, B.gravel);
+  }
+
   const markers = {
+    manor: [-60, F, 0],
     spawn: [6, F, 6],
     frostwatch: [556, 34, -119],
     wolfDen: [560, 34, -136],

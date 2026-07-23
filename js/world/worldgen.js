@@ -16,6 +16,11 @@ export const SEA = 62;
 // exists on every seed.
 export const FROST_CAMP = { x: 560, z: -120, ground: 67 };
 
+// A flat shelf just west of Brookhollow for the converted starter manor. Pinned
+// to the settlement surface (64) so the manor's terrace sits flush and the lane
+// from town stays level. Kept clear of procedural trees/mobs by world.js.
+export const MANOR_PAD = { x: -60, z: 0, ground: 64 };
+
 // A real-world climate taxonomy. biomeAt() places each biome by real drivers —
 // elevation (mountains, snow-capped peaks), then temperature × moisture
 // (Whittaker) — with temperature biased toward mild/temperate near spawn so the
@@ -239,6 +244,12 @@ export class WorldGen {
         const t2 = smoothstep(clamp((44 - d) / 10, 0, 1));
         h = lerp(h, 64, t2);
       }
+    }
+    // Manor pad: a flat shelf west of town so the starter manor sits cleanly
+    const dm = Math.hypot(x - MANOR_PAD.x, z - MANOR_PAD.z);
+    if (dm < 30) {
+      const t2 = smoothstep(clamp((30 - dm) / 6, 0, 1));
+      h = lerp(h, MANOR_PAD.ground, t2);
     }
     // Frostwatch plateau: the frontier camp gets the same treatment
     const df = Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z);
