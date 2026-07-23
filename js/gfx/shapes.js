@@ -136,6 +136,36 @@ export function emitShape(target, def, wx, y, wz, light, facing, sides) {
       break;
     }
 
+    case 'panel': {
+      // trapdoor: a thin 2px board hugging the floor, or the ceiling when the
+      // facing top-half bit (bit 2) is set. facing low bits pick the front tile.
+      const top = (facing >> 2) & 1, t = 2 / 16;
+      if (top) box(target, def, wx, y, wz, 0, 1 - t, 0, 1, 1, 1, light, facing & 3);
+      else box(target, def, wx, y, wz, 0, 0, 0, 1, t, 1, light, facing & 3);
+      break;
+    }
+
+    case 'sign': {
+      // a short centre post carrying a flat board across the upper half
+      const p0 = 0.4375, p1 = 0.5625;
+      box(target, def, wx, y, wz, p0, 0, p0, p1, 0.5, p1, light, facing);          // post
+      box(target, def, wx, y, wz, 0.125, 0.5, 0.4375, 0.875, 1, 0.5625, light, facing); // board
+      break;
+    }
+
+    case 'button': {
+      // a tiny nub sitting on the floor of the cell
+      box(target, def, wx, y, wz, 0.375, 0, 0.3125, 0.625, 2 / 16, 0.6875, light, facing);
+      break;
+    }
+
+    case 'pot': {
+      // a short ~10px box — a little terracotta flower pot
+      const h = 10 / 16;
+      box(target, def, wx, y, wz, 0.3125, 0, 0.3125, 0.6875, h, 0.6875, light, facing);
+      break;
+    }
+
     default:
       box(target, def, wx, y, wz, 0, 0, 0, 1, 1, 1, light, facing); // safety: full cube
   }

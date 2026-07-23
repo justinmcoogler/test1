@@ -71,6 +71,15 @@ export const MC_MAP = {
   smithing_table: 'anvil_block', campfire: 'campfire', soul_campfire: 'campfire',
   torch: 'torch_post', wall_torch: 'torch_post', lantern: 'torch_post', soul_torch: 'torch_post',
 
+  // extra utility stations → closest real station (no dedicated block yet)
+  grindstone: 'workbench', stonecutter: 'workbench', brewing_stand: 'alchemy_table',
+  // volcanic stone
+  basalt: 'basalt', smooth_basalt: 'basalt', polished_basalt: 'basalt',
+  // deepslate tile wall → our deepslate wall (else falls back to stone_brick_wall)
+  deepslate_tile_wall: 'deepslate_wall',
+  // thin metal + wooden fixtures now modelled as real blocks
+  iron_bars: 'iron_bars', chain: 'chain', ladder: 'ladder', flower_pot: 'flower_pot',
+
   // ores
   coal_ore: 'coal_seam', deepslate_coal_ore: 'coal_seam', coal_block: 'coal_seam',
   iron_ore: 'iron_ore', deepslate_iron_ore: 'iron_ore',
@@ -90,7 +99,11 @@ export const MC_MAP = {
   short_grass: 'tall_grass', fern: 'tall_grass', large_fern: 'tall_grass', dead_bush: 'tall_grass',
   big_dripleaf: 'tall_grass', small_dripleaf: 'tall_grass', azalea: 'tall_grass', flowering_azalea: 'wildflower',
   sugar_cane: 'reed', bamboo: 'reed', cactus: 'cactus_flesh',
-  dandelion: 'wildflower', poppy: 'wildflower', cornflower: 'wildflower', oxeye_daisy: 'wildflower',
+  dandelion: 'wildflower', poppy: 'wildflower', sunflower: 'wildflower',
+  // real single-flower blocks now modelled
+  oxeye_daisy: 'oxeye_daisy', allium: 'allium', blue_orchid: 'blue_orchid', cornflower: 'blue_orchid',
+  orange_tulip: 'orange_tulip', pink_tulip: 'pink_tulip', white_tulip: 'white_tulip',
+  lily_of_the_valley: 'white_tulip', red_tulip: 'rose_bush', rose_bush: 'rose_bush', peony: 'rose_bush', lilac: 'allium',
   red_mushroom: 'mushroom_cap', brown_mushroom: 'mushroom_cap',
   brown_mushroom_block: 'mushroom_cap', red_mushroom_block: 'mushroom_cap', mushroom_stem: 'mushroom_cap',
   sweet_berry_bush: 'berry_bush',
@@ -106,7 +119,7 @@ const APPROX_CONTAINS = [
   [/terracotta$/, 'stone_brick'], [/_wool$|^wool$/, 'thatch'], [/_carpet$/, 'thatch'],
   [/prismarine|purpur/, 'stone_brick'], [/quartz/, 'marble'],
   [/oxidized.*copper|weathered.*copper|exposed.*copper/, 'copper_weathered'], [/copper/, 'copper_block'],
-  [/^potted_/, 'wildflower'], [/_candle$/, 'torch_post'], [/mushroom_block$|mushroom_stem$/, 'mushroom_cap'],
+  [/^potted_/, 'flower_pot'], [/_candle$/, 'torch_post'], [/mushroom_block$|mushroom_stem$/, 'mushroom_cap'],
   [/planks|log|wood/, 'planks'],
 ];
 // shape variants → strip the suffix and re-map the base material
@@ -140,9 +153,16 @@ export function normalizeId(raw) {
   return String(raw).toLowerCase().replace(/^minecraft:/, '').replace(/\[.*\]$/, '').trim();
 }
 
+// Decorative wood/stone families that collapse to a single Emberveil block
+// regardless of the source material (wood stays OAK-only): every *_trapdoor →
+// trapdoor, every *_sign / *_wall_sign / *_hanging_sign → sign, every *_button →
+// button. Checked before the generic shape-suffix handling so they win.
+const DECOR_SUFFIX = [['trapdoor', 'trapdoor'], ['sign', 'sign'], ['button', 'button']];
+
 export function mapBlock(rawId) {
   const id = normalizeId(rawId);
   if (id in MC_MAP) return { block: MC_MAP[id], quality: id === 'air' ? 'exact' : 'exact', id };
+  for (const [suf, blk] of DECOR_SUFFIX) if (id === suf || id.endsWith('_' + suf)) return { block: blk, quality: 'exact', id };
   // shape variants: resolve the base material, then keep the shape if we model it
   // (e.g. oak_stairs → planks_stairs, cobblestone_wall → cobble_wall). If we have
   // the material but not that shape, fall back to the plain material block.

@@ -239,6 +239,26 @@ push('thornwood_bow', 1, 'workbench', 'woodworking', 3, 22, [['planks', 3], ['co
 push('recurve_silverbow', 1, 'workbench', 'woodworking', 12, 40, [['silver_bar', 1], ['planks', 3], ['cord', 2]]);
 push('ember_staff', 1, 'construction_bench', 'crafting', 10, 40, [['emberstone_shard', 2], ['planks', 2]]);
 
+// ---- Decorative town blocks (schematic-import equivalents) ------------------
+// Flowers: tint a plant fibre with the matching dye (oxeye pairs two dyes).
+push('allium', 1, null, 'foraging', 1, 4, [['purple_dye', 1], ['plant_fibre', 1]]);
+push('blue_orchid', 1, null, 'foraging', 1, 4, [['light_blue_dye', 1], ['plant_fibre', 1]]);
+push('orange_tulip', 1, null, 'foraging', 1, 4, [['orange_dye', 1], ['plant_fibre', 1]]);
+push('pink_tulip', 1, null, 'foraging', 1, 4, [['pink_dye', 1], ['plant_fibre', 1]]);
+push('white_tulip', 1, null, 'foraging', 1, 4, [['white_dye', 1], ['plant_fibre', 1]]);
+push('oxeye_daisy', 1, null, 'foraging', 1, 4, [['white_dye', 1], ['yellow_dye', 1]]);
+push('rose_bush', 1, null, 'foraging', 1, 4, [['red_dye', 1], ['plant_fibre', 1]]);
+// Metal fixtures at the construction bench (iron bar stock).
+push('iron_bars', 8, 'construction_bench', 'smithing', 3, 10, [['iron_bar', 2]]);
+push('chain', 2, 'construction_bench', 'smithing', 2, 6, [['iron_bar', 1]]);
+// Oak-only wooden fixtures.
+push('ladder', 3, 'workbench', 'woodworking', 1, 5, [['planks', 2]]);
+push('trapdoor', 2, 'workbench', 'woodworking', 1, 6, [['planks', 3]]);
+push('sign', 1, 'workbench', 'woodworking', 1, 5, [['planks', 3]]);
+push('button', 1, null, 'construction', 1, 2, [['planks', 1]]);
+// Terracotta flower pot.
+push('flower_pot', 1, 'construction_bench', 'construction', 1, 4, [['terracotta', 1]]);
+
 export function availableRecipes(skills, discoveredItems) {
   return RECIPES.filter((rec) => !rec.discover || discoveredItems.has(rec.discover));
 }

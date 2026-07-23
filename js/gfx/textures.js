@@ -525,6 +525,96 @@ for (const [id, hex] of COLORS) {
 }
 PAINTERS.terracotta ??= COLOR_PAINTERS.terracotta('#9a6045'); // plain fired clay
 
+// ---- Decorative town blocks (schematic-import equivalents) ------------------
+// Transparent cross-cutout flowers: a green stem + leaves and a coloured bloom.
+function flowerStem(c, x, y, r, sx, stem, fromY) {
+  for (let yy = fromY; yy < LP; yy++) px(c, x, y, sx, yy, shade(stem, (r() - 0.5) * 0.12));
+  px(c, x, y, sx - 2, fromY + 4, stem); px(c, x, y, sx - 3, fromY + 4, shade(stem, -0.08));
+  px(c, x, y, sx + 2, fromY + 7, stem); px(c, x, y, sx + 3, fromY + 7, shade(stem, -0.08));
+}
+function tulipPainter(petal) {
+  return (c, x, y, r) => cross(c, x, y, r, () => {
+    const sx = LP / 2, hi = shade(petal, 0.13), lo = shade(petal, -0.15);
+    flowerStem(c, x, y, r, sx, '#4d7d3b', 12);
+    for (let dx = -2; dx <= 2; dx++) px(c, x, y, sx + dx, 11, petal);
+    for (let dx = -2; dx <= 2; dx++) px(c, x, y, sx + dx, 10, dx === 0 ? hi : petal);
+    px(c, x, y, sx - 2, 9, petal); px(c, x, y, sx + 2, 9, petal); px(c, x, y, sx, 8, hi);
+    px(c, x, y, sx - 1, 12, lo); px(c, x, y, sx + 1, 12, lo);
+  });
+}
+PAINTERS.orange_tulip = tulipPainter('#e07a1f');
+PAINTERS.pink_tulip = tulipPainter('#e58fb8');
+PAINTERS.white_tulip = tulipPainter('#eef0ef');
+PAINTERS.allium = (c, x, y, r) => cross(c, x, y, r, () => {
+  const sx = LP / 2, col = '#9a5fc4';
+  flowerStem(c, x, y, r, sx, '#4d7d3b', 13);
+  for (let i = 0; i < 26; i++) {
+    const a = r() * Math.PI * 2, rad = r() * 3.4;
+    px(c, x, y, Math.round(sx + Math.cos(a) * rad), Math.round(7 + Math.sin(a) * rad), shade(col, (r() - 0.5) * 0.3));
+  }
+  px(c, x, y, sx, 6, '#c9a8e6');
+});
+PAINTERS.blue_orchid = (c, x, y, r) => cross(c, x, y, r, () => {
+  const sx = LP / 2, col = '#2f8fd6';
+  flowerStem(c, x, y, r, sx, '#3f7d5a', 12);
+  for (const [dx, dy] of [[0, 8], [-2, 9], [2, 9], [-1, 7], [1, 7], [0, 10]]) px(c, x, y, sx + dx, dy, col);
+  px(c, x, y, sx, 8, '#7fc4ee'); px(c, x, y, sx, 9, '#e8d24a'); // highlight + yellow throat
+});
+PAINTERS.oxeye_daisy = (c, x, y, r) => cross(c, x, y, r, () => {
+  const sx = LP / 2, petal = '#f2f4f0';
+  flowerStem(c, x, y, r, sx, '#4d7d3b', 12);
+  for (const [dx, dy] of [[0, 6], [0, 10], [-2, 8], [2, 8], [-2, 6], [2, 6], [-2, 10], [2, 10]]) px(c, x, y, sx + dx, dy, petal);
+  px(c, x, y, sx, 8, '#e6c437'); px(c, x, y, sx - 1, 8, '#e6c437'); px(c, x, y, sx, 7, '#f2d658'); // yellow disc
+});
+PAINTERS.rose_bush = (c, x, y, r) => cross(c, x, y, r, () => {
+  const sx = LP / 2;
+  blades(c, x, y, r, '#3d6f35', 16);
+  for (let yy = 6; yy < LP; yy++) px(c, x, y, sx, yy, shade('#3d6f35', (r() - 0.5) * 0.1));
+  for (const [cx, cy] of [[sx - 3, 8], [sx + 4, 12]]) {
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) px(c, x, y, cx + dx, cy + dy, shade('#c0303a', (r() - 0.5) * 0.2));
+    px(c, x, y, cx, cy, '#e0555c');
+  }
+});
+// Iron bars — transparent grey metal grille (vertical bars, top/bottom rails).
+PAINTERS.iron_bars = (c, x, y, r) => {
+  c.clearRect(x, y, TILE, TILE);
+  const bar = '#b9bcc2', edge = '#8a8d93', hi = '#dfe2e6';
+  for (const bx of [6, 12, 19, 25]) for (let yy = 0; yy < LP; yy++) {
+    px(c, x, y, bx, yy, shade(bar, (r() - 0.5) * 0.06)); px(c, x, y, bx + 1, yy, edge);
+    if (yy % 6 === 2) px(c, x, y, bx, yy, hi);
+  }
+  for (let xx = 0; xx < LP; xx++) { px(c, x, y, xx, 0, edge); px(c, x, y, xx, 1, bar); px(c, x, y, xx, LP - 1, edge); }
+};
+// Chain — a dark interlocking link run down the centre strip (only the middle
+// of the tile shows on an isolated pane post).
+PAINTERS.chain = (c, x, y, r) => {
+  c.clearRect(x, y, TILE, TILE);
+  const link = '#5a5e66', hi = '#8b9099', dk = '#3a3d43';
+  for (let ly = 0; ly < LP; ly++) px(c, x, y, LP / 2, ly, dk);
+  for (let ly = 0; ly < LP; ly += 6) {
+    const cx = LP / 2 + ((ly / 6) % 2 ? 1 : -1);
+    for (let a = 0; a < 8; a++) {
+      const ang = (a / 8) * Math.PI * 2;
+      const lx = Math.round(cx + Math.cos(ang) * 1.7), ly2 = Math.round(ly + 3 + Math.sin(ang) * 2.6);
+      if (ly2 >= 0 && ly2 < LP) px(c, x, y, lx, ly2, a < 2 ? hi : link);
+    }
+  }
+};
+// Ladder — transparent wooden rails + rungs (renders as a cross billboard).
+PAINTERS.ladder = (c, x, y, r) => cross(c, x, y, r, () => {
+  const wood = '#8a6a3f', dk = '#6b4f2c', hi = '#a5824f';
+  for (const rx of [10, 21]) for (let yy = 1; yy < LP - 1; yy++) { px(c, x, y, rx, yy, wood); px(c, x, y, rx + 1, yy, dk); }
+  for (let ry = 4; ry < LP; ry += 6) for (let xx = 10; xx <= 22; xx++) { px(c, x, y, xx, ry, hi); px(c, x, y, xx, ry + 1, dk); }
+});
+// Sign — plank grain with a lighter board across the tile's top half (the board
+// face; the bottom half maps onto the short post).
+PAINTERS.sign = (c, x, y, r) => {
+  PAINTERS.planks(c, x, y, r);
+  for (let yy = 0; yy < LP / 2; yy++) for (let xx = 0; xx < LP; xx++) px(c, x, y, xx, yy, shade('#c19a5e', (r() - 0.5) * 0.06));
+  for (let yy = 3; yy < LP / 2; yy += 4) for (let xx = 2; xx < LP - 2; xx++) px(c, x, y, xx, yy, '#a5824f');
+  for (let xx = 6; xx < 26; xx += 2) { px(c, x, y, xx, 7, '#7a5f38'); px(c, x, y, xx, 11, '#7a5f38'); } // faint engraving
+};
+
 // Reserve atlas slots for any pack-only tiles (new station faces) so they get a
 // UV; the real art is blitted over the placeholder by applyTexturePack().
 for (const name of Object.keys(TEXPACK_TILES)) {

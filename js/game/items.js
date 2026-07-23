@@ -164,6 +164,22 @@ blockItem('construction_bench', 'Construction Bench', 'construction_bench', 'con
 blockItem('chest_block', 'Storage Chest', 'chest_block', 'chest_front');
 blockItem('stone', 'Stone', 'stone', 'stone');
 
+// ---- decorative town blocks (schematic-import equivalents) ----
+blockItem('allium', 'Allium', 'allium', 'allium');
+blockItem('orange_tulip', 'Orange Tulip', 'orange_tulip', 'orange_tulip');
+blockItem('pink_tulip', 'Pink Tulip', 'pink_tulip', 'pink_tulip');
+blockItem('white_tulip', 'White Tulip', 'white_tulip', 'white_tulip');
+blockItem('oxeye_daisy', 'Oxeye Daisy', 'oxeye_daisy', 'oxeye_daisy');
+blockItem('blue_orchid', 'Blue Orchid', 'blue_orchid', 'blue_orchid');
+blockItem('rose_bush', 'Rose Bush', 'rose_bush', 'rose_bush');
+blockItem('iron_bars', 'Iron Bars', 'iron_bars', 'iron_bars');
+blockItem('chain', 'Chain', 'chain', 'chain');
+blockItem('ladder', 'Ladder', 'ladder', 'ladder');
+blockItem('trapdoor', 'Trapdoor', 'trapdoor', 'planks');
+blockItem('sign', 'Sign', 'sign', 'sign');
+blockItem('button', 'Button', 'button', 'planks');
+blockItem('flower_pot', 'Flower Pot', 'flower_pot', 'terracotta');
+
 // ---- dyes (colour wool / glass / clay / concrete) ----
 for (const [c] of COLORS) it(`${c}_dye`, `${cap(c.replace(/_/g, ' '))} Dye`, { desc: 'Colours wool, stained glass, terracotta and concrete.' });
 

@@ -143,7 +143,7 @@ def('meteor_crater', { label: 'Meteor Crater', hardness: 5.5, tool: 'pickaxe', m
 // draws the geometry; world.collisionHeight reads SHAPE_COLLISION for physics.
 // Directional shapes (stairs, gate) record a placement facing; glass panes are
 // transparent (cutout pass). Naming is `<base>_<shape>`.
-export const SHAPE_COLLISION = { slab: 0.5, carpet: 1 / 16, stairs: 1, wall: 1, fence: 1, gate: 1, pane: 1 };
+export const SHAPE_COLLISION = { slab: 0.5, carpet: 1 / 16, stairs: 1, wall: 1, fence: 1, gate: 1, pane: 1, panel: 2 / 16, sign: 0, button: 0, pot: 0 };
 const DIRECTIONAL_SHAPES = new Set(['stairs', 'gate']);
 const SHAPE_LABEL = { slab: 'Slab', stairs: 'Stairs', wall: 'Wall', fence: 'Fence', gate: 'Gate', pane: 'Pane', carpet: 'Carpet' };
 
@@ -204,6 +204,28 @@ for (const [id, ] of COLORS) {
   def(`${id}_stained_glass_pane`, { label: `${C} Glass Pane`, shape: 'pane', transparent: true, hardness: 0.4, tiles: { all: `${id}_stained_glass` }, drops: null });
 }
 def('terracotta', { label: 'Terracotta', hardness: 1.4, tool: 'pickaxe' }); // plain fired clay
+
+// ---- Decorative town blocks (Minecraft schematic import equivalents) --------
+// APPENDED at the end so existing block ids never shift (Uint16 chunk storage,
+// saves + the atlas depend on stable ids). Wood stays OAK-ONLY — one shared
+// trapdoor/sign/button/ladder rather than per-species variants.
+// Small transparent cross-cutout flowers (foraging; each drops itself).
+for (const f of ['allium', 'orange_tulip', 'pink_tulip', 'white_tulip', 'oxeye_daisy', 'blue_orchid', 'rose_bush']) {
+  def(f, { shape: 'cross', solid: false, opaque: false, hardness: 0.1, tool: null });
+}
+// Iron bars & chain — thin metal fixtures on the transparent pane path.
+def('iron_bars', { label: 'Iron Bars', shape: 'pane', transparent: true, hardness: 3.5, tool: 'pickaxe', tiles: { all: 'iron_bars' } });
+def('chain', { label: 'Chain', shape: 'pane', transparent: true, hardness: 3.5, tool: 'pickaxe', tiles: { all: 'chain' } });
+// Ladder — a climbable transparent cross of rungs (walk-through).
+def('ladder', { label: 'Ladder', shape: 'cross', solid: false, opaque: false, climb: true, hardness: 0.4, tool: 'axe', tiles: { all: 'ladder' } });
+// Trapdoor — thin flat wooden panel (bottom/top via the facing top bit), planks tile.
+def('trapdoor', { label: 'Trapdoor', shape: 'panel', hardness: 1.8, tool: 'axe', tiles: { all: 'planks' } });
+// Sign — a short post carrying a wooden board.
+def('sign', { label: 'Sign', shape: 'sign', hardness: 1.2, tool: 'axe', tiles: { all: 'sign' } });
+// Button — a tiny nub; reuse the planks tile.
+def('button', { label: 'Button', shape: 'button', hardness: 0.6, tool: 'axe', tiles: { all: 'planks' } });
+// Flower pot — a short terracotta box that sits on surfaces.
+def('flower_pot', { label: 'Flower Pot', shape: 'pot', hardness: 0.6, tool: 'pickaxe', tiles: { all: 'terracotta' } });
 
 export function blockByName(name) { return BLOCKS[B[name]]; }
 export function isSolid(id) { return BLOCKS[id]?.solid === true; }

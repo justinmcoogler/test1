@@ -533,6 +533,29 @@ their base material's tile, so they need **no** extra art.
 
 Shape variants (slabs, stairs, walls, fences, gates, panes, carpets) **reuse the base material tile above** — no extra art needed.
 
+### Batch T1 — Decorative town blocks (11) — palette: garden blooms + weathered metal + oak
+
+These render from **procedural tiles** today; authoring the PNGs replaces the
+placeholders. The seven flowers and the ladder are **transparent cross cutouts**
+(the sprite floats on a clear background); iron bars and chain are **transparent
+panes**; the sign face is an **opaque** tile. Trapdoor and button reuse
+`block_planks.png`, and the flower pot reuses `block_terracotta.png`, so those
+three need **no** extra art.
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_allium.png` | Allium — round purple pom-pom bloom on a green stalk | single tall flower, cross cutout | yes |
+| `block_orange_tulip.png` | Orange tulip — cupped orange bloom on a green stalk | single tall flower, cross cutout | yes |
+| `block_pink_tulip.png` | Pink tulip — cupped pink bloom on a green stalk | single tall flower, cross cutout | yes |
+| `block_white_tulip.png` | White tulip — cupped white bloom on a green stalk | single tall flower, cross cutout | yes |
+| `block_oxeye_daisy.png` | Oxeye daisy — white petals around a yellow disc | single flower, cross cutout | yes |
+| `block_blue_orchid.png` | Blue orchid — blue bloom with a yellow throat | single flower, cross cutout | yes |
+| `block_rose_bush.png` | Rose bush — leafy green bush with two red rose blooms | bushy two-bloom flower, cross cutout | yes |
+| `block_iron_bars.png` | Iron bars — vertical grey metal bars + top/bottom rails | brushed grey iron grille, tiles horizontally | yes |
+| `block_chain.png` | Chain — dark interlocking metal links down the centre | narrow vertical chain, dark steel | yes |
+| `block_ladder.png` | Ladder — two wooden rails with horizontal rungs | oak rungs, cross cutout | yes |
+| `block_sign.png` | Sign — oak plank board (lighter face across the top half) | worked oak, faint engraving band | no |
+
 ### Batch I9 — Dyes (16) — palette: the 16 dye colours, small pigment
 
 | filename | what it is | style hint | transparent |
