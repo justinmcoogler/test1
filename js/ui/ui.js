@@ -236,6 +236,20 @@ export class UI {
       }
       bl.textContent = `Bleeding — ${Math.ceil(p.bleeding)}s`;
     } else if (bl) bl.remove();
+    // body-temperature warning (only when outside the comfort band)
+    let tt = $('temp-tag');
+    if (p.tempState && p.tempState !== 'ok') {
+      if (!tt) {
+        tt = document.createElement('div');
+        tt.id = 'temp-tag';
+        $('vitals').appendChild(tt);
+      }
+      const labels = { cold: 'Cold', hypothermia: 'Hypothermia', hot: 'Overheating', heatstroke: 'Heatstroke' };
+      const cold = p.tempState === 'cold' || p.tempState === 'hypothermia';
+      const severe = p.tempState === 'hypothermia' || p.tempState === 'heatstroke';
+      tt.textContent = labels[p.tempState] || '';
+      tt.className = `vital-tag temp ${cold ? 'cold' : 'hot'}${severe ? ' severe' : ''}`;
+    } else if (tt) tt.remove();
     // weather + season badge (glyph art pending — text with a weather-tinted dot)
     const wsys = this.game.weather;
     if (wsys) {

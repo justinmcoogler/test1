@@ -363,6 +363,24 @@ class Game {
     p.hp = Math.min(p.hp, p.maxHp);
   }
 
+  // Warmth from a nearby campfire or lava (0…~0.32), sampled on a throttle.
+  computeFireWarmth(p) {
+    const gx = Math.floor(p.x), gy = Math.floor(p.y), gz = Math.floor(p.z);
+    let best = 0;
+    for (let dx = -3; dx <= 3; dx++) {
+      for (let dy = -1; dy <= 2; dy++) {
+        for (let dz = -3; dz <= 3; dz++) {
+          const b = this.world.getBlock(gx + dx, gy + dy, gz + dz);
+          if (b === B.campfire || b === B.lava) {
+            const w = 0.32 * Math.max(0, 1 - Math.hypot(dx, dy, dz) / 4.5);
+            if (w > best) best = w;
+          }
+        }
+      }
+    }
+    return best;
+  }
+
   applySettings() {
     const s = this.settings;
     document.documentElement.style.setProperty('--ui-scale', s.uiScale);
@@ -519,6 +537,29 @@ class Game {
     const surf = this.world.surfaceAt(Math.floor(p.x), Math.floor(p.z));
     const underground = eyeY < surf - 3 || (eyeY < SEA - 2);
     this.renderer.fogMix += ((underground ? 1 : 0) - this.renderer.fogMix) * Math.min(1, dt * 2);
+
+    // body temperature: felt climate (biome + season/weather + night + altitude +
+    // water) offset by clothing insulation and nearby fire; caves stay cool & stable
+    if (!p.debug && !p.dead) {
+      this._fireWarmT = (this._fireWarmT || 0) - dt;
+      if (this._fireWarmT <= 0) { this._fireWarmT = 0.5; this._fireWarmth = this.computeFireWarmth(p); }
+      const est = this.inventory.equipStats();
+      const warmth = (est.warmth || 0) * 0.03 + est.armor * 0.012; // insulation proxy
+      const band = 0.15 + this.skills.level('vitality') * 0.0015;   // Constitution widens comfort
+      let felt;
+      if (underground) {
+        felt = 0.45;
+      } else {
+        felt = this.world.gen.temperatureAt(cx, cz)
+          + this.weather.tempOffset()
+          - (1 - this.world.daylight()) * 0.10
+          - Math.max(0, (p.y - SEA) / 220);
+        if (p.inWater) felt -= 0.08;
+        if (p.sprinting) felt += 0.02;
+        felt += this._fireWarmth || 0;
+      }
+      p.tickTemperature(dt, clamp(felt + warmth, 0, 1), band, warmth * 4);
+    }
 
     // camera
     this.shake = Math.max(0, this.shake - dt);

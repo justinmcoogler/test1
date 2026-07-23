@@ -181,7 +181,7 @@ export class Inventory {
 
   // Aggregate combat/gather stats from all equipped items.
   equipStats() {
-    const st = { armor: 0, evasion: 0, speed: 0, crit: 0, magic: 0, magicResist: 0, mana: 0, hp: 0, gather: 0, block: 0 };
+    const st = { armor: 0, evasion: 0, speed: 0, crit: 0, magic: 0, magicResist: 0, mana: 0, hp: 0, gather: 0, block: 0, warmth: 0 };
     for (const slot of EQUIP_SLOTS) {
       const e = this.equipment[slot];
       if (!e) continue;

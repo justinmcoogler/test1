@@ -31,6 +31,9 @@ export class Player {
     this.bleeding = 0;    // seconds of open-wound bleeding remaining (real-world wounds)
     this.bleedDps = 0;    // health lost per second while bleeding
     this._bleedTick = 0;
+    this.bodyTemp = 0.5;  // 0 = freezing … 0.5 = comfortable … 1 = overheating
+    this.tempState = 'ok';// ok | cold | hypothermia | hot | heatstroke
+    this._tempTick = 0;
   }
 
   eye() { return [this.x, this.y + this.eyeHeight, this.z]; }
@@ -41,7 +44,7 @@ export class Player {
 
   update(dt, input, world) {
     dt = Math.min(dt, 0.05);
-    if (this.debug) { this.hp = this.maxHp; this.dead = false; this.bleeding = 0; this.bleedDps = 0; this.flyUpdate(dt, input); return; }
+    if (this.debug) { this.hp = this.maxHp; this.dead = false; this.bleeding = 0; this.bleedDps = 0; this.bodyTemp = 0.5; this.tempState = 'ok'; this.flyUpdate(dt, input); return; }
     if (this.dead) return;
 
     // open wounds bleed until dressed (Medicine) or they clot on their own
@@ -204,6 +207,27 @@ export class Player {
     this.bleeding = 0; this.bleedDps = 0; this._bleedTick = 0;
   }
 
+  // Body temperature drifts toward the felt environment temperature; clothing
+  // insulation slows the drift and Constitution widens the comfort band. Outside
+  // the band the body chills/overheats — mild states sap stamina, severe states
+  // (hypothermia / heatstroke) cost health.
+  tickTemperature(dt, target, band, insul = 0) {
+    const rate = 0.05 / (1 + insul);
+    this.bodyTemp += (target - this.bodyTemp) * Math.min(1, rate * dt);
+    const low = 0.5 - band, high = 0.5 + band;
+    let cold = 0, hot = 0, state = 'ok';
+    if (this.bodyTemp < low) { cold = (low - this.bodyTemp) / Math.max(0.05, low); state = cold > 0.5 ? 'hypothermia' : 'cold'; }
+    else if (this.bodyTemp > high) { hot = (this.bodyTemp - high) / Math.max(0.05, 1 - high); state = hot > 0.5 ? 'heatstroke' : 'hot'; }
+    this.tempState = state;
+    this._tempTick += dt;
+    if (this._tempTick >= 1) {
+      this._tempTick -= 1;
+      if (state === 'cold' || state === 'hot') this.energy = Math.max(0, this.energy - 4);
+      else if (state === 'hypothermia') this.damage(Math.max(1, Math.round(cold * 3)), 'the cold');
+      else if (state === 'heatstroke') this.damage(Math.max(1, Math.round(hot * 3)), 'the heat');
+    }
+  }
+
   tickBleed(dt) {
     if (this.bleeding <= 0) return;
     this.bleeding = Math.max(0, this.bleeding - dt);
@@ -237,6 +261,7 @@ export class Player {
     this.energy = this.maxEnergy;
     this.dead = false;
     this.stopBleeding();
+    this.bodyTemp = 0.5; this.tempState = 'ok'; this._tempTick = 0;
   }
 
   serialize() {
