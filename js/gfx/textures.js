@@ -477,6 +477,19 @@ PAINTERS.copper_weathered ??= (c, x, y, r) => noisyFill(c, x, y, r, '#54a082', 0
 PAINTERS.iron_block ??= (c, x, y, r) => { noisyFill(c, x, y, r, '#d3d3d6', 0.03); for (let xx = 2; xx < LP; xx += 6) for (let yy = 0; yy < LP; yy++) if (r() < 0.5) px(c, x, y, xx, yy, shade('#d3d3d6', -0.06)); };
 PAINTERS.gold_block ??= (c, x, y, r) => noisyFill(c, x, y, r, '#e6c132', 0.04, { chance: 0.08, color: '#fff08a' });
 
+// Green moss clumps scattered over a base stone tile (mossy cobblestone / bricks)
+function mossOver(c, x, y, r, clumps = 11) {
+  for (let i = 0; i < clumps; i++) {
+    const bx = Math.floor(r() * LP), by = Math.floor(r() * LP), n = 3 + Math.floor(r() * 4);
+    for (let j = 0; j < n; j++) {
+      const px_ = bx + Math.floor((r() - 0.5) * 4), py_ = by + Math.floor((r() - 0.5) * 4);
+      if (px_ >= 0 && px_ < LP && py_ >= 0 && py_ < LP) px(c, x, y, px_, py_, shade('#5f7a3c', (r() - 0.5) * 0.25));
+    }
+  }
+}
+PAINTERS.mossy_cobble ??= (c, x, y, r) => { PAINTERS.cobble(c, x, y, r); mossOver(c, x, y, r); };
+PAINTERS.mossy_stone_brick ??= (c, x, y, r) => { PAINTERS.stone_brick(c, x, y, r); mossOver(c, x, y, r, 9); };
+
 // ---- Colored block families: tint one base pattern per dye colour -----------
 function hexToRgb(hex) { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
 function mix(a, b, t) {

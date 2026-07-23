@@ -29,6 +29,8 @@ function aliasBlock(name) {
   // fall back to the detailed see-through procedural tile.
   if (tileSet.has(name)) return name;              // exact match
   if (name === 'cobblestone') return 'cobble';
+  if (name === 'mossy_cobblestone') return 'mossy_cobble';
+  if (name === 'mossy_stone_bricks') return 'mossy_stone_brick';
   if (name === 'clay') return 'clay_block';
   if (name === 'furnace') return 'furnace_front';  // the front face art
   const log = name.match(/^(.+)_log(_top)?$/);      // <wood>_log → <wood>_bark / _ring

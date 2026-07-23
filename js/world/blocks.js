@@ -183,6 +183,10 @@ for (const base of ['granite', 'andesite', 'marble', 'deepslate', 'sandstone', '
   for (const s of ['slab', 'stairs', 'wall']) defShape(base, s);
 }
 for (const s of ['slab', 'stairs']) { defShape('copper_block', s); defShape('copper_weathered', s); }
+// mossy variants (green moss over cobble / stone brick) — common roof + ruin trim
+def('mossy_cobble', { label: 'Mossy Cobblestone', hardness: 2.6, tool: 'pickaxe' });
+def('mossy_stone_brick', { label: 'Mossy Stone Brick', hardness: 3.2, tool: 'pickaxe' });
+for (const base of ['mossy_cobble', 'mossy_stone_brick']) for (const s of ['slab', 'stairs', 'wall']) defShape(base, s);
 
 // ---- Colored block families (16 dyes) ---------------------------------------
 // wool/carpet (soft), concrete + powder, terracotta + glazed, and stained glass

@@ -1,6 +1,6 @@
 # Emberveil — Realistic Texture Manifest (v3)
 
-Generated from `js/game/materials.js` — 363 textures, all **32×32 PNG**. `block_*.png` = world tiles (opaque, tile seamlessly), `item_*.png` = inventory icons (transparent). Filenames are load-bearing — the texture-pack loader consumes them exactly.
+Generated from `js/game/materials.js` — 365 textures, all **32×32 PNG**. `block_*.png` = world tiles (opaque, tile seamlessly), `item_*.png` = inventory icons (transparent). Filenames are load-bearing — the texture-pack loader consumes them exactly.
 
 ## How to generate (paste this prompt into ChatGPT, then one batch table per session)
 
@@ -526,12 +526,16 @@ their base material's tile, so they need **no** extra art.
 | `block_copper_weathered.png` | Weathered copper — green patina | verdigris green with copper flecks | no |
 | `block_iron_block.png` | Iron block — brushed steel | light cool grey, faint vertical brushing | no |
 | `block_gold_block.png` | Gold block — bright gold | warm yellow metal, soft highlights | no |
+| `block_mossy_cobblestone.png` | Mossy cobblestone — cobble with green moss | grey cobble base, green moss clumps in the crevices | no |
+| `block_mossy_stone_bricks.png` | Mossy stone bricks — brick with green moss | grey stone-brick base, green moss patches | no |
+
+(Plain **`block_cobblestone.png`** — grey broken stone — is already listed in Batch B1.)
 
 Shape variants (slabs, stairs, walls, fences, gates, panes, carpets) **reuse the base material tile above** — no extra art needed.
 
 ## Totals
-- Block tiles: 179
+- Block tiles: 181
 - Item icons: 184
-- **Total: 363**
+- **Total: 365**
 
 Not included (carried from the skill plan, generated later): fish, foods, potions, herbs, crops, hides, relics, coins, misc consumables.
