@@ -410,6 +410,276 @@ export const ENEMY_TYPES = {
       box(0.5, 2.1, 0, 0.2, 0.5, 0.2, [0.35, 0.55, 0.28]),
     ]),
   },
+
+  // ===========================================================================
+  // Fantasy roster — fey, slimes, goblinoids, undead, elementals, aberrations.
+  // Broadens the bestiary beyond realistic animals. Models hand-authored in
+  // world units via box(); rigs/skins/face-tiles registered in the maps below.
+  // ===========================================================================
+
+  // ---- Tier 0 ----
+  pixie: {
+    label: 'Pixie', behavior: 'aggressive', tier: 0,
+    hp: 8, atk: 3, acc: 60, evasion: 28, armor: 0, speed: 9, moveRange: 5,
+    abilities: ['sting_spark'], element: 'nature', weak: ['fire'], resist: [],
+    xp: 16, respawn: 70, aggroRange: 5,
+    headBoxes: [1],
+    drops: [
+      { item: 'plant_fibre', qty: [1, 2], chance: 1 },
+      { item: 'amber_resin', qty: [1, 1], chance: 0.15 },
+    ],
+    desc: 'A thumb-sized mote of meadow-light, here and gone in a blink.',
+    recommend: 'Nearly impossible to pin down — area magic or sheer luck.',
+    model: M([
+      box(0, 0.45, 0, 0.22, 0.3, 0.18, [0.55, 0.8, 0.45]),   // body
+      box(0, 0.75, 0, 0.2, 0.2, 0.2, [0.85, 1, 0.7]),        // head
+      box(-0.28, 0.55, -0.05, 0.28, 0.02, 0.24, [0.8, 0.95, 1]), // wing L
+      box(0.28, 0.55, -0.05, 0.28, 0.02, 0.24, [0.8, 0.95, 1]),  // wing R
+      box(0, 0.5, 0.11, 0.08, 0.08, 0.08, [1, 1, 0.6]),      // glow heart
+    ]),
+  },
+  bog_ooze: {
+    label: 'Bog Ooze', behavior: 'defensive', tier: 0,
+    hp: 30, atk: 4, acc: 42, evasion: 2, armor: 4, speed: 2, moveRange: 2,
+    abilities: ['mire_grip'], element: 'water', weak: ['fire'], resist: ['water'],
+    xp: 24, respawn: 110, aggroRange: 0,
+    headBoxes: [1],
+    drops: [
+      { item: 'clay_lump', qty: [1, 3], chance: 1 },
+      { item: 'rough_gem', qty: [1, 1], chance: 0.12 },
+    ],
+    desc: 'A slow, quivering heap of swamp-jelly that swallows whatever it settles on.',
+    recommend: 'It shrugs off feeble blows — bring weight, and don\'t get stuck.',
+    model: M([
+      box(0, 0, 0, 0.85, 0.45, 0.8, [0.3, 0.35, 0.22]),      // base blob
+      box(0, 0.45, 0, 0.6, 0.3, 0.55, [0.36, 0.42, 0.26]),   // upper blob
+      box(-0.14, 0.55, 0.28, 0.08, 0.08, 0.06, [0.9, 0.95, 0.6]), // eyes
+      box(0.14, 0.55, 0.28, 0.08, 0.08, 0.06, [0.9, 0.95, 0.6]),
+    ]),
+  },
+  scrap_goblin: {
+    label: 'Scrap Goblin', behavior: 'aggressive', tier: 0,
+    hp: 14, atk: 5, acc: 58, evasion: 12, armor: 1, speed: 6, moveRange: 4,
+    abilities: ['gnaw'], element: null, weak: [], resist: [],
+    xp: 22, respawn: 80, aggroRange: 6,
+    headBoxes: [1, 2, 3],
+    drops: [
+      { item: 'old_coin', qty: [1, 2], chance: 0.5 },
+      { item: 'sinew', qty: [1, 2], chance: 0.7 },
+    ],
+    desc: 'A wiry green scavenger draped in stolen rags, always hungry, never brave alone.',
+    recommend: 'Cheeky but fragile. Hit it before it hits back.',
+    model: M([
+      box(0, 0.35, 0, 0.34, 0.4, 0.24, [0.35, 0.5, 0.3]),    // torso
+      box(0, 0.75, 0, 0.3, 0.28, 0.28, [0.45, 0.6, 0.38]),   // head
+      box(-0.22, 0.82, 0, 0.1, 0.06, 0.06, [0.4, 0.55, 0.34]), // ears
+      box(0.22, 0.82, 0, 0.1, 0.06, 0.06, [0.4, 0.55, 0.34]),
+      box(-0.36, 0.4, 0, 0.1, 0.34, 0.12, [0.4, 0.55, 0.34]), // arms
+      box(0.36, 0.4, 0, 0.1, 0.34, 0.12, [0.4, 0.55, 0.34]),
+      box(-0.12, 0, 0, 0.13, 0.32, 0.13, [0.3, 0.42, 0.26]),  // legs
+      box(0.12, 0, 0, 0.13, 0.32, 0.13, [0.3, 0.42, 0.26]),
+    ]),
+  },
+
+  // ---- Tier 1 ----
+  will_o_wisp: {
+    label: "Will-o'-Wisp", behavior: 'aggressive', tier: 1,
+    hp: 16, atk: 7, acc: 68, evasion: 24, armor: 0, speed: 8, moveRange: 4,
+    abilities: ['ember_fling'], ranged: true, range: 4, element: 'fire', weak: ['water'], resist: ['fire'],
+    xp: 46, respawn: 130, aggroRange: 6,
+    headBoxes: [1],
+    drops: [
+      { item: 'sunpetal', qty: [1, 1], chance: 0.35 },
+      { item: 'old_coin', qty: [1, 3], chance: 0.5 },
+    ],
+    desc: 'A drifting ghost-flame that beckons the lost deeper into the mire.',
+    recommend: 'It keeps its distance and burns — close in or bring water.',
+    model: M([
+      box(0, 0.45, 0, 0.3, 0.35, 0.3, [0.8, 0.6, 0.25]),     // core
+      box(0, 0.8, 0, 0.18, 0.25, 0.18, [1, 0.85, 0.4]),      // flame crown
+      box(0, 0.2, -0.05, 0.12, 0.2, 0.12, [0.7, 0.45, 0.2]), // trailing ember
+    ]),
+  },
+  bone_hound: {
+    label: 'Bone Hound', behavior: 'aggressive', tier: 1, nocturnal: true,
+    hp: 24, atk: 8, acc: 64, evasion: 14, armor: 1, speed: 8, moveRange: 5,
+    abilities: ['gnaw'], element: null, weak: ['fire'], resist: [],
+    xp: 52, huntXp: 32, respawn: 150, aggroRange: 7, bleed: 0.2,
+    headBoxes: [1, 2],
+    drops: [
+      { item: 'sinew', qty: [1, 2], chance: 0.8 },
+      { item: 'bone_needle', qty: [1, 1], chance: 0.2 },
+    ],
+    desc: 'A skeleton dog knitted from a hundred grave-scraps. It hunts the cold nights in packs.',
+    recommend: 'Dry bone burns fast. Fire, and don\'t let the pack circle you.',
+    model: M([
+      box(0, 0.35, 0, 0.4, 0.32, 0.9, [0.8, 0.8, 0.74]),     // ribcage body
+      box(0, 0.5, 0.55, 0.28, 0.28, 0.35, [0.85, 0.85, 0.78]), // skull
+      box(0, 0.45, 0.8, 0.14, 0.12, 0.18, [0.8, 0.8, 0.72]),  // snout
+      box(0, 0.4, -0.6, 0.08, 0.08, 0.35, [0.78, 0.78, 0.72]), // tail
+      box(-0.15, 0, 0.35, 0.1, 0.32, 0.1, [0.76, 0.76, 0.7]), // legs
+      box(0.15, 0, 0.35, 0.1, 0.32, 0.1, [0.76, 0.76, 0.7]),
+      box(-0.15, 0, -0.3, 0.1, 0.32, 0.1, [0.76, 0.76, 0.7]),
+      box(0.15, 0, -0.3, 0.1, 0.32, 0.1, [0.76, 0.76, 0.7]),
+    ]),
+  },
+  cave_slime: {
+    label: 'Cave Slime', behavior: 'aggressive', tier: 1,
+    hp: 34, atk: 6, acc: 50, evasion: 4, armor: 3, speed: 3, moveRange: 2,
+    abilities: ['toxin_lash'], element: 'nature', weak: ['fire'], resist: ['nature'],
+    xp: 48, respawn: 150, aggroRange: 4,
+    headBoxes: [1],
+    drops: [
+      { item: 'rough_gem', qty: [1, 1], chance: 0.4 },
+      { item: 'veilcrystal', qty: [1, 1], chance: 0.1 },
+    ],
+    desc: 'A glinting crystalline ooze that creeps the cavern dark, dissolving all it touches.',
+    recommend: 'Its acid lingers — carry an antidote and heavy boots.',
+    model: M([
+      box(0, 0, 0, 0.7, 0.4, 0.65, [0.4, 0.7, 0.6]),         // base
+      box(0, 0.4, 0, 0.5, 0.28, 0.45, [0.5, 0.8, 0.7]),      // dome
+      box(0, 0.6, 0, 0.12, 0.18, 0.12, [0.75, 0.95, 0.9]),   // crystal spur
+      box(-0.12, 0.45, 0.24, 0.07, 0.07, 0.05, [0.95, 1, 0.9]), // eyes
+      box(0.12, 0.45, 0.24, 0.07, 0.07, 0.05, [0.95, 1, 0.9]),
+    ]),
+  },
+
+  // ---- Tier 2 ----
+  frost_elemental: {
+    label: 'Frost Elemental', behavior: 'aggressive', tier: 2,
+    hp: 34, atk: 11, acc: 68, evasion: 10, armor: 3, speed: 5, moveRange: 4,
+    abilities: ['glacial_lance'], ranged: true, range: 5, element: 'ice', weak: ['fire'], resist: ['ice'],
+    xp: 92, respawn: 210, aggroRange: 7,
+    headBoxes: [1, 2],
+    drops: [
+      { item: 'veilcrystal', qty: [1, 1], chance: 0.3 },
+      { item: 'rough_gem', qty: [1, 2], chance: 0.6 },
+    ],
+    desc: 'A walking shard of the deep winter, its heart a knot of everlasting ice.',
+    recommend: 'Fire melts it fast. Ice does nothing but amuse it.',
+    model: M([
+      box(0, 0.45, 0, 0.5, 0.6, 0.35, [0.6, 0.78, 0.95]),    // torso
+      box(0, 1.05, 0, 0.34, 0.32, 0.32, [0.75, 0.88, 1]),    // head
+      box(0, 1.35, 0, 0.14, 0.22, 0.14, [0.85, 0.95, 1]),    // crystal crown
+      box(-0.42, 0.5, 0, 0.14, 0.5, 0.14, [0.55, 0.72, 0.9]), // arms
+      box(0.42, 0.5, 0, 0.14, 0.5, 0.14, [0.55, 0.72, 0.9]),
+      box(-0.16, 0, 0, 0.16, 0.45, 0.16, [0.5, 0.68, 0.88]), // legs
+      box(0.16, 0, 0, 0.16, 0.45, 0.16, [0.5, 0.68, 0.88]),
+    ]),
+  },
+  grave_wight: {
+    label: 'Grave Wight', behavior: 'aggressive', tier: 2,
+    hp: 40, atk: 12, acc: 64, evasion: 8, armor: 4, speed: 5, moveRange: 4,
+    abilities: ['corrupt_claw'], element: 'shadow', weak: ['nature'], resist: ['shadow'],
+    xp: 96, respawn: 220, aggroRange: 6,
+    headBoxes: [1, 6],
+    drops: [
+      { item: 'old_coin', qty: [2, 4], chance: 0.6 },
+      { item: 'relic_fragment', qty: [1, 1], chance: 0.12 },
+    ],
+    desc: 'A barrow-lord that never learned to lie still, draining the warmth from the living.',
+    recommend: 'Its touch saps your strength — end it quickly, or bring a ward.',
+    model: M([
+      box(0, 0.4, 0, 0.4, 0.55, 0.28, [0.28, 0.24, 0.34]),   // shrouded torso
+      box(0, 0.98, 0, 0.3, 0.3, 0.3, [0.4, 0.36, 0.46]),     // head
+      box(-0.36, 0.42, 0, 0.12, 0.5, 0.12, [0.24, 0.2, 0.3]), // arms
+      box(0.36, 0.42, 0, 0.12, 0.5, 0.12, [0.24, 0.2, 0.3]),
+      box(-0.13, 0, 0, 0.14, 0.4, 0.14, [0.22, 0.18, 0.28]), // legs
+      box(0.13, 0, 0, 0.14, 0.4, 0.14, [0.22, 0.18, 0.28]),
+      box(0, 1.28, 0.1, 0.34, 0.12, 0.12, [0.6, 0.4, 0.8]),  // spectral crest above the face
+    ]),
+  },
+  skeletal_archer: {
+    label: 'Skeletal Archer', behavior: 'aggressive', tier: 2,
+    hp: 26, atk: 11, acc: 72, evasion: 12, armor: 2, speed: 6, moveRange: 4,
+    abilities: ['shard_spit'], ranged: true, range: 5, element: null, weak: ['fire'], resist: [],
+    xp: 90, respawn: 200, aggroRange: 7,
+    headBoxes: [1],
+    drops: [
+      { item: 'old_coin', qty: [1, 3], chance: 0.5 },
+      { item: 'bone_needle', qty: [1, 2], chance: 0.4 },
+    ],
+    desc: 'A dead marksman still keeping its endless watch, loosing splinters of bone from the dark.',
+    recommend: 'Break line of sight and rush it — it is helpless up close.',
+    model: M([
+      box(0, 0.4, 0, 0.34, 0.5, 0.2, [0.82, 0.8, 0.72]),     // ribs
+      box(0, 0.95, 0, 0.28, 0.28, 0.28, [0.88, 0.86, 0.78]), // skull
+      box(-0.32, 0.42, 0.05, 0.1, 0.46, 0.1, [0.8, 0.78, 0.7]), // arms
+      box(0.32, 0.42, 0.05, 0.1, 0.46, 0.1, [0.8, 0.78, 0.7]),
+      box(-0.11, 0, 0, 0.11, 0.4, 0.11, [0.78, 0.76, 0.68]), // legs
+      box(0.11, 0, 0, 0.11, 0.4, 0.11, [0.78, 0.76, 0.68]),
+      box(0.34, 0.45, 0.14, 0.05, 0.58, 0.06, [0.4, 0.28, 0.18]), // bow
+    ]),
+  },
+
+  // ---- Tier 3 (elite / dangerous) ----
+  stone_golem: {
+    label: 'Stone Golem', behavior: 'aggressive', tier: 3, elite: true,
+    hp: 95, atk: 17, acc: 60, evasion: 2, armor: 9, speed: 3, moveRange: 2,
+    abilities: ['boulder_swat'], element: null, weak: [], resist: [],
+    xp: 300, respawn: 400, aggroRange: 6,
+    headBoxes: [1],
+    drops: [
+      { item: 'rough_stone', qty: [2, 4], chance: 1 },
+      { item: 'rough_gem', qty: [1, 2], chance: 0.6 },
+      { item: 'relic_fragment', qty: [1, 1], chance: 0.35 },
+    ],
+    desc: 'A mountain given fists and a grudge, its chest lit by an old bound rune.',
+    recommend: 'Elite. Armour laughs off arrows — bring crushing force and patience.',
+    model: M([
+      box(0, 0.6, 0, 0.8, 0.8, 0.6, [0.46, 0.45, 0.4]),      // torso
+      box(0, 1.5, 0, 0.5, 0.45, 0.5, [0.5, 0.48, 0.42]),     // head
+      box(-0.62, 0.55, 0, 0.28, 0.85, 0.28, [0.42, 0.4, 0.36]), // arms
+      box(0.62, 0.55, 0, 0.28, 0.85, 0.28, [0.42, 0.4, 0.36]),
+      box(-0.24, 0, 0, 0.3, 0.55, 0.32, [0.4, 0.38, 0.34]),  // legs
+      box(0.24, 0, 0, 0.3, 0.55, 0.32, [0.4, 0.38, 0.34]),
+      box(0, 0.75, 0.32, 0.2, 0.2, 0.1, [0.6, 0.85, 0.7]),   // rune core
+    ]),
+  },
+  veil_crawler: {
+    label: 'Veil Crawler', behavior: 'aggressive', tier: 3, elite: true,
+    hp: 70, atk: 16, acc: 68, evasion: 14, armor: 5, speed: 6, moveRange: 4,
+    abilities: ['corrupt_claw'], element: 'shadow', weak: ['nature'], resist: ['shadow'],
+    xp: 300, respawn: 380, aggroRange: 7,
+    headBoxes: [1, 2],
+    drops: [
+      { item: 'veilcrystal', qty: [1, 2], chance: 0.5 },
+      { item: 'relic_fragment', qty: [1, 2], chance: 0.4 },
+    ],
+    desc: 'A low, many-legged horror birthed where the Veil tore. Reality frays where it walks.',
+    recommend: 'Elite. Nature magic cuts the corruption. Wards strongly advised.',
+    model: M([
+      box(0, 0.3, 0, 0.5, 0.35, 1.0, [0.3, 0.22, 0.4]),      // body
+      box(0, 0.35, 0.6, 0.3, 0.28, 0.3, [0.36, 0.26, 0.46]), // head
+      box(0, 0.3, 0.85, 0.18, 0.14, 0.16, [0.5, 0.3, 0.6]),  // maw
+      box(0, 0.35, -0.65, 0.1, 0.1, 0.4, [0.28, 0.2, 0.38]), // tail
+      box(-0.24, 0, 0.4, 0.12, 0.3, 0.12, [0.26, 0.18, 0.34]), // legs
+      box(0.24, 0, 0.4, 0.12, 0.3, 0.12, [0.26, 0.18, 0.34]),
+      box(-0.24, 0, -0.35, 0.12, 0.3, 0.12, [0.26, 0.18, 0.34]),
+      box(0.24, 0, -0.35, 0.12, 0.3, 0.12, [0.26, 0.18, 0.34]),
+      box(0, 0.62, 0.5, 0.34, 0.12, 0.1, [0.7, 0.4, 0.9]),   // veil crest
+    ]),
+  },
+  gaze_orb: {
+    label: 'Gaze Orb', behavior: 'aggressive', tier: 3,
+    hp: 42, atk: 15, acc: 74, evasion: 18, armor: 2, speed: 7, moveRange: 4,
+    abilities: ['void_gaze'], ranged: true, range: 6, element: 'shadow', weak: ['nature'], resist: ['shadow'],
+    xp: 210, respawn: 300, aggroRange: 8,
+    headBoxes: [0],
+    drops: [
+      { item: 'veilcrystal', qty: [1, 1], chance: 0.4 },
+      { item: 'flawless_veilcrystal', qty: [1, 1], chance: 0.08 },
+    ],
+    desc: 'A floating eye trailing raw tendrils, its stare peeling back the world.',
+    recommend: 'Break its line of sight — everything it sees, it can wither.',
+    model: M([
+      box(0, 0.55, 0, 0.5, 0.5, 0.45, [0.3, 0.2, 0.35]),     // orb
+      box(0, 0.6, 0.22, 0.24, 0.24, 0.12, [0.9, 0.8, 1]),    // iris
+      box(-0.2, 0.9, 0, 0.06, 0.22, 0.06, [0.4, 0.28, 0.5]), // tendrils
+      box(0.2, 0.9, 0, 0.06, 0.22, 0.06, [0.4, 0.28, 0.5]),
+      box(0, 0.95, -0.1, 0.06, 0.2, 0.06, [0.4, 0.28, 0.5]),
+    ]),
+  },
 };
 
 // ---- Minecraft-proportioned remodel ----------------------------------------
@@ -701,6 +971,11 @@ const SKINS = {
   magma_hulk: 'skin_stone', blight_horror: 'skin_bark', hollow_watcher: 'skin_glow',
   shell_snapper: 'skin_scales', rootling: 'skin_bark', rootbound_golem: 'skin_stone',
   duskwing: 'skin_hide', rimehowl_alpha: 'skin_fur',
+  // fantasy roster
+  pixie: 'skin_glow', bog_ooze: 'skin_scales', scrap_goblin: 'skin_hide',
+  will_o_wisp: 'skin_glow', bone_hound: 'skin_stone', cave_slime: 'skin_glow',
+  frost_elemental: 'skin_glow', grave_wight: 'skin_hide', skeletal_archer: 'skin_stone',
+  stone_golem: 'skin_stone', veil_crawler: 'skin_scales', gaze_orb: 'skin_glow',
 };
 // face-tile box index per creature (matches the remodeled box order)
 const HEAD_BOX = {
@@ -710,6 +985,9 @@ const HEAD_BOX = {
   shell_snapper: 3, moss_lurker: 2, bog_shambler: 3, magma_hulk: 4,
   blight_horror: 3, rootbound_golem: 4, cinder_imp: 3, thicket_sprite: 1,
   root_creeper: 2, rootling: 1, marsh_wisp: 0, rime_shade: 1, duskwing: 1,
+  // fantasy roster (eyeless orbs — will_o_wisp / gaze_orb — get no face tile)
+  pixie: 1, bog_ooze: 1, scrap_goblin: 1, bone_hound: 1, cave_slime: 1,
+  frost_elemental: 1, grave_wight: 1, skeletal_archer: 1, stone_golem: 1, veil_crawler: 1,
 };
 for (const [type, def] of Object.entries(ENEMY_TYPES)) {
   def.skin = SKINS[type] || 'skin_hide';

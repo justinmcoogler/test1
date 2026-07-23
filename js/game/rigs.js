@@ -15,6 +15,12 @@ const RIGS = {
   moss_lurker: 'lumberer', shell_snapper: 'lumberer',
   bog_shambler: 'biped', magma_hulk: 'biped', blight_horror: 'biped',
   rootbound_golem: 'biped', stone_pecker: 'pecker',
+  // fantasy roster
+  pixie: 'floater', will_o_wisp: 'floater', gaze_orb: 'floater',
+  bog_ooze: 'lumberer', cave_slime: 'lumberer',
+  scrap_goblin: 'biped', frost_elemental: 'biped', grave_wight: 'biped',
+  skeletal_archer: 'biped', stone_golem: 'biped',
+  bone_hound: 'quadruped', veil_crawler: 'quadruped',
 };
 
 const cx = (b) => b.x + b.w / 2;
