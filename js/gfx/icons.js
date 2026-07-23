@@ -599,6 +599,21 @@ export function iconDataURL(name) {
   return url;
 }
 
+// Draw an item's procedural icon shape straight onto a 2D context (nearest-
+// neighbour scaled). Used to paint the held weapon/shield onto the player skin.
+// Uses the procedural silhouette (DEFS) — recognisable and synchronous; pack
+// art (async data URIs) isn't used here.
+export function drawItemIcon(ctx, id, dx, dy, size) {
+  const def = DEFS[`it_${id}`] || DEFS[id] || DEFS.boxicon;
+  const c = document.createElement('canvas');
+  c.width = SIZE; c.height = SIZE;
+  const g = c.getContext('2d');
+  const p = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  SHAPES[def[0]](p, ...def.slice(1));
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(c, 0, 0, SIZE, SIZE, dx, dy, size, size);
+}
+
 // inline <img> markup (pixelated via .pix css)
 export function icon(name, size = 18, cls = '') {
   const url = iconDataURL(name);

@@ -23,6 +23,7 @@ import { findPath } from './game/pathfind.js';
 import { icon as pixelIcon } from './gfx/icons.js';
 import { applyTexturePack } from './gfx/textures.js';
 import { buildRig, playerAnimations } from './game/rigs.js';
+import { buildPlayerSkinCanvas, partBoxUV, swatchUV, preloadPlayerSkins } from './gfx/playerskin.js';
 import { EducationManager } from './game/education.js';
 import { LessonRunner } from './game/lessons.js';
 import { hashSeed } from './core/rng.js';
@@ -174,59 +175,57 @@ class Game {
     }
     this.playerModelVersion = 0;
     this.registerPlayerModel();
+    // If real 64×64 player art (skin_player_base / skin_armor_*) is bundled,
+    // decode it once and repaint the skin; a no-op until those PNGs exist.
+    preloadPlayerSkins().then((n) => { if (n) this.registerPlayerModel(); });
   }
 
   registerPlayerModel() {
-    // Simple voxel adventurer whose colors reflect equipped armor.
+    // The adventurer wears its gear: buildPlayerSkinCanvas paints the equipped
+    // armour and held weapon/shield onto one 96×64 skin, and each body box maps
+    // its faces into that skin (Minecraft-style). See js/gfx/playerskin.js.
     const eq = this.inventory.equipment;
-    const colorOf = (slot, fallback) => {
-      const e = eq[slot];
-      if (!e) return fallback;
-      const item = e.item;
-      if (item.startsWith('hide')) return [0.55, 0.4, 0.26];
-      if (item.startsWith('bronze')) return [0.72, 0.48, 0.25];
-      if (item.startsWith('woven')) return [0.5, 0.42, 0.62];
-      return fallback;
-    };
-    const matOf = (slot) => {
-      const e = eq[slot];
-      if (!e) return 'skin_cloth';
-      if (e.item.startsWith('hide')) return 'skin_hide';
-      if (e.item.startsWith('bronze')) return 'skin_metal';
-      return 'skin_cloth';
-    };
-    const body = colorOf('body', [0.32, 0.5, 0.38]);
-    const legs = colorOf('legs', [0.35, 0.32, 0.3]);
-    const head = colorOf('head', [0.85, 0.7, 0.55]);
-    const arms = colorOf('hands', body);
-    const boots = colorOf('feet', [0.3, 0.24, 0.18]);
+    const canvas = buildPlayerSkinCanvas(eq);
+    const tex = this.renderer.createMobTexture(canvas);
 
-    // Classic blocky-humanoid geometry (Minecraft-style proportions, in model
-    // pixels: head 8×8×8, torso 8×12×4, arms/legs 4×12×4 — 32px tall total),
-    // scaled so the model matches our 1.8-block collision height.
+    // Blocky-humanoid geometry (MC proportions: head 8³, torso 8×12×4,
+    // arms/legs 4×12×4), scaled to the 1.8-block collision height. color=[1,1,1]
+    // so the skin shows as painted (the renderer shades it by face brightness).
     const PX = 1.8 / 32;
-    const B = (fx, fy, fz, w, h, d, color, tex, extra = {}) => ({
-      x: fx * PX, y: fy * PX, z: fz * PX, w: w * PX, h: h * PX, d: d * PX, color, tex, ...extra,
+    const W = [1, 1, 1];
+    const B = (fx, fy, fz, w, h, d, uv) => ({
+      x: fx * PX, y: fy * PX, z: fz * PX, w: w * PX, h: h * PX, d: d * PX, color: W, uv,
     });
-    const legL = [B(-4, 0, -2, 4, 12, 4, legs, matOf('legs'))];
-    const legR = [B(0, 0, -2, 4, 12, 4, legs, matOf('legs'))];
-    const torso = [B(-4, 12, -2, 8, 12, 4, body, matOf('body'))];
-    const armL = [B(-8, 12, -2, 4, 12, 4, arms, eq.hands ? 'skin_hide' : matOf('body'))];
-    const armR = [B(4, 12, -2, 4, 12, 4, arms, eq.hands ? 'skin_hide' : matOf('body'))];
-    const headBoxes = [B(-4, 24, -4, 8, 8, 8, head, 'skin_solid', { texFront: 'skin_face' })];
-    // armor renders as slightly inflated overlay layers, Minecraft-style
-    if (eq.head) headBoxes.push(B(-4.5, 23.75, -4.5, 9, 8.75, 9, colorOf('head', head), matOf('head')));
-    if (eq.feet) {
-      legL.push(B(-4.3, -0.25, -2.3, 4.6, 4.5, 4.6, boots, 'skin_hide'));
-      legR.push(B(-0.3, -0.25, -2.3, 4.6, 4.5, 4.6, boots, 'skin_hide'));
-    }
+    const legL = [B(-4, 0, -2, 4, 12, 4, partBoxUV('leg_l'))];
+    const legR = [B(0, 0, -2, 4, 12, 4, partBoxUV('leg_r'))];
+    const torso = [B(-4, 12, -2, 8, 12, 4, partBoxUV('body'))];
+    const armL = [B(-8, 12, -2, 4, 12, 4, partBoxUV('arm_l'))];
+    const armR = [B(4, 12, -2, 4, 12, 4, partBoxUV('arm_r'))];
+    const headBoxes = [B(-4, 24, -4, 8, 8, 8, partBoxUV('head'))];
+    // held weapon: a small 3D model in the right fist, coloured by material
+    // (via the skin swatches); it swings with the right arm. Shape by class.
     const weapon = eq.main || eq.ranged;
     if (weapon) {
-      armR.push(B(6.75, 10, 2, 1.5, 13, 1.5, [0.6, 0.6, 0.65], 'skin_metal')); // held at the right hand
+      const wclass = ITEMS[weapon.item]?.wclass;
+      if (wclass === 'ranged') {                       // a bow held upright
+        armR.push(B(6, 4, 2.5, 1, 8, 1, swatchUV('grip')));   // lower limb
+        armR.push(B(6, 12, 2.5, 1, 8, 1, swatchUV('grip')));  // upper limb
+        armR.push(B(5.4, 10, 2.6, 1.4, 4, 1, swatchUV('blade'))); // riser
+      } else if (wclass === 'magic') {                 // a staff with a glowing tip
+        armR.push(B(5.6, 4, 2.5, 1.2, 16, 1.2, swatchUV('grip')));
+        armR.push(B(5.2, 19, 2.1, 2, 2, 2, swatchUV('blade')));
+      } else {                                         // melee: hilt, guard, blade
+        armR.push(B(5.2, 9, 2.5, 1.6, 5, 1.6, swatchUV('grip')));       // grip
+        armR.push(B(3.6, 13.5, 2.2, 5, 1.4, 2, swatchUV('grip')));      // crossguard
+        armR.push(B(5.4, 14.5, 2.7, 1.2, 10, 1.2, swatchUV('blade')));  // blade (up)
+      }
     }
+    // shield: a broad plate on the outside of the left arm, with a rim
     if (eq.off) {
-      armL.push(B(-9.5, 13, -3.5, 1.5, 8, 7, [0.5, 0.38, 0.2], 'skin_bark'));  // shield on the left arm
+      armL.push(B(-11, 11, -4, 1.4, 10, 9, swatchUV('shield')));   // face
+      armL.push(B(-11.2, 14, -2, 1.2, 4, 3, swatchUV('rim')));     // central boss
     }
+
     // rigged parts: legs swing at the hip, arms at the shoulder, head at the neck
     const parts = [
       { id: 'body', pivot: [0, 12 * PX, 0], boxes: torso },
@@ -239,7 +238,7 @@ class Game {
     if (this.playerModelName) this.renderer.deleteModel(this.playerModelName);
     this.playerModelVersion++;
     this.playerModelName = `player_v${this.playerModelVersion}`;
-    this.renderer.registerAnimatedModel(this.playerModelName, parts, playerAnimations());
+    this.renderer.registerAnimatedModel(this.playerModelName, parts, playerAnimations(), tex);
   }
 
   bindGameEvents() {
