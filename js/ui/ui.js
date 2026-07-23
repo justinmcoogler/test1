@@ -635,10 +635,17 @@ export class UI {
   // ---- skills ----
   renderSkills(body) {
     const skills = this.game.skills;
-    const groups = { Gathering: [], Crafting: [], Combat: [] };
-    for (const [key, def] of Object.entries(SKILL_DEFS)) groups[def.group].push(key);
+    const ORDER = ['Gathering', 'Processing', 'Survival', 'Combat', 'Knowledge', 'Frontier'];
+    const groups = {};
+    for (const g of ORDER) groups[g] = [];
+    const showFrontier = this.game.settings.fantasyFrontier === true;
+    for (const [key, def] of Object.entries(SKILL_DEFS)) {
+      if (def.frontier && !showFrontier) continue; // fantasy skills hidden on the real-world route
+      (groups[def.group] ||= []).push(key);
+    }
     let html = `<div style="margin-bottom:10px;color:var(--ink-dim)">Total level: <b style="color:var(--gold)">${skills.totalLevel()}</b></div><div class="skill-groups">`;
     for (const [group, keys] of Object.entries(groups)) {
+      if (!keys.length) continue;
       html += `<div class="skill-group"><h3>${group}</h3><div class="skill-grid">`;
       for (const key of keys) {
         const def = SKILL_DEFS[key];

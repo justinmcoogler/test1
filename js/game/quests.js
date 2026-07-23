@@ -61,7 +61,7 @@ export const QUESTS = [
       { type: 'defeat', enemy: 'mudback_boar', count: 1, text: 'Defeat a Mudback Boar in the west meadow' },
       { type: 'talk', npc: 'maren', text: 'Report to Elder Maren' },
     ],
-    rewards: { coins: 50, items: [{ item: 'hide_jerkin', qty: 1 }], xp: [['tactics', 60], ['vitality', 40]] },
+    rewards: { coins: 50, items: [{ item: 'hide_jerkin', qty: 1 }], xp: [['hunting', 60], ['vitality', 40]] },
   },
   {
     id: 'q_rootgrave', giver: 'maren', name: 'Whispers Below', requires: 'q_mettle',
@@ -74,7 +74,7 @@ export const QUESTS = [
       { type: 'chest', id: 'rootgrave_chest', text: 'Claim the Rootgrave treasure' },
       { type: 'talk', npc: 'maren', text: 'Bring word (and proof) to Elder Maren' },
     ],
-    rewards: { coins: 200, items: [{ item: 'veilcharm', qty: 1 }], xp: [['tactics', 150], ['archaeology', 100]] },
+    rewards: { coins: 200, items: [{ item: 'veilcharm', qty: 1 }], xp: [['hunting', 150], ['archaeology', 100]] },
   },
   {
     id: 'q_stall', giver: 'tam', name: 'Stocking the Stall',
@@ -122,7 +122,7 @@ export const QUESTS = [
       { type: 'reach', marker: 'frostwatch', radius: 14, text: 'Travel far east to the Frostwatch camp (follow the trail dots)' },
       { type: 'talk', npc: 'sylla', text: 'Report to Warden Sylla' },
     ],
-    rewards: { coins: 60, items: [{ item: 'travel_biscuit', qty: 3 }], xp: [['tactics', 120]] },
+    rewards: { coins: 60, items: [{ item: 'travel_biscuit', qty: 3 }], xp: [['hunting', 120]] },
   },
   {
     id: 'q_wolfcull', giver: 'sylla', name: 'Thin the Pack',
@@ -145,7 +145,7 @@ export const QUESTS = [
       { type: 'chest', id: 'rimehowl_chest', text: 'Claim the den hoard' },
       { type: 'talk', npc: 'sylla', text: 'Report to Warden Sylla' },
     ],
-    rewards: { coins: 250, xp: [['strength', 220], ['vitality', 160], ['tactics', 120]] },
+    rewards: { coins: 250, xp: [['strength', 220], ['vitality', 160], ['hunting', 120]] },
   },
 ];
 

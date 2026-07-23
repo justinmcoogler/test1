@@ -111,7 +111,7 @@ export class Combat {
       gx: pt.gx, gz: pt.gz, y: pt.y,
       hp: player.hp, maxHp: player.maxHp,
       statuses: [], cooldowns: {}, defending: false,
-      speed: 4 + est.speed + Math.floor(skills.level('tactics') / 10),
+      speed: 4 + est.speed + Math.floor(skills.level('vitality') / 10),
       evasion: 5 + est.evasion,
       armor: est.armor, magicResist: est.magicResist,
       blockChance: est.block, crit: est.crit,
@@ -137,7 +137,7 @@ export class Combat {
 
     // --- initiative ---
     for (const c of this.combatants) {
-      c.initiative = c.speed + Math.random() * 4 + (c.kind === 'player' ? skills.level('tactics') * 0.15 : 0);
+      c.initiative = c.speed + Math.random() * 4 + (c.kind === 'player' ? skills.level('vitality') * 0.15 : 0);
     }
     this.combatants.sort((a, b) => b.initiative - a.initiative);
     this.turnIdx = -1;
@@ -348,7 +348,7 @@ export class Combat {
       return {
         atk: base + skills.level('strength') * 0.4,
         acc: 60 + (w?.acc || 0) + skills.level('strength') * 0.5,
-        crit: 5 + (w?.crit || 0) + est.crit + skills.level('tactics') * 0.1,
+        crit: 5 + (w?.crit || 0) + est.crit + skills.level('vitality') * 0.1,
         skill: 'strength', weaponSlot: w ? 'main' : null, // bare fists wear nothing down
       };
     }
@@ -356,14 +356,14 @@ export class Combat {
       return {
         atk: (w?.atk || 0) + skills.level('ranged') * 0.4,
         acc: 58 + (w?.acc || 0) + skills.level('ranged') * 0.6,
-        crit: 5 + (w?.crit || 0) + est.crit + skills.level('tactics') * 0.1,
+        crit: 5 + (w?.crit || 0) + est.crit + skills.level('vitality') * 0.1,
         skill: 'ranged', weaponSlot: 'ranged',
       };
     }
     return {
       atk: (w?.atk || 2) + skills.level('magic') * 0.45 + est.magic,
       acc: 62 + (w?.acc || 0) + skills.level('magic') * 0.5,
-      crit: 4 + est.crit + skills.level('tactics') * 0.1,
+      crit: 4 + est.crit + skills.level('vitality') * 0.1,
       skill: 'magic', weaponSlot: 'main',
     };
   }
@@ -617,9 +617,9 @@ export class Combat {
     if (!t || t.kind !== 'enemy') return null;
     if (!this.inspected.has(targetId)) {
       this.inspected.add(targetId);
-      this.game.skills.addXp('tactics', 8);
+      this.game.skills.addXp('vitality', 8);
     }
-    const lvl = this.game.skills.level('tactics');
+    const lvl = this.game.skills.level('vitality');
     return {
       label: t.label, hp: t.hp, maxHp: t.maxHp,
       desc: t.def.desc, recommend: t.def.recommend,
@@ -825,7 +825,7 @@ export class Combat {
       }
       skills.addXp('vitality', Math.round(totalXp * 0.2));
       skills.addXp('defense', Math.round(totalXp * 0.15));
-      skills.addXp('tactics', Math.round(totalXp * 0.15));
+      skills.addXp('vitality', Math.round(totalXp * 0.15));
       if (huntXp) skills.addXp('hunting', huntXp);
       for (const l of loot) inventory.add(l.item, l.qty);
       inventory.add('coin', coins);

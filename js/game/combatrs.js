@@ -350,7 +350,7 @@ export class CombatRS {
       skills.addXp('defense', bonus / 2);
     } else skills.addXp(this.style === 'defensive' ? 'defense' : stats.skill, bonus);
     skills.addXp('vitality', (def.xp || 10) * 0.25 * shinyMult);
-    skills.addXp('tactics', (def.xp || 10) * 0.15 * shinyMult);
+    skills.addXp('vitality', (def.xp || 10) * 0.15 * shinyMult);
     if (def.huntXp) skills.addXp('hunting', def.huntXp * shinyMult);
     // loot (shiny creatures drop double and pay triple coin)
     const loot = [];
