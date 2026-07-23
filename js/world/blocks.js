@@ -25,6 +25,8 @@ function def(name, opts = {}) {
     emissive: opts.emissive || 0,
     climb: opts.climb || false,
     walkThrough: opts.solid === false,
+    directional: opts.directional || false, // records a facing on placement; front tile points at it
+    transparent: opts.transparent || false, // non-cube shapes that render in the cutout (alpha) pass
   };
   B[name] = d.id;
   BLOCKS[d.id] = d;
@@ -134,6 +136,36 @@ def('coal_seam', { label: 'Coal Seam', hardness: 3.4, tool: 'pickaxe', minTier: 
 def('saltpeter_deposit', { label: 'Saltpeter Deposit', hardness: 2.6, tool: 'pickaxe', drops: 'saltpeter', tiles: { all: 'saltpeter_deposit' } });
 def('sulfur_deposit', { label: 'Sulfur Deposit', hardness: 2.8, tool: 'pickaxe', minTier: 1, drops: 'sulfur', tiles: { all: 'sulfur_deposit' } });
 def('meteor_crater', { label: 'Meteor Crater', hardness: 5.5, tool: 'pickaxe', minTier: 3, drops: 'rough_stone', tiles: { all: 'meteor_crater' } });
+
+// ---- Shape variants: slabs, stairs, walls, fences, gates, panes, carpets -----
+// Each reuses a base block's tiles/hardness/tool. The mesher (js/gfx/shapes.js)
+// draws the geometry; world.collisionHeight reads SHAPE_COLLISION for physics.
+// Directional shapes (stairs, gate) record a placement facing; glass panes are
+// transparent (cutout pass). Naming is `<base>_<shape>`.
+export const SHAPE_COLLISION = { slab: 0.5, carpet: 1 / 16, stairs: 1, wall: 1, fence: 1, gate: 1, pane: 1 };
+const DIRECTIONAL_SHAPES = new Set(['stairs', 'gate']);
+const SHAPE_LABEL = { slab: 'Slab', stairs: 'Stairs', wall: 'Wall', fence: 'Fence', gate: 'Gate', pane: 'Pane', carpet: 'Carpet' };
+
+export function defShape(base, shape, opts = {}) {
+  const b = BLOCKS[B[base]];
+  const name = `${base}_${shape}`;
+  return def(name, {
+    label: opts.label || `${b.label} ${SHAPE_LABEL[shape] || shape}`,
+    hardness: b.hardness, tool: b.tool, minTier: b.minTier,
+    shape, tiles: { ...b.tiles },
+    directional: DIRECTIONAL_SHAPES.has(shape) || !!opts.directional,
+    transparent: !!opts.transparent,
+    drops: name,
+  });
+}
+
+// Stone family: slab, stairs, wall. Wood (generic planks): slab, stairs, fence, gate.
+for (const base of ['stone', 'cobble', 'stone_brick']) {
+  for (const s of ['slab', 'stairs', 'wall']) defShape(base, s);
+}
+for (const s of ['slab', 'stairs', 'fence', 'gate']) defShape('planks', s);
+defShape('thatch', 'slab');
+defShape('glasspane', 'pane', { label: 'Glass Pane', transparent: true });
 
 export function blockByName(name) { return BLOCKS[B[name]]; }
 export function isSolid(id) { return BLOCKS[id]?.solid === true; }

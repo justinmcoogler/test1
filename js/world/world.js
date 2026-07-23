@@ -1,6 +1,6 @@
 // Chunked voxel world: generation, block access, player edits, resource
 // node lifecycle (deplete/respawn), chest storage, raycasting, persistence.
-import { B, BLOCKS, isSolid } from './blocks.js';
+import { B, BLOCKS, isSolid, SHAPE_COLLISION } from './blocks.js';
 import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, WorldGen, undergroundNodeCandidates } from './worldgen.js';
 import { buildStarterStructures, indexEditsByChunk } from './structures.js';
 import { NODE_TYPES, nodeBlocks, nodeCells } from '../game/nodes.js';
@@ -489,6 +489,8 @@ export class World {
   collisionHeight(x, y, z) {
     const id = this.getBlock(x, y, z);
     if (!isSolid(id)) return 0;
+    const shape = BLOCKS[id]?.shape;
+    if (shape && SHAPE_COLLISION[shape] !== undefined) return SHAPE_COLLISION[shape];
     return SLAB_BLOCKS.has(id) ? 0.6 : 1;
   }
 

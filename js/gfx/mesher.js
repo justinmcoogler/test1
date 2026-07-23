@@ -3,6 +3,11 @@
 import { B, BLOCKS, isOpaque } from '../world/blocks.js';
 import { CHUNK, WORLD_H } from '../world/worldgen.js';
 import { faceUV } from './textures.js';
+import { emitShape, CONNECTS } from './shapes.js';
+
+// Non-cube shapes routed through js/gfx/shapes.js (slab stays on the fast cube
+// path below). Panes/glass render in the cutout pass; the rest are solid.
+const CUSTOM_SHAPES = new Set(['slab', 'stairs', 'wall', 'fence', 'gate', 'pane', 'carpet']);
 
 // face: [nx,ny,nz, corners(4× [x,y,z] in block space), brightness]
 const FACES = [
@@ -155,6 +160,22 @@ export function meshChunk(world, cx, cz) {
 
         if (def.shape === 'cross') {
           addCross(cutout, def, wx, y, wz, skyAt(x, y, z), Math.max(blockAt(x, y, z), def.emissive));
+          continue;
+        }
+        if (CUSTOM_SHAPES.has(def.shape)) {
+          const facing = def.directional ? world.facingAt(wx, y, wz) : 0;
+          const light = { sky: skyAt(x, y + 1, z), blk: Math.max(blockAt(x, y, z), def.emissive) };
+          const target = def.transparent ? cutout : opaque;
+          let sides = null;
+          const grp = CONNECTS[def.shape];
+          if (grp) {
+            const links = (nid) => nid !== B.air && (isOpaque(nid) || grp.has(BLOCKS[nid]?.shape));
+            sides = {
+              px: links(get(x + 1, y, z)), nx: links(get(x - 1, y, z)),
+              pz: links(get(x, y, z + 1)), nz: links(get(x, y, z - 1)),
+            };
+          }
+          emitShape(target, def, wx, y, wz, light, facing, sides);
           continue;
         }
         if (def.shape === 'liquid') {
