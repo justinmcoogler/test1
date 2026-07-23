@@ -558,16 +558,18 @@ Shape variants (slabs, stairs, walls, fences, gates, panes, carpets) **reuse the
 
 ## Still procedural — art still needed (all image-gen)
 
-Everything below still renders from the **procedural atlas** (no hand PNG yet). These
-are the remaining tiles/icons to image-gen so the whole game is real art. All are
-**32×32**. Item icons want a **transparent background + 1px outline** (same as the
-dye icons). Leaves, glass, and the torch post are transparent; other block tiles are
-opaque full-cube faces. Filenames are load-bearing — `block_<name>.png` / `item_<id>.png`.
+Everything below still renders from the **procedural atlas** (no hand PNG yet) — this
+is the *complete* set left to image-gen so the whole game is real art, nothing already
+covered. Tiles/icons are **32×32**. Item icons want a **transparent background + 1px
+outline** (same as the dye icons). Leaves, glass, and the torch post are transparent;
+other block tiles are opaque full-cube faces. Filenames are load-bearing:
+`block_<name>.png`, `item_<id>.png`, and now `skin_<name>.png` for body materials
+(`tools/gen-texpack.mjs` picks up all three prefixes automatically).
 
-> The 11 `skin_*` atlas tiles (mob/player body materials — bark, cloth, face, fur,
-> glow, hide, metal, scales, solid, stone, straw) are **not** part of the
-> block/item PNG pipeline and stay procedural; there is no `block_`/`item_` slot for
-> them, so they are excluded from the counts below.
+**Three groups, all still procedural:** 56 world/material block tiles (R1–R6),
+11 body-material skin tiles (S1), and 80 item icons (R7–R12). The player-worn gear
+that renders armour + weapons *on the character* (full body-wrap skins + held-weapon
+art) is specified in its own section at the end.
 
 ### Batch R1 — Leaves & needles (15) — transparent cutout foliage
 
@@ -654,6 +656,27 @@ opaque full-cube faces. Filenames are load-bearing — `block_<name>.png` / `ite
 | `block_glasspane.png` | Glass | clear glass with thin frame | yes |
 | `block_obsidian_glass.png` | Obsidian glass | dark smoky translucent volcanic glass | yes |
 | `block_torch_post.png` | Torch post | wooden post with lit flame on top | yes |
+
+### Batch S1 — Body-material skins (11) — `skin_<name>.png`, 32×32, **tileable, grayscale**
+
+These paint the **bodies of mobs, NPCs and the player** (and the base layer under
+armour). The engine multiplies each tile by a per-creature colour, so keep them
+**neutral grey / light value** and **seamlessly tileable** (they wrap across body
+boxes) — an over-coloured tile will tint wrong. Opaque.
+
+| filename | what it is | style hint |
+|---|---|---|
+| `skin_solid.png` | Smooth skin panel | near-white, faint even grain (generic body base) |
+| `skin_face.png` | Face panel | light base, two dark eyes + a small muzzle/mouth, front-of-head only |
+| `skin_fur.png` | Fur | short vertical grey hair strokes, soft |
+| `skin_hide.png` | Tanned hide / leather | mottled grey with a few darker patches |
+| `skin_scales.png` | Reptile scales | offset rows of small overlapping scales |
+| `skin_stone.png` | Stone / golem hide | cracked grey rock with a wandering seam |
+| `skin_bark.png` | Bark / treant | vertical bark ridges, woody grain |
+| `skin_metal.png` | Brushed metal plating | horizontal sheen bands, rivets at the corners |
+| `skin_cloth.png` | Woven cloth | fine even weave grid |
+| `skin_straw.png` | Straw / thatch | scattered straw strands (practice-dummy body) |
+| `skin_glow.png` | Glowing wisp | soft radial glow, bright centre → dim edge |
 
 ### Batch R7 — Item icons: materials & resources (27) — transparent, 1px outline
 
@@ -765,10 +788,43 @@ opaque full-cube faces. Filenames are load-bearing — `block_<name>.png` / `ite
 | `item_energy_tonic.png` | Energy tonic | glowing yellow-orange vial |
 | `item_antidote.png` | Antidote | green cure vial |
 
-### Remaining-art totals
-- Block tiles still procedural: **56** (R1–R6)
-- Item icons still procedural: **80** (R7–R12)
-- **Remaining: 136**  ·  `skin_*` mob/player tiles (11) excluded — not PNG-addressable.
+### Batch P — Player-worn gear: full body-wrap layers (9) — `skin_<name>.png`, **64×64 UV**
+
+Renders armour + weapons **on the character**. Chosen approach: Minecraft-style
+full-humanoid UV skins. Paint onto the **standard 64×64 humanoid skin template**
+(our player boxes match it exactly: head 8×8×8, torso 8×12×4, arms 4×12×4, legs
+4×12×4 — front/back/sides/top/bottom regions in the usual layout). The **base** skin
+is opaque; each **armour wrap** is an overlay layer — **transparent everywhere the
+armour doesn't cover**, so the base body shows through.
+
+| filename | what it is | style hint |
+|---|---|---|
+| `skin_player_base.png` | Base adventurer | bare body — face, hands, tunic, trousers, boots (opaque, full wrap) |
+| `skin_armor_hide.png` | Hide armour wrap | tan leather cap / jerkin / leggings / boots over the plated regions |
+| `skin_armor_cloth.png` | Woven armour wrap | cloth hood + robe (the `woven` set) |
+| `skin_armor_bronze.png` | Bronze armour wrap | warm bronze helm / cuirass / greaves plating |
+| `skin_armor_copper.png` | Copper armour wrap | orange-copper plates, faint patina |
+| `skin_armor_iron.png` | Iron armour wrap | cool grey steel plate |
+| `skin_armor_steel.png` | Steel armour wrap | bright polished steel, crisp edges |
+| `skin_armor_damascus.png` | Damascus armour wrap | watered-steel wave pattern, dark |
+| `skin_armor_meteoric.png` | Meteoric armour wrap | dark star-metal, faint violet sheen |
+
+**Held items (weapons + shields):** rendered on an in-hand model that reuses each
+item's existing **icon art** as its texture — so no new image-gen files are needed
+for held gear (the weapon/shield icons on batches R7–R12 + the already-drawn metal
+shields cover them). *Optional later:* dedicated side-profile held sprites per weapon
+family (~21) if you want crisper in-hand silhouettes.
+
+> Batches S1 + P need engine work to consume them — a `skin_*` PNG hook (done) plus a
+> UV-skin render path for the player and a small held-weapon model system. Those are a
+> build step, separate from generating the art.
+
+### Remaining-art totals (files to generate)
+- World / material block tiles: **56** (R1–R6, `block_*` 32×32)
+- Body-material skins: **11** (S1, `skin_*` 32×32, grayscale/tileable)
+- Item icons: **80** (R7–R12, `item_*` 32×32, transparent)
+- Player-worn gear: **9** (P, `skin_*` 64×64 UV; held gear reuses item icons)
+- **Total to generate: 156**
 
 ## Totals (art requested in this manifest)
 - Block tiles: 181

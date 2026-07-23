@@ -50,7 +50,13 @@ const unmappedItems = [];
 
 for (const f of files) {
   const base = f.replace(/\.png$/, '');
-  if (base.startsWith('block_')) {
+  if (base.startsWith('skin_')) {
+    // body-material tiles for the player + mobs (skin_fur, skin_hide, …) and
+    // the full-body armor-layer wraps (skin_armor_<material>). Named 1:1 with
+    // the engine tile so they overlay the procedural swatch directly.
+    if (tileSet.has(base)) tiles[base] = dataURI(f);
+    else unmappedBlocks.push(base);
+  } else if (base.startsWith('block_')) {
     const target = aliasBlock(base.slice(6));
     if (target) tiles[target] = dataURI(f);
     else unmappedBlocks.push(base.slice(6));
