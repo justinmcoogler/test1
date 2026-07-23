@@ -2020,6 +2020,16 @@ async function startGame(slot, isNew) {
   window.__blocks = await import('./world/blocks.js');
   window.__enemies = await import('./game/enemies.js');
   window.__mobloader = await import('./game/mobloader.js');
+  window.__schematic = await import('./world/schematic.js');
+  // Paste a schematic converted by tools/import-schematic.mjs near the player:
+  //   __paste('assets/schematics/hut.json')  (optional dx,dy,dz offset)
+  window.__paste = async (url, dx = 3, dy = 0, dz = 0) => {
+    const p = game.player;
+    const r = await window.__schematic.loadAndPaste(game.world, url,
+      Math.floor(p.x) + dx, Math.floor(p.y) + dy, Math.floor(p.z) + dz);
+    console.log('[schematic]', url, r);
+    return r;
+  };
   await game.init((frac, text) => {
     $('loading-fill').style.width = `${Math.round(frac * 100)}%`;
     $('loading-text').textContent = text;
