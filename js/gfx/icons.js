@@ -618,6 +618,39 @@ export function skillIcon(key, size = 16) {
   return icon(DEFS[`sk_${key}`] ? `sk_${key}` : 'sparkle', size);
 }
 
+// ---- socketed-weapon icons: the weapon with a small gem set into its hilt ----
+function gemShade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (sh) => Math.max(0, Math.min(255, ((n >> sh) & 255) + amt * 255)) | 0;
+  return `rgb(${ch(16)},${ch(8)},${ch(0)})`;
+}
+// Draw the weapon icon, then a ~4px faceted gem on its hilt. Cached under
+// `it_<id>#<gem>` so each socketed combination renders once.
+export function gemmedItemDataURL(id, gemId) {
+  const key = `it_${id}#${gemId}`;
+  let url = cache.get(key);
+  if (url) return url;
+  const def = DEFS[`it_${id}`];
+  const c = document.createElement('canvas');
+  c.width = SIZE; c.height = SIZE;
+  const ctx = c.getContext('2d');
+  const p = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); };
+  if (def) SHAPES[def[0]](p, ...def.slice(1)); else SHAPES.boxicon(p);
+  const hue = GEM_COL[gemId] || '#c8d0e8';
+  const gx = 6, gy = 9; // hilt, lower-centre — sized to sit on the grip, not the blade
+  p(gx - 1, gy - 1, 6, 6, 'rgba(0,0,0,0.55)');  // dark bezel
+  p(gx, gy, 4, 4, gemShade(hue, -0.05));        // gem body
+  p(gx, gy, 3, 1, gemShade(hue, 0.30));         // top facet
+  p(gx, gy, 1, 3, gemShade(hue, 0.14));         // left facet
+  p(gx + 2, gy + 2, 2, 2, gemShade(hue, -0.24)); // shadow facet
+  p(gx + 1, gy + 1, 1, 1, '#ffffff');           // sparkle
+  url = c.toDataURL(); cache.set(key, url);
+  return url;
+}
+export function gemmedItemHTML(id, size, gemId) {
+  return `<img class="pix" src="${gemmedItemDataURL(id, gemId)}" width="${size}" height="${size}" alt="">`;
+}
+
 // True when an item id has a dedicated icon (not the boxicon fallback). Used by
 // tests to guarantee generated catalog items are all covered.
 export function hasItemIcon(id) { return !!DEFS[`it_${id}`] || !!TEXPACK_ITEMS[id]; }

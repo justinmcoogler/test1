@@ -10,7 +10,8 @@ import { RS_STYLES } from '../game/combatrs.js';
 import { tileIconDataURL, getAtlasCanvas, faceUV } from '../gfx/textures.js';
 import { B, BLOCKS } from '../world/blocks.js';
 import { WORLD_H } from '../world/worldgen.js';
-import { icon, itemIcon, skillIcon } from '../gfx/icons.js';
+import { icon, itemIcon, skillIcon, gemmedItemHTML } from '../gfx/icons.js';
+import { SOCKETABLE_GEMS, socketDesc } from '../game/sockets.js';
 import { CHUNK } from '../world/worldgen.js';
 import { on, emit } from '../core/events.js';
 import { SFX } from '../core/audio.js';
@@ -34,9 +35,10 @@ function itemTitle(itemId) {
   return bits.join('\n');
 }
 
-function itemIconHTML(itemId, size = null) {
+function itemIconHTML(itemId, size = null, gem = null) {
   const def = ITEMS[itemId];
   if (!def) return '?';
+  if (gem) return gemmedItemHTML(itemId, size || 20, gem); // weapon with a socketed gem
   if (def.tileIcon) {
     const url = tileIconDataURL(def.tileIcon);
     if (url) return `<img src="${url}" alt="${def.label}">`;
@@ -335,7 +337,7 @@ export class UI {
       let html = `<span class="key">${i + 1}</span>`;
       if (s) {
         const def = ITEMS[s.item];
-        html += itemIconHTML(s.item);
+        html += itemIconHTML(s.item, null, s.gem);
         if (s.qty > 1) html += `<span class="qty">${s.qty}</span>`;
         if (s.dur != null && def.dur) {
           html += `<span class="dur"><div style="width:${(s.dur / def.dur) * 100}%"></div></span>`;
@@ -626,7 +628,7 @@ export class UI {
       const s = inv.slots[i];
       const def = s ? ITEMS[s.item] : null;
       grid += `<div class="inv-slot ${i < HOTBAR_SIZE ? 'hotbar-mark' : ''} ${this.selectedInvSlot === i ? 'selected' : ''}" data-idx="${i}" title="${s ? itemTitle(s.item).replace(/"/g, '&quot;') : ''}">
-        ${s ? itemIconHTML(s.item) : ''}
+        ${s ? itemIconHTML(s.item, null, s.gem) : ''}
         ${s && s.qty > 1 ? `<span class="qty">${s.qty}</span>` : ''}
         ${s && s.dur != null && def.dur ? `<span class="dur"><div style="width:${(s.dur / def.dur) * 100}%"></div></span>` : ''}
       </div>`;
@@ -636,7 +638,7 @@ export class UI {
       const e = inv.equipment[slot];
       equip += `<div class="equip-row">
         <span class="eq-label">${EQUIP_LABELS[slot]}</span>
-        <div class="eq-slot" data-eq="${slot}" title="${e ? itemTitle(e.item).replace(/"/g, '&quot;') : 'Empty'}">${e ? itemIconHTML(e.item) : ''}</div>
+        <div class="eq-slot" data-eq="${slot}" title="${e ? itemTitle(e.item).replace(/"/g, '&quot;') : 'Empty'}">${e ? itemIconHTML(e.item, null, e.gem) : ''}</div>
         <span class="eq-item">${e ? ITEMS[e.item].label : '—'}</span>
       </div>`;
     }
@@ -648,9 +650,23 @@ export class UI {
       const canEquip = ['weapon', 'armor', 'accessory', 'utility'].includes(selDef.type);
       const statline = ['atk', 'acc', 'crit', 'armor', 'evasion', 'speed', 'magic', 'magicResist', 'mana', 'hp', 'block', 'heal']
         .filter((k) => selDef[k]).map((k) => `${k} ${selDef[k] > 0 ? '+' : ''}${selDef[k]}`).join(' · ');
+      // gem socketing for weapons: show the set gem's power, or offer to socket one
+      let socketHTML = '';
+      if (selDef.type === 'weapon') {
+        const cap = (s) => s.replace(/\b\w/g, (c) => c.toUpperCase());
+        if (sel.gem) {
+          socketHTML = `<div class="ia-socket">◆ ${cap(sel.gem)}: ${socketDesc(sel.gem)} <button data-act="unsocket">Remove gem</button></div>`;
+        } else {
+          const gems = SOCKETABLE_GEMS.filter((g) => inv.count(g) > 0);
+          socketHTML = gems.length
+            ? `<div class="ia-socket">Socket a gem: ${gems.map((g) => `<button class="ia-gem" data-socket="${g}" title="${socketDesc(g)}">${itemIconHTML(g, 14)} ${cap(g)}</button>`).join(' ')}</div>`
+            : '<div class="ia-socket ia-dim">◇ Empty socket — cut a gem to set a power into this weapon.</div>';
+        }
+      }
       actions = `<div class="item-actions">
         <span class="ia-name">${selDef.label}</span>
         <div class="ia-desc">${selDef.desc || ''} ${statline ? `<br>${statline}` : ''} ${selDef.gather ? `· +${Math.round(selDef.gather * 100)}% gathering` : ''}</div>
+        ${socketHTML}
         ${canUse ? '<button data-act="use">Use</button>' : ''}
         ${canEquip ? '<button data-act="equip">Equip</button>' : ''}
         <button data-act="drop">Drop</button>
@@ -698,7 +714,17 @@ export class UI {
           if (inv.equipFromSlot(idx) && wasWeapon) emit('equippedWeapon', {});
         }
         else if (act === 'drop') inv.removeSlot(idx, inv.slots[idx]?.qty || 1);
+        else if (act === 'unsocket') { const r = inv.unsocketGem(idx); if (!r.ok) this.toast(r.reason); this.renderWindowBody(); return; }
         this.selectedInvSlot = null;
+        this.renderWindowBody();
+      });
+    });
+    body.querySelectorAll('[data-socket]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const idx = this.selectedInvSlot;
+        if (idx == null) return;
+        const r = this.game.inventory.socketGem(idx, b.dataset.socket);
+        if (!r.ok) this.toast(r.reason); else emit('equippedWeapon', {});
         this.renderWindowBody();
       });
     });

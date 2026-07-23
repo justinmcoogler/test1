@@ -1,6 +1,7 @@
 // Inventory (32 slots, first 8 = hotbar), equipment (11 slots), durability.
 import { ITEMS } from './items.js';
 import { emit } from '../core/events.js';
+import { gemBonus } from './sockets.js';
 
 export const INV_SIZE = 32;
 export const HOTBAR_SIZE = 8;
@@ -22,7 +23,7 @@ export class Inventory {
 
   selectedStack() { return this.slots[this.selected]; }
 
-  add(itemId, qty = 1, dur = null) {
+  add(itemId, qty = 1, dur = null, gem = null) {
     const def = ITEMS[itemId];
     if (!def) { console.warn('unknown item', itemId); return 0; }
     if (itemId === 'coin') { this.coins += qty; emit('coinsChanged', this.coins); emit('itemGained', { item: itemId, qty }); return qty; }
@@ -41,6 +42,7 @@ export class Inventory {
         const take = Math.min(def.stack, remaining);
         this.slots[i] = { item: itemId, qty: take };
         if (def.dur) this.slots[i].dur = dur ?? def.dur;
+        if (gem) this.slots[i].gem = gem; // carry a socketed gem onto the new stack
         remaining -= take;
       }
     }
@@ -162,9 +164,9 @@ export class Inventory {
     else if (def.type === 'utility') slot = 'utility';
     if (!slot) return false;
     const prev = this.equipment[slot];
-    this.equipment[slot] = { item: s.item, dur: s.dur ?? def.dur ?? null };
+    this.equipment[slot] = { item: s.item, dur: s.dur ?? def.dur ?? null, gem: s.gem || null };
     this.slots[idx] = null;
-    if (prev) this.add(prev.item, 1, prev.dur);
+    if (prev) this.add(prev.item, 1, prev.dur, prev.gem);
     emit('equipmentChanged', { slot, item: s.item });
     emit('inventoryChanged');
     return true;
@@ -173,10 +175,38 @@ export class Inventory {
   unequip(slot) {
     const e = this.equipment[slot];
     if (!e) return false;
-    if (this.add(e.item, 1, e.dur) < 1) return false; // inventory full
+    if (this.add(e.item, 1, e.dur, e.gem) < 1) return false; // inventory full
     this.equipment[slot] = null;
     emit('equipmentChanged', { slot, item: null });
     return true;
+  }
+
+  // ---- gem sockets ----
+  // Set a cut gem into a weapon stack (one socket). Consumes the gem.
+  socketGem(idx, gemId) {
+    const s = this.slots[idx];
+    if (!s) return { ok: false, reason: 'No item selected' };
+    if (ITEMS[s.item]?.type !== 'weapon') return { ok: false, reason: 'Only weapons take gems' };
+    if (s.gem) return { ok: false, reason: 'Already socketed' };
+    if (!gemBonus(gemId)) return { ok: false, reason: 'Not a socketable gem' };
+    if (this.count(gemId) < 1) return { ok: false, reason: 'You have no cut ' + gemId };
+    this.consumeAll([{ item: gemId, qty: 1 }]);
+    s.gem = gemId;
+    emit('equipmentChanged', {});
+    emit('inventoryChanged');
+    return { ok: true };
+  }
+
+  // Pop a gem back out (recovers the gem if there's room).
+  unsocketGem(idx) {
+    const s = this.slots[idx];
+    if (!s || !s.gem) return { ok: false, reason: 'No gem to remove' };
+    if (!this.canFit(s.gem, 1)) return { ok: false, reason: 'Inventory full' };
+    this.add(s.gem, 1);
+    s.gem = null;
+    emit('equipmentChanged', {});
+    emit('inventoryChanged');
+    return { ok: true };
   }
 
   // Aggregate combat/gather stats from all equipped items.
@@ -192,12 +222,24 @@ export class Inventory {
   }
 
   weapon(style) {
-    // style: melee|ranged|magic → the relevant equipped weapon def or null
-    const main = this.equipment.main ? ITEMS[this.equipment.main.item] : null;
-    const rng = this.equipment.ranged ? ITEMS[this.equipment.ranged.item] : null;
-    if (style === 'ranged') return rng && rng.wclass === 'ranged' ? rng : null;
-    if (style === 'magic') return main && main.wclass === 'magic' ? main : null;
-    return main && main.wclass === 'melee' ? main : null;
+    // style: melee|ranged|magic → the relevant equipped weapon def or null, with
+    // any socketed gem's bonus merged in (so combat reads the boosted stats).
+    const withGem = (inst, want) => {
+      if (!inst) return null;
+      const def = ITEMS[inst.item];
+      if (!def || def.wclass !== want) return null;
+      const b = inst.gem && gemBonus(inst.gem);
+      if (!b) return def;
+      return {
+        ...def, socketGem: inst.gem,
+        atk: (def.atk || 0) + (b.atk || 0), acc: (def.acc || 0) + (b.acc || 0),
+        crit: (def.crit || 0) + (b.crit || 0), spd: (def.spd || 0) + (b.spd || 0),
+        range: (def.range || 0) + (b.range || 0),
+      };
+    };
+    if (style === 'ranged') return withGem(this.equipment.ranged, 'ranged');
+    if (style === 'magic') return withGem(this.equipment.main, 'magic');
+    return withGem(this.equipment.main, 'melee');
   }
 
   damageEquipped(slot, amount = 1) {
@@ -213,9 +255,9 @@ export class Inventory {
 
   serialize() {
     return {
-      slots: this.slots.map((s) => (s ? [s.item, s.qty, s.dur ?? -1] : 0)),
+      slots: this.slots.map((s) => (s ? [s.item, s.qty, s.dur ?? -1, s.gem || 0] : 0)),
       equipment: Object.fromEntries(
-        EQUIP_SLOTS.map((k) => [k, this.equipment[k] ? [this.equipment[k].item, this.equipment[k].dur ?? -1] : 0])
+        EQUIP_SLOTS.map((k) => [k, this.equipment[k] ? [this.equipment[k].item, this.equipment[k].dur ?? -1, this.equipment[k].gem || 0] : 0])
       ),
       coins: this.coins,
       selected: this.selected,
@@ -226,16 +268,17 @@ export class Inventory {
     if (!d) return;
     this.slots = (d.slots || []).map((s) => {
       if (!s) return null;
-      const [item, qty, dur] = s;
+      const [item, qty, dur, gem] = s;
       if (!ITEMS[item]) return null;
       const st = { item, qty };
       if (dur >= 0) st.dur = dur;
+      if (gem) st.gem = gem;
       return st;
     });
     while (this.slots.length < INV_SIZE) this.slots.push(null);
     for (const k of EQUIP_SLOTS) {
       const e = d.equipment?.[k];
-      this.equipment[k] = e && ITEMS[e[0]] ? { item: e[0], dur: e[1] >= 0 ? e[1] : null } : null;
+      this.equipment[k] = e && ITEMS[e[0]] ? { item: e[0], dur: e[1] >= 0 ? e[1] : null, gem: e[2] || null } : null;
     }
     this.coins = d.coins || 0;
     this.selected = d.selected || 0;
