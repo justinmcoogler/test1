@@ -28,6 +28,9 @@ export class Player {
     this.fallStartVy = 0;
     this.dead = false;
     this.debug = false;   // debug/creative: fly (noclip) + invulnerable
+    this.bleeding = 0;    // seconds of open-wound bleeding remaining (real-world wounds)
+    this.bleedDps = 0;    // health lost per second while bleeding
+    this._bleedTick = 0;
   }
 
   eye() { return [this.x, this.y + this.eyeHeight, this.z]; }
@@ -38,7 +41,11 @@ export class Player {
 
   update(dt, input, world) {
     dt = Math.min(dt, 0.05);
-    if (this.debug) { this.hp = this.maxHp; this.dead = false; this.flyUpdate(dt, input); return; }
+    if (this.debug) { this.hp = this.maxHp; this.dead = false; this.bleeding = 0; this.bleedDps = 0; this.flyUpdate(dt, input); return; }
+    if (this.dead) return;
+
+    // open wounds bleed until dressed (Medicine) or they clot on their own
+    this.tickBleed(dt);
     if (this.dead) return;
 
     // water state from waist position
@@ -185,6 +192,30 @@ export class Player {
     }
   }
 
+  // Open a bleeding wound. Takes the worse of any existing bleed rather than
+  // stacking, so repeated hits don't compound into instant death.
+  applyBleed(seconds, dps) {
+    if (this.debug) return;
+    this.bleeding = Math.max(this.bleeding, seconds);
+    this.bleedDps = Math.max(this.bleedDps, dps);
+  }
+
+  stopBleeding() {
+    this.bleeding = 0; this.bleedDps = 0; this._bleedTick = 0;
+  }
+
+  tickBleed(dt) {
+    if (this.bleeding <= 0) return;
+    this.bleeding = Math.max(0, this.bleeding - dt);
+    this._bleedTick += dt;
+    while (this._bleedTick >= 1) {
+      this._bleedTick -= 1;
+      this.damage(this.bleedDps, 'bleeding');
+      if (this.dead) { this.stopBleeding(); return; }
+    }
+    if (this.bleeding <= 0) this.stopBleeding();
+  }
+
   damage(amount, source = 'damage') {
     if (this.dead || this.debug) return;
     this.hp = Math.max(0, this.hp - amount);
@@ -205,6 +236,7 @@ export class Player {
     this.hp = this.maxHp;
     this.energy = this.maxEnergy;
     this.dead = false;
+    this.stopBleeding();
   }
 
   serialize() {

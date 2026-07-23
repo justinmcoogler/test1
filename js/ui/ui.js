@@ -215,9 +215,27 @@ export class UI {
     $('hp-fill').style.width = `${(p.hp / p.maxHp) * 100}%`;
     $('hp-text').textContent = `HP ${Math.ceil(p.hp)}/${p.maxHp}`;
     $('energy-fill').style.width = `${(p.energy / p.maxEnergy) * 100}%`;
-    $('energy-text').textContent = `EN ${Math.floor(p.energy)}`;
-    $('mana-fill').style.width = `${(p.mana / p.maxMana) * 100}%`;
-    $('mana-text').textContent = `MP ${Math.floor(p.mana)}/${p.maxMana}`;
+    $('energy-text').textContent = `STA ${Math.floor(p.energy)}`;
+    // mana is Fantasy Frontier only — the bar is hidden in real-world play
+    const manaBar = $('mana-fill').parentElement;
+    if (this.game.settings?.fantasyFrontier === true) {
+      manaBar.style.display = '';
+      $('mana-fill').style.width = `${(p.mana / p.maxMana) * 100}%`;
+      $('mana-text').textContent = `MP ${Math.floor(p.mana)}/${p.maxMana}`;
+    } else {
+      manaBar.style.display = 'none';
+    }
+    // open-wound indicator: only while bleeding, warns to bandage
+    let bl = $('bleed-tag');
+    if (p.bleeding > 0) {
+      if (!bl) {
+        bl = document.createElement('div');
+        bl.id = 'bleed-tag';
+        bl.className = 'vital-tag bleed';
+        $('vitals').appendChild(bl);
+      }
+      bl.textContent = `Bleeding — ${Math.ceil(p.bleeding)}s`;
+    } else if (bl) bl.remove();
     // breath bar only surfaces while diving (or catching your breath)
     let bb = $('breath-bar');
     if (p.air < p.maxAir - 0.05) {
@@ -856,6 +874,7 @@ export class UI {
       ${row('Reduced motion', check('reducedMotion'))}
       ${row('Screen shake', check('screenShake'))}
       ${row('Colorblind-friendly colors', check('colorblind'))}
+      ${row('Fantasy Frontier — off by default; re-enables magic, mana &amp; spellcasting', check('fantasyFrontier'))}
       ${row('Sprint: toggle instead of hold', check('sprintToggle'))}
       ${row('Left-handed mobile layout', check('leftHanded'))}
       ${row('Tap to interact (mobile)', check('tapToInteract'))}

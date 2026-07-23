@@ -24,8 +24,16 @@
 > generates smelting/alloying/gem-cutting/forging/gunsmithing/jewelry; new
 > `crafting` skill; biomes/underground/structures spawn the realistic content;
 > tutorial teaches the copper-first chain — validated by `tests/unit/recipes.test.mjs`)
-> → (4) 32×32 textures (list in `docs/TEXTURES.md`) → (5) realistic biome
-> generation refinement. Legacy non-metal content (herbs/fish/hides/relics) stays.
+> → (4) 32×32 textures (list in `docs/TEXTURES.md`) → (5) ✅ realistic biome
+> generation (20 real-world biomes, Whittaker climate model in `js/world/worldgen.js`)
+> → (6) ✅ **realism combat pass**: default play is de-magicked — mana bar, magic
+> combat style and spell specials (`ember_burst`/`spark`/`frost_bind`/`mend`/`rally`)
+> are gated behind the off-by-default `settings.fantasyFrontier`; the mana heal is
+> replaced by a real Medicine **bandage** (costs stamina, stops bleeding); a real
+> **bleed/wound** loop (`player.bleeding`, predator infliction in `combatrs.js`,
+> Constitution/armor resistance) makes Medicine a live combat skill; HUD relabels
+> Energy→Stamina and hides mana off-Frontier (`tests/unit/combat.test.mjs`).
+> Legacy non-metal content (herbs/fish/hides/relics) stays.
 
 ---
 

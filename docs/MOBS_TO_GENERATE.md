@@ -12,7 +12,8 @@ a **32×32-per-tile texture** on the mob's own UV sheet (same 32px scale as bloc
   "parts": [ { "id":"body","parent":null,"pivot":[…],"boxes":[ { "from":[…],"size":[…],"uv":{…} } ] }, … ],
   "animations": { "idle":{…}, "walk":{…}, "attack":{…} },      // keyframed rotate/translate
   "stats": { "hp":…, "atk":…, "acc":…, "evasion":…, "armor":…, "speed":…, "moveRange":…,
-             "behavior":"passive|defensive|aggressive", "tier":…, "xp":…, "huntXp":…, "respawn":… },
+             "behavior":"passive|defensive|aggressive", "tier":…, "xp":…, "huntXp":…, "respawn":…,
+             "bleed":0.0 },   // optional 0–1: chance a hit opens a bleeding wound (claws/fangs)
   "drops": [ { "item":"…","qty":[min,max],"chance":… } ],
   "spawn": { "biomes":[…], "density":0.001, "packSize":[min,max] } }   // density pre-multiplier; game also applies MOB_SPAWN_RATE
 ```

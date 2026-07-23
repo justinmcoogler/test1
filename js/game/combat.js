@@ -11,16 +11,17 @@ export const ABILITIES = {
   // ---- player basics (by weapon style) ----
   strike: { label: 'Strike', style: 'melee', range: 1, power: 1, desc: 'A basic melee attack.' },
   shot: { label: 'Loose Arrow', style: 'ranged', range: 6, power: 1, desc: 'A basic ranged attack. Needs line of sight.' },
-  spark: { label: 'Emberbolt', style: 'magic', range: 5, power: 1, mana: 3, element: 'fire', desc: 'A dart of flame.' },
+  spark: { label: 'Emberbolt', style: 'magic', range: 5, power: 1, mana: 3, element: 'fire', frontier: true, desc: 'A dart of flame. Fantasy Frontier only.' },
   // ---- unlockable player abilities ----
   power_strike: { label: 'Power Strike', style: 'melee', range: 1, power: 1.6, energy: 25, cd: 2, accMod: -5, req: ['strength', 5], desc: 'A heavy blow: +60% damage, slightly less accurate.' },
   cleave: { label: 'Cleave', style: 'melee', range: 1, power: 1.1, energy: 35, cd: 3, aoeAdjacent: true, req: ['strength', 15], desc: 'Strike every adjacent enemy.' },
   aimed_shot: { label: 'Aimed Shot', style: 'ranged', range: 6, power: 1.5, energy: 25, cd: 2, accMod: 15, req: ['ranged', 5], desc: 'Take a breath. +50% damage, +15 accuracy.' },
   pinning_shot: { label: 'Pinning Shot', style: 'ranged', range: 6, power: 1.0, energy: 30, cd: 3, status: { id: 'slow', turns: 2, chance: 0.9 }, req: ['ranged', 15], desc: 'Slows the target for 2 turns.' },
-  frost_bind: { label: 'Frostbind', style: 'magic', range: 5, power: 0.7, mana: 6, cd: 2, element: 'ice', status: { id: 'slow', turns: 2, chance: 0.9 }, req: ['magic', 5], desc: 'Icy grip: damage + slow.' },
-  ember_burst: { label: 'Ember Burst', style: 'magic', range: 4, power: 0.9, mana: 10, cd: 3, aoe: 1, element: 'fire', req: ['magic', 10], desc: 'Explodes in a 3×3 area.' },
-  mend: { label: 'Mend', style: 'heal', range: 0, mana: 5, cd: 2, req: ['healing', 1], desc: 'Restore health. Scales with Healing.' },
-  rally: { label: 'Rally', style: 'heal', range: 0, mana: 12, cd: 4, buff: { id: 'atkUp', turns: 3 }, req: ['healing', 15], desc: 'Heal and bolster your attacks for 3 turns.' },
+  frost_bind: { label: 'Frostbind', style: 'magic', range: 5, power: 0.7, mana: 6, cd: 2, element: 'ice', status: { id: 'slow', turns: 2, chance: 0.9 }, req: ['magic', 5], frontier: true, desc: 'Icy grip: damage + slow. Fantasy Frontier only.' },
+  ember_burst: { label: 'Ember Burst', style: 'magic', range: 4, power: 0.9, mana: 10, cd: 3, aoe: 1, element: 'fire', req: ['magic', 10], frontier: true, desc: 'Explodes in a 3×3 area. Fantasy Frontier only.' },
+  bandage: { label: 'Bandage', style: 'heal', range: 0, energy: 20, cd: 2, req: ['healing', 1], desc: 'Field first aid — dress wounds. No magic; trains Medicine.' },
+  mend: { label: 'Mend', style: 'heal', range: 0, mana: 5, cd: 2, req: ['healing', 1], frontier: true, desc: 'Restore health with a spell. Fantasy Frontier only.' },
+  rally: { label: 'Rally', style: 'heal', range: 0, mana: 12, cd: 4, buff: { id: 'atkUp', turns: 3 }, req: ['healing', 15], frontier: true, desc: 'Heal and bolster your attacks. Fantasy Frontier only.' },
   // ---- enemy abilities ----
   tusk_charge: { label: 'Tusk Charge', style: 'melee', range: 3, power: 1.5, telegraph: 'lowers its head, ready to charge…', push: 1, cd: 3 },
   sting_spark: { label: 'Sting Spark', style: 'magic', range: 2, power: 1, element: 'nature' },
@@ -309,6 +310,7 @@ export class Combat {
   // ---------------------------------------------------------------- player stats & abilities
   playerAbilities() {
     const { inventory, skills, player } = this.game;
+    const frontier = this.game.settings?.fantasyFrontier === true;
     const list = [];
     const melee = inventory.weapon('melee');
     const rangedW = inventory.weapon('ranged');
@@ -316,14 +318,15 @@ export class Combat {
     // basic attack from whatever is available (fists count as weak melee)
     list.push({ id: 'strike', ...ABILITIES.strike, available: true });
     if (rangedW) list.push({ id: 'shot', ...ABILITIES.shot, range: rangedW.range || 6, available: true });
-    if (magicW) list.push({ id: 'spark', ...ABILITIES.spark, range: magicW.range || 5, available: true });
+    if (magicW && frontier) list.push({ id: 'spark', ...ABILITIES.spark, range: magicW.range || 5, available: true });
     for (const [id, ab] of Object.entries(ABILITIES)) {
       if (!ab.req) continue;
+      if (ab.frontier && !frontier) continue;            // fantasy spells hidden in real-world play
       const [skill, lvl] = ab.req;
       if (skills.level(skill) < lvl) continue;
       if (ab.style === 'melee' && !melee) continue;
       if (ab.style === 'ranged' && !rangedW) continue;
-      if (ab.style === 'magic' && !magicW && id !== 'mend' && id !== 'rally') continue;
+      if (ab.style === 'magic' && !magicW) continue;
       list.push({ id, ...ab, range: ab.range ?? (ab.style === 'ranged' ? (rangedW?.range || 6) : ab.range), available: true });
     }
     // annotate availability
@@ -462,6 +465,8 @@ export class Combat {
 
     if (ab.style === 'heal') {
       if (ab.mana) player.mana -= ab.mana;
+      if (ab.energy) player.energy = Math.max(0, player.energy - ab.energy);
+      if (abilityId === 'bandage') player.stopBleeding?.(); // real first aid staunches wounds
       const heal = abilityId === 'rally' ? 12 + skills.level('healing') : 8 + Math.round(skills.level('healing') * 0.8);
       this.playerC.hp = Math.min(this.playerC.maxHp, this.playerC.hp + heal);
       player.hp = this.playerC.hp;

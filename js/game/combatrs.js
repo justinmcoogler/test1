@@ -12,16 +12,19 @@ export const RS_STYLES = {
   balanced: { label: 'Balanced', icon: 'swords', weaponSlot: 'main', kind: 'melee', desc: 'Split XP between Strength, Defense and Vitality.' },
   aggressive: { label: 'Aggressive', icon: 'burst', weaponSlot: 'main', kind: 'melee', dmg: 1.15, acc: -3, desc: '+15% damage. Trains Strength.' },
   defensive: { label: 'Defensive', icon: 'shield', weaponSlot: 'main', kind: 'melee', dmg: 0.85, guard: true, desc: '-15% damage, take less damage. Trains Defense.' },
-  ranged: { label: 'Ranged', icon: 'target', weaponSlot: 'ranged', kind: 'ranged', desc: 'Fight at distance with your bow. Trains Ranged.' },
-  magic: { label: 'Magic', icon: 'sparkle', weaponSlot: 'main', kind: 'magic', desc: 'Sling spells (costs mana). Trains Magic.' },
+  ranged: { label: 'Ranged', icon: 'target', weaponSlot: 'ranged', kind: 'ranged', desc: 'Slings, bows and firearms at distance. Trains Marksmanship.' },
+  // Magic is Fantasy Frontier content — hidden and unusable in real-world play.
+  magic: { label: 'Magic', icon: 'sparkle', weaponSlot: 'main', kind: 'magic', frontier: true, desc: 'Sling spells (costs mana). Fantasy Frontier only.' },
 };
 
 export const RS_SPECIALS = {
-  power_strike: { label: 'Power Strike', icon: 'burst', kind: 'melee', energy: 30, cd: 8, power: 1.7, req: ['strength', 5], desc: 'A heavy blow: +70% damage.' },
-  cleave: { label: 'Cleave', icon: 'swirlicon', kind: 'melee', energy: 40, cd: 12, power: 1.15, aoe: true, req: ['strength', 15], desc: 'Strike every foe in reach.' },
-  aimed_shot: { label: 'Aimed Shot', icon: 'target', kind: 'ranged', energy: 30, cd: 8, power: 1.6, acc: 20, req: ['ranged', 5], desc: 'Never rushes, rarely misses.' },
-  ember_burst: { label: 'Ember Burst', icon: 'flame', kind: 'magic', mana: 10, cd: 10, power: 1.5, element: 'fire', req: ['magic', 10], desc: 'A roaring gout of flame.' },
-  mend: { label: 'Mend', icon: 'heartplus', kind: 'heal', mana: 6, cd: 9, req: ['healing', 1], desc: 'Knit your wounds mid-fight.' },
+  power_strike: { label: 'Power Strike', icon: 'burst', kind: 'melee', energy: 30, cd: 8, power: 1.7, req: ['strength', 5], desc: 'A heavy blow: +70% damage. Costs stamina.' },
+  cleave: { label: 'Cleave', icon: 'swirlicon', kind: 'melee', energy: 40, cd: 12, power: 1.15, aoe: true, req: ['strength', 15], desc: 'Strike every foe in reach. Costs stamina.' },
+  aimed_shot: { label: 'Aimed Shot', icon: 'target', kind: 'ranged', energy: 30, cd: 8, power: 1.6, acc: 20, req: ['ranged', 5], desc: 'Never rushes, rarely misses. Costs stamina.' },
+  // Real first aid replaces the old mana heal: staunch bleeding + dress wounds, no magic.
+  bandage: { label: 'Bandage', icon: 'heartplus', kind: 'heal', energy: 20, cd: 9, req: ['healing', 1], desc: 'Field first aid — stop bleeding and knit wounds. Costs stamina; trains Medicine.' },
+  // Fantasy Frontier only:
+  ember_burst: { label: 'Ember Burst', icon: 'flame', kind: 'magic', mana: 10, cd: 10, power: 1.5, element: 'fire', frontier: true, req: ['magic', 10], desc: 'A roaring gout of flame. Fantasy Frontier only.' },
 };
 
 const MELEE_RANGE = 2.4;
@@ -41,11 +44,13 @@ export class CombatRS {
 
   get active() { return this.engaged.size > 0; }
 
+  get frontierOn() { return this.game.settings?.fantasyFrontier === true; }
+
   availableStyles() {
     const inv = this.game.inventory;
     const out = ['balanced', 'aggressive', 'defensive'];
     if (inv.weapon('ranged')) out.push('ranged');
-    if (inv.weapon('magic')) out.push('magic');
+    if (this.frontierOn && inv.weapon('magic')) out.push('magic');
     return out;
   }
 
@@ -54,6 +59,7 @@ export class CombatRS {
     const style = RS_STYLES[this.style];
     const out = [];
     for (const [id, sp] of Object.entries(RS_SPECIALS)) {
+      if (sp.frontier && !this.frontierOn) continue;      // fantasy spells hidden in real-world play
       if (sp.req && skills.level(sp.req[0]) < sp.req[1]) continue;
       if (sp.kind !== 'heal' && sp.kind !== style.kind) continue;
       if (sp.kind === 'ranged' && !inventory.weapon('ranged')) continue;
@@ -106,6 +112,9 @@ export class CombatRS {
   // ---------------------------------------------------------------- update
   update(dt) {
     this.time += dt;
+    // a Magic style chosen under the Fantasy Frontier must not linger once it's
+    // switched off — otherwise the player keeps casting/draining mana invisibly
+    if (!this.frontierOn && RS_STYLES[this.style]?.kind === 'magic') this.style = 'balanced';
     const { player, world } = this.game;
     if (!this.active) return;
     if (player.dead) { this.disengageAll(); return; }
@@ -335,6 +344,22 @@ export class CombatRS {
     player.damage(dmg, sourceLabel);
     emit('rsPlayerHit', { dmg });
     skills.addXp('defense', dmg * (this.style === 'defensive' ? 1.2 : 0.4));
+    this.maybeBleed(e, armor);
+  }
+
+  // Real wounds: claws & fangs of a melee predator can open a bleed. Custom mob
+  // files opt in with a `bleed` chance (0–1); untagged melee beasts get a light
+  // default. Armor resists lacerations; Constitution shortens the bleed.
+  maybeBleed(e, armor) {
+    const { player, skills } = this.game;
+    if (player.dead || player.debug || player.bleeding > 0) return;
+    const chance = e.def.bleed ?? (!e.def.ranged && (e.def.atk || 0) >= 4 && (e.def.moveRange || 0) > 0 ? 0.15 : 0);
+    if (chance <= 0 || Math.random() >= chance) return;
+    if (Math.random() < armor / (armor + 25)) return;              // plate turns the edge
+    const con = skills.level('vitality');
+    const seconds = clamp(6 - con * 0.03, 3, 6);
+    player.applyBleed(seconds, 1 + Math.floor(e.def.tier || 0));   // deeper on tougher beasts
+    emit('rsLog', `${e.def.label} tears a bleeding wound — bandage it!`);
   }
 
   kill(entity) {
@@ -379,15 +404,24 @@ export class CombatRS {
     const sp = RS_SPECIALS[id];
     const { player, skills, inventory } = this.game;
     if (!sp) return false;
+    if (sp.frontier && !this.frontierOn) return false; // no fantasy specials in real-world play
     if ((this.cooldowns[id] || 0) > this.time) return false;
     if (sp.energy && player.energy < sp.energy) { emit('rsLog', 'Not enough energy.'); return false; }
     if (sp.mana && player.mana < sp.mana) { emit('rsLog', 'Not enough mana.'); return false; }
 
     if (sp.kind === 'heal') {
-      player.mana -= sp.mana;
-      const heal = 8 + Math.round(skills.level('healing') * 0.8);
+      if (sp.energy) player.energy = Math.max(0, player.energy - sp.energy);
+      if (sp.mana) player.mana = Math.max(0, player.mana - sp.mana); // frontier heals only
+      const med = skills.level('healing');
+      const heal = 6 + Math.round(med * 0.8);
       player.heal(heal);
-      skills.addXp('healing', heal * 1.2);
+      let xp = heal * 1.2;
+      if (player.bleeding > 0) {
+        player.stopBleeding();
+        emit('rsLog', 'You bind the wound — the bleeding stops.');
+        xp += 15; // treating an active wound teaches more Medicine
+      }
+      skills.addXp('healing', xp);
       this.game.addHitsplat(player.x, player.y + 2.0, player.z, `+${heal}`, '#6cbf5a');
       this.cooldowns[id] = this.time + sp.cd;
       emit('rsUpdate');

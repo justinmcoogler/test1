@@ -212,6 +212,6 @@ test('dialogue graph has no dangling links', () => {
 test('abilities all resolvable', () => {
   for (const [id, ab] of Object.entries(ABILITIES)) {
     assert.ok(ab.label, id);
-    if (ab.req) assert.ok(['strength', 'ranged', 'magic', 'healing', 'tactics'].includes(ab.req[0]));
+    if (ab.req) assert.ok(['strength', 'ranged', 'magic', 'healing'].includes(ab.req[0]));
   }
 });

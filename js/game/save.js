@@ -5,6 +5,9 @@ export const NUM_SLOTS = 3;
 
 export const DEFAULT_SETTINGS = {
   tacticalCombat: false, // false = classic auto-exchange battles (default)
+  fantasyFrontier: false, // OFF by default: real-world play has no magic, mana or spells.
+                          // Enabling re-admits the magic skill tree, mana bar, magic combat
+                          // style and spell specials (the optional fantasy sandbox).
   classicCamera: false,  // true = RuneScape-style third-person view + click-to-move
   renderDistance: 4,
   sensitivity: 1,
