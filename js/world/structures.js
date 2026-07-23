@@ -3,6 +3,7 @@
 // node/NPC/enemy placements that worldgen applies on top of terrain.
 import { B } from './blocks.js';
 import { MANOR } from './starter-manor.js';
+import { LEARN_MEADOW } from './worldgen.js';
 
 const key = (x, y, z) => `${x},${y},${z}`;
 
@@ -327,7 +328,59 @@ export function buildStarterStructures() {
     for (let x = -42; x <= -31; x++) for (let z = 0; z <= 1; z++) set(x, GROUND, z, B.gravel);
   }
 
+  // ---- Numbers Meadow: the kids' Learning Mode classroom pad ----------------
+  // A quiet, combat-free grass yard far east of town. Worldgen pins LEARN_MEADOW
+  // flat at ground 64 and keeps procedural trees/mobs off it. The child performs
+  // math lessons by placing wool blocks on the WORK MAT; js/game/lessons.js reads
+  // the mat region (recorded in markers.learnMat) to count what they've built.
+  // Authored at the legacy scale like everything else: set() adds LIFT, so the
+  // floor authored at GL=30 lands on the real surface (64) and standing is 65.
+  const learnMat = (() => {
+    const LX = LEARN_MEADOW.x, LZ = LEARN_MEADOW.z;   // world 200, 200
+    const GL = LEARN_MEADOW.ground - LIFT;            // 30 → real 64 after set() lifts
+    const FL = GL + 1;                                // 31 → real 65 (standing / build layer)
+    const HALF = 11;                                  // 23×23 yard
+    // grass yard with a gravel path just inside the fence
+    for (let x = LX - HALF; x <= LX + HALF; x++) {
+      for (let z = LZ - HALF; z <= LZ + HALF; z++) {
+        const ring = Math.max(Math.abs(x - LX), Math.abs(z - LZ)) === HALF;
+        set(x, GL, z, ring ? B.gravel : B.grass);
+      }
+    }
+    // low fence border, with a 3-wide entry gap on the south edge
+    for (let x = LX - HALF; x <= LX + HALF; x++) {
+      set(x, FL, LZ - HALF, B.planks_fence);
+      if (Math.abs(x - LX) > 1) set(x, FL, LZ + HALF, B.planks_fence);
+    }
+    for (let z = LZ - HALF; z <= LZ + HALF; z++) {
+      set(LX - HALF, FL, z, B.planks_fence);
+      set(LX + HALF, FL, z, B.planks_fence);
+    }
+    // corner torches light the yard
+    for (const [tx, tz] of [[LX - HALF + 1, LZ - HALF + 1], [LX + HALF - 1, LZ - HALF + 1],
+      [LX - HALF + 1, LZ + HALF - 1], [LX + HALF - 1, LZ + HALF - 1]]) {
+      set(tx, FL, tz, B.torch_post);
+    }
+    // the work mat: 9×5 light-gray wool, a brown planks stripe down the middle
+    // splitting it into a LEFT and a RIGHT half (used by the sorting lesson)
+    const X0 = LX - 4, X1 = LX + 4, Z0 = LZ - 2, Z1 = LZ + 2;
+    for (let x = X0; x <= X1; x++) {
+      for (let z = Z0; z <= Z1; z++) set(x, GL, z, x === LX ? B.planks : B.light_gray_wool);
+    }
+    // torches flanking the mat's dividing line
+    set(LX, FL, Z0 - 1, B.torch_post);
+    set(LX, FL, Z1 + 1, B.torch_post);
+    // guide Pip's little stand, just south of the mat
+    box(LX - 1, GL, LZ - 6, LX + 1, GL, LZ - 4, B.planks);
+    set(LX - 2, FL, LZ - 5, B.torch_post);
+    npcs.push({ id: 'pip', x: LX, y: FL, z: LZ - 5 });
+    // return the mat AABB in REAL world coords (build layer = FL + LIFT = 65)
+    return { x0: X0, x1: X1, z0: Z0, z1: Z1, y0: FL + LIFT, y1: FL + LIFT + 2, div: LX };
+  })();
+
   const markers = {
+    // teleport-in point: a step south of Pip, facing the mat (lifted below)
+    learnMeadow: [LEARN_MEADOW.x, (LEARN_MEADOW.ground - LIFT) + 1, LEARN_MEADOW.z - 6],
     manor: [-60, F, 0],
     spawn: [6, F, 6],
     frostwatch: [556, 34, -119],
@@ -354,6 +407,9 @@ export function buildStarterStructures() {
   for (const ch of chests) ch.y += LIFT;
   for (const n of npcs) n.y += LIFT;
   for (const m of Object.values(markers)) m[1] += LIFT;
+  // learnMat is an AABB object (already in real coords), not a [x,y,z] marker —
+  // attach it after the blanket lift so its fields aren't mangled by m[1]+=LIFT.
+  markers.learnMat = learnMat;
 
   return { edits, nodes, spawns, npcs, chests, facings, markers };
 }

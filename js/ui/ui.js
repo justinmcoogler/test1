@@ -384,6 +384,39 @@ export class UI {
     $('gather-label').textContent = label || '';
   }
 
+  // ---- kids' Learning Mode (Phase 1) -------------------------------------
+  // Persistent prompt panel for the current lesson. Passing null clears it.
+  showLessonPrompt(lesson) {
+    let el = $('lesson-panel');
+    if (!lesson) { el?.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'lesson-panel';
+      document.body.appendChild(el);
+    }
+    const guide = NPC_DEFS[lesson.guide]?.label || 'Pip';
+    el.innerHTML = `<div class="lesson-guide"></div><div class="lesson-prompt"></div><button class="lesson-hint">Need a hint?</button>`;
+    el.querySelector('.lesson-guide').textContent = `${guide} says`;
+    el.querySelector('.lesson-prompt').textContent = lesson.prompt;
+    el.querySelector('.lesson-hint').addEventListener('click', () => {
+      SFX.uiClick();
+      this.game.lessons.showHint(lesson.area);
+    });
+  }
+
+  showLessonSuccess(lesson) {
+    this.toast(lesson.success, 'gold');
+    SFX.questDone();
+    // a burst of gold sparkles over the work mat
+    const m = this.game.world?.markers?.learnMat;
+    if (m && this.game.renderer?.spawnParticles) {
+      const cx = (m.x0 + m.x1) / 2 + 0.5, cz = (m.z0 + m.z1) / 2 + 0.5;
+      this.game.renderer.spawnParticles(cx, m.y0 + 0.6, cz, [1, 0.85, 0.3], 30, 3, 1.0, 0.12);
+    }
+  }
+
+  showLessonHint(lesson) { this.toast(lesson.hint, ''); }
+
   drawCompass() {
     const canvas = $('compass');
     const ctx = canvas.getContext('2d');
@@ -1133,7 +1166,10 @@ export class UI {
         SFX.uiClick();
         if (opt.action === 'close') this.hideDialogue();
         else if (opt.action === 'shop') { this.hideDialogue(); this.openShop(npcId); }
-        else if (opt.action?.startsWith('startQuest:')) {
+        else if (opt.action?.startsWith('startLesson:')) {
+          this.hideDialogue();
+          emit('startLesson', { area: opt.action.slice(12) });
+        } else if (opt.action?.startsWith('startQuest:')) {
           const qid = opt.action.slice(11);
           g.quests.start(qid);
           const q = QUESTS.find((qq) => qq.id === qid);

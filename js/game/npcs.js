@@ -90,9 +90,43 @@ NPC_DEFS.sylla = {
   dialogue: 'sylla_root',
 };
 
-// Dialogue graph. Options can carry action tags read by main.js:
-//   startQuest:<id>, turnIn:<id>, shop, close
+// Pip — the friendly guide of Numbers Meadow (kids' Learning Mode, Phase 1).
+// A small, brightly dressed helper who hands the child their math lessons.
+NPC_DEFS.pip = {
+  label: 'Pip',
+  role: 'Meadow Guide',
+  model: humanoid(
+    { skin: [0.95, 0.8, 0.62], top: [0.35, 0.72, 0.42], sleeves: [0.95, 0.82, 0.3], bottom: [0.4, 0.5, 0.85] },
+    [
+      hb(-4.6, 31.5, -4.6, 9.2, 3, 9.2, [0.9, 0.35, 0.45]),    // 6 round red cap
+      hb(-1, 34.5, -1, 2, 2, 2, [0.98, 0.86, 0.35]),           // 7 gold cap bobble
+      hb(-4.4, 13, -2.4, 8.8, 5, 1, [0.98, 0.98, 0.95]),       // 8 bright collar
+    ]
+  ),
+  headExtra: [6, 7],
+  dialogue: 'pip_root',
+};
+
+// Dialogue graph. Options can carry action tags read by main.js/ui.js:
+//   startQuest:<id>, turnIn:<id>, startLesson:<area>, shop, close
 export const DIALOGUES = {
+  pip_root: {
+    speaker: 'pip',
+    text: () => `Hi hi! I'm Pip, and this is Numbers Meadow! We learn by BUILDING. Put blocks on the soft mat and we'll count them together. Ready to play with numbers?`,
+    options: [
+      { label: 'Yes! Give me a lesson.', action: 'startLesson:numbers_meadow', cls: 'quest-offer' },
+      { label: 'How does it work?', next: 'pip_how' },
+      { label: 'Maybe later.', action: 'close' },
+    ],
+  },
+  pip_how: {
+    speaker: 'pip',
+    text: () => `Easy peasy! I'll ask for some blocks — like "place 7 red blocks." Pick the blocks from your bag and place them right on the mat. When you get it, we celebrate and you earn more play time! Wrong guess? No worries — just try again.`,
+    options: [
+      { label: "Okay, let's go!", action: 'startLesson:numbers_meadow', cls: 'quest-offer' },
+      { label: 'Got it.', action: 'close' },
+    ],
+  },
   maren_root: {
     speaker: 'maren',
     text: () => `Ah — you're awake! You washed up at our gates two nights ago. I'm Maren, elder of Brookhollow. This valley is generous to those who work it… and unkind past the lantern line. What do you need, traveler?`,

@@ -24,6 +24,7 @@ import { icon as pixelIcon } from './gfx/icons.js';
 import { applyTexturePack } from './gfx/textures.js';
 import { buildRig, playerAnimations } from './game/rigs.js';
 import { EducationManager } from './game/education.js';
+import { LessonRunner } from './game/lessons.js';
 import { hashSeed } from './core/rng.js';
 import { on, emit, clearAllListeners } from './core/events.js';
 import { clamp } from './core/math.js';
@@ -58,6 +59,7 @@ class Game {
     this.controls = new Controls(this.canvas, this.settings);
     this.touch = isTouchDevice() ? new TouchControls(this.controls, this.settings) : null;
     this.ui = new UI(this);
+    this.lessons = new LessonRunner(this); // kids' Learning Mode engine (rides education)
 
     this.discovered = new Set();
     this.discoveredItems = new Set(['fernwood_log', 'rough_stone', 'plant_fibre']);
@@ -141,6 +143,7 @@ class Game {
     this.enemyMgr.refresh();
     this.enemyMgr.applySavedHp();
     this.recomputeVitals();
+    this.lessons.resume(); // re-show any in-progress lesson prompt after a load
     onProgress(1, 'Waking up…');
   }
 
@@ -1681,8 +1684,55 @@ class Game {
     }
   }
 
+  // ------------------------------------------------- kids' Learning Mode entry
+  // Switch into education (play-time-bank) mode and drop the child into Numbers
+  // Meadow. Reachable for testing via window.__game.enterLearningMode() (or
+  // window.__learn()); the character-creation mode picker arrives in Phase 2.
+  enterLearningMode(config = {}) {
+    if (!this.education.isEducation) this.education.setMode('education', config);
+    this.goToLearningMeadow();
+  }
+
+  // Teleport to the Numbers Meadow classroom pad, generating its chunks first so
+  // the child never drops into unloaded void.
+  goToLearningMeadow() {
+    const m = this.world.markers.learnMeadow;
+    if (!m) return;
+    const [x, y, z] = m;
+    const pcx = Math.floor(x / CHUNK), pcz = Math.floor(z / CHUNK);
+    for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) this.world.ensureChunk(pcx + dx, pcz + dz);
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) this.renderer.remeshChunk(this.world, pcx + dx, pcz + dz);
+    this.player.respawnAt(x + 0.5, y, z + 0.5);
+    this.cancelClassicActions();
+    this.travelDest = null;
+    this.controls.worldMove = null;
+    if (!this.player.dead) this.controls.enabled = true;
+    this.touch?.show();
+    this.grantLessonKit();
+    this.ui.toast('Welcome to Numbers Meadow! Talk to Pip to start a lesson.', 'gold');
+    this.saveGame();
+  }
+
+  // Stock the child with the coloured blocks the Numbers Meadow lessons use.
+  grantLessonKit() {
+    for (const c of ['red_wool', 'blue_wool', 'yellow_wool']) {
+      const have = this.inventory.count(c);
+      if (have < 10) this.inventory.add(c, 16 - have);
+    }
+  }
+
+  // "Go to Lessons" from the play-time lock screen: lift the lock enough to walk
+  // and build (the bank is empty, so nothing drains until a lesson is completed)
+  // and drop the child at the meadow to earn more time.
+  goToLessons() {
+    document.getElementById('playtime-lock')?.remove();
+    this.playtimeLocked = false;
+    if (!this.player.dead) this.controls.enabled = true;
+    this.touch?.show();
+    this.goToLearningMeadow();
+  }
+
   // Full-screen gate shown when the play-time bank runs dry (education mode).
-  // The lesson launcher plugs into this screen in a later phase.
   showPlaytimeLock() {
     if (document.getElementById('playtime-lock')) return;
     const el = document.createElement('div');
@@ -1694,8 +1744,10 @@ class Game {
       Your world is saved and waiting for you.</p>
       <p style="color:var(--ink-dim);margin-top:14px;font-size:13px">Lessons: ${Object.keys(this.education.lessonsDone).length} completed ·
       ${Math.round(this.education.playtimeTotalSec / 60)} minutes played all-time</p>
+      <button id="go-to-lessons-btn" class="slot-btn" style="margin-top:18px;justify-content:center">Go to Lessons</button>
     </div>`;
     document.body.appendChild(el);
+    el.querySelector('#go-to-lessons-btn').addEventListener('click', () => { SFX.uiClick(); this.goToLessons(); });
   }
 
   onPlayerDeath() {
@@ -1933,6 +1985,7 @@ class Game {
       quests: this.quests.serialize(),
       enemies: this.enemyMgr.serialize(),
       education: this.education.serialize(),
+      lessons: this.lessons.serialize(),
       flags: this.flags,
       discovered: [...this.discovered],
       discoveredItems: [...this.discoveredItems],
@@ -1949,6 +2002,7 @@ class Game {
     this.quests.deserialize(d.quests);
     this.enemyMgr.deserialize(d.enemies);
     this.education.deserialize(d.education);
+    this.lessons.deserialize(d.lessons);
     this.flags = d.flags || {};
     this.discovered = new Set(d.discovered || []);
     this.discoveredItems = new Set(d.discoveredItems || []);
@@ -2027,6 +2081,7 @@ async function startGame(slot, isNew) {
     try { await registerMob(game, f); } catch (e) { console.error('[mobs]', e.message); }
   }
   window.__game = game; // for automated tests & debugging
+  window.__learn = () => game.enterLearningMode(); // Phase-1 shortcut into Numbers Meadow
   const crafting = await import('./game/crafting.js');
   window.__crafting = crafting;
   window.__blocks = await import('./world/blocks.js');

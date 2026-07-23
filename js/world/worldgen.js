@@ -21,6 +21,12 @@ export const FROST_CAMP = { x: 560, z: -120, ground: 67 };
 // from town stays level. Kept clear of procedural trees/mobs by world.js.
 export const MANOR_PAD = { x: -60, z: 0, ground: 64 };
 
+// Numbers Meadow: a flat, combat-free classroom pad for the kids' Learning Mode
+// (Phase 1). Far enough out to be its own quiet space, pinned flat at the
+// settlement surface (64) so the hand-built lesson yard sits cleanly. Kept clear
+// of procedural trees/mobs by world.js. See js/game/lessons.js.
+export const LEARN_MEADOW = { x: 200, z: 200, ground: 64 };
+
 // A real-world climate taxonomy. biomeAt() places each biome by real drivers —
 // elevation (mountains, snow-capped peaks), then temperature × moisture
 // (Whittaker) — with temperature biased toward mild/temperate near spawn so the
@@ -251,6 +257,12 @@ export class WorldGen {
     if (dm < 30) {
       const t2 = smoothstep(clamp((30 - dm) / 6, 0, 1));
       h = lerp(h, MANOR_PAD.ground, t2);
+    }
+    // Numbers Meadow pad: a flat classroom shelf for the kids' Learning Mode
+    const dn = Math.hypot(x - LEARN_MEADOW.x, z - LEARN_MEADOW.z);
+    if (dn < 30) {
+      const t2 = smoothstep(clamp((30 - dn) / 6, 0, 1));
+      h = lerp(h, LEARN_MEADOW.ground, t2);
     }
     // Frostwatch plateau: the frontier camp gets the same treatment
     const df = Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z);

@@ -1,7 +1,7 @@
 // Chunked voxel world: generation, block access, player edits, resource
 // node lifecycle (deplete/respawn), chest storage, raycasting, persistence.
 import { B, BLOCKS, isSolid, SHAPE_COLLISION } from './blocks.js';
-import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, WorldGen, undergroundNodeCandidates } from './worldgen.js';
+import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, LEARN_MEADOW, WorldGen, undergroundNodeCandidates } from './worldgen.js';
 import { buildStarterStructures, indexEditsByChunk } from './structures.js';
 import { NODE_TYPES, nodeBlocks, nodeCells } from '../game/nodes.js';
 import { hash2, hash3, hashSeed } from '../core/rng.js';
@@ -89,6 +89,7 @@ export class World {
         if (d0 < 38) continue;
         if (Math.hypot(wx - FROST_CAMP.x, wz - FROST_CAMP.z) < 26) continue; // camp stays hand-built
         if (Math.hypot(wx - MANOR_PAD.x, wz - MANOR_PAD.z) < 26) continue; // manor pad stays hand-built
+        if (Math.hypot(wx - LEARN_MEADOW.x, wz - LEARN_MEADOW.z) < 26) continue; // Numbers Meadow stays hand-built & combat-free
         const h = chunk.surfaceH[lz * CHUNK + lx];
         const surfId = blocks[lidx(lx, h, lz)];
         const biome = gen.biomeAt(wx, wz);

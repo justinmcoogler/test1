@@ -144,6 +144,23 @@ body.classic-cam #crosshair { display: none; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
 :root.reduced-motion .toast { animation: none; }
 
+/* kids' Learning Mode — big, friendly current-lesson prompt (top centre) */
+#lesson-panel {
+  position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+  width: min(560px, 92vw); z-index: 40; text-align: center; pointer-events: none;
+  background: rgba(28, 22, 46, 0.86); border: 2px solid var(--gold); border-radius: 14px;
+  padding: 12px 18px 14px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+}
+#lesson-panel .lesson-guide { color: var(--gold); font-weight: 700; font-size: calc(13px * var(--text-scale)); letter-spacing: 1px; margin-bottom: 4px; }
+#lesson-panel .lesson-prompt { color: var(--ink); font-size: calc(18px * var(--text-scale)); line-height: 1.35; }
+#lesson-panel .lesson-hint {
+  pointer-events: auto; margin-top: 10px; color: var(--ink);
+  background: rgba(0, 0, 0, 0.35); border: 1px solid var(--gold); border-radius: 10px;
+  padding: 5px 16px; font-size: calc(12.5px * var(--text-scale));
+}
+#lesson-panel .lesson-hint:hover { background: rgba(226, 177, 60, 0.2); }
+body.in-combat #lesson-panel { display: none !important; }
+
 #hotbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; pointer-events: auto; }
 .hotbar-slot {
   width: calc(52px * var(--ui-scale)); height: calc(52px * var(--ui-scale));
