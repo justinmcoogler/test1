@@ -213,9 +213,21 @@ export function convertSchematic(buf, ext = '.schem') {
       const e = approx.get(m.id) || { block: m.block, count: 0 };
       e.count++; approx.set(m.id, e);
     } else exact++;
-    // carry orientation (facing + top-half) for stairs/slabs/gates
+    // carry orientation (facing + top-half + trapdoor-open) for stairs/slabs/gates/trapdoors
     const cell = { x: c.x, y: c.y, z: c.z, block: m.block };
-    if (ORIENTED.has(BLOCKS[B[m.block]]?.shape)) { const f = mcOrient(c.id); if (f !== undefined) cell.f = f; }
+    const shape = BLOCKS[B[m.block]]?.shape;
+    if (ORIENTED.has(shape)) {
+      let f = mcOrient(c.id);
+      if (f !== undefined) {
+        // A Minecraft trapdoor's `facing` points AWAY from the wall its open
+        // panel hangs on, whereas our renderer hangs the open panel on the wall
+        // dir points at (FRONT_N[dir]) — the opposite convention. Flip the two
+        // direction bits for panels only so imported open trapdoors hug the same
+        // wall they did in the source build (harmless for closed ones).
+        if (shape === 'panel') f = (f & ~3) | ((f & 3) ^ 2);
+        cell.f = f;
+      }
+    }
     cells.push(cell);
   }
   return {

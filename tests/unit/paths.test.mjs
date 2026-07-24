@@ -28,6 +28,25 @@ test('every road steps at most one block — always walkable', () => {
   }
 });
 
+test('the whole lane is walkable — every road column is within 1 block of its road-neighbours', () => {
+  // The real guarantee (not just the centre line): shoulders on a diagonal climb
+  // must not leave a >1 lateral seam the 1-block auto-step can't cross.
+  for (const seed of [12345, 59, 1, 777, 4242]) {
+    const gen = new WorldGen(seed);
+    let worst = 0, worstAt = '';
+    for (const [k, y] of gen.pathY) {
+      const c = k.split(','), x = +c[0], z = +c[1];
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const n = gen.pathY.get((x + dx) + ',' + (z + dz));
+        if (n === undefined) continue;
+        const d = Math.abs(n - y);
+        if (d > worst) { worst = d; worstAt = `${k} (${y}) vs ${(x + dx)},${(z + dz)} (${n})`; }
+      }
+    }
+    assert.ok(worst <= 1, `seed ${seed}: max adjacent road step ${worst} > 1 at ${worstAt}`);
+  }
+});
+
 test('roads never dip below the waterline', () => {
   const gen = new WorldGen(99);
   for (const [A, Bp] of [[SPAWN, GREYWALL], [SPAWN, FROST]]) {
@@ -67,4 +86,21 @@ test('road columns render a gravel lane with clear headroom and solid support', 
     if (++checked >= 15) break;
   }
   assert.ok(checked >= 5, `verified several near-origin road cells (${checked})`);
+});
+
+test('road gravel wins over the beach rule even at the waterline height', () => {
+  // On low/flat seeds most road cells grade down to SEA+1; the beach branch must
+  // not repaint them as sand, or the visible gravel road disappears.
+  const w = new World(1);
+  const gen = w.gen;
+  // find a road cell graded to exactly SEA+1 (=63) near enough to generate
+  let cell = null;
+  for (const key of gen.pathSet) {
+    const [x, z] = key.split(',').map(Number);
+    if (Math.abs(x) > 260 || Math.abs(z) > 260) continue;
+    if (gen.heightAt(x, z) === 63) { cell = { x, z }; break; }
+  }
+  assert.ok(cell, 'found a road cell graded to the waterline (SEA+1)');
+  w.ensureChunk(Math.floor(cell.x / 16), Math.floor(cell.z / 16));
+  assert.equal(w.getBlock(cell.x, 63, cell.z), B.gravel, 'a waterline-height road cell is gravel, not beach sand');
 });

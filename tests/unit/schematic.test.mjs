@@ -171,12 +171,15 @@ test('trapdoors carry facing, half, and the open bit through import', () => {
   const conv = convertSchematic(buf, '.schem');
   const tds = conv.cells.filter((c) => c.block === 'trapdoor');
   assert.equal(tds.length, 3, 'every *_trapdoor mapped to the trapdoor block');
-  // facing=north (2) + open (bit 3 = 8) → 10
-  assert.ok(tds.some((c) => c.f === (2 | 8)), 'open north trapdoor → facing 10 (open bit set)');
-  // facing=east (1), closed, bottom half → 1
-  assert.ok(tds.some((c) => c.f === 1), 'closed east trapdoor → facing 1');
-  // facing=south (0) + top half (4), closed → 4
-  assert.ok(tds.some((c) => c.f === 4), 'closed ceiling trapdoor → facing 4 (top-half bit)');
+  // A Minecraft trapdoor's `facing` points away from the wall its open panel
+  // hangs on; our renderer hangs the open panel on the wall `dir` points at, so
+  // the importer flips the direction bits (dir ^ 2) for panels. Thus:
+  //   facing=north (2) → dir south (0), + open (8) → 8  (open panel on +Z, as in MC)
+  assert.ok(tds.some((c) => c.f === (0 | 8)), 'open north trapdoor → dir flipped to south + open bit → 8');
+  //   facing=east (1) → dir west (3), closed → 3  (dir cosmetic while closed)
+  assert.ok(tds.some((c) => c.f === 3), 'closed east trapdoor → dir flipped to west → 3');
+  //   facing=south (0) → dir north (2), + top half (4), closed → 6
+  assert.ok(tds.some((c) => c.f === (2 | 4)), 'closed ceiling trapdoor → dir flipped to north + top-half → 6');
 });
 
 // ── game-side loader (pasteSchematic) with a fake world ─────────────────────

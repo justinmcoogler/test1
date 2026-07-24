@@ -432,8 +432,10 @@ export class WorldGen {
         if (this.isCave(wx, y, wz)) {
           id = B.air;
         } else if (y === h) {
-          // beaches near water line
-          if (h <= SEA + 1 && h >= SEA - 2) id = B.sand;
+          // beaches near water line — but the gravel road always wins, even where
+          // it's graded down to the waterline (SEA+1), or it renders as beach sand.
+          if (onPath) id = surfaceId;
+          else if (h <= SEA + 1 && h >= SEA - 2) id = B.sand;
           else id = surfaceId;
         } else if (y >= h - 3) {
           id = h <= SEA + 1 ? B.sand : fillerId;
@@ -505,11 +507,29 @@ export class WorldGen {
     for (const [A, Bp] of [[spawn, greywall], [spawn, frost]]) {
       for (const c of this._routePath(A, Bp)) {
         lay(c.x, c.z, c.y);
-        // Width 3: two shoulders perpendicular to travel, at the same graded Y,
-        // so the lane is comfortable and its edges never step more than one block.
+        // Width 3: two shoulders perpendicular to travel, at the same graded Y.
         const px = -c.sz, pz = c.sx;
         lay(c.x + px, c.z + pz, c.y);
         lay(c.x - px, c.z - pz, c.y);
+      }
+    }
+    // Smooth the whole lane so EVERY road column is within one block of each of
+    // its 4-neighbour road columns — not just consecutive centre cells. A
+    // diagonal climb can leave a shoulder two steps above a lower centre one
+    // cell over, a lateral seam the 1-block auto-step can't cross; raising the
+    // lower column to (highestRoadNeighbour − 1) removes it. Raise-only and
+    // iterated to a fixed point, so it converges and never lowers the road.
+    let changed = true;
+    for (let pass = 0; changed && pass < 64; pass++) {
+      changed = false;
+      for (const [k, y] of pathY) {
+        const c = k.split(','), x = +c[0], z = +c[1];
+        let hi = y;
+        const a = pathY.get((x + 1) + ',' + z); if (a > hi) hi = a;
+        const b = pathY.get((x - 1) + ',' + z); if (b > hi) hi = b;
+        const d = pathY.get(x + ',' + (z + 1)); if (d > hi) hi = d;
+        const e = pathY.get(x + ',' + (z - 1)); if (e > hi) hi = e;
+        if (hi - y > 1) { pathY.set(k, hi - 1); changed = true; }
       }
     }
     this.pathY = pathY; this.pathSet = pathSet;
