@@ -27,11 +27,6 @@ export const MANOR_PAD = { x: -60, z: 0, ground: 64 };
 // of procedural trees/mobs by world.js. See js/game/lessons.js.
 export const LEARN_MEADOW = { x: 200, z: 200, ground: 64 };
 
-// Greywall — the large imported starter town (a circular walled city baked from
-// a schematic). A big flat pad west of spawn holds its footprint; the player
-// starts in its centre. See js/world/town.js + js/world/town-data.js.
-export const TOWN_PAD = { x: -520, z: 0, ground: 63, R: 363 };
-
 // Inter-town roads: gravel lanes graded to ≤1-block steps so they're always
 // walkable, baked deterministically from the seed (js `WorldGen.buildPaths`).
 const PATH_SALT = 63601;
@@ -42,7 +37,6 @@ function skipPathColumn(x, z) {
   if (Math.hypot(x, z) < 60) return true;                                          // Brookhollow settlement
   if (Math.hypot(x - MANOR_PAD.x, z - MANOR_PAD.z) < 30) return true;              // manor pad
   if (Math.hypot(x - LEARN_MEADOW.x, z - LEARN_MEADOW.z) < 30) return true;        // Numbers Meadow pad
-  if (Math.hypot(x - TOWN_PAD.x, z - TOWN_PAD.z) < TOWN_PAD.R + 12) return true;   // Greywall pad + city
   if (Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z) < 72) return true;            // Frostwatch pad
   return false;
 }
@@ -296,12 +290,6 @@ export class WorldGen {
       const t2 = smoothstep(clamp((30 - dn) / 6, 0, 1));
       h = lerp(h, LEARN_MEADOW.ground, t2);
     }
-    // Greywall town pad: a big flat shelf the whole circular city sits on
-    const dtw = Math.hypot(x - TOWN_PAD.x, z - TOWN_PAD.z);
-    if (dtw < TOWN_PAD.R + 10) {
-      const t2 = smoothstep(clamp((TOWN_PAD.R + 10 - dtw) / 14, 0, 1));
-      h = lerp(h, TOWN_PAD.ground, t2);
-    }
     // Frostwatch plateau: the frontier camp gets the same treatment
     const df = Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z);
     if (df < 70) {
@@ -501,10 +489,9 @@ export class WorldGen {
       pathY.set(k, y); pathSet.add(k);
     };
     const spawn = { x: 0, z: 0, ground: 64 };
-    const greywall = { x: TOWN_PAD.x, z: TOWN_PAD.z, ground: TOWN_PAD.ground };
     const frost = { x: FROST_CAMP.x, z: FROST_CAMP.z, ground: FROST_CAMP.ground };
-    // Two trunk roads radiate from the spawn settlement to the two other sites.
-    for (const [A, Bp] of [[spawn, greywall], [spawn, frost]]) {
+    // A trunk road runs from the spawn village out to the Frostwatch frontier.
+    for (const [A, Bp] of [[spawn, frost]]) {
       for (const c of this._routePath(A, Bp)) {
         lay(c.x, c.z, c.y);
         // Width 3: two shoulders perpendicular to travel, at the same graded Y.

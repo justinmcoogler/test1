@@ -3,17 +3,16 @@
 // chunk generates. Guards WorldGen.buildPaths / _routePath and the column stamp.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { WorldGen, TOWN_PAD, FROST_CAMP } from '../../js/world/worldgen.js';
+import { WorldGen, FROST_CAMP } from '../../js/world/worldgen.js';
 import { World } from '../../js/world/world.js';
 import { B } from '../../js/world/blocks.js';
 
 const SPAWN = { x: 0, z: 0, ground: 64 };
-const GREYWALL = { x: TOWN_PAD.x, z: TOWN_PAD.z, ground: TOWN_PAD.ground };
 const FROST = { x: FROST_CAMP.x, z: FROST_CAMP.z, ground: FROST_CAMP.ground };
 
 test('every road steps at most one block — always walkable', () => {
   const gen = new WorldGen(4242);
-  for (const [A, Bp] of [[SPAWN, GREYWALL], [SPAWN, FROST]]) {
+  for (const [A, Bp] of [[SPAWN, FROST]]) {
     const cells = gen._routePath(A, Bp);
     assert.ok(cells.length > 100, `the ${A.x},${A.z}→${Bp.x},${Bp.z} road spans many cells (${cells.length})`);
     for (let i = 1; i < cells.length; i++) {
@@ -50,7 +49,7 @@ test('the whole lane is walkable — every road column is within 1 block of its 
 
 test('roads never dip below the waterline', () => {
   const gen = new WorldGen(99);
-  for (const [A, Bp] of [[SPAWN, GREYWALL], [SPAWN, FROST]]) {
+  for (const [A, Bp] of [[SPAWN, FROST]]) {
     for (const c of gen._routePath(A, Bp)) {
       assert.ok(c.y >= 63, `road stays above sea level (y=${c.y})`); // SEA=62, road clamps to ≥63
     }
