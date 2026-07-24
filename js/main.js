@@ -2018,33 +2018,47 @@ class Game {
     }
     // nature-prop forage: the 3D model IS the visual (its marker cell is
     // invisible). Hidden while harvested; a static rest pose, per-prop yaw.
-    for (const [, chunk] of this.world.chunks) {
-      for (const node of chunk.nodes) {
-        if (node.def?.kind !== 'prop') continue;
-        if (this.world.nodeState(node.id)?.state === 'depleted') continue;
-        const dx = node.x + 0.5 - this.player.x, dz = node.z + 0.5 - this.player.z;
-        if (dx * dx + dz * dz > 44 * 44) continue;
-        out.push({
-          model: node.def.model, x: node.x + 0.5, y: node.y, z: node.z + 0.5,
-          yaw: (node.x * 2.399 + node.z * 5.717) % (Math.PI * 2), tint: [0, 0, 0], pose: null,
-        });
+    this.forNodesNear(44, (node) => {
+      if (node.def?.kind !== 'prop') return;
+      if (this.world.nodeState(node.id)?.state === 'depleted') return;
+      const dx = node.x + 0.5 - this.player.x, dz = node.z + 0.5 - this.player.z;
+      if (dx * dx + dz * dz > 44 * 44) return;
+      out.push({
+        model: node.def.model, x: node.x + 0.5, y: node.y, z: node.z + 0.5,
+        yaw: (node.x * 2.399 + node.z * 5.717) % (Math.PI * 2), tint: [0, 0, 0], pose: null,
+      });
+    });
+    return out;
+  }
+
+  // Visit resource nodes in loaded chunks within `radius` blocks of the player,
+  // scanning only the chunk window that could hold them rather than every loaded
+  // chunk. Identical results to a full scan — chunks entirely out of range are
+  // skipped — so this per-frame cost stays flat as the world (chunk count) grows,
+  // instead of climbing with render distance. Matters for mobile and multiplayer.
+  forNodesNear(radius, fn) {
+    const pcx = Math.floor(this.player.x / CHUNK), pcz = Math.floor(this.player.z / CHUNK);
+    const r = Math.ceil(radius / CHUNK) + 1;
+    for (let dz = -r; dz <= r; dz++) {
+      for (let dx = -r; dx <= r; dx++) {
+        const chunk = this.world.getChunk(pcx + dx, pcz + dz);
+        if (!chunk) continue;
+        const nodes = chunk.nodes;
+        for (let i = 0; i < nodes.length; i++) fn(nodes[i]);
       }
     }
-    return out;
   }
 
   collectMarkers() {
     const out = [];
-    for (const [, chunk] of this.world.chunks) {
-      for (const node of chunk.nodes) {
-        if (node.def.kind !== 'water') continue;
-        const st = this.world.nodeState(node.id);
-        if (st?.state !== 'ready') continue;
-        const d = Math.hypot(node.x - this.player.x, node.z - this.player.z);
-        if (d > 40) continue;
-        out.push({ x: node.x, y: node.y - 0.85, z: node.z, color: [0.5, 0.75, 1] });
-      }
-    }
+    this.forNodesNear(40, (node) => {
+      if (node.def.kind !== 'water') return;
+      const st = this.world.nodeState(node.id);
+      if (st?.state !== 'ready') return;
+      const d = Math.hypot(node.x - this.player.x, node.z - this.player.z);
+      if (d > 40) return;
+      out.push({ x: node.x, y: node.y - 0.85, z: node.z, color: [0.5, 0.75, 1] });
+    });
     if (this.travelDest) {
       const [tx, ty, tz] = this.travelDest;
       out.push({ x: Math.floor(tx), y: ty - 0.6, z: Math.floor(tz), color: [1, 0.8, 0.25] });
