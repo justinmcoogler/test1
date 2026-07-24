@@ -18,7 +18,7 @@ export class Controls {
     this.mouseDX = 0; this.mouseDY = 0;
     this.leftDown = false; this.rightDown = false;
     this.pointerLocked = false;
-    this.enabled = true;       // false while menus/combat/dialogue are open
+    this._enabled = true;      // false while menus/combat/dialogue are open
     this.sprintToggled = false;
     this.classicMode = false;  // RuneScape-style camera: no pointer lock
     this.orbitDX = 0; this.orbitDY = 0;   // classic-mode camera drag
@@ -27,6 +27,9 @@ export class Controls {
 
     document.addEventListener('keydown', (e) => this.onKey(e, true));
     document.addEventListener('keyup', (e) => this.onKey(e, false));
+    // Losing focus (alt-tab, a click into a menu field) means no keyup arrives —
+    // forget everything held so the player never keeps moving on return.
+    window.addEventListener('blur', () => this.releaseAll());
     canvas.addEventListener('mousedown', (e) => {
       if (!this.enabled) return;
       if (this.classicMode) {
@@ -104,11 +107,35 @@ export class Controls {
     }, { passive: false });
   }
 
+  // Enabling/disabling control (menus, combat, dialogue, cutscenes) routes
+  // through here so that whenever the player loses control we drop every held
+  // key and steering target — the fix for "opened a menu mid-walk and kept
+  // walking after closing it."
+  get enabled() { return this._enabled; }
+  set enabled(v) {
+    this._enabled = v;
+    if (!v) this.releaseAll();
+  }
+
+  // Forget all currently-held input (keys, mouse buttons, touch/steering).
+  releaseAll() {
+    this.keys.clear();
+    this.leftDown = false; this.rightDown = false;
+    this.touchMove = null; this.touchJump = false; this.touchAction = false;
+    this.worldMove = null;
+    this._fpDrag = null; this._leftDrag = null; this.orbitDragging = false;
+  }
+
   onKey(e, down) {
     if (e.repeat) return;
+    // ALWAYS release a key on keyup, even while a text field is focused — else a
+    // keyup that lands while a menu's input has focus never clears the key and
+    // you keep walking after closing the menu. Only key-DOWN is suppressed while
+    // typing, so WASD in a search box doesn't drive the player.
+    if (!down) this.keys.delete(e.code);
     const tag = document.activeElement?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-    if (down) this.keys.add(e.code); else this.keys.delete(e.code);
+    if (down) this.keys.add(e.code);
 
     if (!down) return;
     const b = this.bindings;
