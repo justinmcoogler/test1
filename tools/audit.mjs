@@ -37,6 +37,9 @@ for (const def of Object.values(ENEMY_TYPES)) for (const ph of def.phases || [])
 // ── roots: items obtainable without crafting ────────────────────────────────
 const roots = new Set(['coin']);
 const addRoot = (i) => { if (i) roots.add(i); };
+// importOnly blocks (schematic-import / creative) count as obtainable by fiat —
+// placeable, but no survival gather/craft path is expected.
+for (const [id, d] of Object.entries(ITEMS)) if (d?.importOnly) roots.add(id);
 for (const t of placedNodes) { const d = NODE_TYPES[t]; if (!d) continue; for (const dr of d.drops || []) addRoot(dr.item); for (const rd of d.rare || []) addRoot(rd.item); }
 for (const t of spawnedMobs) { const d = ENEMY_TYPES[t]; if (!d) continue; for (const dr of d.drops || []) addRoot(dr.item); }
 for (const ch of struct.chests) for (const l of ch.loot || []) addRoot(l.item);
@@ -67,7 +70,9 @@ while (changed) {
 
 // ── report: unreachable items ───────────────────────────────────────────────
 const KNOWN_QUEST_OR_SPECIAL = new Set([]); // add ids here if intentionally unobtainable
-const unreachable = Object.keys(ITEMS).filter((i) => !roots.has(i) && !KNOWN_QUEST_OR_SPECIAL.has(i));
+// importOnly items are schematic-import / creative blocks with no intended
+// survival gather/craft path — placeable, but exempt from reachability.
+const unreachable = Object.keys(ITEMS).filter((i) => !roots.has(i) && !KNOWN_QUEST_OR_SPECIAL.has(i) && !ITEMS[i]?.importOnly);
 if (unreachable.length) problems.push(['UNREACHABLE ITEMS', unreachable]);
 
 // recipes whose inputs can never all be gathered

@@ -124,6 +124,26 @@ export const MC_MAP = {
 
   // wood furniture / misc that has an honest stand-in
   bookshelf: 'planks', chiseled_bookshelf: 'planks', candle: 'torch_post',
+
+  // ---- wave 3: schematic-import blocks (P1–P4) -------------------------------
+  // P1 lights — froglights + full-cube lamps get real blocks; hanging/rod lights fold into the glowing post
+  glowstone: 'glowstone', sea_lantern: 'sea_lantern', redstone_lamp: 'redstone_lamp', shroomlight: 'shroomlight',
+  jack_o_lantern: 'jack_o_lantern', ochre_froglight: 'ochre_froglight', verdant_froglight: 'verdant_froglight',
+  pearlescent_froglight: 'pearlescent_froglight', soul_lantern: 'torch_post', end_rod: 'torch_post',
+  // P2 building stone & terrain
+  netherrack: 'netherrack', end_stone: 'end_stone', end_stone_bricks: 'end_stone_bricks',
+  red_nether_bricks: 'red_nether_bricks', tuff_bricks: 'tuff_bricks', polished_tuff: 'polished_tuff', chiseled_tuff: 'tuff_bricks',
+  gilded_blackstone: 'gilded_blackstone', magma_block: 'magma_block',
+  soul_sand: 'soul_sand', soul_soil: 'soul_soil', bone_block: 'bone_block',
+  nether_wart_block: 'nether_wart_block', warped_wart_block: 'warped_wart_block',
+  sculk: 'sculk', amethyst_block: 'amethyst_block', budding_amethyst: 'budding_amethyst',
+  // P3 mineral show-blocks + ores (deepslate variants fold into the base)
+  diamond_block: 'diamond_block', emerald_block: 'emerald_block', lapis_block: 'lapis_block',
+  redstone_block: 'redstone_block', netherite_block: 'netherite_block',
+  diamond_ore: 'diamond_ore', deepslate_diamond_ore: 'diamond_ore', emerald_ore: 'emerald_ore', deepslate_emerald_ore: 'emerald_ore',
+  lapis_ore: 'lapis_ore', deepslate_lapis_ore: 'lapis_ore', redstone_ore: 'redstone_ore', deepslate_redstone_ore: 'redstone_ore',
+  // P4 farm / organic
+  pumpkin: 'pumpkin', carved_pumpkin: 'carved_pumpkin', jack_o_lantern_off: 'pumpkin', melon: 'melon',
 };
 
 // Rough material stand-ins for coloured/decorative families we don't model.

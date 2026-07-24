@@ -7,7 +7,7 @@ import { TEXPACK_TILES } from './texpack.js';
 
 export const TILE = 32;
 export const ATLAS_COLS = 16;
-export const ATLAS_ROWS = 22; // headroom for wood/ore/mineral + the 16-colour tinted families
+export const ATLAS_ROWS = 26; // headroom for wood/ore/mineral + tinted families + schematic-import blocks
 const G = 1; // grain: logical pixel size
 const LP = TILE / G; // 32 logical pixels per side
 
@@ -758,6 +758,79 @@ PAINTERS.scaffolding = (c, x, y, r) => {
   for (let ly = 2; ly < LP; ly += 7) for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, ly, shade('#a8863f', (r() - 0.5) * 0.1)); // bamboo node rings
   for (const lx of [8, 16, 24]) for (let ly = 0; ly < LP; ly++) px(c, x, y, lx, ly, shade('#9a7a35', -0.05));                    // vertical seams
 };
+
+// ---- Schematic-import blocks, wave 3 (P1–P4): placeholder procedural art -----
+// Recognisable colour/pattern stand-ins so imports render; real PNGs are listed
+// in docs/TEXTURES.md for hand-authoring (blitted over by applyTexturePack()).
+{
+  const fill = (base, v = 0.05, sp = null) => (c, x, y, r) => noisyFill(c, x, y, r, base, v, sp);
+  const oreOn = (dark, light, n = 4) => (c, x, y, r) => { PAINTERS.stone(c, x, y, r); oreBlobs(c, x, y, r, dark, light, n); };
+  const bricks = (base, mortar) => (c, x, y, r) => {
+    noisyFill(c, x, y, r, base, 0.05);
+    for (let ly = 0; ly < LP; ly++) {
+      if (ly % 8 === 0) { for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, ly, mortar); continue; }
+      const seam = (Math.floor(ly / 8) % 2) ? 8 : 0;             // offset every other course
+      px(c, x, y, seam, ly, mortar); px(c, x, y, (seam + 16) % LP, ly, mortar);
+    }
+  };
+  const ridged = (base, groove) => (c, x, y, r) => {            // pumpkin/melon vertical ridges
+    noisyFill(c, x, y, r, base, 0.05);
+    for (const lx of [0, 8, 16, 24]) for (let ly = 0; ly < LP; ly++) px(c, x, y, lx, ly, groove);
+  };
+  const face = (base, glow) => (c, x, y, r) => {               // carved pumpkin / jack-o face
+    ridged('#c8791f', '#9a5a15')(c, x, y, r);
+    for (const [ex, ey] of [[8, 12], [9, 12], [21, 12], [22, 12]]) px(c, x, y, ex, ey, glow);   // eyes
+    for (let lx = 10; lx <= 21; lx++) px(c, x, y, lx, 20, glow);                                 // mouth
+    for (const [lx, ly] of [[12, 22], [15, 22], [18, 22]]) px(c, x, y, lx, ly, glow);            // teeth
+  };
+  Object.assign(PAINTERS, {
+    // P1 lights
+    glowstone: fill('#c9a44e', 0.08, { chance: 0.18, color: '#f4dc8e' }),
+    sea_lantern: fill('#bcd6d0', 0.05, { chance: 0.14, color: '#e8f3ef' }),
+    redstone_lamp: fill('#c8813f', 0.06, { chance: 0.16, color: '#f2b86e' }),
+    shroomlight: fill('#e08a2c', 0.07, { chance: 0.2, color: '#f6c862' }),
+    jack_o_lantern: face('#c8791f', '#ffd23a'),
+    pumpkin_top: (c, x, y, r) => { noisyFill(c, x, y, r, '#c8791f', 0.04); for (const lx of [0, 8, 16, 24]) for (let ly = 0; ly < LP; ly++) px(c, x, y, lx, ly, '#9a5a15'); },
+    pumpkin_side: ridged('#c8791f', '#9a5a15'),
+    carved_pumpkin: face('#c8791f', '#3a2408'),
+    froglight_ochre: fill('#d9cf7a', 0.05, { chance: 0.16, color: '#efe8a0' }),
+    froglight_ochre_top: fill('#efe8a0', 0.04),
+    froglight_verdant: fill('#8fbf6a', 0.05, { chance: 0.16, color: '#c0e59a' }),
+    froglight_verdant_top: fill('#c0e59a', 0.04),
+    froglight_pearl: fill('#e6d6de', 0.04, { chance: 0.16, color: '#f6ecf1' }),
+    froglight_pearl_top: fill('#f6ecf1', 0.03),
+    // P2 building stone & terrain
+    end_stone: fill('#dcd7a6', 0.04, { chance: 0.1, color: '#eae6c2' }),
+    end_stone_bricks: bricks('#d7d2a0', '#bdb884'),
+    red_nether_bricks: bricks('#3a1414', '#521c1c'),
+    tuff_bricks: bricks('#6d6f68', '#585a54'),
+    polished_tuff: fill('#6d6f68', 0.04),
+    gilded_blackstone: (c, x, y, r) => { noisyFill(c, x, y, r, '#2b2830', 0.06); oreBlobs(c, x, y, r, '#c8a24a', '#f2cf72', 3); },
+    magma_block: (c, x, y, r) => { noisyFill(c, x, y, r, '#5a2a1e', 0.08); oreBlobs(c, x, y, r, '#e0722a', '#f6a838', 4); },
+    soul_sand: fill('#4a3a30', 0.06, { chance: 0.14, color: '#33251d' }),
+    soul_soil: fill('#42332a', 0.06, { chance: 0.1, color: '#54453a' }),
+    bone_block_top: (c, x, y, r) => { noisyFill(c, x, y, r, '#dcd6bf', 0.03); for (let a = 4; a <= 12; a += 4) for (let t = 0; t < 32; t++) { const lx = 16 + Math.round(a * Math.cos(t / 5)), ly = 16 + Math.round(a * Math.sin(t / 5)); px(c, x, y, lx, ly, '#c2bb9e'); } },
+    bone_block_side: (c, x, y, r) => { noisyFill(c, x, y, r, '#dcd6bf', 0.03); for (const lx of [6, 12, 20, 26]) for (let ly = 0; ly < LP; ly++) px(c, x, y, lx, ly, '#c2bb9e'); for (let lx = 0; lx < LP; lx++) { px(c, x, y, lx, 5, '#b4ac8c'); px(c, x, y, lx, 26, '#b4ac8c'); } },
+    nether_wart_block: fill('#6e0d14', 0.08, { chance: 0.16, color: '#8a1620' }),
+    warped_wart_block: fill('#167e7a', 0.08, { chance: 0.16, color: '#1fa39a' }),
+    sculk: (c, x, y, r) => { noisyFill(c, x, y, r, '#0e1b23', 0.06); oreBlobs(c, x, y, r, '#153742', '#2fd6c4', 3); },
+    amethyst_block: fill('#8a5fc4', 0.06, { chance: 0.2, color: '#b892e2' }),
+    budding_amethyst: (c, x, y, r) => { noisyFill(c, x, y, r, '#7a52b0', 0.06, { chance: 0.18, color: '#b892e2' }); oreBlobs(c, x, y, r, '#5c3a8e', '#d0b6f0', 3); },
+    // P3 mineral show-blocks + ores
+    diamond_block: fill('#4fd6d0', 0.05, { chance: 0.2, color: '#a2f0ec' }),
+    emerald_block: fill('#2fb45a', 0.05, { chance: 0.2, color: '#74e08e' }),
+    lapis_block: fill('#22449c', 0.06, { chance: 0.2, color: '#4472d6' }),
+    redstone_block: fill('#8a1414', 0.06, { chance: 0.18, color: '#cc3030' }),
+    netherite_block: fill('#2a2528', 0.05, { chance: 0.12, color: '#463c40' }),
+    diamond_ore: oreOn('#3fb4b0', '#a2f0ec', 4),
+    emerald_ore: oreOn('#2f9450', '#74e08e', 4),
+    lapis_ore: oreOn('#22449c', '#4f7fd6', 5),
+    redstone_ore: oreOn('#a01818', '#e64040', 5),
+    // P4 farm / organic
+    melon_top: fill('#5f8f3a', 0.04),
+    melon_side: (c, x, y, r) => { noisyFill(c, x, y, r, '#3f7a34', 0.05); for (const lx of [2, 9, 16, 23, 30]) for (let ly = 0; ly < LP; ly++) px(c, x, y, lx, ly, shade('#67a24a', 0.05)); for (let i = 0; i < 20; i++) px(c, x, y, Math.floor(r() * LP), Math.floor(r() * LP), '#b7413f'); },
+  });
+}
 
 // Reserve atlas slots for any pack-only tiles (new station faces) so they get a
 // UV; the real art is blitted over the placeholder by applyTexturePack().

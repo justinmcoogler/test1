@@ -260,6 +260,52 @@ def('scaffolding', { label: 'Scaffolding', shape: 'fence', hardness: 0.6, tool: 
 // but is still hit by the raycast so a prop's node can be clicked and gathered.
 def('forage_marker', { label: 'Forage', shape: 'marker', solid: false, opaque: false, drops: null, hardness: 0.2, tool: null, tiles: {} });
 
+// ---- Schematic-import blocks, wave 3 (P1–P4) --------------------------------
+// Lights, building stone/terrain, mineral+ore blocks, and farm props so imported
+// Minecraft builds keep their fidelity instead of leaving holes. APPENDED so ids
+// never shift. Placeholder procedural art (js/gfx/textures.js); real tiles are
+// listed in docs/TEXTURES.md for hand-authoring.
+// P1 — light sources (emissive)
+def('glowstone', { label: 'Glowstone', hardness: 0.3, tool: null, emissive: 0.95, tiles: { all: 'glowstone' } });
+def('sea_lantern', { label: 'Sea Lantern', hardness: 0.3, tool: 'pickaxe', emissive: 0.9, tiles: { all: 'sea_lantern' } });
+def('redstone_lamp', { label: 'Redstone Lamp', hardness: 0.3, tool: null, emissive: 0.8, tiles: { all: 'redstone_lamp' } });
+def('shroomlight', { label: 'Shroomlight', hardness: 1.0, tool: 'axe', emissive: 0.85, tiles: { all: 'shroomlight' } });
+def('jack_o_lantern', { label: "Jack o'Lantern", hardness: 1.0, tool: 'axe', directional: true, emissive: 0.85, tiles: { top: 'pumpkin_top', side: 'pumpkin_side', front: 'jack_o_lantern' } });
+def('ochre_froglight', { label: 'Ochre Froglight', hardness: 0.3, tool: null, emissive: 0.9, tiles: { top: 'froglight_ochre_top', side: 'froglight_ochre' } });
+def('verdant_froglight', { label: 'Verdant Froglight', hardness: 0.3, tool: null, emissive: 0.9, tiles: { top: 'froglight_verdant_top', side: 'froglight_verdant' } });
+def('pearlescent_froglight', { label: 'Pearlescent Froglight', hardness: 0.3, tool: null, emissive: 0.9, tiles: { top: 'froglight_pearl_top', side: 'froglight_pearl' } });
+// P2 — building stone & terrain
+def('netherrack', { label: 'Netherrack', hardness: 0.4, tool: 'pickaxe', tiles: { all: 'netherrack' } });
+def('end_stone', { label: 'End Stone', hardness: 3.0, tool: 'pickaxe', tiles: { all: 'end_stone' } });
+def('end_stone_bricks', { label: 'End Stone Bricks', hardness: 3.0, tool: 'pickaxe', tiles: { all: 'end_stone_bricks' } });
+def('red_nether_bricks', { label: 'Red Nether Bricks', hardness: 2.8, tool: 'pickaxe', tiles: { all: 'red_nether_bricks' } });
+def('tuff_bricks', { label: 'Tuff Bricks', hardness: 3.0, tool: 'pickaxe', tiles: { all: 'tuff_bricks' } });
+def('polished_tuff', { label: 'Polished Tuff', hardness: 3.0, tool: 'pickaxe', tiles: { all: 'polished_tuff' } });
+def('gilded_blackstone', { label: 'Gilded Blackstone', hardness: 3.4, tool: 'pickaxe', tiles: { all: 'gilded_blackstone' } });
+def('magma_block', { label: 'Magma Block', hardness: 0.5, tool: 'pickaxe', emissive: 0.4, tiles: { all: 'magma_block' } });
+def('soul_sand', { label: 'Soul Sand', hardness: 0.5, tool: 'shovel', tiles: { all: 'soul_sand' } });
+def('soul_soil', { label: 'Soul Soil', hardness: 0.5, tool: 'shovel', tiles: { all: 'soul_soil' } });
+def('bone_block', { label: 'Bone Block', hardness: 2.0, tool: 'pickaxe', tiles: { top: 'bone_block_top', side: 'bone_block_side', bottom: 'bone_block_top' } });
+def('nether_wart_block', { label: 'Nether Wart Block', hardness: 1.0, tool: null, tiles: { all: 'nether_wart_block' } });
+def('warped_wart_block', { label: 'Warped Wart Block', hardness: 1.0, tool: null, tiles: { all: 'warped_wart_block' } });
+def('sculk', { label: 'Sculk', hardness: 0.6, tool: null, tiles: { all: 'sculk' } });
+def('amethyst_block', { label: 'Amethyst Block', hardness: 1.5, tool: 'pickaxe', tiles: { all: 'amethyst_block' } });
+def('budding_amethyst', { label: 'Budding Amethyst', hardness: 1.5, tool: 'pickaxe', drops: null, tiles: { all: 'budding_amethyst' } });
+// P3 — mineral show-blocks + ores
+def('diamond_block', { label: 'Diamond Block', hardness: 5.0, tool: 'pickaxe', minTier: 2, tiles: { all: 'diamond_block' } });
+def('emerald_block', { label: 'Emerald Block', hardness: 5.0, tool: 'pickaxe', minTier: 2, tiles: { all: 'emerald_block' } });
+def('lapis_block', { label: 'Lapis Block', hardness: 3.0, tool: 'pickaxe', tiles: { all: 'lapis_block' } });
+def('redstone_block', { label: 'Redstone Block', hardness: 3.0, tool: 'pickaxe', tiles: { all: 'redstone_block' } });
+def('netherite_block', { label: 'Netherite Block', hardness: 8.0, tool: 'pickaxe', minTier: 3, tiles: { all: 'netherite_block' } });
+def('diamond_ore', { label: 'Diamond Ore', hardness: 4.5, tool: 'pickaxe', minTier: 2, tiles: { all: 'diamond_ore' } });
+def('emerald_ore', { label: 'Emerald Ore', hardness: 4.5, tool: 'pickaxe', minTier: 2, tiles: { all: 'emerald_ore' } });
+def('lapis_ore', { label: 'Lapis Ore', hardness: 3.5, tool: 'pickaxe', minTier: 1, tiles: { all: 'lapis_ore' } });
+def('redstone_ore', { label: 'Redstone Ore', hardness: 3.5, tool: 'pickaxe', minTier: 1, tiles: { all: 'redstone_ore' } });
+// P4 — farm / organic
+def('pumpkin', { label: 'Pumpkin', hardness: 1.0, tool: 'axe', tiles: { top: 'pumpkin_top', side: 'pumpkin_side', bottom: 'pumpkin_top' } });
+def('carved_pumpkin', { label: 'Carved Pumpkin', hardness: 1.0, tool: 'axe', directional: true, tiles: { top: 'pumpkin_top', side: 'pumpkin_side', front: 'carved_pumpkin' } });
+def('melon', { label: 'Melon', hardness: 1.0, tool: 'axe', tiles: { top: 'melon_top', side: 'melon_side', bottom: 'melon_top' } });
+
 export function blockByName(name) { return BLOCKS[B[name]]; }
 export function isSolid(id) { return BLOCKS[id]?.solid === true; }
 export function isOpaque(id) { return BLOCKS[id]?.opaque === true; }

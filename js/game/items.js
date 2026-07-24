@@ -146,6 +146,13 @@ it('lantern', 'Glowmoss Lantern', { stack: 1, type: 'utility', slot: 'utility', 
 function blockItem(id, label, blockName, tile) {
   it(id, label, { block: blockName, tileIcon: tile, type: 'block' });
 }
+// Import-fidelity / creative blocks: placeable and hold their own break-drop, but
+// intentionally have no survival gather/craft path (the reachability audit skips
+// items flagged importOnly). Used for schematic-import blocks we don't yet make
+// obtainable in play.
+function impBlock(id, label, blockName, tile) {
+  it(id, label, { block: blockName, tileIcon: tile, type: 'block', importOnly: true });
+}
 blockItem('cobble', 'Cobblestone', 'cobble', 'cobble');
 blockItem('planks', 'Planks', 'planks', 'planks');
 blockItem('timber_wall', 'Timber Wall', 'timber_wall', 'timber_wall');
@@ -201,6 +208,43 @@ blockItem('cobweb', 'Cobweb', 'cobweb', 'cobweb');
 blockItem('sea_pickle', 'Sea Pickle', 'sea_pickle', 'sea_pickle');
 blockItem('nether_portal', 'Nether Portal', 'nether_portal', 'nether_portal');
 blockItem('scaffolding', 'Scaffolding', 'scaffolding', 'scaffolding');
+
+// ---- schematic-import blocks, wave 3 (P1–P4) ----
+impBlock('glowstone', 'Glowstone', 'glowstone', 'glowstone');
+impBlock('sea_lantern', 'Sea Lantern', 'sea_lantern', 'sea_lantern');
+impBlock('redstone_lamp', 'Redstone Lamp', 'redstone_lamp', 'redstone_lamp');
+impBlock('shroomlight', 'Shroomlight', 'shroomlight', 'shroomlight');
+impBlock('jack_o_lantern', "Jack o'Lantern", 'jack_o_lantern', 'jack_o_lantern');
+impBlock('ochre_froglight', 'Ochre Froglight', 'ochre_froglight', 'froglight_ochre');
+impBlock('verdant_froglight', 'Verdant Froglight', 'verdant_froglight', 'froglight_verdant');
+impBlock('pearlescent_froglight', 'Pearlescent Froglight', 'pearlescent_froglight', 'froglight_pearl');
+impBlock('netherrack', 'Netherrack', 'netherrack', 'netherrack');
+impBlock('end_stone', 'End Stone', 'end_stone', 'end_stone');
+impBlock('end_stone_bricks', 'End Stone Bricks', 'end_stone_bricks', 'end_stone_bricks');
+impBlock('red_nether_bricks', 'Red Nether Bricks', 'red_nether_bricks', 'red_nether_bricks');
+impBlock('tuff_bricks', 'Tuff Bricks', 'tuff_bricks', 'tuff_bricks');
+impBlock('polished_tuff', 'Polished Tuff', 'polished_tuff', 'polished_tuff');
+impBlock('gilded_blackstone', 'Gilded Blackstone', 'gilded_blackstone', 'gilded_blackstone');
+impBlock('magma_block', 'Magma Block', 'magma_block', 'magma_block');
+impBlock('soul_sand', 'Soul Sand', 'soul_sand', 'soul_sand');
+impBlock('soul_soil', 'Soul Soil', 'soul_soil', 'soul_soil');
+impBlock('bone_block', 'Bone Block', 'bone_block', 'bone_block_side');
+impBlock('nether_wart_block', 'Nether Wart Block', 'nether_wart_block', 'nether_wart_block');
+impBlock('warped_wart_block', 'Warped Wart Block', 'warped_wart_block', 'warped_wart_block');
+impBlock('sculk', 'Sculk', 'sculk', 'sculk');
+impBlock('amethyst_block', 'Amethyst Block', 'amethyst_block', 'amethyst_block');
+impBlock('diamond_block', 'Diamond Block', 'diamond_block', 'diamond_block');
+impBlock('emerald_block', 'Emerald Block', 'emerald_block', 'emerald_block');
+impBlock('lapis_block', 'Lapis Block', 'lapis_block', 'lapis_block');
+impBlock('redstone_block', 'Redstone Block', 'redstone_block', 'redstone_block');
+impBlock('netherite_block', 'Netherite Block', 'netherite_block', 'netherite_block');
+impBlock('diamond_ore', 'Diamond Ore', 'diamond_ore', 'diamond_ore');
+impBlock('emerald_ore', 'Emerald Ore', 'emerald_ore', 'emerald_ore');
+impBlock('lapis_ore', 'Lapis Ore', 'lapis_ore', 'lapis_ore');
+impBlock('redstone_ore', 'Redstone Ore', 'redstone_ore', 'redstone_ore');
+impBlock('pumpkin', 'Pumpkin', 'pumpkin', 'pumpkin_side');
+impBlock('carved_pumpkin', 'Carved Pumpkin', 'carved_pumpkin', 'carved_pumpkin');
+impBlock('melon', 'Melon', 'melon', 'melon_side');
 
 // ---- dyes (colour wool / glass / clay / concrete) ----
 for (const [c] of COLORS) it(`${c}_dye`, `${cap(c.replace(/_/g, ' '))} Dye`, { desc: 'Colours wool, stained glass, terracotta and concrete.' });

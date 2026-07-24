@@ -902,3 +902,96 @@ All batches below have been generated and dropped into `assets/textures/`, and
 - Block tiles: 181
 - Item icons: 200
 - **Total: 381**
+
+---
+
+## Batch P — Procedural-art gap (schematic-import blocks) — 83 tiles
+
+These world tiles currently render as **placeholder procedural art** (colour/pattern stand-ins) and have **no hand-authored PNG yet** — the town-import decoration blocks plus the P1–P4 wave (lights, building stone, mineral/ore blocks, farm props). Author a `32×32` PNG per row with the exact filename; the loader blits it over the placeholder. Same rules as the batches above (opaque tiles tile seamlessly; transparent rows float on alpha 0). Palette: match the real Minecraft block so imported builds read correctly.
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_allium.png` | Allium | match the Minecraft block | yes |
+| `block_amethyst_block.png` | Amethyst Block | match the Minecraft block | no |
+| `block_bee_nest.png` | Bee Nest — side face | match the Minecraft block | no |
+| `block_bee_nest_top.png` | Bee Nest — top face | match the Minecraft block | no |
+| `block_beehive.png` | Beehive — side face | match the Minecraft block | no |
+| `block_beehive_top.png` | Beehive — top face | match the Minecraft block | no |
+| `block_bell.png` | Bell | match the Minecraft block | no |
+| `block_blue_orchid.png` | Blue Orchid | match the Minecraft block | yes |
+| `block_bone_block_side.png` | Bone Block — side face | match the Minecraft block | no |
+| `block_bone_block_top.png` | Bone Block — top/bottom face | match the Minecraft block | no |
+| `block_budding_amethyst.png` | Budding Amethyst | match the Minecraft block | no |
+| `block_carved_pumpkin.png` | Carved Pumpkin — front face | match the Minecraft block | no |
+| `block_cauldron.png` | Cauldron — side face | match the Minecraft block | no |
+| `block_cauldron_top.png` | Cauldron — top face | match the Minecraft block | no |
+| `block_chain.png` | Chain | match the Minecraft block | yes |
+| `block_cobweb.png` | Cobweb | match the Minecraft block | yes |
+| `block_daylight_detector_side.png` | Daylight Detector — side face | match the Minecraft block | no |
+| `block_daylight_detector_top.png` | Daylight Detector — top face | match the Minecraft block | no |
+| `block_diamond_block.png` | Diamond Block | match the Minecraft block | no |
+| `block_diamond_ore.png` | Diamond Ore | match the Minecraft block | no |
+| `block_emerald_block.png` | Emerald Block | match the Minecraft block | no |
+| `block_emerald_ore.png` | Emerald Ore | match the Minecraft block | no |
+| `block_end_stone.png` | End Stone | match the Minecraft block | no |
+| `block_end_stone_bricks.png` | End Stone Bricks | match the Minecraft block | no |
+| `block_ender_chest_front.png` | Ender Chest — front face | match the Minecraft block | no |
+| `block_ender_chest_side.png` | Ender Chest — side face | match the Minecraft block | no |
+| `block_ender_chest_top.png` | Ender Chest — top face | match the Minecraft block | no |
+| `block_froglight_ochre.png` | Ochre Froglight — side face | match the Minecraft block | no |
+| `block_froglight_ochre_top.png` | Ochre Froglight — top face | match the Minecraft block | no |
+| `block_froglight_pearl.png` | Pearlescent Froglight — side face | match the Minecraft block | no |
+| `block_froglight_pearl_top.png` | Pearlescent Froglight — top face | match the Minecraft block | no |
+| `block_froglight_verdant.png` | Verdant Froglight — side face | match the Minecraft block | no |
+| `block_froglight_verdant_top.png` | Verdant Froglight — top face | match the Minecraft block | no |
+| `block_gilded_blackstone.png` | Gilded Blackstone | match the Minecraft block | no |
+| `block_glow_lichen.png` | Glow Lichen | match the Minecraft block | yes |
+| `block_glowstone.png` | Glowstone | match the Minecraft block | no |
+| `block_hopper.png` | Hopper — side face | match the Minecraft block | no |
+| `block_hopper_top.png` | Hopper — top face | match the Minecraft block | no |
+| `block_iron_bars.png` | Iron Bars | match the Minecraft block | yes |
+| `block_jack_o_lantern.png` | Jack o'Lantern — front face | match the Minecraft block | no |
+| `block_ladder.png` | Ladder | match the Minecraft block | yes |
+| `block_lapis_block.png` | Lapis Block | match the Minecraft block | no |
+| `block_lapis_ore.png` | Lapis Ore | match the Minecraft block | no |
+| `block_lectern.png` | Lectern — side face | match the Minecraft block | no |
+| `block_lectern_top.png` | Lectern — top face | match the Minecraft block | no |
+| `block_lodestone.png` | Lodestone — side face | match the Minecraft block | no |
+| `block_lodestone_top.png` | Lodestone — top face | match the Minecraft block | no |
+| `block_magma_block.png` | Magma Block | match the Minecraft block | no |
+| `block_melon_side.png` | Melon — side face | match the Minecraft block | no |
+| `block_melon_top.png` | Melon — top/bottom face | match the Minecraft block | no |
+| `block_nether_portal.png` | Nether Portal | match the Minecraft block | yes |
+| `block_nether_wart_block.png` | Nether Wart Block | match the Minecraft block | no |
+| `block_netherite_block.png` | Netherite Block | match the Minecraft block | no |
+| `block_netherrack.png` | Warped Nylium, Netherrack — bottom face | match the Minecraft block | no |
+| `block_note_block.png` | Note Block — side face | match the Minecraft block | no |
+| `block_note_block_top.png` | Note Block — top face | match the Minecraft block | no |
+| `block_orange_tulip.png` | Orange Tulip | match the Minecraft block | yes |
+| `block_oxeye_daisy.png` | Oxeye Daisy | match the Minecraft block | yes |
+| `block_pink_tulip.png` | Pink Tulip | match the Minecraft block | yes |
+| `block_polished_tuff.png` | Polished Tuff | match the Minecraft block | no |
+| `block_pumpkin_side.png` | Jack o'Lantern, Pumpkin, Carved Pumpkin — side face | match the Minecraft block | no |
+| `block_pumpkin_top.png` | Jack o'Lantern, Pumpkin, Carved Pumpkin — top/bottom face | match the Minecraft block | no |
+| `block_rail.png` | Rail | match the Minecraft block | no |
+| `block_red_nether_bricks.png` | Red Nether Bricks | match the Minecraft block | no |
+| `block_redstone_block.png` | Redstone Block | match the Minecraft block | no |
+| `block_redstone_lamp.png` | Redstone Lamp | match the Minecraft block | no |
+| `block_redstone_ore.png` | Redstone Ore | match the Minecraft block | no |
+| `block_rose_bush.png` | Rose Bush | match the Minecraft block | yes |
+| `block_scaffolding.png` | Scaffolding | match the Minecraft block | no |
+| `block_sculk.png` | Sculk | match the Minecraft block | no |
+| `block_sea_lantern.png` | Sea Lantern | match the Minecraft block | no |
+| `block_sea_pickle.png` | Sea Pickle | match the Minecraft block | yes |
+| `block_shroomlight.png` | Shroomlight | match the Minecraft block | no |
+| `block_sign.png` | Sign | match the Minecraft block | no |
+| `block_soul_sand.png` | Soul Sand | match the Minecraft block | no |
+| `block_soul_soil.png` | Soul Soil | match the Minecraft block | no |
+| `block_suspicious_gravel.png` | Suspicious Gravel | match the Minecraft block | no |
+| `block_tuff_bricks.png` | Tuff Bricks | match the Minecraft block | no |
+| `block_warped_nylium.png` | Warped Nylium — top face | match the Minecraft block | no |
+| `block_warped_nylium_side.png` | Warped Nylium — side face | match the Minecraft block | no |
+| `block_warped_roots.png` | Warped Roots | match the Minecraft block | yes |
+| `block_warped_wart_block.png` | Warped Wart Block | match the Minecraft block | no |
+| `block_white_tulip.png` | White Tulip | match the Minecraft block | yes |
+
