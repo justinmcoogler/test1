@@ -66,6 +66,7 @@ export function listSlots() {
         totalLevel: d.meta?.totalLevel || 0,
         playtime: d.meta?.playtime || 0,
         savedAt: d.meta?.savedAt || 0,
+        mode: d.meta?.mode || d.education?.mode || 'free',
       });
     } catch {
       out.push({ slot: i, empty: true, corrupt: true });

@@ -1724,6 +1724,12 @@ class Game {
   // window.__learn()); the character-creation mode picker arrives in Phase 2.
   enterLearningMode(config = {}) {
     if (!this.education.isEducation) this.education.setMode('education', config);
+    // A brand-new learner (no lessons finished, empty bank) gets a few starter
+    // minutes so they can walk to Pip before play time runs out; after the first
+    // lesson the bank is earned, never given.
+    if (this.education.balanceSec <= 0 && Object.keys(this.education.lessonsDone).length === 0) {
+      this.education.grantMinutes(10, 'welcome');
+    }
     this.goToLearningMeadow();
   }
 
@@ -2024,6 +2030,7 @@ class Game {
         savedAt: Date.now(),
         playtime: Math.round(this.playtime),
         totalLevel: this.skills.totalLevel(),
+        mode: this.education.mode, // 'free' | 'education' — lets the title screen resume Learning Mode
         version: 1,
       },
       world: this.world.serialize(),
@@ -2102,12 +2109,19 @@ function renderTitle() {
     });
     slotsEl.appendChild(b);
   }
+  const learnBtn = $('learning-mode-btn');
+  if (learnBtn) {
+    const hasSave = listSlots().some((s) => !s.empty && s.mode === 'education');
+    learnBtn.innerHTML = `<span>${pixelIcon('scroll', 18)}<b>Learning Mode</b>`
+      + `<span class="slot-sub">${hasSave ? 'continue lessons · finish a lesson to earn play time' : 'for kids · finish lessons to earn play time'}</span></span>`;
+    learnBtn.onclick = () => { SFX.uiClick?.(); startLearningMode(); };
+  }
   $('title-hint').textContent = isTouchDevice()
     ? 'Left stick to move · drag right side to look · Action button to gather and fight'
     : 'WASD to move · mouse to look · hold left click to gather · E for inventory';
 }
 
-async function startGame(slot, isNew) {
+async function startGame(slot, isNew, opts = {}) {
   const seedInput = $('seed-input').value.trim();
   let saveData = null;
   let seedText;
@@ -2154,8 +2168,37 @@ async function startGame(slot, isNew) {
   if (game.touch) game.touch.show();
   game.ui.renderHotbar();
   game.ui.renderQuestTracker();
+  if (opts.learning) {
+    // Title-screen "Learning Mode": switch into education mode and drop the
+    // child at Numbers Meadow (works for both a fresh world and a resumed one).
+    game.enterLearningMode();
+  } else if (game.education.isEducation && game.education.locked) {
+    // Resumed a Learning Mode save whose play-time bank is empty — show the
+    // lock gate so the child heads back to lessons instead of free-roaming.
+    game.playtimeLocked = true;
+    game.controls.enabled = false;
+    game.touch?.hide();
+    game.showPlaytimeLock();
+  }
   game.saveGame();
   game.start();
+}
+
+// Launch (or resume) Learning Mode from the title screen. Continue an existing
+// education save if there is one; otherwise start fresh in the first open slot
+// so a survival world is never overwritten. If every slot is full, offer to
+// open the most recent world in Learning Mode (non-destructive — it just adds
+// the play-time bank and drops the child at the meadow).
+function startLearningMode() {
+  const slots = listSlots();
+  const existing = slots.find((s) => !s.empty && s.mode === 'education');
+  if (existing) { startGame(existing.slot, false, { learning: true }); return; }
+  const open = slots.find((s) => s.empty);
+  if (open) { startGame(open.slot, true, { learning: true }); return; }
+  const recent = slots.filter((s) => !s.empty).sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0];
+  if (recent && confirm(`All save slots are full.\n\nOpen your most recent world (slot ${recent.slot}) in Learning Mode?\nYour worlds are kept — this just adds the lesson/play-time system.`)) {
+    startGame(recent.slot, false, { learning: true });
+  }
 }
 
 initAudio(loadSettings());
