@@ -1103,6 +1103,12 @@ class Game {
     if (Math.hypot(dest[0] - p.x, dest[2] - p.z) < 6) { this.trailDots = null; return; }
     if (this._trailT > 0) return;
     this._trailT = 1.5;
+    // skip the A* (a periodic single-frame spike) when nothing meaningful moved:
+    // same destination and the player has barely shifted since the last trail
+    const destKey = `${Math.round(dest[0])},${Math.round(dest[2])}`;
+    if (this.trailDots && destKey === this._trailDestKey
+        && Math.hypot(p.x - this._trailFromX, p.z - this._trailFromZ) < 3) return;
+    this._trailDestKey = destKey; this._trailFromX = p.x; this._trailFromZ = p.z;
     const path = findPath(this.world, p.x, p.z, p.y, dest[0], dest[2], { maxExpand: 3500, goalRadius: 2 });
     if (!path || path.length < 4) { this.trailDots = null; return; }
     const dots = [];
@@ -2028,14 +2034,23 @@ class Game {
     return out;
   }
 
-  labelVisible(x, y, z) {
-    // occlude labels behind solid terrain
+  labelVisible(x, y, z, cacheId) {
+    // The occlusion raycast is the label system's per-frame hot spot. It doesn't
+    // need to be frame-exact, so cache the result per source for ~160ms.
+    if (cacheId != null) {
+      this._visCache ??= new Map();
+      if (this._visCache.size > 200) this._visCache.clear(); // drop stale despawned ids
+      const c = this._visCache.get(cacheId);
+      if (c && this.world.time - c.t < 0.16) return c.v;
+    }
     const eye = this.combat.active && this.combatCam ? this.combatCam.eye : this.player.eye();
     const dx = x - eye[0], dy = y - eye[1], dz = z - eye[2];
     const dist = Math.hypot(dx, dy, dz);
     if (dist < 0.5) return true;
     const hit = this.world.raycast(eye[0], eye[1], eye[2], dx / dist, dy / dist, dz / dist, dist - 0.6, false);
-    return !hit || !BLOCKS[hit.id]?.opaque;
+    const v = !hit || !BLOCKS[hit.id]?.opaque;
+    if (cacheId != null) this._visCache.set(cacheId, { v, t: this.world.time });
+    return v;
   }
 
   updateWorldLabels() {
@@ -2057,7 +2072,7 @@ class Game {
       for (const npc of this.world.structure.npcs) {
         const d = Math.hypot(npc.x - this.player.x, npc.z - this.player.z);
         if (d > 22) continue;
-        if (!this.labelVisible(npc.x + 0.5, npc.y + 1.6, npc.z + 0.5)) continue;
+        if (!this.labelVisible(npc.x + 0.5, npc.y + 1.6, npc.z + 0.5, `npc:${npc.id}`)) continue;
         const def = NPC_DEFS[npc.id];
         const hasQuest = this.quests.availableFrom(npc.id).length > 0;
         const turnIn = this.quests.activeFrom(npc.id).some((q) => this.quests.readyToTurnIn(q, npc.id));
@@ -2070,7 +2085,7 @@ class Game {
       for (const e of this.enemyMgr.entities.values()) {
         const d = Math.hypot(e.x - this.player.x, e.z - this.player.z);
         if (d > 18) continue;
-        if (!this.labelVisible(e.x, e.y + 1.2, e.z)) continue;
+        if (!this.labelVisible(e.x, e.y + 1.2, e.z, e.id)) continue;
         const isTarget = this.combatRS.target === e;
         labels.push({
           x: e.x, y: e.y + 1.6, z: e.z,

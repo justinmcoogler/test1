@@ -1816,12 +1816,18 @@ export class UI {
       const pr = renderer.project(l.x, l.y, l.z);
       if (!pr || pr[2] > 40) { el.style.display = 'none'; continue; }
       el.style.display = '';
+      // position updates every frame (cheap); the innerHTML (a DOM parse) is
+      // rebuilt only when the label's content actually changes
       el.style.left = `${pr[0]}px`;
       el.style.top = `${pr[1]}px`;
-      el.innerHTML = `${l.intent ? `<div class="wl-intent">${l.intent}</div>` : ''}
-        <div class="wl-name" style="color:${l.color || '#fff'}">${l.name}</div>
-        ${l.sub ? `<div style="color:var(--ink-dim);font-size:10px">${l.sub}</div>` : ''}
-        ${l.hpFrac != null ? `<div class="wl-bar"><div style="width:${l.hpFrac * 100}%"></div></div>` : ''}`;
+      const key = `${l.intent || ''}|${l.name}|${l.sub || ''}|${l.color || ''}|${l.hpFrac != null ? Math.round(l.hpFrac * 100) : ''}`;
+      if (el._lblKey !== key) {
+        el._lblKey = key;
+        el.innerHTML = `${l.intent ? `<div class="wl-intent">${l.intent}</div>` : ''}
+          <div class="wl-name" style="color:${l.color || '#fff'}">${l.name}</div>
+          ${l.sub ? `<div style="color:var(--ink-dim);font-size:10px">${l.sub}</div>` : ''}
+          ${l.hpFrac != null ? `<div class="wl-bar"><div style="width:${l.hpFrac * 100}%"></div></div>` : ''}`;
+      }
     }
   }
 }
