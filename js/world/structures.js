@@ -47,6 +47,55 @@ export function buildStarterStructures() {
   const GROUND = 30; // authored plateau height (real surface is GROUND + LIFT)
   const F = GROUND + 1; // standing level
 
+  // set a block AND record a facing for it (stairs roofs, gates, chest fronts).
+  // facings carry REAL world y — set() already lifted the block, so lift here too.
+  const setF = (x, y, z, id, f) => { set(x, y, z, id); facings.push([x, y + LIFT, z, f]); };
+
+  // A cosy timber cottage with a pitched (gabled) stair roof, doorway, glass
+  // windows, corner posts and a lamp. Centred at (cx,cz) on the plateau; halfX/
+  // halfZ are interior half-extents so the footprint (2h+1) is odd — a clean
+  // central ridge. `door` names the wall the doorway faces (S|N|E|W). The ridge
+  // runs along Z and the roof slopes down to ±X. Returns the interior AABB.
+  const house = (cx, cz, halfX, halfZ, opts = {}) => {
+    const { wall = B.timber_wall, post = B.fernwood_log, floor = B.planks, roof = 'brick', door = 'S', wallH = 4 } = opts;
+    const x0 = cx - halfX, x1 = cx + halfX, z0 = cz - halfZ, z1 = cz + halfZ;
+    const yTop = F + wallH - 1;                                    // top wall row
+    box(x0, GROUND, z0, x1, GROUND, z1, floor);                   // floor
+    hollowWalls(x0, z0, x1, z1, F, yTop, wall);                   // walls
+    for (const [px, pz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) box(px, F, pz, px, yTop, pz, post); // corner posts
+    // doorway (2 tall, centred on the chosen wall) + a lamp beside it
+    const gap = (x, z) => { set(x, F, z, B.air); set(x, F + 1, z, B.air); };
+    if (door === 'S') { gap(cx, z1); set(cx + 1, F, z1 + 1, B.torch_post); }
+    else if (door === 'N') { gap(cx, z0); set(cx + 1, F, z0 - 1, B.torch_post); }
+    else if (door === 'E') { gap(x1, cz); set(x1 + 1, F, cz + 1, B.torch_post); }
+    else { gap(x0, cz); set(x0 - 1, F, cz + 1, B.torch_post); }
+    // glass windows spaced along each wall (skip the doorway column)
+    const win = (x, z) => set(x, F + 1, z, B.glasspane);
+    for (let x = x0 + 1; x <= x1 - 1; x += 2) {
+      if (!((door === 'S') && x === cx)) win(x, z1);
+      if (!((door === 'N') && x === cx)) win(x, z0);
+    }
+    for (let z = z0 + 1; z <= z1 - 1; z += 2) {
+      if (!((door === 'W') && z === cz)) win(x0, z);
+      if (!((door === 'E') && z === cz)) win(x1, z);
+    }
+    // gabled roof: stair slopes to ±X + a slab ridge, with the two Z-end gables
+    // filled solid up to the roof underside.
+    const stair = B[roof + '_stairs'], slab = B[roof + '_slab'];
+    const baseY = yTop + 1;
+    for (let L = 0; L <= halfX; L++) {
+      const y = baseY + L, wx = x0 + L, ex = x1 - L;
+      if (wx < ex) {
+        for (let z = z0; z <= z1; z++) { setF(wx, y, z, stair, 1); setF(ex, y, z, stair, 3); } // west→east, east→west slopes
+      } else {
+        for (let z = z0; z <= z1; z++) set(wx, y, z, slab); // ridge cap (odd width)
+      }
+      for (const zEnd of [z0, z1]) for (let yy = baseY; yy < y; yy++) { set(wx, yy, zEnd, wall); set(ex, yy, zEnd, wall); } // gable fill
+    }
+    set(cx, yTop, cz, B.sea_lantern); // hanging ceiling lamp lights the room
+    return { x0, x1, z0, z1, cx, cz };
+  };
+
   // ---- Paths -------------------------------------------------------------
   for (let x = -30; x <= 30; x++) for (let z = 0; z <= 1; z++) set(x, GROUND, z, B.gravel);
   for (let z = -30; z <= 30; z++) for (let x = 0; x <= 1; x++) set(x, GROUND, z, B.gravel);
@@ -55,36 +104,43 @@ export function buildStarterStructures() {
     set(2, F, i, B.torch_post);
   }
 
-  // ---- Elder's cottage ---------------------------------------------------
-  box(-16, GROUND, -16, -8, GROUND, -8, B.planks);           // floor
-  hollowWalls(-16, -16, -8, -8, F, F + 2, B.timber_wall);
-  box(-16, F + 3, -16, -8, F + 3, -8, B.thatch);             // roof
-  set(-12, F, -8, B.air); set(-12, F + 1, -8, B.air);        // doorway
-  set(-10, F, -9, B.glasspane); set(-14, F, -9, B.glasspane);
-  set(-15, F, -15, B.torch_post);
-  set(-9, F, -15, B.chest_block);
-  chests.push({ id: 'maren_chest', x: -9, y: F, z: -15, loot: [{ item: 'travel_biscuit', qty: 3 }] });
+  // ---- The village of Brookhollow: timber cottages around a plaza ---------
+  // Elder Maren's cottage (NW) — home of the first quest-giver.
+  house(-12, -11, 4, 3, { roof: 'brick', door: 'S' });
+  set(-15, F, -13, B.chest_block);
+  chests.push({ id: 'maren_chest', x: -15, y: F, z: -13, loot: [{ item: 'travel_biscuit', qty: 3 }] });
   npcs.push({ id: 'maren', x: -12, y: F, z: -6 });
 
-  // ---- Workshop pavilion -------------------------------------------------
-  box(8, GROUND, -16, 16, GROUND, -8, B.planks);
-  for (const [px, pz] of [[8, -16], [16, -16], [8, -8], [16, -8]]) box(px, F, pz, px, F + 2, pz, B.fernwood_log);
-  box(8, F + 3, -16, 16, F + 3, -8, B.thatch);
-  set(10, F, -14, B.workbench);
-  set(12, F, -14, B.furnace);
-  set(14, F, -14, B.anvil_block);
-  set(10, F, -10, B.construction_bench);
-  set(12, F, -10, B.loom_block);
-  set(14, F, -10, B.alchemy_table);
-  set(9, F, -12, B.chest_block);
-  chests.push({ id: 'workshop_chest', x: 9, y: F, z: -12, loot: [{ item: 'rough_stone', qty: 4 }, { item: 'plant_fibre', qty: 4 }] });
-  set(6, F, -6, B.campfire);
+  // Village smithy & workshop (NE) — every crafting station under one roof.
+  house(12, -11, 4, 3, { roof: 'stone_brick', door: 'S', wall: B.planks });
+  set(9, F, -13, B.workbench);
+  set(11, F, -13, B.furnace);
+  set(13, F, -13, B.anvil_block);
+  set(15, F, -13, B.construction_bench);
+  set(9, F, -9, B.loom_block);
+  set(11, F, -9, B.alchemy_table);
+  set(15, F, -9, B.chest_block);
+  chests.push({ id: 'workshop_chest', x: 15, y: F, z: -9, loot: [{ item: 'rough_stone', qty: 4 }, { item: 'plant_fibre', qty: 4 }] });
+  set(7, F, -6, B.campfire);                    // forge fire out front
 
-  // ---- Merchant stall ----------------------------------------------------
-  for (const [px, pz] of [[-16, 8], [-10, 8], [-16, 12], [-10, 12]]) box(px, F, pz, px, F + 2, pz, B.fernwood_log);
-  box(-16, F + 3, 8, -10, F + 3, 12, B.thatch);
-  for (let x = -15; x <= -11; x++) set(x, F, 8, B.planks);   // counter
-  npcs.push({ id: 'tam', x: -13, y: F, z: 10 });
+  // Tam's general store (W) — doorway opening onto the plaza.
+  house(-13, 8, 3, 3, { roof: 'mossy_cobble', door: 'E' });
+  set(-14, F, 6, B.chest_block);
+  chests.push({ id: 'tam_chest', x: -14, y: F, z: 6, loot: [] });
+  npcs.push({ id: 'tam', x: -13, y: F, z: 8 });
+
+  // ---- Plaza well + lamp posts -------------------------------------------
+  {
+    const wx = 6, wz = -6;                       // a cobble well just off the crossing
+    for (const [dx, dz] of [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) set(wx + dx, F, wz + dz, B.cobble);
+    set(wx, GROUND, wz, B.cobble); set(wx, F, wz, B.water);   // walled water, contained by the rim
+    for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) box(wx + dx, F + 1, wz + dz, wx + dx, F + 2, wz + dz, B.fernwood_log);
+    box(wx - 1, F + 3, wz - 1, wx + 1, F + 3, wz + 1, B.thatch);
+  }
+  // lamp posts around the plaza (fence post topped with a lantern)
+  for (const [lx, lz] of [[-4, -4], [4, -4], [-4, 4], [4, 4]]) {
+    set(lx, F, lz, B.planks_fence); set(lx, F + 1, lz, B.planks_fence); set(lx, F + 2, lz, B.sea_lantern);
+  }
 
   // ---- Pond (fishing) ----------------------------------------------------
   // A sunken basin ringed by a step-down sand ledge: step off the plateau onto
