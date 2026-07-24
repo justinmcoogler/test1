@@ -106,7 +106,7 @@ export class Renderer {
     // pixels and let the browser upscale the canvas to fill — a big fill-rate
     // saving that the pixel-art look mostly hides, so the render distance can
     // stay far. renderScale is driven by measured FPS in adaptResolution().
-    const dpr = Math.min(window.devicePixelRatio || 1, 2) * (this.renderScale || 1);
+    const dpr = Math.min(window.devicePixelRatio || 1, this.dprCap || 2) * (this.renderScale || 1);
     const w = Math.max(1, Math.floor(this.canvas.clientWidth * dpr)) || 800;
     const h = Math.max(1, Math.floor(this.canvas.clientHeight * dpr)) || 600;
     if (this.canvas.width !== w || this.canvas.height !== h) {
@@ -129,11 +129,16 @@ export class Renderer {
     const fps = this._scaleFrames / this._scaleAccum;
     this._scaleAccum = 0; this._scaleFrames = 0;
     if (this._scaleCd > 0) return;
-    let s = this.renderScale;
+    let s = this.renderScale, cd = 1.2;
     const floor = this.scaleFloor || 0.5; // Low tier lets it drop further on weak GPUs
-    if (fps < 45 && s > floor) s = Math.max(floor, +(s - 0.1).toFixed(2));    // struggling → fewer pixels
-    else if (fps > 72 && s < 1) s = Math.min(1, +(s + 0.1).toFixed(2));      // headroom → sharpen back up
-    if (s !== this.renderScale) { this.renderScale = s; this._scaleCd = 1.2; this.resize(); }
+    // vsync quantises frame rate (60→30→20…), so a device stuck at 30 needs the
+    // resolution cut hard enough to push frame time back under ~16ms in one or
+    // two steps, not eight. Drop aggressively when badly behind, gently near the
+    // target, and only sharpen back up with genuine headroom (a solid ~58+).
+    if (fps < 34 && s > floor) { s = Math.max(floor, +(s - 0.2).toFixed(2)); cd = 0.6; } // stuck at 30 → big cut
+    else if (fps < 50 && s > floor) s = Math.max(floor, +(s - 0.1).toFixed(2));
+    else if (fps >= 58 && s < 1) s = Math.min(1, +(s + 0.1).toFixed(2));
+    if (s !== this.renderScale) { this.renderScale = s; this._scaleCd = cd; this.resize(); }
   }
 
   setFPSCamera(eye, yaw, pitch) {

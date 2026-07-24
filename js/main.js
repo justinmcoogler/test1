@@ -437,19 +437,26 @@ class Game {
     document.documentElement.classList.toggle('colorblind', s.colorblind);
     document.documentElement.classList.toggle('reduced-motion', s.reducedMotion);
     document.documentElement.classList.toggle('left-handed', s.leftHanded);
-    this.renderer.renderDistance = s.renderDistance;
     this.renderer.dynamicResolution = s.dynamicResolution !== false;
     if (s.dynamicResolution === false && this.renderer.renderScale !== 1) { this.renderer.renderScale = 1; this.renderer.resize(); }
     this.renderer.reducedMotion = s.reducedMotion;
     // Quality ladder: one renderer, three tiers. 'auto' picks by device (phones
-    // get Low, desktops Medium). Tiers trade fill + effects, never render
-    // distance (kept far per design). High: gradient sky + sun/moon + fresnel
-    // water. Low: no sky, capped precip, a lower adaptive-resolution floor.
+    // get Low, desktops Medium). High: gradient sky + sun/moon + fresnel water.
+    // The Low tier is fill-bound on phones (voxel scenes are cheap on the CPU but
+    // heavy on fragments — foliage/leaf overdraw + high-DPR pixels), so it trims
+    // exactly those: fewer chunks in view, a lower device-pixel-ratio cap, a
+    // lower adaptive-resolution floor, and a nearer draw range for transparent
+    // props. Desktop tiers keep the full view.
     const tier = this.qualityTier();
     this.renderer.qualityTier = tier;
     this.renderer.highQuality = tier === 'high';
-    this.renderer.scaleFloor = tier === 'low' ? 0.4 : 0.5;
+    this.renderer.scaleFloor = tier === 'low' ? 0.35 : 0.5;
     this.renderer.precipMult = tier === 'low' ? 0.5 : 1; // Medium/High keep full precip (old default look)
+    this.renderer.dprCap = tier === 'low' ? 1.5 : 2;     // a DPR-3 phone would else render at 2× = 4× the pixels
+    const rdCap = tier === 'low' ? 3 : tier === 'medium' ? 5 : 8;
+    this.renderer.renderDistance = Math.min(s.renderDistance, rdCap);
+    this._entityCull = tier === 'low' ? 30 : 44;         // nearer prop/enemy pop-in on phones = less overdraw
+    this.renderer.resize();                              // pick up the DPR cap
     document.body.classList.toggle('classic-cam', !!s.classicCamera);
     if (s.classicCamera) document.exitPointerLock?.();
     setVolumes(s);
@@ -708,7 +715,10 @@ class Game {
   streamChunks() {
     const p = this.player;
     const pcx = Math.floor(p.x / CHUNK), pcz = Math.floor(p.z / CHUNK);
-    const R = this.settings.renderDistance;
+    // Stream to the tier-capped draw distance, not the raw setting, so the low
+    // tier doesn't mesh a ring of chunks it never draws (saves mesh time + the
+    // shared-buffer memory on phones). Data streams one ring further for AO/light.
+    const R = this.renderer.renderDistance;
     // generate data in a spiral, budget per frame
     let budget = 2;
     outer:
@@ -1988,9 +1998,10 @@ class Game {
         });
       }
     } else {
+      const cull = this._entityCull ?? 44;
       for (const e of this.enemyMgr.entities.values()) {
         const d = Math.hypot(e.x - this.player.x, e.z - this.player.z);
-        if (d > 40) continue;
+        if (d > cull) continue;
         const model = this.renderer.modelCache.get(e.type);
         out.push({
           model: e.type, x: e.x, y: e.y, z: e.z, yaw: e.yaw,
@@ -2018,11 +2029,12 @@ class Game {
     }
     // nature-prop forage: the 3D model IS the visual (its marker cell is
     // invisible). Hidden while harvested; a static rest pose, per-prop yaw.
-    this.forNodesNear(44, (node) => {
+    const propCull = this._entityCull ?? 44;
+    this.forNodesNear(propCull, (node) => {
       if (node.def?.kind !== 'prop') return;
       if (this.world.nodeState(node.id)?.state === 'depleted') return;
       const dx = node.x + 0.5 - this.player.x, dz = node.z + 0.5 - this.player.z;
-      if (dx * dx + dz * dz > 44 * 44) return;
+      if (dx * dx + dz * dz > propCull * propCull) return;
       out.push({
         model: node.def.model, x: node.x + 0.5, y: node.y, z: node.z + 0.5,
         yaw: (node.x * 2.399 + node.z * 5.717) % (Math.PI * 2), tint: [0, 0, 0], pose: null,

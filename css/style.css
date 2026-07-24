@@ -107,14 +107,18 @@ body.classic-cam #crosshair { display: none; }
   pointer-events: none; white-space: nowrap; }
 #env-badge .env-dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 4px rgba(255,255,255,0.4); }
 #env-badge .env-tod { width: 18px; height: 18px; image-rendering: pixelated; margin-right: 1px; vertical-align: middle; }
-/* phones hide the compass; the badge sits top-centre, compacted (no phase word —
-   the sun/moon icon already reads day vs night) so it clears the vitals + minimap */
-@media (max-width: 640px) {
+/* touch devices hide the compass; the badge sits top-centre, compacted (no phase
+   word — the sun/moon icon already reads day vs night) so it clears the vitals +
+   minimap. Keyed on coarse pointer too, so landscape phones (641-860px wide) get
+   the same treatment instead of the desktop-corner fallback. */
+@media (max-width: 640px), (pointer: coarse) {
   #env-badge { top: calc(6px + env(safe-area-inset-top, 0px)); right: auto; left: 50%; transform: translateX(-50%);
     font-size: 10px; padding: 2px 8px; gap: 4px; }
   #env-badge .env-phase, #env-badge .env-phase + .env-sep { display: none; }
   #env-badge .env-tod { width: 15px; height: 15px; }
 }
+/* tightest phones (≤384px): drop the season too so the badge clears the minimap */
+@media (max-width: 384px) { #env-badge .env-season, #env-badge .env-weather + .env-sep { display: none; } }
 .vital-tag { font-size: calc(11px * var(--text-scale)); font-weight: 700; letter-spacing: 0.4px;
   padding: 2px 6px; border-radius: 4px; align-self: flex-start; }
 .vital-tag.bleed { color: #ffd7d7; background: rgba(150, 20, 20, 0.62); border: 1px solid #c23a3a;
@@ -138,7 +142,7 @@ body.classic-cam #crosshair { display: none; }
 #fps-badge.bad { color: #e06a5a; }
 /* phones: FPS tucks into the very top-left corner; vitals drop below it, so the
    centre stays clear for the env badge */
-@media (max-width: 640px) { #fps-badge { left: calc(6px + env(safe-area-inset-left, 0px)); right: auto;
+@media (max-width: 640px), (pointer: coarse) { #fps-badge { left: calc(6px + env(safe-area-inset-left, 0px)); right: auto;
   top: calc(6px + env(safe-area-inset-top, 0px)); font-size: 10px; min-width: 0; padding: 2px 7px; } }
 #minimap { position: absolute; top: 12px; right: 12px; border: 1px solid var(--edge); border-radius: 8px; background: #101318; pointer-events: auto; cursor: pointer; }
 #quest-tracker {
@@ -604,6 +608,31 @@ body.in-combat #quest-tracker, body.in-combat #compass-wrap { display: none !imp
   #hotbar { gap: 3px; }
   .hotbar-slot { width: 40px; height: 40px; font-size: 18px; }
   #toasts { bottom: 250px; }
+}
+
+/* landscape phones: the screen is short, so the right edge can't stack the
+   minimap, quest tracker AND the action-button column. Keep the right edge for
+   minimap (top) + action buttons (bottom), and dock the quest tracker + menu row
+   on the left under the vitals. Action buttons shrink so their column clears the
+   minimap. */
+@media (pointer: coarse) and (max-height: 500px) {
+  #vitals { top: calc(24px + env(safe-area-inset-top, 0px)); width: 148px; }
+  /* menu row goes across the wide top-centre, just under the env badge */
+  #menu-buttons {
+    top: calc(34px + env(safe-area-inset-top, 0px)); bottom: auto;
+    left: 50%; right: auto; transform: translateX(-50%); flex-direction: row; gap: 6px;
+  }
+  .menu-btn { width: 38px; height: 38px; font-size: 16px; }
+  /* quest docks to the wide top-centre just under the menu row — the left and
+     right edges are taken by the vitals, minimap and the joystick/action zones */
+  #quest-tracker {
+    top: calc(74px + env(safe-area-inset-top, 0px)); left: 50%; right: auto;
+    transform: translateX(-50%); width: min(260px, 62vw); font-size: 10.5px; padding: 6px 10px;
+  }
+  #minimap { width: 78px; height: 78px; }
+  #touch-buttons { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); gap: 7px; }
+  .touch-btn { width: 48px; height: 48px; font-size: 18px; }
+  .touch-btn.big { width: 60px; height: 60px; font-size: 24px; }
 }
 
 /* windows go single-column on narrow screens */
