@@ -559,20 +559,20 @@ export class UI {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     const half = canvas.width / 2;
     const pcx = Math.floor(p.x / CHUNK), pcz = Math.floor(p.z / CHUNK);
+    ctx.imageSmoothingEnabled = false;
+    // Round each tile's edges — AND the next tile's edge — to whole pixels so
+    // neighbours share an exact boundary. Drawing at fractional coords/size left
+    // 1px seams between chunks (the "grid lines" on the map).
     for (let dz = -4; dz <= 4; dz++) {
       for (let dx = -4; dx <= 4; dx++) {
         const cx = pcx + dx, cz = pcz + dz;
         if (!this.game.discovered.has(`${cx},${cz}`)) continue;
         const tile = this.chunkTileCanvas(cx, cz);
-        ctx.save();
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(
-          tile,
-          half + (cx * CHUNK - p.x) * scale,
-          half + (cz * CHUNK - p.z) * scale,
-          CHUNK * scale, CHUNK * scale
-        );
-        ctx.restore();
+        const x0 = Math.round(half + (cx * CHUNK - p.x) * scale);
+        const y0 = Math.round(half + (cz * CHUNK - p.z) * scale);
+        const x1 = Math.round(half + ((cx + 1) * CHUNK - p.x) * scale);
+        const y1 = Math.round(half + ((cz + 1) * CHUNK - p.z) * scale);
+        ctx.drawImage(tile, x0, y0, x1 - x0, y1 - y0);
       }
     }
     // quest / travel markers (clamped to the minimap edge when far away)
@@ -926,7 +926,10 @@ export class UI {
     for (const key of this.game.discovered) {
       const [cx, cz] = key.split(',').map(Number);
       const tile = this.chunkTileCanvas(cx, cz);
-      ctx.drawImage(tile, ox + cx * CHUNK * scale, oz + cz * CHUNK * scale, CHUNK * scale, CHUNK * scale);
+      // integer, shared-boundary edges → no seams between chunk tiles
+      const x0 = Math.round(ox + cx * CHUNK * scale), y0 = Math.round(oz + cz * CHUNK * scale);
+      const x1 = Math.round(ox + (cx + 1) * CHUNK * scale), y1 = Math.round(oz + (cz + 1) * CHUNK * scale);
+      ctx.drawImage(tile, x0, y0, x1 - x0, y1 - y0);
     }
     const diamond = (x, y, r, fill) => {
       ctx.fillStyle = fill;
