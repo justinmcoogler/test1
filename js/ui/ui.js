@@ -293,8 +293,14 @@ export class UI {
       const key = `${phase}|${wd.label}|${wsys.season}|${dot}`;
       if (this._envKey !== key) { // only touch the DOM when it actually changes
         this._envKey = key;
-        eb.innerHTML = `<canvas class="env-tod" width="18" height="18"></canvas>${phase}`
-          + ` · <span class="env-dot" style="background:${dot}"></span>${wd.label} · ${wsys.season}`;
+        // Parts are wrapped in spans so narrow phones can drop the redundant
+        // phase word (the sun/moon icon already reads day vs night) and keep the
+        // badge compact enough to sit clear of the vitals and minimap.
+        eb.innerHTML = `<canvas class="env-tod" width="18" height="18"></canvas>`
+          + `<span class="env-phase">${phase}</span><span class="env-sep">·</span>`
+          + `<span class="env-dot" style="background:${dot}"></span>`
+          + `<span class="env-weather">${wd.label}</span>`
+          + `<span class="env-sep">·</span><span class="env-season">${wsys.season}</span>`;
         this.drawTimeOfDay(eb.querySelector('.env-tod'), night);
       }
     }

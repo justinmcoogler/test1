@@ -107,8 +107,14 @@ body.classic-cam #crosshair { display: none; }
   pointer-events: none; white-space: nowrap; }
 #env-badge .env-dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 4px rgba(255,255,255,0.4); }
 #env-badge .env-tod { width: 18px; height: 18px; image-rendering: pixelated; margin-right: 1px; vertical-align: middle; }
-/* phones hide the compass, so the badge can stay top-centre with nothing to clash */
-@media (max-width: 640px) { #env-badge { top: calc(6px + env(safe-area-inset-top, 0px)); right: auto; left: 50%; transform: translateX(-50%); font-size: 11px; padding: 2px 7px; } }
+/* phones hide the compass; the badge sits top-centre, compacted (no phase word —
+   the sun/moon icon already reads day vs night) so it clears the vitals + minimap */
+@media (max-width: 640px) {
+  #env-badge { top: calc(6px + env(safe-area-inset-top, 0px)); right: auto; left: 50%; transform: translateX(-50%);
+    font-size: 10px; padding: 2px 8px; gap: 4px; }
+  #env-badge .env-phase, #env-badge .env-phase + .env-sep { display: none; }
+  #env-badge .env-tod { width: 15px; height: 15px; }
+}
 .vital-tag { font-size: calc(11px * var(--text-scale)); font-weight: 700; letter-spacing: 0.4px;
   padding: 2px 6px; border-radius: 4px; align-self: flex-start; }
 .vital-tag.bleed { color: #ffd7d7; background: rgba(150, 20, 20, 0.62); border: 1px solid #c23a3a;
@@ -130,7 +136,10 @@ body.classic-cam #crosshair { display: none; }
   pointer-events: none; min-width: 58px; text-align: center; }
 #fps-badge.low { color: #e0b04a; }
 #fps-badge.bad { color: #e06a5a; }
-@media (max-width: 640px) { #fps-badge { left: auto; right: 106px; top: calc(8px + env(safe-area-inset-top, 0px)); font-size: 11px; } }
+/* phones: FPS tucks into the very top-left corner; vitals drop below it, so the
+   centre stays clear for the env badge */
+@media (max-width: 640px) { #fps-badge { left: calc(6px + env(safe-area-inset-left, 0px)); right: auto;
+  top: calc(6px + env(safe-area-inset-top, 0px)); font-size: 10px; min-width: 0; padding: 2px 7px; } }
 #minimap { position: absolute; top: 12px; right: 12px; border: 1px solid var(--edge); border-radius: 8px; background: #101318; pointer-events: auto; cursor: pointer; }
 #quest-tracker {
   position: absolute; top: 192px; right: 12px; width: calc(240px * var(--ui-scale));
@@ -559,12 +568,14 @@ body.in-combat #quest-tracker, body.in-combat #compass-wrap { display: none !imp
 
 /* ===== mobile layout ===== */
 @media (max-width: 860px), (pointer: coarse) {
-  #vitals { width: 150px; top: calc(8px + env(safe-area-inset-top, 0px)); left: 8px; }
+  /* drop the vitals below the top-left FPS chip; a touch narrower so the centred
+     env badge clears the column */
+  #vitals { width: 136px; top: calc(30px + env(safe-area-inset-top, 0px)); left: 8px; }
   .vital-bar { height: 15px; }
   #minimap { width: 92px; height: 92px; top: calc(8px + env(safe-area-inset-top, 0px)); right: 8px; }
   #quest-tracker { top: 108px; right: 8px; width: 180px; font-size: 11.5px; padding: 7px 9px; }
   #compass-wrap { display: none; }
-  #hotbar { bottom: calc(6px + env(safe-area-inset-bottom, 0px)); gap: 4px; }
+  #hotbar { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); gap: 4px; }
   .hotbar-slot { width: 44px; height: 44px; font-size: 20px; }
   #menu-buttons { bottom: auto; top: calc(8px + env(safe-area-inset-top, 0px)); right: 108px; }
   .menu-btn { width: 40px; height: 40px; font-size: 17px; }
@@ -589,7 +600,7 @@ body.in-combat #quest-tracker, body.in-combat #compass-wrap { display: none !imp
     top: calc(108px + env(safe-area-inset-top, 0px)); right: 58px;
     width: 138px; font-size: 11px;
   }
-  #vitals { width: 132px; }
+  #vitals { width: 124px; }
   #hotbar { gap: 3px; }
   .hotbar-slot { width: 40px; height: 40px; font-size: 18px; }
   #toasts { bottom: 250px; }
