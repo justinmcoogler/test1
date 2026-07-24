@@ -1,12 +1,23 @@
 // Chunked voxel world: generation, block access, player edits, resource
 // node lifecycle (deplete/respawn), chest storage, raycasting, persistence.
 import { B, BLOCKS, isSolid, SHAPE_COLLISION } from './blocks.js';
-import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, LEARN_MEADOW, WorldGen, undergroundNodeCandidates } from './worldgen.js';
+import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, LEARN_MEADOW, BIOMES, WorldGen, undergroundNodeCandidates } from './worldgen.js';
 import { buildStarterStructures, indexEditsByChunk } from './structures.js';
 import { stampTownColumn, inTown, townReady, townSurfaceAt, TOWN_CENTER, TOWN_BASE } from './town.js';
 import { NODE_TYPES, nodeBlocks, nodeCells } from '../game/nodes.js';
+import { ENEMY_TYPES } from '../game/enemies.js';
+import { mobActive, mobRate, mobBiomes, allMobTypes } from '../game/mobconfig.js';
 import { hash2, hash3, hashSeed } from '../core/rng.js';
 import { emit } from '../core/events.js';
+
+// Reverse map biome object → biome key, so spawn gating can match the string
+// keys stored in a mob's biomes override against the biome at each column.
+const BIOME_KEY = new Map(Object.entries(BIOMES).map(([k, v]) => [v, k]));
+
+// Base per-block density for a mob steered into a biome purely by its biomes
+// override (i.e. one that biome.enemies never listed — e.g. an activated
+// imported mob). Comparable to a typical native biome density.
+const ADDED_MOB_D = 0.0025;
 
 const SLAB_BLOCKS = new Set();
 export function initSlabSet() {
@@ -76,6 +87,39 @@ export class World {
     const chunk = { cx, cz, blocks, nodes: [], spawns: [], surfaceH: new Int16Array(CHUNK * CHUNK) };
     const setLocal = (lx, y, lz, id) => { blocks[lidx(lx, y, lz)] = id; };
     const gen = this.gen;
+
+    // Per-chunk cache of each biome's LIVE spawn candidate list (admin overrides
+    // applied): filtered by mobActive, density scaled by mobRate, restricted or
+    // steered by any per-mob biomes override. Rebuilt each generateChunk so new
+    // chunks reflect the current mob config, but computed once per distinct
+    // biome in the chunk (cheap). See js/game/mobconfig.js.
+    const spawnListCache = new Map(); // biomeKey → [{ type, d, pack, _salt }]
+    const effectiveEnemies = (biome, biomeKey) => {
+      let list = spawnListCache.get(biomeKey);
+      if (list) return list;
+      list = [];
+      const present = new Set();
+      for (const e of biome.enemies || []) {
+        present.add(e.type);
+        if (!mobActive(e.type)) continue;
+        const bs = mobBiomes(e.type);
+        if (bs && !bs.includes(biomeKey)) continue; // restricted away from here
+        e._salt ??= hashSeed(e.type);
+        list.push({ type: e.type, d: e.d * mobRate(e.type), pack: e.pack, _salt: e._salt });
+      }
+      // Mobs steered INTO this biome by a biomes override but not natively listed
+      // here (e.g. an activated imported mob) — make them actually appear.
+      for (const type of allMobTypes()) {
+        if (present.has(type)) continue;
+        if (!mobActive(type)) continue;
+        const bs = mobBiomes(type);
+        if (!bs || !bs.includes(biomeKey)) continue;
+        if (ENEMY_TYPES[type]?.noOverworld) continue; // summon-only creatures
+        list.push({ type, d: ADDED_MOB_D * mobRate(type), pack: null, _salt: hashSeed(type) });
+      }
+      spawnListCache.set(biomeKey, list);
+      return list;
+    };
 
     // Highest occupied layer (+1) in this chunk. The mesher/light/scans stop
     // here instead of at WORLD_H, so cost tracks terrain height, not the tall
@@ -163,11 +207,13 @@ export class World {
         }
         // enemy spawn points (packs place several creatures on one point)
         if (d0 > 60 && above === B.air && surfId !== B.water) {
-          for (const e of biome.enemies) {
-            // Per-type salt from the name's hash — NOT its length, which collides
-            // for equal-length names (e.g. moss_lurker vs glimmer_fox) and would
-            // let an earlier same-length enemy permanently shadow a later one.
-            e._salt ??= hashSeed(e.type);
+          // Live, admin-override-aware candidate list for this biome (active
+          // mobs only, densities scaled, biome restrictions/steering applied).
+          // Per-type salt is from the name's hash — NOT its length, which
+          // collides for equal-length names and would let an earlier same-length
+          // enemy permanently shadow a later one.
+          const candidates = effectiveEnemies(biome, BIOME_KEY.get(biome));
+          for (const e of candidates) {
             if (hash2(this.seed + e._salt, wx, wz) < e.d * MOB_SPAWN_RATE) {
               const n = e.pack
                 ? e.pack[0] + Math.floor(hash2(this.seed + 913, wx, wz) * (e.pack[1] - e.pack[0] + 1))

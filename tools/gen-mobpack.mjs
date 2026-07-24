@@ -39,6 +39,11 @@ function makeIdFactory() {
       counts[base] = 1;
       return base;
     }
+    // generic bone ids must be unique too: colliding ids collapse the part
+    // hierarchy (parent lookups turn ambiguous and meshes stack on one bone),
+    // which is how bird/fish models with generic bone names render as a blob.
+    if (counts[base]) return `${base}_${counts[base]++}`;
+    counts[base] = 1;
     return base;
   };
 }

@@ -3,6 +3,7 @@
 // timers while free to move. Attack styles route XP, food heals mid-fight,
 // specials cost energy/mana, and running away breaks the fight.
 import { ENEMY_TYPES } from './enemies.js';
+import { mobDropsFor } from './mobconfig.js';
 import { ITEMS } from './items.js';
 import { emit } from '../core/events.js';
 import { clamp } from '../core/math.js';
@@ -379,7 +380,7 @@ export class CombatRS {
     if (def.huntXp) skills.addXp('hunting', def.huntXp * shinyMult);
     // loot (shiny creatures drop double and pay triple coin)
     const loot = [];
-    for (const d of def.drops || []) {
+    for (const d of mobDropsFor(entity.type)) { // admin-editable drop table (mobconfig)
       if (Math.random() < d.chance) {
         const qty = (d.qty[0] + Math.floor(Math.random() * (d.qty[1] - d.qty[0] + 1))) * shinyMult;
         inventory.add(d.item, qty);

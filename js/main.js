@@ -194,8 +194,9 @@ class Game {
         if (mobSkinOverride(type)) registerRemadeMob(this.renderer, type, def);
       }
     });
-    // Imported Blockbench models (assets/mobs/*.bbmodel) fully replace a type's
-    // model — highest priority, decoded + registered async once ready.
+    // Imported Blockbench models (assets/mobs/*.bbmodel drop-ins + the licensed
+    // pack in js/gfx/mobpack-imported.js) fully replace a type's model — decoded
+    // + registered async once ready. Pack mobs are admin-activated, not spawned.
     registerImportedMobs(this.renderer).then((done) => {
       if (done.length) console.log(`[mobpack] ${done.length} imported model(s) active`);
     });

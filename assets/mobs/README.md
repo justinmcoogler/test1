@@ -23,3 +23,18 @@ Only add models you have the right to redistribute — CC0 / MIT / CC-BY (add
 attribution to `assets/mobs/CREDITS.md`) or your own work. Do **not** add
 Mojang's Minecraft entity models or look-alikes; those are not licensed for
 redistribution.
+
+## Imported mob pack (`imported/`)
+
+The 99-model licensed pack imported by `tools/import-mobpack.mjs` (open-standard
+CC-BY / EUPL / MIT / Apache / CC0 models) ships its attribution and full license
+texts in **`assets/mobs/imported/`**:
+
+- `imported/CREDITS.md` — per-source credit lines and links.
+- `imported/licenses/**` — the upstream LICENSE files and source READMEs.
+
+These credits/licenses are **required** by the CC-BY / EUPL / etc. terms — keep
+them when redistributing. The generated modules are
+`js/gfx/mobpack-imported.js` (geometry + skins) and `js/game/mobs-imported.js`
+(types). Imported mobs are registered and admin-configurable but are **not**
+worldgen-spawned by default.

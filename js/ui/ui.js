@@ -1,5 +1,8 @@
 // All DOM UI: HUD, windows, dialogue, shop, chest, combat interface, labels.
 import { ITEMS } from '../game/items.js';
+import { ENEMY_TYPES } from '../game/enemies.js';
+import { BIOMES } from '../world/worldgen.js';
+import { mobActive, mobRate, mobBiomes, mobDropsFor, setMobConfig, resetMobConfig, saveMobConfig, allMobTypes } from '../game/mobconfig.js';
 import { SKILL_DEFS, SKILL_UNLOCKS, xpForLevel } from '../game/skills.js';
 import { RECIPES, STATION_LABELS, canCraft, craft, minFuel } from '../game/crafting.js';
 import { EQUIP_SLOTS, EQUIP_LABELS, HOTBAR_SIZE, INV_SIZE } from '../game/inventory.js';
@@ -1007,6 +1010,17 @@ export class UI {
       <button id="btn-to-title">${icon('house', 14)} Save & quit to title</button>
       <span style="color:var(--ink-dim);font-size:12px;align-self:center" id="save-status"></span>
     </div>
+    <div class="admin-section">
+      <div class="admin-title-row">
+        <h3 class="admin-title">Admin / Debug</h3>
+        <label class="admin-toggle"><input type="checkbox" id="admin-enable" ${s.debugTools ? 'checked' : ''}> Enable debug tools</label>
+      </div>
+      <div id="admin-panel" class="${s.debugTools ? '' : 'hidden'}">
+        <p class="admin-hint">Per-mob spawn &amp; drop overrides, saved to this browser and read live by world generation and combat. Imported mobs are off until you activate them.</p>
+        <input type="search" id="admin-search" class="admin-search" placeholder="Search mobs…" autocomplete="off">
+        <div id="admin-list" class="admin-list"></div>
+      </div>
+    </div>
     <div style="margin-top:14px;color:var(--ink-dim);font-size:12px;line-height:1.7">
       <b>First person:</b> WASD move · Mouse look (click to capture) · Space jump · Shift sprint · LMB gather/mine/attack · RMB place/interact · F interact · E inventory · K skills · C crafting · J quests · M map · 1–8 hotbar · V camera<br>
       <b>Classic view:</b> click ground to walk · click trees/rocks/creatures/villagers to act · Shift+click (or long-press) a block to break it · RMB place block · left-drag, middle-drag or arrow keys orbit · wheel zoom · click the minimap for the big map, then click anywhere explored to auto-walk there<br>
@@ -1026,6 +1040,195 @@ export class UI {
       setTimeout(() => { const el = $('save-status'); if (el) el.textContent = ''; }, 1800);
     });
     $('btn-to-title').addEventListener('click', () => { this.game.saveGame(); location.reload(); });
+
+    // ---- Admin / Debug panel ----
+    const adminEnable = $('admin-enable');
+    adminEnable.addEventListener('change', () => {
+      s.debugTools = adminEnable.checked;
+      this.game.applySettings();            // persists settings
+      $('admin-panel').classList.toggle('hidden', !adminEnable.checked);
+      if (adminEnable.checked) this.renderAdminList();
+    });
+    const search = $('admin-search');
+    search.value = this._adminSearch || '';
+    search.addEventListener('input', () => { this._adminSearch = search.value; this.renderAdminList(); });
+    if (s.debugTools) this.renderAdminList();
+  }
+
+  // Fill the mob list, filtered by the current search text.
+  renderAdminList() {
+    const host = $('admin-list');
+    if (!host) return;
+    const q = (this._adminSearch || '').trim().toLowerCase();
+    this._adminExpanded ??= new Set();
+    const types = allMobTypes().filter((t) => {
+      if (!q) return true;
+      const def = ENEMY_TYPES[t];
+      return t.toLowerCase().includes(q) || (def.label || '').toLowerCase().includes(q);
+    });
+    host.innerHTML = types.length
+      ? types.map((t) => this._adminMobHTML(t)).join('')
+      : '<div class="admin-empty">No mobs match your search.</div>';
+    this._wireAdminList(host);
+  }
+
+  _adminMobHTML(type) {
+    const def = ENEMY_TYPES[type];
+    const open = this._adminExpanded.has(type);
+    const active = mobActive(type);
+    const badge = def.imported ? '<span class="admin-badge">imported</span>' : '';
+    return `<div class="admin-mob${open ? ' open' : ''}" data-mob="${type}">
+      <div class="admin-mob-head">
+        <button class="admin-caret" data-act="toggle" title="Expand">${open ? '▾' : '▸'}</button>
+        <span class="admin-mob-name">${def.label || type} ${badge}<code>${type}</code></span>
+        <label class="admin-active"><input type="checkbox" data-act="active" ${active ? 'checked' : ''}>Active</label>
+      </div>
+      ${open ? this._adminDetailHTML(type) : ''}
+    </div>`;
+  }
+
+  _adminDetailHTML(type) {
+    const rate = mobRate(type);
+    const sel = mobBiomes(type); // null = everywhere
+    const chips = [`<button class="admin-chip${sel === null ? ' on' : ''}" data-biome="*">Everywhere</button>`]
+      .concat(Object.entries(BIOMES).map(([key, b]) =>
+        `<button class="admin-chip${sel && sel.includes(key) ? ' on' : ''}" data-biome="${key}">${b.label}</button>`))
+      .join('');
+    const drops = mobDropsFor(type).map((d) => this._adminDropRowHTML(d)).join('');
+    return `<div class="admin-detail">
+      <div class="admin-field">
+        <label>Spawn rate <span class="admin-rate-val">${(+rate).toFixed(2)}×</span></label>
+        <input type="range" class="admin-rate" min="0" max="4" step="0.05" value="${rate}">
+      </div>
+      <div class="admin-field">
+        <label>Spawn biomes</label>
+        <div class="admin-chips">${chips}</div>
+      </div>
+      <div class="admin-field">
+        <label>Drops <span class="admin-dim">item · min · max · chance(0–1)</span></label>
+        <div class="admin-drops">${drops}</div>
+        <button class="admin-btn admin-add-drop" data-act="add-drop">+ Add drop</button>
+      </div>
+      <div class="admin-actions">
+        <button class="admin-btn" data-act="spawn">Spawn 3 here</button>
+        <button class="admin-btn admin-reset" data-act="reset">Reset to default</button>
+      </div>
+    </div>`;
+  }
+
+  _adminDropRowHTML(d = { item: '', qty: [1, 1], chance: 1 }) {
+    const min = d.qty?.[0] ?? 1, max = d.qty?.[1] ?? min, chance = d.chance ?? 1;
+    return `<div class="admin-drop">
+      <input class="admin-drop-item" list="admin-item-ids" data-f="item" placeholder="item id" value="${d.item || ''}">
+      <input type="number" data-f="min" min="0" step="1" value="${min}" title="min">
+      <input type="number" data-f="max" min="0" step="1" value="${max}" title="max">
+      <input type="number" data-f="chance" min="0" max="1" step="0.05" value="${chance}" title="chance 0–1">
+      <button class="admin-drop-del" data-act="del-drop" title="Remove">✕</button>
+    </div>`;
+  }
+
+  // Read the drop rows currently in a mob's editor into the {item,qty,chance} shape.
+  _adminReadDrops(mobEl) {
+    const out = [];
+    for (const r of mobEl.querySelectorAll('.admin-drop')) {
+      const item = r.querySelector('[data-f=item]').value.trim();
+      if (!item) continue; // skip incomplete rows
+      const min = Math.max(0, parseInt(r.querySelector('[data-f=min]').value, 10) || 0);
+      const max = Math.max(min, parseInt(r.querySelector('[data-f=max]').value, 10) || min);
+      let chance = parseFloat(r.querySelector('[data-f=chance]').value);
+      chance = Number.isNaN(chance) ? 1 : Math.min(1, Math.max(0, chance));
+      out.push({ item, qty: [min, max], chance });
+    }
+    return out;
+  }
+
+  // Toggle a biome chip: "*" = everywhere (null), else build/edit an explicit
+  // biome-key set. An emptied set falls back to everywhere.
+  _adminBiomeClick(type, chip) {
+    if (!type) return;
+    const key = chip.dataset.biome;
+    if (key === '*') setMobConfig(type, { biomes: null });
+    else {
+      const cur = mobBiomes(type);
+      const set = cur ? [...cur] : [];
+      const i = set.indexOf(key);
+      if (i >= 0) set.splice(i, 1); else set.push(key);
+      setMobConfig(type, { biomes: set.length ? set : null });
+    }
+    saveMobConfig();
+    const sel = mobBiomes(type);
+    chip.closest('.admin-chips').querySelectorAll('.admin-chip').forEach((c) => {
+      const k = c.dataset.biome;
+      c.classList.toggle('on', k === '*' ? sel === null : !!(sel && sel.includes(k)));
+    });
+  }
+
+  _wireAdminList(host) {
+    // Shared item-id datalist, attached to <body> once (survives host repaints).
+    if (!$('admin-item-ids')) {
+      const dl = document.createElement('datalist');
+      dl.id = 'admin-item-ids';
+      dl.innerHTML = Object.keys(ITEMS).map((id) => `<option value="${id}">`).join('');
+      document.body.appendChild(dl);
+    }
+    // Delegated listeners are attached once per host element; renderAdminList
+    // only swaps host.innerHTML, so guard against re-binding duplicates.
+    if (host.__adminWired) return;
+    host.__adminWired = true;
+
+    const mobOf = (el) => el.closest('.admin-mob');
+    const typeOf = (el) => mobOf(el)?.dataset.mob;
+
+    host.addEventListener('click', (ev) => {
+      const chip = ev.target.closest('.admin-chip');
+      if (chip) { this._adminBiomeClick(typeOf(chip), chip); return; }
+      const btn = ev.target.closest('[data-act]');
+      if (!btn) return;
+      const act = btn.dataset.act;
+      const type = typeOf(btn);
+      if (!type) return;
+      if (act === 'toggle') {
+        if (this._adminExpanded.has(type)) this._adminExpanded.delete(type);
+        else this._adminExpanded.add(type);
+        this.renderAdminList();
+      } else if (act === 'reset') {
+        resetMobConfig(type); saveMobConfig();
+        this.renderAdminList();
+      } else if (act === 'spawn') {
+        const g = this.game || window.__game;
+        let n = 0;
+        for (let i = 0; i < 3; i++) if (g?.spawnMobNear?.(type)) n++;
+        this.toast(n ? `Spawned ${n} ${ENEMY_TYPES[type].label || type}` : 'Could not spawn here', n ? 'xp' : 'warn');
+      } else if (act === 'add-drop') {
+        const wrap = mobOf(btn).querySelector('.admin-drops');
+        wrap.insertAdjacentHTML('beforeend', this._adminDropRowHTML());
+      } else if (act === 'del-drop') {
+        const mobEl = mobOf(btn);
+        btn.closest('.admin-drop').remove();
+        setMobConfig(type, { drops: this._adminReadDrops(mobEl) }); saveMobConfig();
+      }
+    });
+
+    host.addEventListener('change', (ev) => {
+      const box = ev.target.closest('[data-act=active]');
+      if (!box) return;
+      const type = typeOf(box);
+      setMobConfig(type, { active: box.checked }); saveMobConfig();
+    });
+
+    host.addEventListener('input', (ev) => {
+      const el = ev.target;
+      const type = typeOf(el);
+      if (!type) return;
+      if (el.classList.contains('admin-rate')) {
+        const v = parseFloat(el.value);
+        setMobConfig(type, { rate: v }); saveMobConfig();
+        const lbl = mobOf(el).querySelector('.admin-rate-val');
+        if (lbl) lbl.textContent = `${v.toFixed(2)}×`;
+      } else if (el.dataset.f) { // a drop field
+        setMobConfig(type, { drops: this._adminReadDrops(mobOf(el)) }); saveMobConfig();
+      }
+    });
   }
 
   // ---- shop ----

@@ -2,6 +2,7 @@
 // an animated part hierarchy (body/head/legs/arms/tail) and generates
 // idle/walk/attack keyframes suited to the creature's movement style.
 // Imported mobs bring their own parts + animations; this covers the natives.
+import { IMPORTED_RIGS } from './mobs-imported.js';
 
 // movement style per creature
 const RIGS = {
@@ -27,6 +28,8 @@ const RIGS = {
   // farm animals
   cow: 'quadruped', pig: 'quadruped', sheep: 'quadruped', goat: 'quadruped', horse: 'quadruped',
   chicken: 'pecker', duck: 'pecker', rabbit: 'scamper',
+  // imported licensed mob pack — each id's converted rig (never overrides a native)
+  ...IMPORTED_RIGS,
 };
 
 const cx = (b) => b.x + b.w / 2;

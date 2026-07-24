@@ -73,8 +73,9 @@ if (unreachable.length) problems.push(['UNREACHABLE ITEMS', unreachable]);
 const deadRecipes = RECIPES.filter((rc) => !rc.inputs.every((inp) => roots.has(inp.item)) || (rc.fuelTemp && !roots.has(minFuel(rc.fuelTemp)))).map((rc) => `${rc.out} ⟵ ${rc.inputs.map((i) => i.item).join('+')}`);
 if (deadRecipes.length) problems.push(['RECIPES WITH UNREACHABLE INPUTS', [...new Set(deadRecipes)]]);
 
-// mobs defined but never spawned (noOverworld summon-only is OK)
-const deadMobs = Object.keys(ENEMY_TYPES).filter((t) => !spawnedMobs.has(t));
+// mobs defined but never spawned (noOverworld summon-only is OK; imported mobs
+// are admin-activated, not worldgen-spawned by default, so they are exempt)
+const deadMobs = Object.keys(ENEMY_TYPES).filter((t) => !spawnedMobs.has(t) && !ENEMY_TYPES[t].imported);
 if (deadMobs.length) problems.push(['MOBS NEVER SPAWNED', deadMobs]);
 
 // nodes defined but never placed

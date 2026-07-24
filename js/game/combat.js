@@ -3,6 +3,7 @@
 // elements, telegraphs, multi-phase bosses.
 import { B, BLOCKS, isSolid } from '../world/blocks.js';
 import { ENEMY_TYPES } from './enemies.js';
+import { mobDropsFor } from './mobconfig.js';
 import { ITEMS } from './items.js';
 import { emit } from '../core/events.js';
 import { clamp } from '../core/math.js';
@@ -813,7 +814,7 @@ export class Combat {
         totalXp += c.def.xp || 0;
         if (c.def.huntXp) huntXp += c.def.huntXp;
         coins += Math.round((5 + (c.def.tier || 0) * 12) * (0.7 + Math.random() * 0.6));
-        for (const d of c.def.drops || []) {
+        for (const d of mobDropsFor(c.type)) { // admin-editable drop table (mobconfig)
           if (Math.random() < d.chance) {
             const qty = d.qty[0] + Math.floor(Math.random() * (d.qty[1] - d.qty[0] + 1));
             loot.push({ item: d.item, qty });
