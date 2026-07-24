@@ -32,8 +32,12 @@ export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
     const gl = (this.gl = createGL(canvas));
+    // Two variants each of the terrain + entity programs: the opaque build omits
+    // `discard` so tile GPUs keep early-Z on the (large) opaque + water passes;
+    // the CUTOUT build keeps `discard` for the alpha-tested foliage/skin pass.
     this.terrainProg = compileProgram(gl, WORLD_VS, TERRAIN_FS);
-    this.worldProg = compileProgram(gl, WORLD_VS, WORLD_FS);
+    this.terrainCutProg = compileProgram(gl, WORLD_VS, TERRAIN_FS, ['CUTOUT']);
+    this.worldProg = compileProgram(gl, WORLD_VS, WORLD_FS); // entities never discard (opaque skins)
     this.colorProg = compileProgram(gl, COLOR_VS, COLOR_FS);
     this.skyProg = compileProgram(gl, SKY_VS, SKY_FS);
     this.skyVAO = (() => {
@@ -338,7 +342,6 @@ export class Renderer {
     gl.uniform1f(wp.uniforms.uFogNear, 500);
     gl.uniform1f(wp.uniforms.uFogFar, 1000);
     gl.uniform1f(wp.uniforms.uOpacity, 1);
-    gl.uniform1f(wp.uniforms.uCutout, 0);
     gl.uniform1i(wp.uniforms.uAtlas, 0);
     gl.uniform3f(wp.uniforms.uTint, 0, 0, 0);
     gl.uniform1f(wp.uniforms.uLightMult, 1.2);
@@ -493,21 +496,29 @@ export class Renderer {
     this.updatePrecip(opts.dt || 0.016);
 
     // --- world passes (terrain program: sky/block light channels) ---
-    const tp = this.terrainProg;
-    gl.useProgram(tp.prog);
-    gl.uniformMatrix4fv(tp.uniforms.uPV, false, this.pv);
-    gl.uniformMatrix4fv(tp.uniforms.uModel, false, mat4Identity(this.tmp));
-    gl.uniform3fv(tp.uniforms.uCamPos, this.camPos);
-    gl.uniform3fv(tp.uniforms.uFogColor, fog);
-    gl.uniform1f(tp.uniforms.uFogNear, fogNear);
-    gl.uniform1f(tp.uniforms.uFogFar, fogFar);
-    gl.uniform1f(tp.uniforms.uOpacity, 1);
-    gl.uniform1f(tp.uniforms.uDaylight, this.daylight);
-    gl.uniform1f(tp.uniforms.uTime, this.reducedMotion ? 0 : this.time);
-    gl.uniform1f(tp.uniforms.uWater, 0); // opaque/cutout terrain: no water shimmer
+    // flame pulse computed once on the CPU (was 3 sin() per fragment, per pass)
+    const ttime = this.reducedMotion ? 0 : this.time;
+    const flicker = 0.87 + 0.09 * Math.sin(ttime * 2.3) + 0.04 * Math.sin(ttime * 8.1) * Math.sin(ttime * 5.7);
+    const setTerrainUniforms = (p) => {
+      gl.useProgram(p.prog);
+      gl.uniformMatrix4fv(p.uniforms.uPV, false, this.pv);
+      gl.uniformMatrix4fv(p.uniforms.uModel, false, mat4Identity(this.tmp));
+      gl.uniform3fv(p.uniforms.uCamPos, this.camPos);
+      gl.uniform3fv(p.uniforms.uFogColor, fog);
+      gl.uniform1f(p.uniforms.uFogNear, fogNear);
+      gl.uniform1f(p.uniforms.uFogFar, fogFar);
+      gl.uniform1f(p.uniforms.uOpacity, 1);
+      gl.uniform1f(p.uniforms.uDaylight, this.daylight);
+      gl.uniform1f(p.uniforms.uTime, ttime);
+      gl.uniform1f(p.uniforms.uFlicker, flicker);
+      gl.uniform1f(p.uniforms.uWater, 0);
+      gl.uniform1i(p.uniforms.uAtlas, 0);
+    };
+    const tp = this.terrainProg;      // opaque build (no discard → early-Z on)
+    const tpc = this.terrainCutProg;  // CUTOUT build (alpha-tested foliage)
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
-    gl.uniform1i(tp.uniforms.uAtlas, 0);
+    setTerrainUniforms(tp);
 
     const pcx = Math.floor(this.camPos[0] / CHUNK), pcz = Math.floor(this.camPos[2] / CHUNK);
     const visible = [];
@@ -519,14 +530,13 @@ export class Renderer {
       visible.push(m);
     }
 
-    gl.uniform1f(tp.uniforms.uCutout, 0);
     for (const m of visible) {
       if (!m.opaque) continue;
       gl.bindVertexArray(m.opaque.vao);
       gl.drawElements(gl.TRIANGLES, m.opaque.count, gl.UNSIGNED_INT, 0);
     }
 
-    gl.uniform1f(tp.uniforms.uCutout, 1);
+    setTerrainUniforms(tpc); // switch to the discarding build for foliage
     gl.disable(gl.CULL_FACE);
     for (const m of visible) {
       if (!m.cutout) continue;
@@ -544,7 +554,6 @@ export class Renderer {
     gl.uniform1f(wp.uniforms.uFogNear, fogNear);
     gl.uniform1f(wp.uniforms.uFogFar, fogFar);
     gl.uniform1f(wp.uniforms.uOpacity, 1);
-    gl.uniform1f(wp.uniforms.uCutout, 0);
     gl.uniform1i(wp.uniforms.uAtlas, 0);
     gl.uniform3f(wp.uniforms.uTint, 0, 0, 0);
     const ambient = Math.max(0.35, this.daylight);
@@ -601,7 +610,6 @@ export class Renderer {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
     gl.disable(gl.CULL_FACE);
-    gl.uniform1f(tp.uniforms.uCutout, 0);
     gl.uniform1f(tp.uniforms.uOpacity, 0.78);
     gl.uniform1f(tp.uniforms.uWater, this.highQuality ? 1 : 0); // fresnel shimmer on water
     for (const m of visible) {

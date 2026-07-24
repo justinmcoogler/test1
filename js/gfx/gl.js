@@ -6,8 +6,18 @@ export function createGL(canvas) {
   return gl;
 }
 
-export function compileProgram(gl, vsSrc, fsSrc) {
-  const compile = (type, src) => {
+export function compileProgram(gl, vsSrc, fsSrc, defines = null) {
+  // Inject #define lines right AFTER the #version directive (which must stay on
+  // line 1) so callers can compile shader variants — e.g. a CUTOUT build that
+  // keeps `discard` and an opaque build that omits it, letting tile-based GPUs
+  // keep early-Z / hidden-surface removal on the whole opaque world.
+  const withDefs = (src) => {
+    if (!defines || !defines.length) return src;
+    const nl = src.indexOf('\n');
+    return src.slice(0, nl + 1) + defines.map((d) => `#define ${d}\n`).join('') + src.slice(nl + 1);
+  };
+  const compile = (type, src0) => {
+    const src = withDefs(src0);
     const sh = gl.createShader(type);
     gl.shaderSource(sh, src);
     gl.compileShader(sh);
@@ -66,25 +76,24 @@ uniform sampler2D uAtlas;
 uniform vec3 uFogColor;
 uniform float uFogNear;
 uniform float uFogFar;
-uniform float uCutout;   // 1 → discard transparent texels
 uniform float uOpacity;
 uniform float uDaylight; // 0.25 night … 1 noon
 uniform float uTime;
+uniform float uFlicker;  // CPU-computed flame pulse (was 3 sin() per fragment)
 uniform vec3 uCamPos;
 uniform float uWater;    // 1 → animated fresnel shimmer (high quality water)
 out vec4 fragColor;
 void main() {
   vec4 tex = texture(uAtlas, vUV);
-  if (uCutout > 0.5 && tex.a < 0.5) discard;
-  // flame breath: one uniform pulse so each pool swells and shrinks radially
-  // from its source — a slow fade in/out with a faint fast crackle on top
-  float flicker = 0.87 + 0.09 * sin(uTime * 2.3) + 0.04 * sin(uTime * 8.1) * sin(uTime * 5.7);
+#ifdef CUTOUT
+  if (tex.a < 0.5) discard;
+#endif
   // warm tint riding on the block-light channel so torch pools feel like fire
-  float blk = vLight.g * flicker;
+  float blk = vLight.g * uFlicker;
   float light = max(max(vLight.r * uDaylight, blk), 0.05);
   vec3 col = tex.rgb * light;
   float warmth = clamp(blk - vLight.r * uDaylight, 0.0, 1.0);
-  col += vec3(0.10, 0.045, -0.02) * warmth * flicker;
+  col += vec3(0.10, 0.045, -0.02) * warmth * uFlicker;
   // water: a fresnel sheen at grazing angles + a slow ripple of sun/sky glint
   if (uWater > 0.5) {
     vec3 vd = normalize(uCamPos - vWorld);
@@ -107,14 +116,15 @@ uniform sampler2D uAtlas;
 uniform vec3 uFogColor;
 uniform float uFogNear;
 uniform float uFogFar;
-uniform float uCutout;   // 1 → discard transparent texels
 uniform float uOpacity;
 uniform float uLightMult;
 uniform vec3 uTint;      // additive flash (damage/telegraph) for entities
 out vec4 fragColor;
 void main() {
   vec4 tex = texture(uAtlas, vUV);
-  if (uCutout > 0.5 && tex.a < 0.5) discard;
+#ifdef CUTOUT
+  if (tex.a < 0.5) discard;
+#endif
   vec3 col = clamp(tex.rgb * vLight * uLightMult + uTint, 0.0, 1.0);
   float fog = clamp((vDist - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
   fragColor = vec4(mix(col, uFogColor, fog), tex.a * uOpacity);
