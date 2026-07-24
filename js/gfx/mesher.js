@@ -158,6 +158,9 @@ export function meshChunk(world, cx, cz) {
         const def = BLOCKS[id];
         const wx = ox + x, wz = oz + z; // world-space position for geometry
 
+        // marker: an invisible forage pick-target — the prop's 3D model draws in
+        // the entity pass, so the block itself contributes no chunk geometry.
+        if (def.shape === 'marker') continue;
         if (def.shape === 'cross') {
           addCross(cutout, def, wx, y, wz, skyAt(x, y, z), Math.max(blockAt(x, y, z), def.emissive));
           continue;

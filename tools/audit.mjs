@@ -8,7 +8,7 @@
 import { ITEMS } from '../js/game/items.js';
 import { BLOCKS, B } from '../js/world/blocks.js';
 import { RECIPES, minFuel } from '../js/game/crafting.js';
-import { NODE_TYPES } from '../js/game/nodes.js';
+import { NODE_TYPES, PROP_NODE_TYPES } from '../js/game/nodes.js';
 import { ENEMY_TYPES } from '../js/game/enemies.js';
 import { BIOMES } from '../js/world/worldgen.js';
 import { buildStarterStructures } from '../js/world/structures.js';
@@ -26,6 +26,7 @@ for (const biome of Object.values(BIOMES)) {
   for (const t of biome.trees || []) placedNodes.add(t.type);
 }
 for (const t of ['ore_copper', 'ore_tin', 'ore_iron', 'deposit_coal', 'ore_lead', 'ore_zinc', 'ore_silver', 'ore_gold', 'ore_platinum', 'ore_meteoric']) placedNodes.add(t); // guaranteed underground
+for (const t of PROP_NODE_TYPES) placedNodes.add(t); // nature-prop forage scattered on open ground (js/world/world.js)
 for (const n of struct.nodes) placedNodes.add(n.type);
 
 const spawnedMobs = new Set();

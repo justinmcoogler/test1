@@ -4,7 +4,7 @@ import { B, BLOCKS, isSolid, SHAPE_COLLISION } from './blocks.js';
 import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, LEARN_MEADOW, BIOMES, WorldGen, undergroundNodeCandidates } from './worldgen.js';
 import { buildStarterStructures, indexEditsByChunk } from './structures.js';
 import { stampTownColumn, inTown, townReady, townSurfaceAt, TOWN_CENTER, TOWN_BASE } from './town.js';
-import { NODE_TYPES, nodeBlocks, nodeCells } from '../game/nodes.js';
+import { NODE_TYPES, PROP_NODE_TYPES, nodeBlocks, nodeCells } from '../game/nodes.js';
 import { ENEMY_TYPES } from '../game/enemies.js';
 import { mobActive, mobRate, mobBiomes, allMobTypes } from '../game/mobconfig.js';
 import { hash2, hash3, hashSeed } from '../core/rng.js';
@@ -196,6 +196,7 @@ export class World {
           }
         }
         // surface nodes
+        let placedNode = false;
         if (above === B.air || surfId === B.water) {
           for (const n of biome.nodes) {
             const def = NODE_TYPES[n.type];
@@ -206,12 +207,25 @@ export class World {
               if (h < SEA - 1 && blocks[lidx(lx, SEA, lz)] === B.water) {
                 const shore = [[1, 0], [-1, 0], [0, 1], [0, -1]]
                   .some(([dx, dz]) => gen.heightAt(wx + dx, wz + dz) >= SEA);
-                if (shore) chunk.nodes.push({ type: n.type, x: wx, y: SEA, z: wz });
+                if (shore) { chunk.nodes.push({ type: n.type, x: wx, y: SEA, z: wz }); placedNode = true; }
               }
             } else if (above === B.air && surfId !== B.water) {
-              chunk.nodes.push({ type: n.type, x: wx, y: h + 1, z: wz });
+              chunk.nodes.push({ type: n.type, x: wx, y: h + 1, z: wz }); placedNode = true;
             }
             break;
+          }
+        }
+        // nature-prop forage: a light scatter of 3D mushrooms/rocks/sticks/stumps
+        // on open ground (rendered as models, harvested like any node). Kept
+        // exclusive with the biome node above so a cell never carries two nodes.
+        if (!placedNode && above === B.air && h > SEA && (grassy || surfId === B.stone || surfId === B.sand)
+            && blocks[lidx(lx, h + 1, lz)] === B.air) {
+          if (hash2(this.seed + 971, wx, wz) < 0.02) {
+            // scrambled coords + a distant salt so the type pick doesn't correlate
+            // with the sparse placement gate above (which collapses the variety).
+            const r = hash2(this.seed + 40503, wx * 7 + 3, wz * 11 + 5);
+            const pick = PROP_NODE_TYPES[Math.floor(r * PROP_NODE_TYPES.length) % PROP_NODE_TYPES.length];
+            chunk.nodes.push({ type: pick, x: wx, y: h + 1, z: wz });
           }
         }
         // enemy spawn points (packs place several creatures on one point)
@@ -654,7 +668,8 @@ export class World {
       if (id !== B.air) {
         const def = BLOCKS[id];
         const node = this.nodeAt(x, y, z);
-        if (def.solid || def.shape === 'cross' || (hitWaterNodes && node)) {
+        // marker cells are invisible but pickable (a forage prop's node lives there)
+        if (def.solid || def.shape === 'cross' || def.shape === 'marker' || (hitWaterNodes && node)) {
           return { x, y, z, id, face, dist: t, node };
         }
       }

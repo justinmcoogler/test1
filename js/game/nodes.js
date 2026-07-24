@@ -129,7 +129,78 @@ export const NODE_TYPES = {
     drops: [{ item: 'grainsheaf', qty: [1, 2], weight: 1 }],
     rare: [{ item: 'golden_grain', chance: 0.03 }, { item: 'grain_seeds', chance: 0.4 }],
   },
+
+  // ---- Nature-prop forage (kind 'prop') --------------------------------------
+  // Each renders a 3D model from js/gfx/proppack.js (js/game/proppack.js
+  // registers them as `prop_<id>`) at an invisible forage_marker cell; harvest,
+  // XP, drops and respawn ride the generic node path. Scattered by worldgen.
+  forage_brownmush: {
+    label: 'Brown Mushroom', skill: 'foraging', level: 1, tool: null,
+    xp: 10, time: 1.4, charges: [1, 2], respawn: 55, kind: 'prop',
+    model: 'prop_brownmush', ready: 'forage_marker', depleted: null,
+    drops: [{ item: 'wild_mushroom', qty: [1, 2], weight: 1 }],
+    rare: [{ item: 'duskcap', chance: 0.05 }],
+  },
+  forage_purple_mushroom: {
+    label: 'Purple Mushroom', skill: 'foraging', level: 5, tool: null,
+    xp: 14, time: 1.6, charges: [1, 2], respawn: 70, kind: 'prop',
+    model: 'prop_purple_mushroom', ready: 'forage_marker', depleted: null,
+    drops: [{ item: 'wild_mushroom', qty: [1, 2], weight: 3 }, { item: 'duskcap', qty: [1, 1], weight: 1, level: 8 }],
+    rare: [{ item: 'sunpetal', chance: 0.04 }],
+  },
+  forage_flower1: {
+    label: 'Wildflower Cluster', skill: 'foraging', level: 1, tool: null,
+    xp: 9, time: 1.4, charges: [1, 2], respawn: 50, kind: 'prop',
+    model: 'prop_flower1', ready: 'forage_marker', depleted: null,
+    drops: [{ item: 'sunpetal', qty: [1, 2], weight: 3 }, { item: 'bitterleaf', qty: [1, 1], weight: 1 }],
+    rare: [{ item: 'springroot', chance: 0.05 }],
+  },
+  forage_rock3: {
+    label: 'Loose Rocks', skill: 'foraging', level: 1, tool: null,
+    xp: 8, time: 1.6, charges: [1, 2], respawn: 60, kind: 'prop',
+    model: 'prop_rock3', ready: 'forage_marker', depleted: null,
+    drops: [{ item: 'rough_stone', qty: [1, 2], weight: 1 }],
+    rare: [],
+  },
+  forage_rock4: {
+    label: 'Rock Pile', skill: 'foraging', level: 1, tool: null,
+    xp: 10, time: 1.8, charges: [1, 3], respawn: 65, kind: 'prop',
+    model: 'prop_rock4', ready: 'forage_marker', depleted: null,
+    drops: [{ item: 'rough_stone', qty: [1, 3], weight: 1 }],
+    rare: [],
+  },
+  forage_stick_bundle: {
+    label: 'Fallen Sticks', skill: 'foraging', level: 1, tool: null,
+    xp: 8, time: 1.3, charges: [1, 2], respawn: 45, kind: 'prop',
+    model: 'prop_stick_bundle', ready: 'forage_marker', depleted: null,
+    drops: [{ item: 'plant_fibre', qty: [1, 2], weight: 1 }],
+    rare: [],
+  },
+  forage_stick_bundle2: {
+    label: 'Twig Scatter', skill: 'foraging', level: 1, tool: null,
+    xp: 6, time: 1.1, charges: [1, 1], respawn: 40, kind: 'prop',
+    model: 'prop_stick_bundle2', ready: 'forage_marker', depleted: null,
+    drops: [{ item: 'plant_fibre', qty: [1, 1], weight: 1 }],
+    rare: [],
+  },
+  forage_stick_bundle3: {
+    label: 'Kindling Pile', skill: 'foraging', level: 1, tool: null,
+    xp: 11, time: 1.6, charges: [2, 3], respawn: 55, kind: 'prop',
+    model: 'prop_stick_bundle3', ready: 'forage_marker', depleted: null,
+    drops: [{ item: 'plant_fibre', qty: [2, 3], weight: 1 }],
+    rare: [],
+  },
+  forage_wooden_stump: {
+    label: 'Weathered Stump', skill: 'foraging', level: 1, tool: null,
+    xp: 12, time: 2.0, charges: [1, 2], respawn: 80, kind: 'prop',
+    model: 'prop_wooden_stump', ready: 'forage_marker', depleted: null,
+    drops: [{ item: 'plant_fibre', qty: [1, 2], weight: 2 }, { item: 'oak_log', qty: [1, 1], weight: 1 }],
+    rare: [{ item: 'amber_resin', chance: 0.05 }],
+  },
 };
+
+// Prop forage nodes (kind 'prop'), for worldgen scatter + entity rendering.
+export const PROP_NODE_TYPES = Object.keys(NODE_TYPES).filter((k) => NODE_TYPES[k].kind === 'prop');
 
 // Deterministic 0–1 hash for organic, save-stable canopy raggedness.
 function thash(a, b, c) {

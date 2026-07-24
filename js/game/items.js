@@ -55,6 +55,7 @@ it('bitterleaf', 'Bitterleaf');
 it('springroot', 'Springroot');
 it('duskcap', 'Duskcap');
 it('sunpetal', 'Sunpetal');
+it('wild_mushroom', 'Wild Mushroom', { type: 'food', heal: 4, nutrients: { vitamin: 10, carb: 4 } });
 it('tartberries', 'Tartberries', { type: 'food', heal: 3, hydration: 12, nutrients: { vitamin: 16 } });
 it('grainsheaf', 'Grainsheaf');
 it('golden_grain', 'Golden Grain');

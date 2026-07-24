@@ -143,7 +143,7 @@ def('meteor_crater', { label: 'Meteor Crater', hardness: 5.5, tool: 'pickaxe', m
 // draws the geometry; world.collisionHeight reads SHAPE_COLLISION for physics.
 // Directional shapes (stairs, gate) record a placement facing; glass panes are
 // transparent (cutout pass). Naming is `<base>_<shape>`.
-export const SHAPE_COLLISION = { slab: 0.5, carpet: 1 / 16, stairs: 1, wall: 1, fence: 1, gate: 1, pane: 1, panel: 2 / 16, sign: 0, button: 0, pot: 0 };
+export const SHAPE_COLLISION = { slab: 0.5, carpet: 1 / 16, stairs: 1, wall: 1, fence: 1, gate: 1, pane: 1, panel: 2 / 16, sign: 0, button: 0, pot: 0, marker: 0 };
 const DIRECTIONAL_SHAPES = new Set(['stairs', 'gate']);
 const SHAPE_LABEL = { slab: 'Slab', stairs: 'Stairs', wall: 'Wall', fence: 'Fence', gate: 'Gate', pane: 'Pane', carpet: 'Carpet' };
 
@@ -254,6 +254,11 @@ def('sea_pickle', { label: 'Sea Pickle', shape: 'cross', solid: false, opaque: f
 // Special — a swirly, emissive, translucent portal (renders in the cutout pass).
 def('nether_portal', { label: 'Nether Portal', solid: false, opaque: false, transparent: true, hardness: 0.6, drops: null, emissive: 0.6, tiles: { all: 'nether_portal' } });
 def('scaffolding', { label: 'Scaffolding', shape: 'fence', hardness: 0.6, tool: 'axe', tiles: { all: 'scaffolding' } });
+
+// Invisible pick-target for the 3D forage props (js/game/proppack.js). It draws
+// no geometry (the prop's model renders in the entity pass), is walk-through,
+// but is still hit by the raycast so a prop's node can be clicked and gathered.
+def('forage_marker', { label: 'Forage', shape: 'marker', solid: false, opaque: false, drops: null, hardness: 0.2, tool: null, tiles: {} });
 
 export function blockByName(name) { return BLOCKS[B[name]]; }
 export function isSolid(id) { return BLOCKS[id]?.solid === true; }

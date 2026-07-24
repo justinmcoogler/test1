@@ -27,6 +27,7 @@ import { buildPlayerSkinCanvas, partBoxUV, swatchUV, preloadPlayerSkins } from '
 import { MOB_REMAKES } from './game/mobremakes/index.js';
 import { registerRemadeMob, preloadMobSkins, mobSkinOverride } from './game/mobremake.js';
 import { registerImportedMobs } from './game/mobpack.js';
+import { registerProps } from './game/proppack.js';
 import { loadTown } from './world/town.js';
 import { EducationManager } from './game/education.js';
 import { LessonRunner } from './game/lessons.js';
@@ -199,6 +200,12 @@ class Game {
     // + registered async once ready. Pack mobs are admin-activated, not spawned.
     registerImportedMobs(this.renderer).then((done) => {
       if (done.length) console.log(`[mobpack] ${done.length} imported model(s) active`);
+    });
+    // Nature-prop forage models (js/gfx/proppack.js) — static 3D props scattered
+    // by worldgen and drawn in the entity pass; remesh nearby chunks once ready
+    // so any already-generated prop cells pick up their model.
+    registerProps(this.renderer).then((done) => {
+      if (done.length) { console.log(`[proppack] ${done.length} prop model(s) active`); this.propsReady = true; }
     });
   }
 
@@ -1916,6 +1923,20 @@ class Game {
         yaw: Math.atan2(this.player.x - npc.x, this.player.z - npc.z), tint: [0, 0, 0],
         pose: model?.animated ? evaluatePose(model, 'idle', this.world.time + (npc.x % 7)) : null,
       });
+    }
+    // nature-prop forage: the 3D model IS the visual (its marker cell is
+    // invisible). Hidden while harvested; a static rest pose, per-prop yaw.
+    for (const [, chunk] of this.world.chunks) {
+      for (const node of chunk.nodes) {
+        if (node.def?.kind !== 'prop') continue;
+        if (this.world.nodeState(node.id)?.state === 'depleted') continue;
+        const dx = node.x + 0.5 - this.player.x, dz = node.z + 0.5 - this.player.z;
+        if (dx * dx + dz * dz > 44 * 44) continue;
+        out.push({
+          model: node.def.model, x: node.x + 0.5, y: node.y, z: node.z + 0.5,
+          yaw: (node.x * 2.399 + node.z * 5.717) % (Math.PI * 2), tint: [0, 0, 0], pose: null,
+        });
+      }
     }
     return out;
   }
