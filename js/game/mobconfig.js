@@ -34,9 +34,35 @@ export const MOB_OVERRIDES = loadOverrides();
 // player sees while a local tweak still overrides it, and "Reset to default"
 // falls back to whatever is baked.
 // Native mobs default ON; imported mobs (imported:true) default OFF.
+// A deleted mob never spawns, regardless of its active flag.
 export function mobActive(type) {
+  if (mobDeleted(type)) return false;
   const a = MOB_OVERRIDES[type]?.active ?? MOB_DEFAULTS[type]?.active;
   return a ?? (ENEMY_TYPES[type]?.imported ? false : true);
+}
+
+// "Deleted" is reversible curation: the mob is hidden from the library and
+// never spawns, but the flag lives in the same override store so Restore
+// brings it right back. A localStorage override wins over any baked default.
+export function mobDeleted(type) {
+  const o = MOB_OVERRIDES[type]?.deleted;
+  if (o !== undefined) return o === true;
+  return MOB_DEFAULTS[type]?.deleted === true;
+}
+
+export function setMobDeleted(type, deleted) {
+  setMobConfig(type, { deleted: !!deleted });
+}
+
+// Bulk enable/disable every non-deleted mob at once (the admin "Disable all" /
+// "Enable all" buttons). Deleted mobs are left alone — they stay curated out.
+export function setAllMobsActive(active) {
+  for (const type of allMobTypes(false)) setMobConfig(type, { active: !!active });
+}
+
+// Types the player has curated out of the library, for the "show deleted" list.
+export function deletedMobTypes() {
+  return Object.keys(ENEMY_TYPES).filter((t) => mobDeleted(t)).sort();
 }
 
 // Density multiplier applied to the mob's per-block spawn chance. 1 = default.
@@ -79,9 +105,11 @@ export function saveMobConfig() {
 }
 
 // Sorted list of every registered mob type (so mobs added by other modules at
-// runtime appear in the panel automatically).
-export function allMobTypes() {
-  return Object.keys(ENEMY_TYPES).sort();
+// runtime appear in the panel automatically). Deleted mobs are filtered out
+// unless includeDeleted is set (the "show deleted" reveal).
+export function allMobTypes(includeDeleted = false) {
+  const all = Object.keys(ENEMY_TYPES).sort();
+  return includeDeleted ? all : all.filter((t) => !mobDeleted(t));
 }
 
 // Bake the current effective config (baked defaults overlaid by the player's own

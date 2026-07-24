@@ -2,7 +2,7 @@
 import { ITEMS } from '../game/items.js';
 import { ENEMY_TYPES } from '../game/enemies.js';
 import { BIOMES } from '../world/worldgen.js';
-import { mobActive, mobRate, mobBiomes, mobDropsFor, setMobConfig, resetMobConfig, saveMobConfig, allMobTypes, exportMobDefaults } from '../game/mobconfig.js';
+import { mobActive, mobRate, mobBiomes, mobDropsFor, setMobConfig, resetMobConfig, saveMobConfig, allMobTypes, exportMobDefaults, mobDeleted, setMobDeleted, setAllMobsActive, deletedMobTypes } from '../game/mobconfig.js';
 import { SKILL_DEFS, SKILL_UNLOCKS, xpForLevel } from '../game/skills.js';
 import { RECIPES, STATION_LABELS, canCraft, craft, minFuel } from '../game/crafting.js';
 import { EQUIP_SLOTS, EQUIP_LABELS, HOTBAR_SIZE, INV_SIZE } from '../game/inventory.js';
@@ -221,15 +221,8 @@ export class UI {
     $('hp-text').textContent = `HP ${Math.ceil(p.hp)}/${p.maxHp}`;
     $('energy-fill').style.width = `${(p.energy / p.maxEnergy) * 100}%`;
     $('energy-text').textContent = `STA ${Math.floor(p.energy)}`;
-    // mana is Fantasy Frontier only — the bar is hidden in real-world play
-    const manaBar = $('mana-fill').parentElement;
-    if (this.game.settings?.fantasyFrontier === true) {
-      manaBar.style.display = '';
-      $('mana-fill').style.width = `${(p.mana / p.maxMana) * 100}%`;
-      $('mana-text').textContent = `MP ${Math.floor(p.mana)}/${p.maxMana}`;
-    } else {
-      manaBar.style.display = 'none';
-    }
+    // real-world play has no magic — the mana bar stays hidden
+    $('mana-fill').parentElement.style.display = 'none';
     // hydration bar (lazily created; always shown in real-world play)
     let hyb = $('hydration-bar');
     if (!hyb) {
@@ -771,12 +764,11 @@ export class UI {
   // ---- skills ----
   renderSkills(body) {
     const skills = this.game.skills;
-    const ORDER = ['Gathering', 'Processing', 'Survival', 'Combat', 'Knowledge', 'Frontier'];
+    const ORDER = ['Gathering', 'Processing', 'Survival', 'Combat', 'Knowledge'];
     const groups = {};
     for (const g of ORDER) groups[g] = [];
-    const showFrontier = this.game.settings.fantasyFrontier === true;
     for (const [key, def] of Object.entries(SKILL_DEFS)) {
-      if (def.frontier && !showFrontier) continue; // fantasy skills hidden on the real-world route
+      if (def.frontier) continue; // no magic in real-world play
       (groups[def.group] ||= []).push(key);
     }
     let html = `<div style="margin-bottom:10px;color:var(--ink-dim)">Total level: <b style="color:var(--gold)">${skills.totalLevel()}</b></div><div class="skill-groups">`;
@@ -1002,7 +994,6 @@ export class UI {
       ${row('Screen shake', check('screenShake'))}
       ${row('High-quality sky &amp; water — gradient sky, sun/moon, night stars (needs a decent GPU)', check('highGraphics'))}
       ${row('Colorblind-friendly colors', check('colorblind'))}
-      ${row('Fantasy Frontier — off by default; re-enables magic, mana &amp; spellcasting', check('fantasyFrontier'))}
       ${row('Sprint: toggle instead of hold', check('sprintToggle'))}
       ${row('Left-handed mobile layout', check('leftHanded'))}
       ${row('Tap to interact (mobile)', check('tapToInteract'))}
@@ -1020,17 +1011,20 @@ export class UI {
         <label class="admin-toggle"><input type="checkbox" id="admin-enable" ${s.debugTools ? 'checked' : ''}> Enable debug tools</label>
       </div>
       <div id="admin-panel" class="${s.debugTools ? '' : 'hidden'}">
-        <p class="admin-hint">Per-mob spawn &amp; drop overrides, saved to this browser and read live by world generation and combat. Imported mobs are off until you activate them.</p>
+        <p class="admin-hint">Per-mob spawn &amp; drop overrides, saved to this browser and read live by world generation and combat. Imported mobs are off until you activate them. Use <b>Disable all</b> to clear the world for review, then switch on the ones you want; <b>✕</b> removes a mob you'll never use (it can be restored below).</p>
         <div class="admin-toolbar">
           <input type="search" id="admin-search" class="admin-search" placeholder="Search mobs…" autocomplete="off">
+          <button id="admin-disable-all" class="admin-btn" title="Turn every mob off so nothing spawns — review them, then re-enable the ones you want">Disable all</button>
+          <button id="admin-enable-all" class="admin-btn" title="Turn every mob back on">Enable all</button>
           <button id="admin-export" class="admin-btn" title="Download js/game/mobconfig-defaults.js with your current config baked in — commit it to ship these settings to everyone">Save as game defaults</button>
         </div>
+        <div id="admin-deleted" class="admin-deleted"></div>
         <div id="admin-list" class="admin-list"></div>
       </div>
     </div>
     <div style="margin-top:14px;color:var(--ink-dim);font-size:12px;line-height:1.7">
       <b>First person:</b> WASD move · Mouse look (click to capture) · Space jump · Shift sprint · LMB gather/mine/attack · RMB place/interact · F interact · E inventory · K skills · C crafting · J quests · M map · 1–8 hotbar · V camera<br>
-      <b>Classic view:</b> click ground to walk · click trees/rocks/creatures/villagers to act · Shift+click (or long-press) a block to break it · RMB place block · left-drag, middle-drag or arrow keys orbit · wheel zoom · click the minimap for the big map, then click anywhere explored to auto-walk there<br>
+      <b>Classic view:</b> click ground to walk · click trees/rocks/creatures/villagers to act · double-click (or Shift+click / long-press) a block to mine it · RMB place block · left-drag, middle-drag or arrow keys orbit · wheel zoom · click the minimap for the big map, then click anywhere explored to auto-walk there<br>
       <b>Mobile:</b> left stick move · drag right side to look/orbit · Action button holds to gather · Place button builds · in classic view just tap where you want to go
     </div>`;
     body.querySelectorAll('[data-set]').forEach((inp) => {
@@ -1070,6 +1064,14 @@ export class UI {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       this.toast('Saved mobconfig-defaults.js — commit it to ship these settings to everyone.', 'info');
     });
+    $('admin-disable-all')?.addEventListener('click', () => {
+      setAllMobsActive(false); saveMobConfig(); this.renderAdminList();
+      this.toast('All mobs disabled — nothing will spawn until you re-enable them.', 'info');
+    });
+    $('admin-enable-all')?.addEventListener('click', () => {
+      setAllMobsActive(true); saveMobConfig(); this.renderAdminList();
+      this.toast('All mobs enabled.', 'info');
+    });
     if (s.debugTools) this.renderAdminList();
   }
 
@@ -1090,6 +1092,32 @@ export class UI {
     this._wireAdminList(host);
     this._fillAdminThumbs(host);
     this._fillAdminPreview(host);
+    this._renderDeletedMobs();
+  }
+
+  // The "deleted" tray: mobs curated out of the library, with a Restore each.
+  _renderDeletedMobs() {
+    const host = $('admin-deleted');
+    if (!host) return;
+    const gone = deletedMobTypes();
+    if (!gone.length) { host.innerHTML = ''; return; }
+    this._showDeleted ??= false;
+    if (!this._showDeleted) {
+      host.innerHTML = `<button class="admin-link" id="admin-show-deleted">Show ${gone.length} deleted mob${gone.length > 1 ? 's' : ''}</button>`;
+      $('admin-show-deleted').onclick = () => { this._showDeleted = true; this._renderDeletedMobs(); };
+      return;
+    }
+    host.innerHTML = `<div class="admin-deleted-head"><span>Deleted (${gone.length})</span>`
+      + '<button class="admin-link" id="admin-hide-deleted">hide</button></div>'
+      + gone.map((t) => `<div class="admin-deleted-row"><span>${ENEMY_TYPES[t]?.label || t}</span>`
+        + `<button class="admin-link" data-restore="${t}">Restore</button></div>`).join('');
+    $('admin-hide-deleted').onclick = () => { this._showDeleted = false; this._renderDeletedMobs(); };
+    host.querySelectorAll('[data-restore]').forEach((b) => {
+      b.onclick = () => {
+        setMobDeleted(b.dataset.restore, false); saveMobConfig();
+        this.renderAdminList();
+      };
+    });
   }
 
   // Paint a small 3/4 model preview into each row's thumbnail. Rendered once per
@@ -1168,6 +1196,7 @@ export class UI {
         <img class="admin-thumb" data-mob="${type}" alt="" width="52" height="52">
         <span class="admin-mob-name">${def.label || type} ${badge}<code>${type}</code></span>
         <label class="admin-active"><input type="checkbox" data-act="active" ${active ? 'checked' : ''}>Active</label>
+        <button class="admin-del-mob" data-act="delete" title="Remove this mob from the library (restorable)">✕</button>
       </div>
       ${open ? this._adminDetailHTML(type) : ''}
     </div>`;
@@ -1296,6 +1325,11 @@ export class UI {
         const mobEl = mobOf(btn);
         btn.closest('.admin-drop').remove();
         setMobConfig(type, { drops: this._adminReadDrops(mobEl) }); saveMobConfig();
+      } else if (act === 'delete') {
+        setMobDeleted(type, true); saveMobConfig();
+        this._adminExpanded.delete(type);
+        this.renderAdminList();
+        this.toast(`Removed ${ENEMY_TYPES[type]?.label || type} from the library — restore it below.`, 'info');
       }
     });
 

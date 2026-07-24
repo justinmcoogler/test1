@@ -45,13 +45,10 @@ export class CombatRS {
 
   get active() { return this.engaged.size > 0; }
 
-  get frontierOn() { return this.game.settings?.fantasyFrontier === true; }
-
   availableStyles() {
     const inv = this.game.inventory;
     const out = ['balanced', 'aggressive', 'defensive'];
     if (inv.weapon('ranged')) out.push('ranged');
-    if (this.frontierOn && inv.weapon('magic')) out.push('magic');
     return out;
   }
 
@@ -60,7 +57,7 @@ export class CombatRS {
     const style = RS_STYLES[this.style];
     const out = [];
     for (const [id, sp] of Object.entries(RS_SPECIALS)) {
-      if (sp.frontier && !this.frontierOn) continue;      // fantasy spells hidden in real-world play
+      if (sp.frontier) continue;                          // no magic in real-world play
       if (sp.req && skills.level(sp.req[0]) < sp.req[1]) continue;
       if (sp.kind !== 'heal' && sp.kind !== style.kind) continue;
       if (sp.kind === 'ranged' && !inventory.weapon('ranged')) continue;
@@ -113,9 +110,8 @@ export class CombatRS {
   // ---------------------------------------------------------------- update
   update(dt) {
     this.time += dt;
-    // a Magic style chosen under the Fantasy Frontier must not linger once it's
-    // switched off — otherwise the player keeps casting/draining mana invisibly
-    if (!this.frontierOn && RS_STYLES[this.style]?.kind === 'magic') this.style = 'balanced';
+    // real-world play has no magic style; fall back if one lingers in a save
+    if (RS_STYLES[this.style]?.kind === 'magic') this.style = 'balanced';
     const { player, world } = this.game;
     if (!this.active) return;
     if (player.dead) { this.disengageAll(); return; }
@@ -405,7 +401,7 @@ export class CombatRS {
     const sp = RS_SPECIALS[id];
     const { player, skills, inventory } = this.game;
     if (!sp) return false;
-    if (sp.frontier && !this.frontierOn) return false; // no fantasy specials in real-world play
+    if (sp.frontier) return false;                     // no magic specials in real-world play
     if ((this.cooldowns[id] || 0) > this.time) return false;
     if (sp.energy && player.energy < sp.energy) { emit('rsLog', 'Not enough energy.'); return false; }
     if (sp.mana && player.mana < sp.mana) { emit('rsLog', 'Not enough mana.'); return false; }

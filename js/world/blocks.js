@@ -120,6 +120,11 @@ for (const w of WOODS) {
     tiles: { top: `${w.id}_ring`, side: `${w.id}_bark` },
   });
   def(`${w.id}_leaves`, { label: `${w.label} Leaves`, opaque: false, hardness: 0.4, drops: null, tiles: { all: `${w.id}_leaves` } });
+  // A hinged door: records a facing (dir + open bit 3); right-click swings it.
+  def(`${w.id}_door`, {
+    label: `${w.label} Door`, shape: 'door', hardness: 2.4, tool: 'axe',
+    directional: true, drops: `${w.id}_door`, tiles: { all: `${w.id}_door` },
+  });
 }
 // Ore blocks for every mineable metal the legacy set doesn't already define
 // (copper/tin/iron stay as-is). minTier & hardness scale with the mine level.
@@ -143,7 +148,7 @@ def('meteor_crater', { label: 'Meteor Crater', hardness: 5.5, tool: 'pickaxe', m
 // draws the geometry; world.collisionHeight reads SHAPE_COLLISION for physics.
 // Directional shapes (stairs, gate) record a placement facing; glass panes are
 // transparent (cutout pass). Naming is `<base>_<shape>`.
-export const SHAPE_COLLISION = { slab: 0.5, carpet: 1 / 16, stairs: 1, wall: 1, fence: 1, gate: 1, pane: 1, panel: 2 / 16, sign: 0, button: 0, pot: 0, marker: 0 };
+export const SHAPE_COLLISION = { slab: 0.5, carpet: 1 / 16, stairs: 1, wall: 1, fence: 1, gate: 1, pane: 1, panel: 2 / 16, door: 1, sign: 0, button: 0, pot: 0, marker: 0 };
 const DIRECTIONAL_SHAPES = new Set(['stairs', 'gate']);
 const SHAPE_LABEL = { slab: 'Slab', stairs: 'Stairs', wall: 'Wall', fence: 'Fence', gate: 'Gate', pane: 'Pane', carpet: 'Carpet' };
 

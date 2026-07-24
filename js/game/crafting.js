@@ -223,6 +223,13 @@ for (const d of BLOCKS) {
   push(d.name, outQ, 'construction_bench', 'construction', 1, 4, [[base, inQ]]);
 }
 
+// Wooden doors — one per species, hinged (right-click to swing open/closed).
+// Cut from the matching logs so each door keeps its wood's look.
+for (const w of WOODS) {
+  const id = `${w.id}_door`;
+  if (id in ITEMS) push(id, 3, 'workbench', 'woodworking', 1, 8, [[`${w.id}_log`, 2]]);
+}
+
 // ---- Audit fixes: give every remaining hand-authored item an honest source ---
 // Ammunition (fletching), a waterskin, the named flavour weapons/armour and the
 // only magic weapon — all were catalogued but had no recipe or drop.

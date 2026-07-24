@@ -1,5 +1,6 @@
-// Realism combat pass: default play is de-magicked. Magic is Fantasy Frontier
-// content, healing is real Medicine (no mana), and wounds bleed.
+// Realism combat pass: play is de-magicked. The Fantasy Frontier toggle has
+// been removed entirely — magic content stays dormant, healing is real
+// Medicine (no mana), and wounds bleed.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_SETTINGS } from '../../js/game/save.js';
@@ -7,13 +8,14 @@ import { RS_STYLES, RS_SPECIALS, CombatRS } from '../../js/game/combatrs.js';
 import { ABILITIES } from '../../js/game/combat.js';
 import { Player } from '../../js/player/player.js';
 
-test('Fantasy Frontier is off by default', () => {
-  assert.equal(DEFAULT_SETTINGS.fantasyFrontier, false);
+test('the Fantasy Frontier setting has been removed', () => {
+  assert.equal(DEFAULT_SETTINGS.fantasyFrontier, undefined,
+    'the fantasyFrontier toggle no longer exists — real-world play is the only mode');
 });
 
-test('real-time combat: magic is frontier-gated, healing is mana-free', () => {
-  assert.equal(RS_STYLES.magic.frontier, true, 'magic style must be frontier content');
-  assert.equal(RS_SPECIALS.ember_burst.frontier, true, 'ember_burst must be frontier content');
+test('real-time combat: magic is frontier-flagged, healing is mana-free', () => {
+  assert.equal(RS_STYLES.magic.frontier, true, 'magic style must stay frontier-flagged content');
+  assert.equal(RS_SPECIALS.ember_burst.frontier, true, 'ember_burst must stay frontier-flagged content');
 
   const bandage = RS_SPECIALS.bandage;
   assert.ok(bandage, 'a real "bandage" heal replaces the mana "mend"');
@@ -29,9 +31,9 @@ test('real-time combat: magic is frontier-gated, healing is mana-free', () => {
   }
 });
 
-function stubGame(frontier, hasMagic = true) {
+function stubGame(hasMagic = true) {
   return {
-    settings: { fantasyFrontier: frontier },
+    settings: {},
     inventory: {
       weapon: (s) => (s === 'magic' ? (hasMagic ? { atk: 5, range: 5 } : null)
         : s === 'ranged' ? null : { atk: 3 }),
@@ -41,39 +43,34 @@ function stubGame(frontier, hasMagic = true) {
   };
 }
 
-test('magic combat style is hidden without the Fantasy Frontier', () => {
-  const off = new CombatRS(stubGame(false, true));
-  assert.ok(!off.availableStyles().includes('magic'), 'magic style hidden in real-world play');
-
-  const on = new CombatRS(stubGame(true, true));
-  assert.ok(on.availableStyles().includes('magic'), 'magic style returns with the Frontier on');
+test('magic combat style is never selectable', () => {
+  const rs = new CombatRS(stubGame(true));
+  assert.ok(!rs.availableStyles().includes('magic'), 'magic style is gone from real-world play');
 });
 
-test('a stale Magic style is force-reset once the Frontier is off', () => {
-  const rs = new CombatRS(stubGame(false, true));
-  rs.style = 'magic';   // as if chosen while the Frontier was enabled
+test('a stale Magic style is force-reset on the next tick', () => {
+  const rs = new CombatRS(stubGame(true));
+  rs.style = 'magic';   // as if loaded from a legacy save
   rs.update(0.1);       // a normal real-world tick must not keep casting
   assert.notEqual(rs.style, 'magic', 'magic style cannot persist in real-world play');
   assert.equal(rs.style, 'balanced');
 });
 
-test('useSpecial refuses a frontier special in real-world play', () => {
-  const rs = new CombatRS(stubGame(false, true));
+test('useSpecial refuses a frontier special', () => {
+  const rs = new CombatRS(stubGame(true));
   rs.style = 'magic';   // even with a stale style, execution must refuse
   assert.equal(rs.useSpecial('ember_burst'), false);
 });
 
-test('specials: bandage always available, ember_burst only on the Frontier', () => {
-  const off = new CombatRS(stubGame(false, true));
-  off.style = 'balanced';
-  const offIds = off.availableSpecials().map((s) => s.id);
-  assert.ok(offIds.includes('bandage'), 'Medicine bandage is a real-world special');
-  assert.ok(!offIds.includes('ember_burst'), 'no fire spell in real-world play');
+test('specials: bandage available, frontier specials never surface', () => {
+  const rs = new CombatRS(stubGame(true));
+  rs.style = 'magic';   // even under a stale magic style, no spells surface
+  const ids = rs.availableSpecials().map((s) => s.id);
+  assert.ok(!ids.includes('ember_burst'), 'no fire spell in real-world play');
 
-  const on = new CombatRS(stubGame(true, true));
-  on.style = 'magic';
-  const onIds = on.availableSpecials().map((s) => s.id);
-  assert.ok(onIds.includes('ember_burst'), 'ember_burst returns with the Frontier on');
+  rs.style = 'balanced';
+  assert.ok(rs.availableSpecials().map((s) => s.id).includes('bandage'),
+    'Medicine bandage is a real-world special');
 });
 
 test('turn-based combat: spells are frontier-flagged, bandage is not', () => {

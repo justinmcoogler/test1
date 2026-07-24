@@ -666,6 +666,8 @@ export class World {
     const shape = BLOCKS[id]?.shape;
     // An open trapdoor is a hole you fall through; closed, it's a thin board to stand on.
     if (shape === 'panel') return ((this.facingAt(x, y, z) >> 3) & 1) ? 0 : SHAPE_COLLISION.panel;
+    // A closed door blocks the doorway (full cell); open, you walk straight through.
+    if (shape === 'door') return ((this.facingAt(x, y, z) >> 3) & 1) ? 0 : 1;
     if (shape && SHAPE_COLLISION[shape] !== undefined) return SHAPE_COLLISION[shape];
     return SLAB_BLOCKS.has(id) ? 0.6 : 1;
   }

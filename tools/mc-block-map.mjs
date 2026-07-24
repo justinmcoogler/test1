@@ -119,7 +119,9 @@ export const MC_MAP = {
   orange_tulip: 'orange_tulip', pink_tulip: 'pink_tulip', white_tulip: 'white_tulip',
   lily_of_the_valley: 'white_tulip', red_tulip: 'rose_bush', rose_bush: 'rose_bush', peony: 'rose_bush', lilac: 'allium',
   red_mushroom: 'mushroom_cap', brown_mushroom: 'mushroom_cap',
-  brown_mushroom_block: 'mushroom_cap', red_mushroom_block: 'mushroom_cap', mushroom_stem: 'mushroom_cap',
+  // the GIANT mushroom BLOCKS are building materials — full cubes, not the tiny
+  // plant. Mapping them to mushroom_cap sprinkled little mushrooms through walls.
+  brown_mushroom_block: 'brown_terracotta', red_mushroom_block: 'red_terracotta', mushroom_stem: 'bone_block',
   sweet_berry_bush: 'berry_bush',
 
   // wood furniture / misc that has an honest stand-in
@@ -153,7 +155,7 @@ const APPROX_CONTAINS = [
   [/terracotta$/, 'stone_brick'], [/_wool$|^wool$/, 'thatch'], [/_carpet$/, 'thatch'],
   [/prismarine|purpur/, 'stone_brick'], [/quartz/, 'marble'],
   [/oxidized.*copper|weathered.*copper|exposed.*copper/, 'copper_weathered'], [/copper/, 'copper_block'],
-  [/^potted_/, 'flower_pot'], [/_candle$/, 'torch_post'], [/mushroom_block$|mushroom_stem$/, 'mushroom_cap'],
+  [/^potted_/, 'flower_pot'], [/_candle$/, 'torch_post'], [/mushroom_block$|mushroom_stem$/, 'bone_block'],
   [/planks|log|wood/, 'planks'],
 ];
 // shape variants → strip the suffix and re-map the base material

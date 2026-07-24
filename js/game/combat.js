@@ -311,23 +311,20 @@ export class Combat {
   // ---------------------------------------------------------------- player stats & abilities
   playerAbilities() {
     const { inventory, skills, player } = this.game;
-    const frontier = this.game.settings?.fantasyFrontier === true;
     const list = [];
     const melee = inventory.weapon('melee');
     const rangedW = inventory.weapon('ranged');
-    const magicW = inventory.weapon('magic');
     // basic attack from whatever is available (fists count as weak melee)
     list.push({ id: 'strike', ...ABILITIES.strike, available: true });
     if (rangedW) list.push({ id: 'shot', ...ABILITIES.shot, range: rangedW.range || 6, available: true });
-    if (magicW && frontier) list.push({ id: 'spark', ...ABILITIES.spark, range: magicW.range || 5, available: true });
     for (const [id, ab] of Object.entries(ABILITIES)) {
       if (!ab.req) continue;
-      if (ab.frontier && !frontier) continue;            // fantasy spells hidden in real-world play
+      if (ab.frontier) continue;                         // no magic in real-world play
       const [skill, lvl] = ab.req;
       if (skills.level(skill) < lvl) continue;
       if (ab.style === 'melee' && !melee) continue;
       if (ab.style === 'ranged' && !rangedW) continue;
-      if (ab.style === 'magic' && !magicW) continue;
+      if (ab.style === 'magic') continue;
       list.push({ id, ...ab, range: ab.range ?? (ab.style === 'ranged' ? (rangedW?.range || 6) : ab.range), available: true });
     }
     // annotate availability

@@ -1,13 +1,18 @@
 // Chunk meshing: culled faces + vertex ambient occlusion + cheap sky light.
 // Produces three passes: opaque, cutout (leaves/plants), water.
-import { B, BLOCKS, isOpaque } from '../world/blocks.js';
+import { B, BLOCKS, isOpaque, isSolid } from '../world/blocks.js';
 import { CHUNK, WORLD_H } from '../world/worldgen.js';
 import { faceUV } from './textures.js';
 import { emitShape, CONNECTS } from './shapes.js';
 
+// Cross-cutout decals that legitimately attach to walls/ceilings or float in
+// portals — everything else in the cross shape is ground foliage that must have
+// a solid block beneath it (no floating flowers, grass, mushrooms or reeds).
+const CROSS_NO_SUPPORT = new Set(['glow_lichen', 'cobweb', 'warped_roots', 'sea_pickle', 'nether_portal', 'ladder']);
+
 // Non-cube shapes routed through js/gfx/shapes.js (slab stays on the fast cube
 // path below). Panes/glass render in the cutout pass; the rest are solid.
-const CUSTOM_SHAPES = new Set(['slab', 'stairs', 'wall', 'fence', 'gate', 'pane', 'carpet', 'panel', 'sign', 'button', 'pot']);
+const CUSTOM_SHAPES = new Set(['slab', 'stairs', 'wall', 'fence', 'gate', 'pane', 'carpet', 'panel', 'door', 'sign', 'button', 'pot']);
 
 // face: [nx,ny,nz, corners(4× [x,y,z] in block space), brightness]
 const FACES = [
@@ -162,6 +167,9 @@ export function meshChunk(world, cx, cz) {
         // the entity pass, so the block itself contributes no chunk geometry.
         if (def.shape === 'marker') continue;
         if (def.shape === 'cross') {
+          // Ground foliage needs something solid underneath — a plant hanging in
+          // mid-air reads as a bug. Wall/ceiling decals are exempt.
+          if (!CROSS_NO_SUPPORT.has(def.name) && (y <= 0 || !isSolid(get(x, y - 1, z)))) continue;
           addCross(cutout, def, wx, y, wz, skyAt(x, y, z), Math.max(blockAt(x, y, z), def.emissive));
           continue;
         }

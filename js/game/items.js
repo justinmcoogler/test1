@@ -254,7 +254,7 @@ for (const [c] of COLORS) it(`${c}_dye`, `${cap(c.replace(/_/g, ' '))} Dye`, { d
 const COLOR_BLOCK = new Set();
 for (const [c] of COLORS) for (const k of ['wool', 'carpet', 'concrete', 'concrete_powder', 'terracotta', 'glazed_terracotta', 'stained_glass', 'stained_glass_pane']) COLOR_BLOCK.add(`${c}_${k}`);
 const NATURAL_BLOCK = new Set(['granite', 'andesite', 'marble', 'deepslate', 'sandstone', 'brick', 'copper_block', 'copper_weathered', 'iron_block', 'gold_block', 'terracotta', 'mossy_cobble', 'mossy_stone_brick']);
-const SHAPE_RE = /_(slab|stairs|wall|fence|gate|pane|carpet)$/;
+const SHAPE_RE = /_(slab|stairs|wall|fence|gate|pane|carpet|door)$/;
 for (const d of BLOCKS) {
   if (!d || d.name in ITEMS) continue;
   const isShape = SHAPE_RE.test(d.name) && d.name !== 'timber_wall';

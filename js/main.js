@@ -324,7 +324,7 @@ class Game {
         this.camYaw = this.player.yaw;
         document.exitPointerLock?.();
       }
-      this.ui.toast(this.settings.classicCamera ? 'Classic view — click to move' : 'First-person view', 'gold');
+      this.ui.toast(this.settings.classicCamera ? 'Classic view — click to move, double-click to mine' : 'First-person view', 'gold');
     });
     on('wheelScroll', (dir) => {
       if (this.settings.classicCamera && !this.combat.active && !this.ui.currentWindow) {
@@ -382,6 +382,13 @@ class Game {
         if (this.controls.consumeClickSuppress()) return; // that "click" was a free-look drag
         this.onTapInteract();
       }
+    });
+    // Classic view: a plain click walks; to MINE/harvest a block (or crop) you
+    // double-click it (or shift-click, or long-press on touch). Right-click is
+    // reserved for placing, so a dedicated break gesture was missing.
+    this.canvas.addEventListener('dblclick', (e) => {
+      if (this.combat.active || !this.settings.classicCamera) return;
+      this.onClassicClick(e.clientX, e.clientY, true);
     });
     window.addEventListener('resize', () => this.renderer.resize());
     $('respawn-btn').addEventListener('click', () => this.respawn());
@@ -746,13 +753,16 @@ class Game {
         const vdx = via.x - p.x, vdz = via.z - p.z;
         const vd = Math.hypot(vdx, vdz) || 1;
         c.worldMove = [vdx / vd, vdz / vd];
-        // auto-hop 1-block steps when we stop making progress
+        // auto-hop 1-block steps when we stop making progress — but only when
+        // there's actually room to complete the hop. Under a low tree canopy the
+        // leaves overhead would cap the jump and the walker would bounce in place
+        // forever; in that case leave blockedTime to run the walk down to a clean
+        // "can't reach that" instead of jittering.
         const speed = Math.hypot(p.vx, p.vz);
         if (p.onGround && speed < 0.6) {
           this.blockedTime += dt;
           if (this.blockedTime > 0.18) {
-            p.vy = 8.1;
-            p.onGround = false;
+            if (this.canAutoHop(c.worldMove)) { p.vy = 8.1; p.onGround = false; }
             this.blockedTime = 0;
             this.moveTargetTimeout -= 0.8; // stalled hops shouldn't extend the walk
           }
@@ -780,6 +790,22 @@ class Game {
     }
     // face the direction of travel
     if (c.worldMove) this.modelYaw = Math.atan2(c.worldMove[0], c.worldMove[1]);
+  }
+
+  // A stalled auto-walk should only hop a step it can actually clear: there must
+  // be headroom above the player to rise (else a leaf canopy caps the jump) and
+  // a mountable 1-block step ahead with a clear landing on top of it.
+  canAutoHop(dir) {
+    if (!dir) return false;
+    const p = this.player, w = this.world;
+    const feetY = Math.floor(p.y + 0.02);
+    // room over our own head to rise into
+    if (w.collisionHeight(Math.floor(p.x), feetY + 2, Math.floor(p.z)) > 0) return false;
+    const ax = Math.floor(p.x + dir[0] * 0.7), az = Math.floor(p.z + dir[1] * 0.7);
+    const stepAhead = w.collisionHeight(ax, feetY, az) > 0;        // a step/wall to mount
+    const landingClear = w.collisionHeight(ax, feetY + 1, az) === 0 // stand on it…
+                      && w.collisionHeight(ax, feetY + 2, az) === 0; // …with headroom
+    return stepAhead && landingClear;
   }
 
   // Long-distance map travel: walk leg by leg, recomputing as chunks stream in.
@@ -909,6 +935,12 @@ class Game {
       this.walkTo(hit.x + 0.5, hit.z + 0.5, 12);
       return;
     }
+    // a door: walk up and swing it open/closed
+    if (bdef && bdef.shape === 'door' && !isBreak) {
+      this.pendingInteract = { kind: 'door', x: hit.x, y: hit.y, z: hit.z, range: 2.6 };
+      this.walkTo(hit.x + 0.5, hit.z + 0.5, 12);
+      return;
+    }
     if (isBreak) {
       // shift+click / long-press: walk over and break the block
       if (!bdef || bdef.hardness === Infinity || bdef.shape === 'liquid') return;
@@ -970,6 +1002,10 @@ class Game {
       emit('chestOpened', { id });
     } else if (pi.kind === 'break') {
       this.autoBreak = { x: pi.x, y: pi.y, z: pi.z };
+    } else if (pi.kind === 'door') {
+      const f = this.world.facingAt(pi.x, pi.y, pi.z);
+      this.world.setFacing(pi.x, pi.y, pi.z, f ^ 8); // swing open/closed
+      SFX.place();
     }
   }
 
@@ -1496,7 +1532,7 @@ class Game {
       emit('chestOpened', { id });
       return true;
     }
-    if (def.shape === 'panel') { // trapdoor — swing it open or closed
+    if (def.shape === 'panel' || def.shape === 'door') { // trapdoor / door — swing it
       const f = this.world.facingAt(hit.x, hit.y, hit.z);
       this.world.setFacing(hit.x, hit.y, hit.z, f ^ 8); // flip the open bit (3)
       SFX.place();

@@ -97,21 +97,43 @@ function brick(ctx, x0, y0, rand, base, mortar, rows = 4) {
   }
 }
 
-// Minecraft-style leaves: dense clumps of varied green with see-through gaps
-// (transparent pixels the cutout pass discards) so a canopy reads as foliage,
-// not one solid green cube.
+// Foliage as a mass of many small, distinct leaves rather than green static.
+// Each leaf is a little rounded blob with its own shading and a sunlit fleck;
+// they overlap into clumps, and clean see-through holes are punched afterwards
+// so the canopy stays transparent (the cutout pass discards clear pixels).
+function leaf(ctx, x0, y0, rand, cx, cy, col) {
+  // an ~elongated 6–8px teardrop leaf
+  const blob = [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [0, -1], [1, -1], [2, 0]];
+  const n = 5 + Math.floor(rand() * 3);
+  for (let i = 0; i < n; i++) {
+    const lx = cx + blob[i][0], ly = cy + blob[i][1];
+    if (lx < 0 || lx >= LP || ly < 0 || ly >= LP) continue;
+    // lower-right pixels a shade darker → each leaf gets a hint of form
+    const lean = blob[i][0] + blob[i][1];
+    px(ctx, x0, y0, lx, ly, shade(col, lean > 1 ? -0.1 : (rand() - 0.5) * 0.08));
+  }
+}
 function leaves(ctx, x0, y0, rand, base, accent, accentChance = 0.06) {
-  for (let y = 0; y < LP; y++) {
-    for (let x = 0; x < LP; x++) {
-      const r = rand();
-      if (r < 0.16) continue;                                    // gap → transparent, see-through
-      let c;
-      if (r < 0.34) c = shade(base, -0.17);                      // shaded underside / clump edge
-      else if (r < 0.34 + accentChance) c = accent;              // bright highlight leaf
-      else if (r < 0.46) c = shade(base, 0.11);                  // sunlit leaf face
-      else c = shade(base, (rand() - 0.5) * 0.16);               // base green, varied
-      px(ctx, x0, y0, x, y, c);
-    }
+  ctx.clearRect(x0, y0, TILE, TILE);
+  const tone = [shade(base, -0.22), shade(base, -0.1), base, shade(base, 0.08)];
+  // back-to-front layers of overlapping leaves fill the tile densely
+  for (let layer = 0; layer < tone.length; layer++)
+    for (let i = 0; i < 26; i++)
+      leaf(ctx, x0, y0, rand, Math.floor(rand() * LP), Math.floor(rand() * LP), tone[layer]);
+  // scattered sunlit tips + the odd bright accent leaf catch the light
+  const lite = shade(base, 0.16);
+  for (let i = 0; i < 24; i++) {
+    const cx = Math.floor(rand() * LP), cy = Math.floor(rand() * LP);
+    const col = rand() < accentChance ? accent : lite;
+    px(ctx, x0, y0, cx, cy, col);
+    if (rand() < 0.5 && cy > 0) px(ctx, x0, y0, cx, cy - 1, shade(col, 0.05));
+  }
+  // punch clean see-through gaps between the clumps so the block stays airy
+  const holes = 16 + Math.floor(rand() * 10);
+  for (let i = 0; i < holes; i++) {
+    const cx = Math.floor(rand() * LP), cy = Math.floor(rand() * LP);
+    ctx.clearRect(x0 + cx * G, y0 + cy * G, G, G);
+    if (rand() < 0.45) ctx.clearRect(x0 + Math.min(LP - 1, cx + 1) * G, y0 + cy * G, G, G);
   }
 }
 
@@ -211,10 +233,34 @@ const PAINTERS = {
   },
   berry_bush_bare: (c, x, y, r) => leaves(c, x, y, r, '#4b6b42', '#5d7a52', 0.02),
   mushroom_cap: (c, x, y, r) => cross(c, x, y, r, () => {
-    const sx = LP / 2;
-    for (let j = 0; j < 4; j++) px(c, x, y, sx, LP - 1 - j, '#d9cfc0');
-    for (let dx = -2; dx <= 2; dx++) px(c, x, y, sx + dx, LP - 5, '#b0653f');
-    for (let dx = -1; dx <= 1; dx++) px(c, x, y, sx + dx, LP - 6, '#c4764e');
+    const cx = Math.floor(LP / 2);
+    const cap = '#c23a2b', capLite = '#d9543f', capDark = '#9a2c20';
+    const stem = '#ece0c8', stemSh = '#cdba98', gill = '#b7986f', spot = '#f2ead6';
+    // stem: a cream stalk with a shaded right edge, sitting on the ground
+    const stemTop = LP - 10;
+    for (let yy = LP - 1; yy >= stemTop; yy--)
+      for (let dx = -1; dx <= 1; dx++) px(c, x, y, cx + dx, yy, dx === 1 ? stemSh : stem);
+    // gill line under the cap
+    for (let dx = -8; dx <= 8; dx++) px(c, x, y, cx + dx, stemTop, gill);
+    // domed cap: rows widen toward the base, with a lit crown
+    const rows = [[stemTop - 7, 2], [stemTop - 6, 4], [stemTop - 5, 6], [stemTop - 4, 7],
+                  [stemTop - 3, 8], [stemTop - 2, 8], [stemTop - 1, 9]];
+    for (const [yy, w] of rows) {
+      for (let dx = -w; dx <= w; dx++) {
+        const lx = cx + dx;
+        if (lx < 0 || lx >= LP) continue;
+        let col = cap;
+        if (yy <= stemTop - 5 && Math.abs(dx) < w - 1) col = capLite;   // crown sheen
+        else if (yy >= stemTop - 2 && Math.abs(dx) > w - 2) col = capDark; // shaded rim
+        px(c, x, y, lx, yy, col);
+      }
+    }
+    // pale spots freckling the cap
+    for (let i = 0; i < 7; i++) {
+      const sx = cx + Math.floor((r() - 0.5) * 15);
+      const sy = stemTop - 1 - Math.floor(r() * 6);
+      if (sx >= 0 && sx < LP && sy >= 0) { px(c, x, y, sx, sy, spot); if (r() < 0.5) px(c, x, y, sx + 1, sy, spot); }
+    }
   }),
   reed: (c, x, y, r) => cross(c, x, y, r, () => { blades(c, x, y, r, '#7ba05a', 6); plantStalk(c, x, y, r, '#8fae62', null); plantStalk(c, x, y, r, '#7ba05a', '#c9b458', 3); }),
   cactus_flesh: (c, x, y, r) => { noisyFill(c, x, y, r, '#4e8a44', 0.05); for (let i = 0; i < 8; i++) px(c, x, y, Math.floor(r() * LP), Math.floor(r() * LP), '#dfe8c8'); },
@@ -446,11 +492,28 @@ const ORE_TEX = {
   lead:     ['#6c7079', '#9298a2'], zinc: ['#b8c0c4', '#dfe6ea'], silver: ['#dfe4ec', '#ffffff'],
   gold:     ['#e2b13c', '#ffd76a'], platinum: ['#d8dbe0', '#f4f6fa'], meteoric: ['#6b6a72', '#a29fb0'],
 };
+// A panelled plank door: a board field with a frame and two sunken panels plus
+// a round handle, tinted to the wood's bark tone so each species reads distinct.
+function doorTile(ctx, x0, y0, rand, base, groove) {
+  noisyFill(ctx, x0, y0, rand, base, 0.05);
+  for (let lx = 0; lx < LP; lx += 8) for (let ly = 0; ly < LP; ly++) px(ctx, x0, y0, lx, ly, shade(groove, (rand() - 0.5) * 0.1));
+  const light = shade(base, 0.13), dark = shade(base, -0.17);
+  const panel = (px0, py0, px1, py1) => {
+    for (let ly = py0; ly <= py1; ly++) for (let lx = px0; lx <= px1; lx++) {
+      const c = (lx === px0 || ly === py0) ? dark : (lx === px1 || ly === py1) ? light : shade(base, (rand() - 0.5) * 0.08);
+      px(ctx, x0, y0, lx, ly, c);
+    }
+  };
+  panel(6, 3, 25, 13);   // upper light
+  panel(6, 17, 25, 28);  // lower light
+  px(ctx, x0, y0, 27, 15, '#2f271e'); px(ctx, x0, y0, 27, 16, '#4a3d30'); px(ctx, x0, y0, 28, 16, '#5c4c3a'); // handle
+}
 for (const w of WOODS) {
   const t = WOOD_TEX[w.id]; if (!t) continue;
   PAINTERS[`${w.id}_bark`] ??= (c, x, y, r) => bark(c, x, y, r, t.bark[0], t.bark[1]);
   PAINTERS[`${w.id}_ring`] ??= (c, x, y, r) => rings(c, x, y, r, t.ring[0], t.ring[1]);
   PAINTERS[`${w.id}_leaves`] ??= (c, x, y, r) => leaves(c, x, y, r, t.leaf[0], t.leaf[1], t.needle ? 0.03 : 0.08);
+  PAINTERS[`${w.id}_door`] ??= (c, x, y, r) => doorTile(c, x, y, r, t.bark[0], t.bark[1]);
 }
 for (const m of METALS.filter((x) => (x.smelt || []).some((s) => s.endsWith('_ore')))) {
   const t = ORE_TEX[m.id]; if (!t) continue;

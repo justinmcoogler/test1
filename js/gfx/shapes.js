@@ -127,12 +127,37 @@ export function emitShape(target, def, wx, y, wz, light, facing, sides) {
     case 'pane': {
       const c0 = 0.4375, c1 = 0.5625;
       const any = sides.px || sides.nx || sides.pz || sides.nz;
-      // isolated pane shows a small central post; connected panes are flat panels
-      if (!any) box(target, def, wx, y, wz, c0, 0, c0, c1, 1, c1, light, facing);
+      // A lone pane (a single window light with nothing to link to) reads as one
+      // full flat sheet spanning the whole block — its edges meeting the block
+      // edges — instead of a tiny floating centre post. Orient by facing.
+      if (!any) {
+        const [fx] = FRONT_N[facing & 3];
+        if (fx !== 0) box(target, def, wx, y, wz, c0, 0, 0, c1, 1, 1, light, facing); // sheet along Z
+        else box(target, def, wx, y, wz, 0, 0, c0, 1, 1, c1, light, facing);          // sheet along X
+      }
       if (sides.px) box(target, def, wx, y, wz, 0.5, 0, c0, 1, 1, c1, light, facing);
       if (sides.nx) box(target, def, wx, y, wz, 0, 0, c0, 0.5, 1, c1, light, facing);
       if (sides.pz) box(target, def, wx, y, wz, c0, 0, 0.5, c1, 1, 1, light, facing);
       if (sides.nz) box(target, def, wx, y, wz, c0, 0, 0, c1, 1, 0.5, light, facing);
+      break;
+    }
+
+    case 'door': {
+      // A hinged door. bits 0-1 = dir (which wall face it hangs across), bit 3 =
+      // open. Closed: a full-height thin slab across the doorway on the `dir`
+      // face. Open: the slab swings 90° to lie along a perpendicular edge.
+      const dir = facing & 3, open = (facing >> 3) & 1, t = 3 / 16;
+      const [fx, fz] = FRONT_N[dir];
+      if (!open) {
+        if (fx === 1) box(target, def, wx, y, wz, 1 - t, 0, 0, 1, 1, 1, light, dir);
+        else if (fx === -1) box(target, def, wx, y, wz, 0, 0, 0, t, 1, 1, light, dir);
+        else if (fz === 1) box(target, def, wx, y, wz, 0, 0, 1 - t, 1, 1, 1, light, dir);
+        else box(target, def, wx, y, wz, 0, 0, 0, 1, 1, t, light, dir);
+      } else {
+        // swung open to the −X (for X-facing doors) or −Z (for Z-facing) edge
+        if (fx !== 0) box(target, def, wx, y, wz, 0, 0, 0, 1, 1, t, light, dir);
+        else box(target, def, wx, y, wz, 0, 0, 0, t, 1, 1, light, dir);
+      }
       break;
     }
 

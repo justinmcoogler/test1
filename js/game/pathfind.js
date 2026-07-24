@@ -85,6 +85,11 @@ export function findPath(world, sx, sz, sy, tx, tz, opts = {}) {
       if (ny === null) continue;
       if (ny - cur.y > 1) continue;      // can't climb more than one block
       if (cur.y - ny > 4) continue;      // don't route off cliffs
+      // Climbing a step needs headroom above the CURRENT cell to jump into — a
+      // low ceiling (a tree canopy of leaves) would otherwise trap the walker
+      // hopping in place. groundNear already proved the destination itself has
+      // 2-block clearance; this covers the lift-off column.
+      if (ny > cur.y && world.collisionHeight(cur.x, cur.y + 2, cur.z) > 0) continue;
       const stepCost = 1 + (ny > cur.y ? 0.4 : ny < cur.y ? 0.1 : 0);
       const g = cur.g + stepCost;
       if (existing && g >= existing.g) continue;

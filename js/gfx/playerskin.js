@@ -160,6 +160,16 @@ export function buildPlayerSkinCanvas(equipment = {}) {
   if (baseImg) ctx.drawImage(baseImg, 0, 0, 64, 64);
   else proceduralBase(ctx, mats);
 
+  // The face belongs on the FRONT of the head only. The base art carried eyes on
+  // the back too, so the adventurer looked two-faced — copy a plain side of the
+  // head over the back region to wipe any face there. (A helmet, drawn next,
+  // covers the whole head anyway; this only shows on the bare default skin.)
+  if (mats.head === 'base_head' || mats.head === undefined) {
+    const [wx, wy, ww, wh] = PART_UV.head.west;   // plain side of the head
+    const [nx, ny] = PART_UV.head.north;          // back of the head
+    ctx.drawImage(c, wx, wy, ww, wh, nx, ny, ww, wh);
+  }
+
   // 2) armour, drawn over the base per slot (legs → feet → body → head)
   for (const slot of ['legs', 'feet', 'body', 'head']) {
     const it = equipment[slot]; if (!it) continue;
