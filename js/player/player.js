@@ -14,6 +14,12 @@ const W = 0.6, H = 1.8;
 // but never block a horizontal step — you walk over them instead of the edge
 // stopping you dead.
 const WALKOVER = 0.2;
+// Auto-step: when you walk into an obstacle no taller than this, you're lifted
+// onto it instead of stopped dead. One full block, so slabs, stairs (a run
+// climbs a block per stair) and the one-block steps on procedural paths are all
+// walkable without jumping; two blocks or more still needs a jump. Kept in sync
+// with the ≤1-block rise the path generator guarantees (js/world/worldgen.js).
+const STEP_UP = 1.0;
 
 export class Player {
   constructor() {
@@ -175,6 +181,8 @@ export class Player {
   moveAxis(world, ax, ay, az) {
     this.x += ax; this.y += ay; this.z += az;
     if (ay < 0) this.onGround = false;
+    const horizontal = ax !== 0 || az !== 0;
+    let stepped = false; // auto-step at most once per call, so the resolve loop can't oscillate
 
     for (let iter = 0; iter < 3; iter++) {
       const [minX, minY, minZ, maxX, maxY, maxZ] = this.aabb();
@@ -187,10 +195,23 @@ export class Player {
           for (let bz = z0; bz <= z1 && !hit; bz++) {
             const ch = world.collisionHeight(bx, by, bz);
             if (ch <= 0) continue;
-            if ((ax !== 0 || az !== 0) && ch <= WALKOVER) continue; // walk over low lips, don't bump them
+            if (horizontal && ch <= WALKOVER) continue; // walk over low lips, don't bump them
             const blockTop = by + ch;
             if (minX >= bx + 1 || maxX <= bx || minZ >= bz + 1 || maxZ <= bz) continue;
             if (minY >= blockTop || maxY <= by) continue;
+            // Auto-step: if this is a low-enough obstacle we're walking into from
+            // the ground and there's clear headroom above it, climb onto it
+            // instead of stopping — keeps momentum so stairs/slabs/paths flow.
+            if (horizontal && !stepped && this.onGround) {
+              const rise = blockTop - minY;
+              if (rise > 1e-3 && rise <= STEP_UP + 1e-3 && this.canStandAt(world, blockTop + 1e-4)) {
+                this.y = blockTop + 1e-4;
+                this.onGround = true;
+                stepped = true;
+                hit = true; // re-resolve from the raised position (velocity kept)
+                break;
+              }
+            }
             hit = true;
             if (ax > 0) { this.x = bx - W / 2 - 1e-4; this.vx = 0; }
             else if (ax < 0) { this.x = bx + 1 + W / 2 + 1e-4; this.vx = 0; }
@@ -203,6 +224,28 @@ export class Player {
       }
       if (!hit) break;
     }
+  }
+
+  // Clear headroom test for the auto-step: would a standing body with its feet
+  // at feetY fit at the player's current x/z footprint without hitting a solid?
+  // Prevents stepping up into a ceiling or an overhang.
+  canStandAt(world, feetY) {
+    const [minX, , minZ, maxX, , maxZ] = this.aabb();
+    const x0 = Math.floor(minX), x1 = Math.floor(maxX - 1e-7);
+    const z0 = Math.floor(minZ), z1 = Math.floor(maxZ - 1e-7);
+    const yTop = feetY + H;
+    const by0 = Math.max(0, Math.floor(feetY + 1e-3));
+    const by1 = Math.floor(yTop - 1e-4);
+    for (let bx = x0; bx <= x1; bx++) {
+      for (let bz = z0; bz <= z1; bz++) {
+        for (let by = by0; by <= by1; by++) {
+          const ch = world.collisionHeight(bx, by, bz);
+          if (ch <= 0) continue;
+          if (by + ch > feetY + 1e-3 && by < yTop - 1e-4) return false;
+        }
+      }
+    }
+    return true;
   }
 
   // Open a bleeding wound. Takes the worse of any existing bleed rather than

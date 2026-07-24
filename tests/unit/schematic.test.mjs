@@ -161,6 +161,24 @@ test('upside-down stairs and top slabs set the top-half bit', () => {
   assert.ok(topSlab.some((c) => c.f === undefined), 'type=bottom slab → no facing');
 });
 
+test('trapdoors carry facing, half, and the open bit through import', () => {
+  const palette = {
+    'minecraft:oak_trapdoor[facing=north,half=bottom,open=true]': 0, // open, bottom-hung, faces north
+    'minecraft:oak_trapdoor[facing=east,half=bottom,open=false]': 1, // closed, bottom-hung
+    'minecraft:spruce_trapdoor[facing=south,half=top,open=false]': 2, // closed, ceiling-mounted
+  };
+  const buf = nbt({ w: 3, h: 1, l: 1, palette, _indices: [0, 1, 2] });
+  const conv = convertSchematic(buf, '.schem');
+  const tds = conv.cells.filter((c) => c.block === 'trapdoor');
+  assert.equal(tds.length, 3, 'every *_trapdoor mapped to the trapdoor block');
+  // facing=north (2) + open (bit 3 = 8) → 10
+  assert.ok(tds.some((c) => c.f === (2 | 8)), 'open north trapdoor → facing 10 (open bit set)');
+  // facing=east (1), closed, bottom half → 1
+  assert.ok(tds.some((c) => c.f === 1), 'closed east trapdoor → facing 1');
+  // facing=south (0) + top half (4), closed → 4
+  assert.ok(tds.some((c) => c.f === 4), 'closed ceiling trapdoor → facing 4 (top-half bit)');
+});
+
 // ── game-side loader (pasteSchematic) with a fake world ─────────────────────
 import { pasteSchematic } from '../../js/world/schematic.js';
 

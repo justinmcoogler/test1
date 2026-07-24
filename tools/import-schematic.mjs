@@ -25,7 +25,8 @@ import { LEGACY_IDS } from './mc-legacy-ids.mjs';
 import { B, BLOCKS } from '../js/world/blocks.js';
 
 // Minecraft blockstate → our packed facing: bits 0-1 = direction (0=+Z/south
-// 1=+X/east 2=-Z/north 3=-X/west), bit 2 = top half (upside-down stair / top slab).
+// 1=+X/east 2=-Z/north 3=-X/west), bit 2 = top half (upside-down stair / top
+// slab / ceiling-mounted trapdoor), bit 3 = trapdoor swung open.
 const MC_FACE = { south: 0, east: 1, north: 2, west: 3 };
 function mcOrient(rawId) {
   const s = String(rawId);
@@ -33,10 +34,12 @@ function mcOrient(rawId) {
   const fm = /facing=(north|south|east|west)/.exec(s);
   if (fm) { v |= MC_FACE[fm[1]]; has = true; }
   if (/(?:half|type)=top/.test(s)) { v |= 4; has = true; } // stairs use half=top, slabs use type=top
+  if (/\bopen=true\b/.test(s)) { v |= 8; has = true; }      // trapdoor swung open (bit 3)
   return has ? v : undefined;
 }
-// which shapes carry an orientation we can represent
-const ORIENTED = new Set(['stairs', 'slab', 'gate']);
+// which shapes carry an orientation we can represent (panel = trapdoor: it packs
+// facing + half + open, so it must be here or imported trapdoors lose their state)
+const ORIENTED = new Set(['stairs', 'slab', 'gate', 'panel']);
 
 // ── NBT reader ──────────────────────────────────────────────────────────────
 // Big-endian named binary tags. gzip- or zlib-compressed on disk, or raw.

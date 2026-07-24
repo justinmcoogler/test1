@@ -79,6 +79,52 @@ test('the player walks over carpet instead of bumping its edge', () => {
   assert.ok(p.y >= y + 1 - 0.02 && p.y <= y + 1 + SHAPE_COLLISION.carpet + 0.02, `stayed grounded on the carpet, not fallen (y=${p.y.toFixed(3)})`);
 });
 
+test('the player auto-steps up a staircase without jumping', () => {
+  const w = new World(4242);
+  w.ensureChunk(0, 0);
+  const y = 66;
+  for (let x = 2; x <= 4; x++) w.setBlock(x, y, 2, B.stone, true);          // flat approach, top y+1
+  w.setBlock(5, y + 1, 2, B.stone_stairs, true);                            // step 1 → top y+2
+  w.setBlock(6, y + 2, 2, B.stone_stairs, true);                           // step 2 → top y+3
+  w.setBlock(7, y + 3, 2, B.stone_stairs, true);                           // step 3 → top y+4
+  for (let x = 8; x <= 13; x++) w.setBlock(x, y + 3, 2, B.stone, true);     // top landing, top y+4
+  const p = new Player();
+  p.x = 2.5; p.z = 2.5; p.y = y + 1; p.onGround = true;
+  let peakY = p.y;
+  for (let i = 0; i < 70; i++) { p.moveAxis(w, 0.12, 0, 0); p.moveAxis(w, 0, -0.05, 0); peakY = Math.max(peakY, p.y); }
+  assert.ok(p.x > 7.5, `climbed across the staircase (x=${p.x.toFixed(2)})`);
+  assert.ok(peakY >= y + 3.5, `rose up the steps, no jump (peakY=${peakY.toFixed(2)})`);
+  assert.ok(p.y >= y + 3.5, `ended on the top landing (y=${p.y.toFixed(2)})`);
+});
+
+test('the player steps up onto a slab', () => {
+  const w = new World(4242);
+  w.ensureChunk(0, 0);
+  const y = 66;
+  for (let x = 2; x <= 13; x++) w.setBlock(x, y, 2, B.stone, true);          // floor, top y+1
+  for (let x = 6; x <= 13; x++) w.setBlock(x, y + 1, 2, B.stone_slab, true); // slab shelf, top y+1.5
+  const p = new Player();
+  p.x = 2.5; p.z = 2.5; p.y = y + 1; p.onGround = true;
+  let peakY = p.y;
+  for (let i = 0; i < 45; i++) { p.moveAxis(w, 0.12, 0, 0); p.moveAxis(w, 0, -0.05, 0); peakY = Math.max(peakY, p.y); }
+  assert.ok(p.x > 7, `walked up onto the slab shelf (x=${p.x.toFixed(2)})`);
+  assert.ok(peakY >= y + 1.4, `stepped up half a block onto the slab (peakY=${peakY.toFixed(2)})`);
+});
+
+test('the player cannot auto-step a full two-block wall', () => {
+  const w = new World(4242);
+  w.ensureChunk(0, 0);
+  const y = 66;
+  for (let x = 2; x <= 5; x++) w.setBlock(x, y, 2, B.stone, true); // floor
+  w.setBlock(6, y + 1, 2, B.stone, true); // wall, lower
+  w.setBlock(6, y + 2, 2, B.stone, true); // wall, upper — no headroom to step
+  const p = new Player();
+  p.x = 2.5; p.z = 2.5; p.y = y + 1; p.onGround = true;
+  for (let i = 0; i < 60; i++) { p.moveAxis(w, 0.12, 0, 0); p.moveAxis(w, 0, -0.05, 0); }
+  assert.ok(p.x < 5.8, `blocked by the two-block wall (x=${p.x.toFixed(2)})`);
+  assert.ok(p.y < y + 1.5, `did not climb the wall (y=${p.y.toFixed(2)})`);
+});
+
 test('player facing edits are recorded and survive a save round-trip', () => {
   const w = new World(4242);
   w.ensureChunk(0, 0);

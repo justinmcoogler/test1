@@ -161,6 +161,7 @@ export class World {
         if (Math.hypot(wx - FROST_CAMP.x, wz - FROST_CAMP.z) < 26) continue; // camp stays hand-built
         if (Math.hypot(wx - MANOR_PAD.x, wz - MANOR_PAD.z) < 26) continue; // manor pad stays hand-built
         if (Math.hypot(wx - LEARN_MEADOW.x, wz - LEARN_MEADOW.z) < 26) continue; // Numbers Meadow stays hand-built & combat-free
+        if (gen.pathSet && gen.pathSet.has(wx + ',' + wz)) continue; // keep the road corridor clear & walkable
         const h = chunk.surfaceH[lz * CHUNK + lx];
         const surfId = blocks[lidx(lx, h, lz)];
         const biome = gen.biomeAt(wx, wz);

@@ -113,9 +113,55 @@ test('countPlaced counts only matching blocks inside the given region', () => {
   put(mat.x1 + 5, y, mat.z0, 'red_wool'); // outside the mat AABB
   assert.equal(ctx.countPlaced('red_wool', mat), 1, 'ignores the red outside the region');
   assert.equal(ctx.countPlaced('blue_wool', mat), 1);
-  // left/right sub-regions split at the divider column
-  assert.equal(ctx.countPlaced('red_wool', mat.left), 1, 'the red sits left of the divider');
-  assert.equal(ctx.countPlaced('red_wool', mat.right), 0);
+  // Left/right sub-regions split at the divider column. Halves are labelled from
+  // the player's viewpoint (they face +Z toward the mat, so their LEFT is +X):
+  // the red at mat.x0 (the low-X / -X end) is therefore the player's RIGHT.
+  assert.equal(ctx.countPlaced('red_wool', mat.right), 1, 'the low-X red is the player’s right of the divider');
+  assert.equal(ctx.countPlaced('red_wool', mat.left), 0);
+});
+
+test('nm_sort completes for correctly sorted colours from the player’s viewpoint', () => {
+  const { lessons, education, put } = scenario();
+  education.setMode('education', {});
+  const mat = lessons.matFor('numbers_meadow');
+  const y = mat.y0;
+  lessons.setLesson('numbers_meadow', 'nm_sort');
+  // Player faces +Z: their LEFT is the +X half (mat.left), RIGHT is -X (mat.right).
+  // Put reds on the +X (left) half and yellows on the -X (right) half.
+  for (let x = mat.left.x0; x <= mat.left.x0 + 2; x++) put(x, y, mat.z0, 'red_wool');
+  for (let x = mat.right.x0; x <= mat.right.x0 + 2; x++) put(x, y, mat.z0, 'yellow_wool');
+  lessons.onWatch('blockPlaced');
+  assert.ok(lessons.isPassed('nm_sort'), 'reds-left / yellows-right (player view) completes the sort');
+});
+
+test('nm_sort also accepts the mirror arrangement (sorting is what matters)', () => {
+  const { lessons, education, put } = scenario();
+  education.setMode('education', {});
+  const mat = lessons.matFor('numbers_meadow');
+  const y = mat.y0;
+  lessons.setLesson('numbers_meadow', 'nm_sort');
+  // Reversed sides — still fully separated, so a child who faced the other way
+  // and sorted correctly is not punished.
+  for (let x = mat.right.x0; x <= mat.right.x0 + 2; x++) put(x, y, mat.z0, 'red_wool');
+  for (let x = mat.left.x0; x <= mat.left.x0 + 2; x++) put(x, y, mat.z0, 'yellow_wool');
+  lessons.onWatch('blockPlaced');
+  assert.ok(lessons.isPassed('nm_sort'), 'mirror arrangement (still sorted) also completes');
+});
+
+test('nm_sort rejects a mixed (unsorted) mat', () => {
+  const { lessons, education, put } = scenario();
+  education.setMode('education', {});
+  const mat = lessons.matFor('numbers_meadow');
+  const y = mat.y0;
+  lessons.setLesson('numbers_meadow', 'nm_sort');
+  // Reds straddle BOTH halves — not sorted, must not pass.
+  put(mat.left.x0, y, mat.z0, 'red_wool');
+  put(mat.left.x0 + 1, y, mat.z0, 'red_wool');
+  put(mat.right.x0, y, mat.z0, 'red_wool');
+  put(mat.right.x0 + 1, y, mat.z0, 'yellow_wool');
+  put(mat.right.x0 + 2, y, mat.z0, 'yellow_wool');
+  lessons.onWatch('blockPlaced');
+  assert.equal(lessons.isPassed('nm_sort'), false, 'reds on both sides is not sorted');
 });
 
 test('runner persists {area → currentLessonId} across serialize/deserialize', () => {

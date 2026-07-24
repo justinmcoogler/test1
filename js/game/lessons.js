@@ -52,12 +52,16 @@ export const LESSONS_DATA = [
     success: 'Perfect sorting — reds on the left, yellows on the right. You did it!',
     watch: ['blockPlaced', 'blockBroken'],
     check: (ctx) => {
-      const redLeft = ctx.countPlaced('red_wool', ctx.mat.left);
-      const redRight = ctx.countPlaced('red_wool', ctx.mat.right);
-      const yelLeft = ctx.countPlaced('yellow_wool', ctx.mat.left);
-      const yelRight = ctx.countPlaced('yellow_wool', ctx.mat.right);
-      // enough of each, each colour only on its own side
-      return redLeft >= 2 && yelRight >= 2 && redRight === 0 && yelLeft === 0;
+      const rl = ctx.countPlaced('red_wool', ctx.mat.left);
+      const rr = ctx.countPlaced('red_wool', ctx.mat.right);
+      const yl = ctx.countPlaced('yellow_wool', ctx.mat.left);
+      const yr = ctx.countPlaced('yellow_wool', ctx.mat.right);
+      // Sorted = each colour entirely on its OWN side, the two colours on
+      // OPPOSITE sides, at least two of each. Either arrangement counts, so a
+      // child who truly separates the colours succeeds no matter which way they
+      // happen to face the mat (reds-left/yellows-right OR the mirror of it).
+      return (rl >= 2 && yr >= 2 && rr === 0 && yl === 0)
+          || (rr >= 2 && yl >= 2 && rl === 0 && yr === 0);
     },
     next: null,
   },
@@ -174,9 +178,12 @@ export class LessonRunner {
     const m = this.game.world?.markers?.learnMat;
     if (!m) return null;
     const region = { x0: m.x0, x1: m.x1, z0: m.z0, z1: m.z1, y0: m.y0, y1: m.y1 };
-    // sub-regions split by the divider column (for sorting lessons)
-    region.left = { ...region, x0: m.x0, x1: m.div - 1 };
-    region.right = { ...region, x0: m.div + 1, x1: m.x1 };
+    // Sub-regions split by the divider column (for the sorting lesson). The
+    // child stands south of the mat and faces +Z toward it, so their LEFT is the
+    // +X half and their RIGHT is the -X half — label the halves to match the
+    // player's viewpoint, not raw world-X, or "reds on the left" never registers.
+    region.left = { ...region, x0: m.div + 1, x1: m.x1 };  // +X = player's left
+    region.right = { ...region, x0: m.x0, x1: m.div - 1 }; // -X = player's right
     return region;
   }
 

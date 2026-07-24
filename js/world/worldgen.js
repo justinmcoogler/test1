@@ -32,6 +32,21 @@ export const LEARN_MEADOW = { x: 200, z: 200, ground: 64 };
 // starts in its centre. See js/world/town.js + js/world/town-data.js.
 export const TOWN_PAD = { x: -520, z: 0, ground: 63, R: 363 };
 
+// Inter-town roads: gravel lanes graded to ≤1-block steps so they're always
+// walkable, baked deterministically from the seed (js `WorldGen.buildPaths`).
+const PATH_SALT = 63601;
+// Columns a road must NOT regrade/stamp: the hand-built settlement and every
+// pinned pad own their own flat ground, so a road stops at their edge and lets
+// that flat surface carry the traveller the rest of the way in.
+function skipPathColumn(x, z) {
+  if (Math.hypot(x, z) < 60) return true;                                          // Brookhollow settlement
+  if (Math.hypot(x - MANOR_PAD.x, z - MANOR_PAD.z) < 30) return true;              // manor pad
+  if (Math.hypot(x - LEARN_MEADOW.x, z - LEARN_MEADOW.z) < 30) return true;        // Numbers Meadow pad
+  if (Math.hypot(x - TOWN_PAD.x, z - TOWN_PAD.z) < TOWN_PAD.R + 12) return true;   // Greywall pad + city
+  if (Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z) < 72) return true;            // Frostwatch pad
+  return false;
+}
+
 // A real-world climate taxonomy. biomeAt() places each biome by real drivers —
 // elevation (mountains, snow-capped peaks), then temperature × moisture
 // (Whittaker) — with temperature biased toward mild/temperate near spawn so the
@@ -226,10 +241,22 @@ export const BIOMES = {
 export class WorldGen {
   constructor(seed) {
     this.seed = seed >>> 0;
+    this.pathY = null;   // Map 'x,z' → graded road-surface Y (null until built)
+    this.pathSet = null; // Set of 'x,z' road cells (centre line + shoulders)
+    this.buildPaths();
   }
 
   // ---- Continuous fields -------------------------------------------------
+  // Ground height at a column. Road cells return the pre-graded road surface
+  // (each step ≤1 block, so it's always walkable); everywhere else is raw
+  // terrain. Splitting it this way lets the road bake once, deterministically,
+  // and every downstream reader (column fill, biome, surfaceH) follows for free.
   heightAt(x, z) {
+    if (this.pathY) { const p = this.pathY.get(x + ',' + z); if (p !== undefined) return p; }
+    return this._naturalHeight(x, z);
+  }
+
+  _naturalHeight(x, z) {
     const s = this.seed;
     const cont = warped2(s + 11, x * 0.004, z * 0.004, 4, 24);          // continents
     const hills = fbm2(s + 22, x * 0.02, z * 0.02, 4);                   // local relief
@@ -375,6 +402,7 @@ export class WorldGen {
 
   isCave(x, y, z) {
     if (y < 4 || y > WORLD_H - 12) return false;
+    if (this.pathSet && this.pathSet.has(x + ',' + z)) return false; // never carve a hole under the road
     const d = Math.hypot(x, z);
     if (d < 46) return false; // keep the settlement's underground intact for the hand-built mine
     if (Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z) < 30) return false; // solid ground under the camp
@@ -388,7 +416,8 @@ export class WorldGen {
   column(blocks, lx, lz, wx, wz, setLocal) {
     const h = this.heightAt(wx, wz);
     const biome = this.biomeAt(wx, wz);
-    const surfaceId = B[biome.surface];
+    const onPath = this.pathSet ? this.pathSet.has(wx + ',' + wz) : false;
+    const surfaceId = onPath ? B.gravel : B[biome.surface]; // roads read as a gravel lane
     const fillerId = B[biome.filler];
     const tundra = biome === BIOMES.frostbound_tundra;
 
@@ -424,6 +453,66 @@ export class WorldGen {
 
   treeHeight(wx, wz, base) {
     return base + Math.floor(hash2(this.seed + 202, wx, wz) * 3);
+  }
+
+  // ---- Inter-town roads --------------------------------------------------
+  // March a road from anchor A to anchor B one cell at a time, regrading the
+  // ground under it so consecutive cells never differ by more than one block —
+  // the ≤1-step guarantee that makes it walkable. Returns the ordered centre
+  // cells (each with the step direction, so buildPaths can lay shoulders).
+  _routePath(A, B) {
+    const cells = [];
+    let x = A.x, z = A.z, curY = A.ground;
+    const MAX = 8000; // safety bound; a step always reduces |Δx|+|Δz| by one
+    for (let i = 0; i < MAX && (x !== B.x || z !== B.z); i++) {
+      const dx = B.x - x, dz = B.z - z;
+      // Deterministic wobble decides which axis to advance this step, so the road
+      // curves organically instead of drawing a rigid L. It only ever steps
+      // TOWARD B, so the march always terminates.
+      const wob = fbm2(this.seed + PATH_SALT, x * 0.04, z * 0.04, 3);
+      let sx = 0, sz = 0;
+      if (dx === 0) sz = Math.sign(dz);
+      else if (dz === 0) sx = Math.sign(dx);
+      else if (Math.abs(dx) >= Math.abs(dz)) { if (wob > 0.3) sx = Math.sign(dx); else sz = Math.sign(dz); }
+      else { if (wob > 0.7) sx = Math.sign(dx); else sz = Math.sign(dz); }
+      x += sx; z += sz;
+      // Regrade toward the natural surface but clamp the change to ±1 per cell.
+      // Keep the road above the waterline so it never floods (a raised causeway
+      // over dips/rivers rather than a drowned lane).
+      let nat = this._naturalHeight(x, z);
+      if (nat < SEA + 1) nat = SEA + 1;
+      curY = clamp(nat, curY - 1, curY + 1);
+      cells.push({ x, z, y: curY, sx, sz });
+    }
+    return cells;
+  }
+
+  // Bake every road once, from the seed, into pathY (column → graded Y) and
+  // pathSet (road columns). Called from the constructor BEFORE any chunk exists,
+  // so heightAt overrides are in place for the very first ensureChunk and the
+  // result is identical regardless of chunk load order.
+  buildPaths() {
+    const pathY = new Map(), pathSet = new Set();
+    const lay = (x, z, y) => {
+      if (skipPathColumn(x, z)) return;      // pads/town own these columns
+      const k = x + ',' + z;
+      pathY.set(k, y); pathSet.add(k);
+    };
+    const spawn = { x: 0, z: 0, ground: 64 };
+    const greywall = { x: TOWN_PAD.x, z: TOWN_PAD.z, ground: TOWN_PAD.ground };
+    const frost = { x: FROST_CAMP.x, z: FROST_CAMP.z, ground: FROST_CAMP.ground };
+    // Two trunk roads radiate from the spawn settlement to the two other sites.
+    for (const [A, Bp] of [[spawn, greywall], [spawn, frost]]) {
+      for (const c of this._routePath(A, Bp)) {
+        lay(c.x, c.z, c.y);
+        // Width 3: two shoulders perpendicular to travel, at the same graded Y,
+        // so the lane is comfortable and its edges never step more than one block.
+        const px = -c.sz, pz = c.sx;
+        lay(c.x + px, c.z + pz, c.y);
+        lay(c.x - px, c.z - pz, c.y);
+      }
+    }
+    this.pathY = pathY; this.pathSet = pathSet;
   }
 }
 
