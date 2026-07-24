@@ -271,7 +271,7 @@ export class UI {
       nutt.textContent = nutLabel;
       nutt.className = `vital-tag nut ${p.malnourished ? 'bad' : 'good'}`;
     } else if (nutt) nutt.remove();
-    // weather + season badge (glyph art pending — text with a weather-tinted dot)
+    // environment badge under the minimap: time-of-day (sun/moon) + weather + season
     const wsys = this.game.weather;
     if (wsys) {
       let eb = $('env-badge');
@@ -282,10 +282,14 @@ export class UI {
       }
       const wd = wsys.def();
       const dot = wd.tint ? `rgb(${wd.tint.map((v) => Math.round(v * 255)).join(',')})` : '#ffd98a';
-      const key = `${wd.label}|${wsys.season}|${dot}`;
+      const phase = this.dayPhaseLabel();
+      const night = phase === 'Night';
+      const key = `${phase}|${wd.label}|${wsys.season}|${dot}`;
       if (this._envKey !== key) { // only touch the DOM when it actually changes
         this._envKey = key;
-        eb.innerHTML = `<span class="env-dot" style="background:${dot}"></span>${wd.label} · ${wsys.season}`;
+        eb.innerHTML = `<canvas class="env-tod" width="18" height="18"></canvas>${phase}`
+          + ` · <span class="env-dot" style="background:${dot}"></span>${wd.label} · ${wsys.season}`;
+        this.drawTimeOfDay(eb.querySelector('.env-tod'), night);
       }
     }
     // breath bar only surfaces while diving (or catching your breath)
@@ -439,19 +443,45 @@ export class UI {
     ctx.lineTo(canvas.width / 2, 7);
     ctx.closePath();
     ctx.fill();
-    // time of day: sun (day) or moon (night) at the compass edge
-    const w = this.game.world;
-    const night = w.isNight();
-    const cx3 = canvas.width - 13, cy3 = 13;
+    // (time-of-day sun/moon lives in the environment badge under the minimap now)
+  }
+
+  // Dawn / Day / Dusk / Night from the world clock, matching the daylight ramps.
+  dayPhaseLabel() {
+    const t = this.game.world.dayPhase();
+    if (t < 0.42) return 'Day';
+    if (t < 0.52) return 'Dusk';
+    if (t < 0.90) return 'Night';
+    return 'Dawn';
+  }
+
+  // Paint the little sun (day) or crescent moon (night) into a tiny canvas —
+  // the day/night indicator that used to sit on the compass.
+  drawTimeOfDay(canvas, night) {
+    const ctx = canvas.getContext('2d');
+    const cx = canvas.width / 2, cy = canvas.height / 2, rad = Math.min(cx, cy) - 1;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = night ? '#c8d2e8' : '#ffd76a';
     ctx.beginPath();
-    ctx.arc(cx3, cy3, 5, 0, Math.PI * 2);
+    ctx.arc(cx, cy, rad, 0, Math.PI * 2);
     ctx.fill();
-    if (night) { // crescent
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    if (night) { // bite out a crescent
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
-      ctx.arc(cx3 - 3, cy3 - 1, 4.4, 0, Math.PI * 2);
+      ctx.arc(cx - rad * 0.55, cy - rad * 0.2, rad * 0.9, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
+    } else { // a few rays for the sun
+      ctx.strokeStyle = '#ffd76a';
+      ctx.lineWidth = 1;
+      for (let a = 0; a < 8; a++) {
+        const ang = (a / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(ang) * (rad + 1), cy + Math.sin(ang) * (rad + 1));
+        ctx.lineTo(cx + Math.cos(ang) * (rad + 2.5), cy + Math.sin(ang) * (rad + 2.5));
+        ctx.stroke();
+      }
     }
   }
 

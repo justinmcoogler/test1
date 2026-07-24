@@ -106,6 +106,7 @@ body.classic-cam #crosshair { display: none; }
   font-size: calc(12px * var(--text-scale)); font-weight: 700; letter-spacing: 0.3px;
   pointer-events: none; white-space: nowrap; }
 #env-badge .env-dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 4px rgba(255,255,255,0.4); }
+#env-badge .env-tod { width: 18px; height: 18px; image-rendering: pixelated; margin-right: 1px; vertical-align: middle; }
 /* phones hide the compass, so the badge can stay top-centre with nothing to clash */
 @media (max-width: 640px) { #env-badge { top: calc(6px + env(safe-area-inset-top, 0px)); right: auto; left: 50%; transform: translateX(-50%); font-size: 11px; padding: 2px 7px; } }
 .vital-tag { font-size: calc(11px * var(--text-scale)); font-weight: 700; letter-spacing: 0.4px;
