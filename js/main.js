@@ -420,6 +420,16 @@ class Game {
     return best;
   }
 
+  // Resolve the graphics quality tier: an explicit low/medium/high, or 'auto'
+  // which picks Low on touch devices (phones/tablets) and Medium on desktop.
+  qualityTier() {
+    const g = this.settings.graphicsPreset;
+    if (g === 'low' || g === 'medium' || g === 'high') return g;
+    // auto: phones/tablets get the lighter Low tier; desktop gets Medium (which
+    // matches the historical default look — full effects, just no gradient sky)
+    return isTouchDevice() ? 'low' : 'medium';
+  }
+
   applySettings() {
     const s = this.settings;
     document.documentElement.style.setProperty('--ui-scale', s.uiScale);
@@ -431,7 +441,15 @@ class Game {
     this.renderer.dynamicResolution = s.dynamicResolution !== false;
     if (s.dynamicResolution === false && this.renderer.renderScale !== 1) { this.renderer.renderScale = 1; this.renderer.resize(); }
     this.renderer.reducedMotion = s.reducedMotion;
-    this.renderer.highQuality = s.highGraphics === true || s.graphicsPreset === 'high'; // gradient sky + sun/moon/stars
+    // Quality ladder: one renderer, three tiers. 'auto' picks by device (phones
+    // get Low, desktops Medium). Tiers trade fill + effects, never render
+    // distance (kept far per design). High: gradient sky + sun/moon + fresnel
+    // water. Low: no sky, capped precip, a lower adaptive-resolution floor.
+    const tier = this.qualityTier();
+    this.renderer.qualityTier = tier;
+    this.renderer.highQuality = tier === 'high';
+    this.renderer.scaleFloor = tier === 'low' ? 0.4 : 0.5;
+    this.renderer.precipMult = tier === 'low' ? 0.5 : 1; // Medium/High keep full precip (old default look)
     document.body.classList.toggle('classic-cam', !!s.classicCamera);
     if (s.classicCamera) document.exitPointerLock?.();
     setVolumes(s);

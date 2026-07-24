@@ -126,7 +126,8 @@ export class Renderer {
     this._scaleAccum = 0; this._scaleFrames = 0;
     if (this._scaleCd > 0) return;
     let s = this.renderScale;
-    if (fps < 45 && s > 0.5) s = Math.max(0.5, +(s - 0.1).toFixed(2));       // struggling → fewer pixels
+    const floor = this.scaleFloor || 0.5; // Low tier lets it drop further on weak GPUs
+    if (fps < 45 && s > floor) s = Math.max(floor, +(s - 0.1).toFixed(2));    // struggling → fewer pixels
     else if (fps > 72 && s < 1) s = Math.min(1, +(s + 0.1).toFixed(2));      // headroom → sharpen back up
     if (s !== this.renderScale) { this.renderScale = s; this._scaleCd = 1.2; this.resize(); }
   }
@@ -495,7 +496,7 @@ export class Renderer {
     let target = 0;
     if (pr.type) {
       const base = snow ? 90 : 150;
-      target = Math.round(base * Math.min(1, pr.intensity) * (this.reducedMotion ? 0.3 : 1));
+      target = Math.round(base * Math.min(1, pr.intensity) * (this.reducedMotion ? 0.3 : 1) * (this.precipMult ?? 1));
     }
     const R = 15;
     const cx = this.camPos[0], cy = this.camPos[1], cz = this.camPos[2];

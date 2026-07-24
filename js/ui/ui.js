@@ -1021,6 +1021,8 @@ export class UI {
     const range = (key, min, max, step) =>
       `<span style="display:flex;align-items:center;gap:6px"><input type="range" data-set="${key}" min="${min}" max="${max}" step="${step}" value="${s[key]}"><span class="set-val">${s[key]}</span></span>`;
     const check = (key) => `<input type="checkbox" data-set="${key}" ${s[key] ? 'checked' : ''}>`;
+    const select = (key, opts) => `<select data-set="${key}">${opts.map(([v, l]) =>
+      `<option value="${v}" ${s[key] === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
     body.innerHTML = `<div class="settings-grid">
       ${row('Classic camera — third person, click to move (V)', check('classicCamera'))}
       ${row('Render distance (chunks)', range('renderDistance', 2, 8, 1))}
@@ -1033,7 +1035,7 @@ export class UI {
       ${row('XP popups on skill gains', check('xpToasts'))}
       ${row('Reduced motion', check('reducedMotion'))}
       ${row('Screen shake', check('screenShake'))}
-      ${row('High-quality sky &amp; water — gradient sky, sun/moon, night stars (needs a decent GPU)', check('highGraphics'))}
+      ${row('Graphics quality', select('graphicsPreset', [['auto', 'Auto (match device)'], ['low', 'Low — fastest, best for phones'], ['medium', 'Medium'], ['high', 'High — gradient sky, sun/moon, fresnel water']]))}
       ${row('Colorblind-friendly colors', check('colorblind'))}
       ${row('Sprint: toggle instead of hold', check('sprintToggle'))}
       ${row('Left-handed mobile layout', check('leftHanded'))}
@@ -1071,7 +1073,9 @@ export class UI {
     body.querySelectorAll('[data-set]').forEach((inp) => {
       inp.addEventListener('input', () => {
         const key = inp.dataset.set;
-        s[key] = inp.type === 'checkbox' ? inp.checked : parseFloat(inp.value);
+        s[key] = inp.type === 'checkbox' ? inp.checked
+          : inp.tagName === 'SELECT' ? inp.value       // string-valued (e.g. graphics quality)
+          : parseFloat(inp.value);
         if (inp.type === 'range') inp.nextElementSibling.textContent = s[key];
         this.game.applySettings();
       });
