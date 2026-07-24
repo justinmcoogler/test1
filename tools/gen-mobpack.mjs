@@ -25,7 +25,7 @@ function makeIdFactory() {
     if (/head|skull|face/.test(n)) base = 'head';
     else if (/tail/.test(n)) base = 'tail';
     else if (/leg|thigh|shin|foot|paw|hoof/.test(n)) base = 'leg';
-    else if (/wing/.test(n)) base = 'wing';
+    else if (/wing|fin$|_fin|fin_/.test(n)) base = 'wing'; // fins → floater rig (fish bob, not waddle)
     else if (/arm|hand|claw/.test(n)) base = 'arm';
     else if (/body|torso|chest|root|main|hip|spine/.test(n)) base = 'body';
     else base = n.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'part';
@@ -63,6 +63,23 @@ export function convertBBModel(json, opts = {}) {
     e.from && e.to && e.visibility !== false && e.export !== false && !uvUnmapped(e));
   const byUuid = new Map(elements.map((e) => [e.uuid, e]));
 
+  // Newer Blockbench exports (e.g. modded_entity) strip group metadata off the
+  // outliner: nodes are bare {uuid, children} and the real name/origin/rotation
+  // live in a separate top-level `groups` array. Without this lookup every bone
+  // read as name=undefined + origin=undefined: junk part ids (rig inference
+  // failed → everything fell to 'lumberer'), pivots collapsed to centre-floor,
+  // and group rotations (a seal's -90° body, a bird's 35° torso) were DROPPED —
+  // the "wrong anatomy / wrong bones" imports. Resolve through the map first.
+  const groupByUuid = new Map((json.groups || []).filter((g) => g && g.uuid).map((g) => [g.uuid, g]));
+  const nodeMeta = (n) => {
+    const g = groupByUuid.get(n.uuid);
+    return {
+      name: n.name ?? g?.name,
+      origin: n.origin ?? g?.origin,
+      rotation: n.rotation ?? g?.rotation,
+    };
+  };
+
   // bounding box → centre on x/z, feet at y=0; Minecraft units are 1/16 block.
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
   for (const e of elements) {
@@ -97,23 +114,42 @@ export function convertBBModel(json, opts = {}) {
 
   const parts = []; const partBoxes = new Map(); const bodyBoxes = [];
   const idOf = makeIdFactory();
+  let rotN = 0;
+  // A cube with its own baked rotation can't live in a plain axis-aligned box
+  // list — the rotation would be silently dropped and the cube re-emitted
+  // axis-aligned (how angled wings/branches/fins exploded into scatter). Give it
+  // a tiny child part carrying the rotation, pivoted on the cube's origin.
+  const attachCube = (e, parentId) => {
+    if (Array.isArray(e.rotation) && e.rotation.some((v) => v)) {
+      const o = e.origin || e.from;
+      parts.push({
+        id: `rot${rotN++}`, parent: parentId || null,
+        pivot: [tx(o[0]), ty(o[1]), tz(o[2])],
+        rotation: e.rotation.map((v) => +(+v).toFixed(2)),
+        boxes: [boxOf(e)],
+      });
+    } else {
+      (parentId ? partBoxes.get(parentId) : bodyBoxes).push(boxOf(e));
+    }
+  };
   const walk = (nodes, parentId) => {
     for (const n of nodes || []) {
       if (typeof n === 'string') {
         const e = byUuid.get(n); if (!e) continue;
-        (parentId ? partBoxes.get(parentId) : bodyBoxes).push(boxOf(e));
+        attachCube(e, parentId);
       } else if (n && n.uuid && Array.isArray(n.children)) {
-        const id = idOf(n.name);
-        const o = n.origin || [cx, floor, cz];
+        const meta = nodeMeta(n);
+        const id = idOf(meta.name);
+        const o = meta.origin || [cx, floor, cz];
         const part = { id, parent: parentId || null, pivot: [tx(o[0]), ty(o[1]), tz(o[2])], boxes: [] };
-        if (Array.isArray(n.rotation) && n.rotation.some((v) => v)) part.rotation = n.rotation.map((v) => +(+v).toFixed(2));
+        if (Array.isArray(meta.rotation) && meta.rotation.some((v) => v)) part.rotation = meta.rotation.map((v) => +(+v).toFixed(2));
         parts.push(part); partBoxes.set(id, part.boxes);
         walk(n.children, id);
       }
     }
   };
   if (Array.isArray(json.outliner) && json.outliner.length) walk(json.outliner, null);
-  else for (const e of elements) bodyBoxes.push(boxOf(e)); // flat model: everything is body
+  else for (const e of elements) attachCube(e, null); // flat model: everything is body
 
   // guarantee exactly one 'body' part carrying the loose/root geometry
   let body = parts.find((p) => p.id === 'body');
@@ -121,9 +157,13 @@ export function convertBBModel(json, opts = {}) {
     if (bodyBoxes.length || !parts.length) { body = { id: 'body', parent: null, pivot: [0, +((maxY - floor) * S * 0.4).toFixed(4), 0], boxes: bodyBoxes }; parts.unshift(body); }
     else { parts[0].id = 'body'; body = parts[0]; body.boxes.push(...bodyBoxes); }
   } else body.boxes.push(...bodyBoxes);
-  // drop empty parts (bones with no geometry still ok as pose locators, but our
-  // mesh path needs boxes; keep body even if empty is impossible here)
-  const kept = parts.filter((p) => p.id === 'body' || p.boxes.length);
+  // Boxless bones still matter when they carry a rotation or sit inside a parent
+  // chain (a seal's whole_body(-90°) holds only child groups — dropping it
+  // un-rotates the entire animal). Keep any bone that has geometry, a rotation,
+  // or surviving descendants; the renderer treats boxless parts as pose-chain
+  // locators that draw nothing.
+  const hasKeptChild = (id) => parts.some((p) => p.parent === id && (p.boxes.length || p.rotation || hasKeptChild(p.id)));
+  const kept = parts.filter((p) => p.id === 'body' || p.boxes.length || p.rotation || hasKeptChild(p.id));
   for (const p of kept) if (p.parent && !kept.some((q) => q.id === p.parent)) p.parent = null;
 
   // rig: filename hint wins, else infer from limb bones

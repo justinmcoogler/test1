@@ -62,10 +62,9 @@ try {
   await page.keyboard.press('KeyF');
   await page.waitForTimeout(300);
   check('dialogue opens', await page.isVisible('#dialogue'));
-  await page.click('#dialogue-options .dialog-btn:nth-child(2)'); // "What should I do first?"
-  await page.waitForTimeout(200);
+  // quest offers now surface on the FIRST dialogue box (fast-path)
   const questBtn = page.locator('.dialog-btn.quest-offer').first();
-  check('quest offered', await questBtn.count() > 0);
+  check('quest offered on first box', await questBtn.count() > 0);
   await questBtn.click();
   await page.waitForTimeout(200);
   await page.click('#dialogue-options .dialog-btn'); // "I'll get to it."
@@ -177,10 +176,9 @@ try {
   await teleportFacing(maren.x + 0.5, 65, maren.z + 2.5, maren.x, 66, maren.z);
   await page.keyboard.press('KeyF');
   await page.waitForTimeout(250);
-  await page.click('#dialogue-options .dialog-btn:nth-child(2)');
-  await page.waitForTimeout(250);
+  // ready turn-ins now surface on the FIRST dialogue box (fast-path)
   const readyBtn = page.locator('.dialog-btn.quest-ready').first();
-  check('quest turn-in offered', await readyBtn.count() > 0);
+  check('quest turn-in offered on first box', await readyBtn.count() > 0);
   if (await readyBtn.count()) {
     await readyBtn.click();
     await page.waitForTimeout(200);

@@ -8,6 +8,7 @@ import { RECIPES, STATION_LABELS, canCraft, craft, minFuel } from '../game/craft
 import { EQUIP_SLOTS, EQUIP_LABELS, HOTBAR_SIZE, INV_SIZE } from '../game/inventory.js';
 import { QUESTS } from '../game/quests.js';
 import { NPC_DEFS, DIALOGUES } from '../game/npcs.js';
+import { evaluatePose } from '../game/mobloader.js';
 import { STATUS_INFO, ABILITIES } from '../game/combat.js';
 import { RS_STYLES } from '../game/combatrs.js';
 import { tileIconDataURL, getAtlasCanvas, faceUV } from '../gfx/textures.js';
@@ -1162,7 +1163,9 @@ export class UI {
       const type = img.dataset.mob;
       let url = this._mobThumbCache.get(type);
       if (url === undefined) { // render once, then cache the data URL for every repaint after
-        url = r.renderMobThumb(type, this._thumbCanvas) ? this._thumbCanvas.toDataURL() : '';
+        const model = r.modelCache.get(type);
+        const pose = model?.animated ? evaluatePose(model, 'idle', 0) : null; // rest pose: bone rotations applied
+        url = r.renderMobThumb(type, this._thumbCanvas, 0, 0, pose) ? this._thumbCanvas.toDataURL() : '';
         this._mobThumbCache.set(type, url);
       }
       if (url) img.src = url; else img.classList.add('admin-thumb-empty');
@@ -1191,7 +1194,9 @@ export class UI {
     this._preview ??= { yaw: 0, pitch: 0 };
     const type = canvas.dataset.mob;
     let raf = 0;
-    const draw = () => { raf = 0; if (!r.renderMobThumb(type, canvas, this._preview.yaw, this._preview.pitch)) canvas.classList.add('admin-preview-empty'); };
+    const model = r.modelCache.get(type);
+    const pose = model?.animated ? evaluatePose(model, 'idle', 0) : null; // rest pose: bone rotations applied
+    const draw = () => { raf = 0; if (!r.renderMobThumb(type, canvas, this._preview.yaw, this._preview.pitch, pose)) canvas.classList.add('admin-preview-empty'); };
     const schedule = () => { if (!raf) raf = requestAnimationFrame(draw); };
     draw();
     // pointer-drag orbit (works with mouse, pen, and touch via pointer events)
@@ -1510,6 +1515,17 @@ export class UI {
     } else {
       text = node.text();
       options = node.options;
+      // Quest fast-path: on the FIRST box of a conversation, a finished quest is
+      // immediately turn-in-able (and fresh offers are one click away) — no need
+      // to re-walk the dialogue tree to reach the quest hub.
+      if (nodeId === npc.dialogue) {
+        const extra = [];
+        for (const q of QUESTS) {
+          if (g.quests.readyToTurnIn(q, npcId)) extra.push({ label: `${q.name} (turn in!)`, action: `turnIn:${q.id}`, cls: 'quest-ready' });
+          else if (q.giver === npcId && g.quests.isAvailable(q)) extra.push({ label: `Quest: ${q.name}`, action: `startQuest:${q.id}`, cls: 'quest-offer' });
+        }
+        if (extra.length) options = [...extra, ...options];
+      }
     }
     $('dialogue').classList.remove('hidden');
     $('dialogue-name').textContent = `${npc.label} — ${npc.role}`;

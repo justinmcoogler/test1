@@ -123,6 +123,14 @@ body.classic-cam #crosshair { display: none; }
   font-size: calc(11px * var(--text-scale)); text-shadow: 1px 1px 1px #000; letter-spacing: 0.5px;
 }
 #compass-wrap { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.45); border: 1px solid var(--edge); border-radius: 6px; padding: 2px 6px; }
+/* FPS readout: top edge, left of the compass, easy to glance at while testing */
+#fps-badge { position: absolute; top: 12px; left: calc(50% - 210px); background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--edge); border-radius: 6px; padding: 3px 8px; color: #8fe08a;
+  font-size: calc(12px * var(--text-scale)); font-weight: 700; letter-spacing: 0.5px;
+  pointer-events: none; min-width: 58px; text-align: center; }
+#fps-badge.low { color: #e0b04a; }
+#fps-badge.bad { color: #e06a5a; }
+@media (max-width: 640px) { #fps-badge { left: auto; right: 106px; top: calc(8px + env(safe-area-inset-top, 0px)); font-size: 11px; } }
 #minimap { position: absolute; top: 12px; right: 12px; border: 1px solid var(--edge); border-radius: 8px; background: #101318; pointer-events: auto; cursor: pointer; }
 #quest-tracker {
   position: absolute; top: 192px; right: 12px; width: calc(240px * var(--ui-scale));

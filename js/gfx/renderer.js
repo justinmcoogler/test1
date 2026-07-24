@@ -283,7 +283,7 @@ export class Renderer {
   // Renders one registered mob model into a square 2D canvas via an FBO, in a
   // static 3/4 rest pose framed on the model's bounds, so the settings panel can
   // show what each mob looks like. Returns false if the model isn't registered.
-  renderMobThumb(modelName, out2d, yaw = 0, pitch = 0) {
+  renderMobThumb(modelName, out2d, yaw = 0, pitch = 0, pose = null) {
     const gl = this.gl;
     const model = this.modelCache.get(modelName);
     if (!model) return false;
@@ -348,7 +348,10 @@ export class Renderer {
       gl.bindTexture(gl.TEXTURE_2D, model.texture || this.atlasTex);
       for (const part of model.parts) {
         if (!part.mesh) continue;
-        gl.uniformMatrix4fv(wp.uniforms.uModel, false, ident);
+        // rest pose (passed by the caller via evaluatePose) — without it, bone
+        // rotations and parent chains are ignored and rotated rigs (birds,
+        // seals, fish) preview as unrotated exploded stacks
+        gl.uniformMatrix4fv(wp.uniforms.uModel, false, pose?.[part.id] || ident);
         gl.bindVertexArray(part.mesh.vao);
         gl.drawElements(gl.TRIANGLES, part.mesh.count, gl.UNSIGNED_INT, 0);
       }

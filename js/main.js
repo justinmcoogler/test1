@@ -452,6 +452,9 @@ class Game {
   // ---------------------------------------------------------------- loop
   start() {
     let last = performance.now();
+    // FPS badge: average over ~0.5s windows so the number is readable, not a blur
+    let fpsAccum = 0, fpsFrames = 0;
+    const fpsEl = document.getElementById('fps-badge');
     const loop = (now) => {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
@@ -460,6 +463,15 @@ class Game {
         this.tick(dt);
       } catch (e) {
         console.error('tick error', e);
+      }
+      if (fpsEl) {
+        fpsAccum += dt; fpsFrames++;
+        if (fpsAccum >= 0.5) {
+          const fps = Math.round(fpsFrames / fpsAccum);
+          fpsEl.textContent = `${fps} FPS`;
+          fpsEl.className = fps < 30 ? 'bad' : fps < 50 ? 'low' : '';
+          fpsAccum = 0; fpsFrames = 0;
+        }
       }
       requestAnimationFrame(loop);
     };
