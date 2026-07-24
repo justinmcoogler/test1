@@ -166,6 +166,70 @@ export function convertBBModel(json, opts = {}) {
   const kept = parts.filter((p) => p.id === 'body' || p.boxes.length || p.rotation || hasKeptChild(p.id));
   for (const p of kept) if (p.parent && !kept.some((q) => q.id === p.parent)) p.parent = null;
 
+  // Ground + centre by the POSED bounds. Bone rotations (a seal's -90° body)
+  // swing geometry away from where the unrotated boxes sat, so normalising on
+  // raw boxes left rotated models floating or sunken. Evaluate the rest pose
+  // (rotation about pivot, parent chains applied), transform every box corner,
+  // and shift ALL pivots + boxes so posed feet sit at y=0, centred on x/z —
+  // a uniform translation commutes with rotation-about-pivot, so the pose
+  // itself is unchanged.
+  const restMat = new Map(); // part id → 3x4 affine [r00..r22, tx, ty, tz]
+  const matFor = (p) => {
+    if (restMat.has(p.id)) return restMat.get(p.id);
+    const d = Math.PI / 180;
+    const [rx, ry, rz] = (p.rotation || [0, 0, 0]).map((v) => v * d);
+    const cxr = Math.cos(rx), sxr = Math.sin(rx), cyr = Math.cos(ry), syr = Math.sin(ry), czr = Math.cos(rz), szr = Math.sin(rz);
+    // R = Rz·Ry·Rx, then T(pivot) · R · T(-pivot) (matches the runtime poseMatrix)
+    const r = [
+      czr * cyr, czr * syr * sxr - szr * cxr, czr * syr * cxr + szr * sxr,
+      szr * cyr, szr * syr * sxr + czr * cxr, szr * syr * cxr - czr * sxr,
+      -syr, cyr * sxr, cyr * cxr,
+    ];
+    const [px2, py2, pz2] = p.pivot;
+    let m = [
+      r[0], r[1], r[2], px2 - (r[0] * px2 + r[1] * py2 + r[2] * pz2),
+      r[3], r[4], r[5], py2 - (r[3] * px2 + r[4] * py2 + r[5] * pz2),
+      r[6], r[7], r[8], pz2 - (r[6] * px2 + r[7] * py2 + r[8] * pz2),
+    ];
+    const parent = p.parent && kept.find((q) => q.id === p.parent);
+    if (parent) {
+      const a = matFor(parent), b = m;
+      m = [
+        a[0] * b[0] + a[1] * b[4] + a[2] * b[8], a[0] * b[1] + a[1] * b[5] + a[2] * b[9], a[0] * b[2] + a[1] * b[6] + a[2] * b[10], a[0] * b[3] + a[1] * b[7] + a[2] * b[11] + a[3],
+        a[4] * b[0] + a[5] * b[4] + a[6] * b[8], a[4] * b[1] + a[5] * b[5] + a[6] * b[9], a[4] * b[2] + a[5] * b[6] + a[6] * b[10], a[4] * b[3] + a[5] * b[7] + a[6] * b[11] + a[7],
+        a[8] * b[0] + a[9] * b[4] + a[10] * b[8], a[8] * b[1] + a[9] * b[5] + a[10] * b[9], a[8] * b[2] + a[9] * b[6] + a[10] * b[10], a[8] * b[3] + a[9] * b[7] + a[10] * b[11] + a[11],
+      ];
+    }
+    restMat.set(p.id, m);
+    return m;
+  };
+  let pMinX = Infinity, pMaxX = -Infinity, pMinY = Infinity, pMinZ = Infinity, pMaxZ = -Infinity;
+  for (const p of kept) {
+    const m = matFor(p);
+    for (const bx of p.boxes) {
+      for (let c = 0; c < 8; c++) {
+        const x = bx.from[0] + ((c & 1) ? bx.size[0] : 0);
+        const y = bx.from[1] + ((c & 2) ? bx.size[1] : 0);
+        const z = bx.from[2] + ((c & 4) ? bx.size[2] : 0);
+        const wx2 = m[0] * x + m[1] * y + m[2] * z + m[3];
+        const wy2 = m[4] * x + m[5] * y + m[6] * z + m[7];
+        const wz2 = m[8] * x + m[9] * y + m[10] * z + m[11];
+        if (wx2 < pMinX) pMinX = wx2; if (wx2 > pMaxX) pMaxX = wx2;
+        if (wy2 < pMinY) pMinY = wy2;
+        if (wz2 < pMinZ) pMinZ = wz2; if (wz2 > pMaxZ) pMaxZ = wz2;
+      }
+    }
+  }
+  if (Number.isFinite(pMinY)) {
+    const dx2 = +(((pMinX + pMaxX) / 2)).toFixed(4);
+    const dy2 = +pMinY.toFixed(4);
+    const dz2 = +(((pMinZ + pMaxZ) / 2)).toFixed(4);
+    for (const p of kept) {
+      p.pivot = [+(p.pivot[0] - dx2).toFixed(4), +(p.pivot[1] - dy2).toFixed(4), +(p.pivot[2] - dz2).toFixed(4)];
+      for (const bx of p.boxes) bx.from = [+(bx.from[0] - dx2).toFixed(4), +(bx.from[1] - dy2).toFixed(4), +(bx.from[2] - dz2).toFixed(4)];
+    }
+  }
+
   // rig: filename hint wins, else infer from limb bones
   let rig = opts.rig;
   if (!rig) {
