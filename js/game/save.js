@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS = {
                           // style and spell specials (the optional fantasy sandbox).
   classicCamera: false,  // true = RuneScape-style third-person view + click-to-move
   renderDistance: 4,
+  dynamicResolution: true, // auto-scale internal render resolution to hold FPS (great on phones)
   sensitivity: 1,
   invertY: false,
   uiScale: 1,

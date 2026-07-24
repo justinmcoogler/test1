@@ -988,6 +988,7 @@ export class UI {
     body.innerHTML = `<div class="settings-grid">
       ${row('Classic camera — third person, click to move (V)', check('classicCamera'))}
       ${row('Render distance (chunks)', range('renderDistance', 2, 8, 1))}
+      ${row('Dynamic resolution — auto-scale sharpness to keep a smooth frame rate (recommended on phones)', check('dynamicResolution'))}
       ${row('Camera sensitivity', range('sensitivity', 0.2, 3, 0.1))}
       ${row('Invert Y axis', check('invertY'))}
       ${row('UI scale', range('uiScale', 0.7, 1.6, 0.05))}

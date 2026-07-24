@@ -421,6 +421,8 @@ class Game {
     document.documentElement.classList.toggle('reduced-motion', s.reducedMotion);
     document.documentElement.classList.toggle('left-handed', s.leftHanded);
     this.renderer.renderDistance = s.renderDistance;
+    this.renderer.dynamicResolution = s.dynamicResolution !== false;
+    if (s.dynamicResolution === false && this.renderer.renderScale !== 1) { this.renderer.renderScale = 1; this.renderer.resize(); }
     this.renderer.reducedMotion = s.reducedMotion;
     this.renderer.highQuality = s.highGraphics === true || s.graphicsPreset === 'high'; // gradient sky + sun/moon/stars
     document.body.classList.toggle('classic-cam', !!s.classicCamera);
@@ -447,6 +449,7 @@ class Game {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
       try {
+        this.renderer.adaptResolution(dt); // scale internal resolution to keep FPS smooth
         this.tick(dt);
       } catch (e) {
         console.error('tick error', e);

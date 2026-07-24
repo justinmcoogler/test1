@@ -66,6 +66,8 @@ export class Renderer {
     this.camPos = [0, 40, 0];
     this.fov = 72 * Math.PI / 180;
     this.renderDistance = 5; // chunks
+    this.renderScale = 1;    // adaptive-resolution factor (0.5–1), driven by FPS
+    this.dynamicResolution = true;
     this.fogMix = 0;         // 0 surface … 1 cave
     this.particles = [];
     this.precip = { type: null, intensity: 0, wind: 0, pool: [] }; // rain/snow field around the camera
@@ -77,15 +79,37 @@ export class Renderer {
   }
 
   resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const w = Math.floor(this.canvas.clientWidth * dpr) || 800;
-    const h = Math.floor(this.canvas.clientHeight * dpr) || 600;
+    // Adaptive resolution: on weak GPUs (phones) we render the 3D scene at fewer
+    // pixels and let the browser upscale the canvas to fill — a big fill-rate
+    // saving that the pixel-art look mostly hides, so the render distance can
+    // stay far. renderScale is driven by measured FPS in adaptResolution().
+    const dpr = Math.min(window.devicePixelRatio || 1, 2) * (this.renderScale || 1);
+    const w = Math.max(1, Math.floor(this.canvas.clientWidth * dpr)) || 800;
+    const h = Math.max(1, Math.floor(this.canvas.clientHeight * dpr)) || 600;
     if (this.canvas.width !== w || this.canvas.height !== h) {
       this.canvas.width = w;
       this.canvas.height = h;
     }
     this.gl.viewport(0, 0, w, h);
     mat4Perspective(this.proj, this.fov, w / h, 0.08, 400);
+  }
+
+  // Nudge the internal render scale toward a smooth frame rate. Sampled over a
+  // ~0.5s window with a cooldown + hysteresis so it settles instead of pumping.
+  adaptResolution(dt) {
+    if (this.dynamicResolution === false) return;
+    if (this.renderScale === undefined) this.renderScale = 1;
+    this._scaleAccum = (this._scaleAccum || 0) + dt;
+    this._scaleFrames = (this._scaleFrames || 0) + 1;
+    this._scaleCd = (this._scaleCd || 0) - dt;
+    if (this._scaleAccum < 0.5) return;
+    const fps = this._scaleFrames / this._scaleAccum;
+    this._scaleAccum = 0; this._scaleFrames = 0;
+    if (this._scaleCd > 0) return;
+    let s = this.renderScale;
+    if (fps < 45 && s > 0.5) s = Math.max(0.5, +(s - 0.1).toFixed(2));       // struggling → fewer pixels
+    else if (fps > 72 && s < 1) s = Math.min(1, +(s + 0.1).toFixed(2));      // headroom → sharpen back up
+    if (s !== this.renderScale) { this.renderScale = s; this._scaleCd = 1.2; this.resize(); }
   }
 
   setFPSCamera(eye, yaw, pitch) {
