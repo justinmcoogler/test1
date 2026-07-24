@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { B, BLOCKS, SHAPE_COLLISION, defShape } from '../../js/world/blocks.js';
 import { World } from '../../js/world/world.js';
+import { Player } from '../../js/player/player.js';
 
 test('shape variants register, reuse base tiles, and set flags', () => {
   const cases = [
@@ -63,6 +64,19 @@ test('trapdoor opens, closes, and reports pass-through collision when open', () 
   w.setFacing(2, y, 2, w.facingAt(2, y, 2) ^ 8);
   assert.equal((w.facingAt(2, y, 2) >> 3) & 1, 0, 'open bit cleared');
   assert.equal(w.collisionHeight(2, y, 2), SHAPE_COLLISION.panel, 'closed again → board');
+});
+
+test('the player walks over carpet instead of bumping its edge', () => {
+  const w = new World(4242);
+  w.ensureChunk(0, 0);
+  const carpet = Object.keys(B).find((n) => n.endsWith('_carpet'));
+  const y = 66;
+  for (let x = 2; x <= 16; x++) { w.setBlock(x, y, 2, B.stone, true); w.setBlock(x, y + 1, 2, B[carpet], true); }
+  const p = new Player();
+  p.x = 2.5; p.z = 2.5; p.y = y + 1; p.onGround = true;
+  for (let i = 0; i < 40; i++) { p.moveAxis(w, 0.12, 0, 0); p.moveAxis(w, 0, -0.03, 0); }
+  assert.ok(p.x > 6, `player crossed several carpet cells (x=${p.x.toFixed(2)})`);
+  assert.ok(p.y >= y + 1 - 0.02 && p.y <= y + 1 + SHAPE_COLLISION.carpet + 0.02, `stayed grounded on the carpet, not fallen (y=${p.y.toFixed(3)})`);
 });
 
 test('player facing edits are recorded and survive a save round-trip', () => {

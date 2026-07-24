@@ -1070,6 +1070,37 @@ export class UI {
       ? types.map((t) => this._adminMobHTML(t)).join('')
       : '<div class="admin-empty">No mobs match your search.</div>';
     this._wireAdminList(host);
+    this._fillAdminThumbs(host);
+  }
+
+  // Paint a small 3/4 model preview into each row's thumbnail. Rendered once per
+  // mob via the renderer's offscreen FBO and cached as a data URL, so repaints
+  // (searching, expanding) reuse it instead of re-rendering.
+  _fillAdminThumbs(host) {
+    const r = this.game?.renderer;
+    if (!r || typeof r.renderMobThumb !== 'function') return;
+    this._mobThumbCache ??= new Map();
+    if (!this._thumbCanvas) { this._thumbCanvas = document.createElement('canvas'); this._thumbCanvas.width = this._thumbCanvas.height = 96; }
+    const paint = (img) => {
+      const type = img.dataset.mob;
+      let url = this._mobThumbCache.get(type);
+      if (url === undefined) { // render once, then cache the data URL for every repaint after
+        url = r.renderMobThumb(type, this._thumbCanvas) ? this._thumbCanvas.toDataURL() : '';
+        this._mobThumbCache.set(type, url);
+      }
+      if (url) img.src = url; else img.classList.add('admin-thumb-empty');
+    };
+    // Cached rows paint instantly; uncached ones render only when scrolled into
+    // view, so opening the (148-mob) list doesn't stall rendering everything.
+    if (!this._thumbObserver && typeof IntersectionObserver === 'function') {
+      this._thumbObserver = new IntersectionObserver((entries, obs) => {
+        for (const e of entries) if (e.isIntersecting) { paint(e.target); obs.unobserve(e.target); }
+      }, { root: host, rootMargin: '120px' });
+    }
+    for (const img of host.querySelectorAll('img.admin-thumb')) {
+      if (this._mobThumbCache.has(img.dataset.mob) || !this._thumbObserver) paint(img);
+      else this._thumbObserver.observe(img);
+    }
   }
 
   _adminMobHTML(type) {
@@ -1080,6 +1111,7 @@ export class UI {
     return `<div class="admin-mob${open ? ' open' : ''}" data-mob="${type}">
       <div class="admin-mob-head">
         <button class="admin-caret" data-act="toggle" title="Expand">${open ? '▾' : '▸'}</button>
+        <img class="admin-thumb" data-mob="${type}" alt="" width="52" height="52">
         <span class="admin-mob-name">${def.label || type} ${badge}<code>${type}</code></span>
         <label class="admin-active"><input type="checkbox" data-act="active" ${active ? 'checked' : ''}>Active</label>
       </div>

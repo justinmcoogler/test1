@@ -15,6 +15,19 @@ const DAY_FOG = [0.62, 0.76, 0.88];
 const NIGHT_FOG = [0.045, 0.06, 0.12];
 const CAVE_FOG = [0.05, 0.06, 0.08];
 
+// Axis-aligned bounds over one or more box lists (model space) — centre + a
+// half-extent radius. Used to frame the admin/debug mob-preview camera so every
+// creature, bee to dragon, fits its thumbnail.
+function modelBounds(boxLists) {
+  let mnx = Infinity, mny = Infinity, mnz = Infinity, mxx = -Infinity, mxy = -Infinity, mxz = -Infinity;
+  for (const boxes of boxLists) for (const b of boxes || []) {
+    mnx = Math.min(mnx, b.x); mny = Math.min(mny, b.y); mnz = Math.min(mnz, b.z);
+    mxx = Math.max(mxx, b.x + b.w); mxy = Math.max(mxy, b.y + b.h); mxz = Math.max(mxz, b.z + b.d);
+  }
+  if (mnx === Infinity) return { cx: 0, cy: 0.9, cz: 0, r: 1 };
+  return { cx: (mnx + mxx) / 2, cy: (mny + mxy) / 2, cz: (mnz + mxz) / 2, r: Math.max(0.3, Math.max(mxx - mnx, mxy - mny, mxz - mnz) / 2) };
+}
+
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -168,6 +181,7 @@ export class Renderer {
   registerModel(name, boxes, defaultTex = 'skin_solid') {
     if (this.modelCache.has(name)) return;
     const mesh = this.buildBoxMesh(boxes, defaultTex);
+    mesh.bounds = modelBounds([boxes]);
     this.modelCache.set(name, mesh);
   }
 
@@ -215,6 +229,7 @@ export class Renderer {
     this.modelCache.set(name, {
       animated: true,
       texture,
+      bounds: modelBounds(parts.map((p) => p.boxes)),
       parts: parts.map((p) => ({
         id: p.id, parent: p.parent || null, pivot: p.pivot || [0, 0, 0],
         rotation: p.rotation || null,
@@ -238,6 +253,100 @@ export class Renderer {
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
     return tex;
+  }
+
+  // ---- offscreen mob thumbnail (admin/debug preview) ---------------------
+  // Renders one registered mob model into a square 2D canvas via an FBO, in a
+  // static 3/4 rest pose framed on the model's bounds, so the settings panel can
+  // show what each mob looks like. Returns false if the model isn't registered.
+  renderMobThumb(modelName, out2d) {
+    const gl = this.gl;
+    const model = this.modelCache.get(modelName);
+    if (!model) return false;
+    const SZ = out2d.width || 96;
+    if (!this._thumbFBO || this._thumbSize !== SZ) {
+      if (this._thumbFBO) { gl.deleteFramebuffer(this._thumbFBO); gl.deleteTexture(this._thumbTex); gl.deleteRenderbuffer(this._thumbDepth); }
+      this._thumbSize = SZ;
+      this._thumbTex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, this._thumbTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, SZ, SZ, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      this._thumbDepth = gl.createRenderbuffer();
+      gl.bindRenderbuffer(gl.RENDERBUFFER, this._thumbDepth);
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, SZ, SZ);
+      this._thumbFBO = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this._thumbFBO);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._thumbTex, 0);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this._thumbDepth);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._thumbFBO);
+    gl.viewport(0, 0, SZ, SZ);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE); // some imported meshes wind faces inconsistently
+
+    // frame the camera on the model's bounds; look from front-right-above.
+    const b = model.bounds || { cx: 0, cy: 0.9, cz: 0, r: 1 };
+    const dist = b.r * 3.4 + 0.6;
+    const dir = [0.55, 0.42, 0.9]; const dl = Math.hypot(...dir);
+    const target = [b.cx, b.cy, b.cz];
+    const eye = [b.cx + dir[0] / dl * dist, b.cy + dir[1] / dl * dist, b.cz + dir[2] / dl * dist];
+    const proj = mat4Identity(new Float32Array(16));
+    mat4Perspective(proj, 40 * Math.PI / 180, 1, 0.05, 100);
+    const view = mat4Identity(new Float32Array(16));
+    mat4LookAt(view, eye, target);
+    const pv = mat4Identity(new Float32Array(16));
+    mat4Multiply(pv, proj, view);
+
+    const wp = this.worldProg;
+    gl.useProgram(wp.prog);
+    gl.uniformMatrix4fv(wp.uniforms.uPV, false, pv);
+    gl.uniform3fv(wp.uniforms.uCamPos, eye);
+    gl.uniform3fv(wp.uniforms.uFogColor, [0, 0, 0]);
+    gl.uniform1f(wp.uniforms.uFogNear, 500);
+    gl.uniform1f(wp.uniforms.uFogFar, 1000);
+    gl.uniform1f(wp.uniforms.uOpacity, 1);
+    gl.uniform1f(wp.uniforms.uCutout, 0);
+    gl.uniform1i(wp.uniforms.uAtlas, 0);
+    gl.uniform3f(wp.uniforms.uTint, 0, 0, 0);
+    gl.uniform1f(wp.uniforms.uLightMult, 1.2);
+    gl.activeTexture(gl.TEXTURE0);
+    const ident = mat4Identity(this.tmp);
+    if (model.animated) {
+      gl.bindTexture(gl.TEXTURE_2D, model.texture || this.atlasTex);
+      for (const part of model.parts) {
+        if (!part.mesh) continue;
+        gl.uniformMatrix4fv(wp.uniforms.uModel, false, ident);
+        gl.bindVertexArray(part.mesh.vao);
+        gl.drawElements(gl.TRIANGLES, part.mesh.count, gl.UNSIGNED_INT, 0);
+      }
+      gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
+    } else {
+      gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
+      gl.uniformMatrix4fv(wp.uniforms.uModel, false, ident);
+      gl.bindVertexArray(model.vao);
+      gl.drawElements(gl.TRIANGLES, model.count, gl.UNSIGNED_INT, 0);
+    }
+
+    // read back → 2D canvas (GL origin is bottom-left, so flip vertically)
+    const px = new Uint8Array(SZ * SZ * 4);
+    gl.readPixels(0, 0, SZ, SZ, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    const ctx = out2d.getContext('2d');
+    const img = ctx.createImageData(SZ, SZ);
+    for (let y = 0; y < SZ; y++) {
+      const srcRow = (SZ - 1 - y) * SZ * 4;
+      img.data.set(px.subarray(srcRow, srcRow + SZ * 4), y * SZ * 4);
+    }
+    ctx.putImageData(img, 0, 0);
+
+    // restore default target + main viewport/projection
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.enable(gl.CULL_FACE);
+    gl.bindVertexArray(null);
+    this.resize();
+    return true;
   }
 
   // ---- particles ----

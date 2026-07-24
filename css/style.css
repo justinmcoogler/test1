@@ -320,6 +320,8 @@ button:disabled { opacity: 0.45; cursor: default; }
 .admin-mob.open { background: rgba(255,255,255,0.03); }
 .admin-mob-head { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
 .admin-caret { background: none; border: none; color: var(--ink-dim); cursor: pointer; font-size: 13px; width: 18px; padding: 0; }
+.admin-thumb { width: 52px; height: 52px; flex: none; image-rendering: pixelated; border-radius: 4px; background: rgba(0,0,0,0.28) radial-gradient(circle at 50% 40%, rgba(255,255,255,0.09), transparent 70%); }
+.admin-thumb-empty { opacity: 0.25; }
 .admin-mob-name { flex: 1; font-size: 13px; display: flex; align-items: center; gap: 7px; }
 .admin-mob-name code { color: var(--ink-dim); font-size: 10.5px; opacity: 0.75; }
 .admin-badge { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #241a04;

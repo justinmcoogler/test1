@@ -10,6 +10,10 @@ const SWIM = 2.6;
 const ACCEL = 42;
 const AIR_ACCEL = 9;
 const W = 0.6, H = 1.8;
+// Blocks this low (carpet 1/16, a closed trapdoor 2/16) hold you up from above
+// but never block a horizontal step — you walk over them instead of the edge
+// stopping you dead.
+const WALKOVER = 0.2;
 
 export class Player {
   constructor() {
@@ -183,6 +187,7 @@ export class Player {
           for (let bz = z0; bz <= z1 && !hit; bz++) {
             const ch = world.collisionHeight(bx, by, bz);
             if (ch <= 0) continue;
+            if ((ax !== 0 || az !== 0) && ch <= WALKOVER) continue; // walk over low lips, don't bump them
             const blockTop = by + ch;
             if (minX >= bx + 1 || maxX <= bx || minZ >= bz + 1 || maxZ <= bz) continue;
             if (minY >= blockTop || maxY <= by) continue;
