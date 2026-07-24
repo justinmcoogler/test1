@@ -65,11 +65,16 @@ for (let dx = -1; dx <= 1; dx++) {
   }
 }
 
+const ZERO_LIGHT = () => 0;
 function computeBlockLight(get, bandTop) {
   const M = LIGHT_MARGIN;
   const EX = CHUNK + 2 * M, EZ = CHUNK + 2 * M;
   const idx = (x, y, z) => ((y * EZ) + (z + M)) * EX + (x + M);
-  const light = new Float32Array(EX * bandTop * EZ);
+  // Find emitters first. The overwhelmingly common chunk has NONE (no torches,
+  // lava or crystals in the 3×3 neighborhood), so we skip both the ~200KB
+  // Float32Array allocation and the whole flood in that case — a big cut to
+  // per-remesh GC pressure. Behaviour is identical: with no emitters the old
+  // path's light grid was all-zero anyway.
   const queue = [];
   for (let y = 1; y < bandTop; y++) {
     for (let z = -M; z < CHUNK + M; z++) {
@@ -77,14 +82,13 @@ function computeBlockLight(get, bandTop) {
         const id = get(x, y, z);
         if (id === B.air) continue;
         const em = BLOCKS[id].emissive;
-        if (em > 0) {
-          const i = idx(x, y, z);
-          light[i] = em;
-          queue.push(x, y, z, em);
-        }
+        if (em > 0) queue.push(x, y, z, em);
       }
     }
   }
+  if (!queue.length) return ZERO_LIGHT;
+  const light = new Float32Array(EX * bandTop * EZ);
+  for (let e = 0; e < queue.length; e += 4) light[idx(queue[e], queue[e + 1], queue[e + 2])] = queue[e + 3];
   // relaxation flood through non-opaque cells (re-queues on improvement)
   for (let q = 0; q < queue.length; q += 4) {
     const x = queue[q], y = queue[q + 1], z = queue[q + 2];

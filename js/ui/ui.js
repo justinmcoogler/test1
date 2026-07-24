@@ -218,12 +218,17 @@ export class UI {
   // ------------------------------------------------------------ HUD
   renderVitals() {
     const p = this.game.player;
-    $('hp-fill').style.width = `${(p.hp / p.maxHp) * 100}%`;
-    $('hp-text').textContent = `HP ${Math.ceil(p.hp)}/${p.maxHp}`;
-    $('energy-fill').style.width = `${(p.energy / p.maxEnergy) * 100}%`;
-    $('energy-text').textContent = `STA ${Math.floor(p.energy)}`;
+    // change-detect each field: DOM writes force style/layout recalc, so writing
+    // ~15 unchanged properties every frame was pure main-thread cost. Only touch
+    // the DOM when the displayed value actually changes.
+    const vc = this._vitalCache || (this._vitalCache = {});
+    const set = (key, el, prop, val) => { if (vc[key] !== val) { vc[key] = val; el[prop] = val; } };
+    set('hpw', $('hp-fill').style, 'width', `${(p.hp / p.maxHp) * 100}%`);
+    set('hpt', $('hp-text'), 'textContent', `HP ${Math.ceil(p.hp)}/${p.maxHp}`);
+    set('enw', $('energy-fill').style, 'width', `${(p.energy / p.maxEnergy) * 100}%`);
+    set('ent', $('energy-text'), 'textContent', `STA ${Math.floor(p.energy)}`);
     // real-world play has no magic — the mana bar stays hidden
-    $('mana-fill').parentElement.style.display = 'none';
+    if (!vc.manaHidden) { vc.manaHidden = true; $('mana-fill').parentElement.style.display = 'none'; }
     // hydration bar (lazily created; always shown in real-world play)
     let hyb = $('hydration-bar');
     if (!hyb) {
@@ -419,6 +424,11 @@ export class UI {
   showLessonHint(lesson) { this.toast(lesson.hint, ''); }
 
   drawCompass() {
+    // the compass depends only on heading — skip the full clear+redraw when the
+    // yaw hasn't moved (rounded to ~0.3°), which is most frames while standing
+    const yaw = this.game.player.yaw;
+    if (this._lastCompassYaw !== undefined && Math.abs(yaw - this._lastCompassYaw) < 0.005) return;
+    this._lastCompassYaw = yaw;
     const canvas = $('compass');
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);

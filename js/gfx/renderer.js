@@ -1,7 +1,7 @@
 // Renderer: camera, chunk meshes, entities, overlays, particles.
 import {
   createGL, compileProgram, WORLD_VS, WORLD_FS, TERRAIN_FS, COLOR_VS, COLOR_FS,
-  SKY_VS, SKY_FS, uploadWorldMesh, uploadColorMesh, deleteMesh, createAtlasTexture,
+  SKY_VS, SKY_FS, uploadWorldMesh, deleteMesh, createAtlasTexture,
 } from './gl.js';
 import { meshChunk } from './mesher.js';
 import { CHUNK, WORLD_H } from '../world/worldgen.js';
@@ -14,6 +14,10 @@ import { getAtlasCanvas, tileUV } from './textures.js';
 const DAY_FOG = [0.62, 0.76, 0.88];
 const NIGHT_FOG = [0.045, 0.06, 0.12];
 const CAVE_FOG = [0.05, 0.06, 0.08];
+
+// The 12 edges of a unit cube (index pairs into an 8-corner list) — the
+// selection wireframe. Module const so it isn't rebuilt each targeted frame.
+const SELECTION_EDGES = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];
 
 // Axis-aligned bounds over one or more box lists (model space) — centre + a
 // half-extent radius. Used to frame the admin/debug mob-preview camera so every
@@ -631,126 +635,140 @@ export class Renderer {
     gl.bindVertexArray(null);
   }
 
+  // Grow the persistent overlay VAO/VBO + static quad index buffer to hold at
+  // least `quads` quads. Created once and reused every frame — the old path
+  // created and deleted a VAO+VBO+IBO (plus two typed arrays) EVERY frame, the
+  // worst GC/driver-churn pattern in the renderer.
+  _ensureOverlayCap(quads) {
+    const gl = this.gl;
+    if (!this._ovlVAO) {
+      this._ovlVAO = gl.createVertexArray();
+      this._ovlVBO = gl.createBuffer();
+      this._ovlIBO = gl.createBuffer();
+      this._ovlQuadCap = 0;
+      this._ovlVerts = new Float32Array(0);
+    }
+    if (quads <= this._ovlQuadCap) return;
+    const cap = Math.max(quads, (this._ovlQuadCap || 64) * 2);
+    this._ovlQuadCap = cap;
+    this._ovlVerts = new Float32Array(cap * 24); // 4 verts × (3 pos + 3 color)
+    const idx = new Uint32Array(cap * 6);
+    for (let q = 0; q < cap; q++) {
+      const v = q * 4, o = q * 6;
+      idx[o] = v; idx[o + 1] = v + 1; idx[o + 2] = v + 2; idx[o + 3] = v; idx[o + 4] = v + 2; idx[o + 5] = v + 3;
+    }
+    gl.bindVertexArray(this._ovlVAO);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this._ovlVBO);
+    gl.bufferData(gl.ARRAY_BUFFER, this._ovlVerts.byteLength, gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+    gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._ovlIBO);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+    gl.bindVertexArray(null);
+  }
+
   drawOverlays(opts) {
     const gl = this.gl;
     const cp = this.colorProg;
-    const verts = [], indices = [];
-    let vc = 0;
-    const quad = (p, color) => {
-      for (const pt of p) verts.push(pt[0], pt[1], pt[2], color[0], color[1], color[2]);
-      indices.push(vc, vc + 1, vc + 2, vc, vc + 2, vc + 3);
-      vc += 4;
-    };
-
-    for (const t of opts.tiles || []) {
-      const y = t.y + 0.04;
-      quad(
-        [[t.x + 0.06, y, t.z + 0.94], [t.x + 0.94, y, t.z + 0.94], [t.x + 0.94, y, t.z + 0.06], [t.x + 0.06, y, t.z + 0.06]],
-        t.color
-      );
-    }
-    for (const p of this.particles) {
-      // camera-facing billboard
-      const rx = [this.view[0], this.view[4], this.view[8]];
-      const ry = [this.view[1], this.view[5], this.view[9]];
-      const s = p.size * (0.5 + 0.5 * (p.life / p.maxLife));
-      quad(
-        [
-          [p.x - rx[0] * s - ry[0] * s, p.y - rx[1] * s - ry[1] * s, p.z - rx[2] * s - ry[2] * s],
-          [p.x + rx[0] * s - ry[0] * s, p.y + rx[1] * s - ry[1] * s, p.z + rx[2] * s - ry[2] * s],
-          [p.x + rx[0] * s + ry[0] * s, p.y + rx[1] * s + ry[1] * s, p.z + rx[2] * s + ry[2] * s],
-          [p.x - rx[0] * s + ry[0] * s, p.y - rx[1] * s + ry[1] * s, p.z - rx[2] * s + ry[2] * s],
-        ],
-        p.color
-      );
-    }
-    // precipitation: rain streaks / snow flakes recycled around the camera
-    if (this.precip.pool.length) {
-      const snow = this.precip.type === 'snow';
-      const rx = [this.view[0], this.view[4], this.view[8]]; // camera-right in world space
-      if (snow) {
-        const ry = [this.view[1], this.view[5], this.view[9]];
-        const s = 0.05;
-        for (const p of this.precip.pool) {
-          quad([
-            [p.x - rx[0] * s - ry[0] * s, p.y - rx[1] * s - ry[1] * s, p.z - rx[2] * s - ry[2] * s],
-            [p.x + rx[0] * s - ry[0] * s, p.y + rx[1] * s - ry[1] * s, p.z + rx[2] * s - ry[2] * s],
-            [p.x + rx[0] * s + ry[0] * s, p.y + rx[1] * s + ry[1] * s, p.z + rx[2] * s + ry[2] * s],
-            [p.x - rx[0] * s + ry[0] * s, p.y - rx[1] * s + ry[1] * s, p.z - rx[2] * s + ry[2] * s],
-          ], [0.95, 0.96, 1.0]);
-        }
-      } else {
-        const w = 0.02, len = 0.75;
-        for (const p of this.precip.pool) {
-          const x0 = p.x - rx[0] * w, z0 = p.z - rx[2] * w;
-          const x1 = p.x + rx[0] * w, z1 = p.z + rx[2] * w;
-          quad([[x0, p.y, z0], [x1, p.y, z1], [x1, p.y - len, z1], [x0, p.y - len, z0]], [0.62, 0.70, 0.82]);
+    const tiles = opts.tiles || [], dots = opts.dots || [], markers = opts.markers || [];
+    const maxQuads = tiles.length + this.particles.length + this.precip.pool.length + dots.length + markers.length;
+    if (maxQuads > 0) {
+      this._ensureOverlayCap(maxQuads);
+      const V = this._ovlVerts;
+      let o = 0, qc = 0;
+      // write one quad (4 verts, flat color) straight into the reused array — no
+      // per-quad corner arrays, no per-frame typed-array allocation
+      const pushQuad = (ax, ay, az, bx, by, bz, ccx, ccy, ccz, dx, dy, dz, cr, cg, cb) => {
+        V[o] = ax; V[o + 1] = ay; V[o + 2] = az; V[o + 3] = cr; V[o + 4] = cg; V[o + 5] = cb;
+        V[o + 6] = bx; V[o + 7] = by; V[o + 8] = bz; V[o + 9] = cr; V[o + 10] = cg; V[o + 11] = cb;
+        V[o + 12] = ccx; V[o + 13] = ccy; V[o + 14] = ccz; V[o + 15] = cr; V[o + 16] = cg; V[o + 17] = cb;
+        V[o + 18] = dx; V[o + 19] = dy; V[o + 20] = dz; V[o + 21] = cr; V[o + 22] = cg; V[o + 23] = cb;
+        o += 24; qc++;
+      };
+      for (const t of tiles) {
+        const y = t.y + 0.04;
+        pushQuad(t.x + 0.06, y, t.z + 0.94, t.x + 0.94, y, t.z + 0.94, t.x + 0.94, y, t.z + 0.06, t.x + 0.06, y, t.z + 0.06, t.color[0], t.color[1], t.color[2]);
+      }
+      // camera basis in world space (right = rx*, up = ry*), computed once
+      const rx0 = this.view[0], rx1 = this.view[4], rx2 = this.view[8];
+      const ry0 = this.view[1], ry1 = this.view[5], ry2 = this.view[9];
+      for (const p of this.particles) {
+        const s = p.size * (0.5 + 0.5 * (p.life / p.maxLife));
+        pushQuad(
+          p.x - rx0 * s - ry0 * s, p.y - rx1 * s - ry1 * s, p.z - rx2 * s - ry2 * s,
+          p.x + rx0 * s - ry0 * s, p.y + rx1 * s - ry1 * s, p.z + rx2 * s - ry2 * s,
+          p.x + rx0 * s + ry0 * s, p.y + rx1 * s + ry1 * s, p.z + rx2 * s + ry2 * s,
+          p.x - rx0 * s + ry0 * s, p.y - rx1 * s + ry1 * s, p.z - rx2 * s + ry2 * s,
+          p.color[0], p.color[1], p.color[2]);
+      }
+      if (this.precip.pool.length) {
+        if (this.precip.type === 'snow') {
+          const s = 0.05;
+          for (const p of this.precip.pool) pushQuad(
+            p.x - rx0 * s - ry0 * s, p.y - rx1 * s - ry1 * s, p.z - rx2 * s - ry2 * s,
+            p.x + rx0 * s - ry0 * s, p.y + rx1 * s - ry1 * s, p.z + rx2 * s - ry2 * s,
+            p.x + rx0 * s + ry0 * s, p.y + rx1 * s + ry1 * s, p.z + rx2 * s + ry2 * s,
+            p.x - rx0 * s + ry0 * s, p.y - rx1 * s + ry1 * s, p.z - rx2 * s + ry2 * s,
+            0.95, 0.96, 1.0);
+        } else {
+          const w = 0.02, len = 0.75;
+          for (const p of this.precip.pool) {
+            const x0 = p.x - rx0 * w, z0 = p.z - rx2 * w, x1 = p.x + rx0 * w, z1 = p.z + rx2 * w;
+            pushQuad(x0, p.y, z0, x1, p.y, z1, x1, p.y - len, z1, x0, p.y - len, z0, 0.62, 0.70, 0.82);
+          }
         }
       }
-    }
-    // quest-trail guide dots: little pixels laid along the path on the ground
-    for (const d of opts.dots || []) {
-      const pulse = 0.5 + 0.5 * Math.sin(this.time * 4 + (d.x + d.z) * 0.9);
-      const r = 0.1 + pulse * 0.04;
-      const y = d.y + 0.06;
-      quad(
-        [[d.x + 0.5 - r, y, d.z + 0.5 + r], [d.x + 0.5 + r, y, d.z + 0.5 + r], [d.x + 0.5 + r, y, d.z + 0.5 - r], [d.x + 0.5 - r, y, d.z + 0.5 - r]],
-        [1, 0.85 + pulse * 0.1, 0.35]
-      );
-    }
-    for (const mk of opts.markers || []) {
-      const pulse = 0.5 + 0.5 * Math.sin(this.time * 3 + mk.x);
-      const r = 0.28 + pulse * 0.1;
-      const y = mk.y + 0.95;
-      quad(
-        [[mk.x + 0.5 - r, y, mk.z + 0.5 + r], [mk.x + 0.5 + r, y, mk.z + 0.5 + r], [mk.x + 0.5 + r, y, mk.z + 0.5 - r], [mk.x + 0.5 - r, y, mk.z + 0.5 - r]],
-        mk.color
-      );
-    }
-
-    if (vc > 0) {
-      gl.uniform1f(cp.uniforms.uOpacity, 0.45);
-      const mesh = uploadColorMesh(gl, new Float32Array(verts), new Uint32Array(indices), true);
-      gl.bindVertexArray(mesh.vao);
-      gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_INT, 0);
-      gl.bindVertexArray(null);
-      deleteMesh(gl, mesh);
-      gl.uniform1f(cp.uniforms.uOpacity, 1);
+      for (const d of dots) {
+        const pulse = 0.5 + 0.5 * Math.sin(this.time * 4 + (d.x + d.z) * 0.9);
+        const r = 0.1 + pulse * 0.04, y = d.y + 0.06, cxp = d.x + 0.5, czp = d.z + 0.5;
+        pushQuad(cxp - r, y, czp + r, cxp + r, y, czp + r, cxp + r, y, czp - r, cxp - r, y, czp - r, 1, 0.85 + pulse * 0.1, 0.35);
+      }
+      for (const mk of markers) {
+        const pulse = 0.5 + 0.5 * Math.sin(this.time * 3 + mk.x);
+        const r = 0.28 + pulse * 0.1, y = mk.y + 0.95, cxp = mk.x + 0.5, czp = mk.z + 0.5;
+        pushQuad(cxp - r, y, czp + r, cxp + r, y, czp + r, cxp + r, y, czp - r, cxp - r, y, czp - r, mk.color[0], mk.color[1], mk.color[2]);
+      }
+      if (qc > 0) {
+        gl.bindVertexArray(this._ovlVAO);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._ovlVBO);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, V, 0, qc * 24);
+        gl.uniform1f(cp.uniforms.uOpacity, 0.45);
+        gl.drawElements(gl.TRIANGLES, qc * 6, gl.UNSIGNED_INT, 0);
+        gl.uniform1f(cp.uniforms.uOpacity, 1);
+        gl.bindVertexArray(null);
+      }
     }
 
-    // selection wireframe
+    // selection wireframe — persistent 24-vertex line buffer, no per-frame churn
     if (opts.selection) {
+      if (!this._selVAO) {
+        this._selVAO = gl.createVertexArray();
+        this._selVBO = gl.createBuffer();
+        this._selVerts = new Float32Array(24 * 6);
+        gl.bindVertexArray(this._selVAO);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._selVBO);
+        gl.bufferData(gl.ARRAY_BUFFER, this._selVerts.byteLength, gl.DYNAMIC_DRAW);
+        gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+        gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+        gl.bindVertexArray(null);
+      }
       const { x, y, z } = opts.selection;
       const e = 0.004;
-      const lo = [x - e, y - e, z - e], hi = [x + 1 + e, y + 1 + e, z + 1 + e];
-      const lv = [];
-      const c = [0.05, 0.05, 0.05];
-      const P = (a, b, cc) => [a, b, cc];
-      const cs = [
-        [lo[0], lo[1], lo[2]], [hi[0], lo[1], lo[2]], [hi[0], lo[1], hi[2]], [lo[0], lo[1], hi[2]],
-        [lo[0], hi[1], lo[2]], [hi[0], hi[1], lo[2]], [hi[0], hi[1], hi[2]], [lo[0], hi[1], hi[2]],
-      ];
-      const edges = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];
-      for (const [a, b] of edges) {
-        lv.push(cs[a][0], cs[a][1], cs[a][2], c[0], c[1], c[2]);
-        lv.push(cs[b][0], cs[b][1], cs[b][2], c[0], c[1], c[2]);
+      const lo0 = x - e, lo1 = y - e, lo2 = z - e, hi0 = x + 1 + e, hi1 = y + 1 + e, hi2 = z + 1 + e;
+      const CS = [lo0, lo1, lo2, hi0, lo1, lo2, hi0, lo1, hi2, lo0, lo1, hi2, lo0, hi1, lo2, hi0, hi1, lo2, hi0, hi1, hi2, lo0, hi1, hi2];
+      const V = this._selVerts; let o = 0;
+      for (const [a, b] of SELECTION_EDGES) {
+        V[o] = CS[a * 3]; V[o + 1] = CS[a * 3 + 1]; V[o + 2] = CS[a * 3 + 2]; V[o + 3] = 0.05; V[o + 4] = 0.05; V[o + 5] = 0.05;
+        V[o + 6] = CS[b * 3]; V[o + 7] = CS[b * 3 + 1]; V[o + 8] = CS[b * 3 + 2]; V[o + 9] = 0.05; V[o + 10] = 0.05; V[o + 11] = 0.05;
+        o += 12;
       }
-      const gl2 = this.gl;
-      const vao = gl2.createVertexArray();
-      gl2.bindVertexArray(vao);
-      const vbo = gl2.createBuffer();
-      gl2.bindBuffer(gl2.ARRAY_BUFFER, vbo);
-      gl2.bufferData(gl2.ARRAY_BUFFER, new Float32Array(lv), gl2.DYNAMIC_DRAW);
-      gl2.enableVertexAttribArray(0);
-      gl2.vertexAttribPointer(0, 3, gl2.FLOAT, false, 24, 0);
-      gl2.enableVertexAttribArray(1);
-      gl2.vertexAttribPointer(1, 3, gl2.FLOAT, false, 24, 12);
-      gl2.uniform1f(cp.uniforms.uOpacity, 0.9);
-      gl2.drawArrays(gl2.LINES, 0, lv.length / 6);
-      gl2.uniform1f(cp.uniforms.uOpacity, 1);
-      gl2.bindVertexArray(null);
-      gl2.deleteVertexArray(vao);
-      gl2.deleteBuffer(vbo);
+      gl.bindVertexArray(this._selVAO);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._selVBO);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, V, 0, 24 * 6);
+      gl.uniform1f(cp.uniforms.uOpacity, 0.9);
+      gl.drawArrays(gl.LINES, 0, 24);
+      gl.uniform1f(cp.uniforms.uOpacity, 1);
+      gl.bindVertexArray(null);
     }
   }
 

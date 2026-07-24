@@ -510,7 +510,11 @@ class Game {
 
     this.world.update(dt);
     this.streamChunks();
-    this.enemyMgr.refresh();
+    // enemyMgr.refresh() rescans every spawn in every loaded chunk (allocating a
+    // Set + two array spreads); it's idempotent, so ~2.5 Hz is plenty. New
+    // spawns/despawns appear within 0.4s — chunks stream in over seconds anyway.
+    this._refreshAccum = (this._refreshAccum ?? 1) + dt;
+    if (this._refreshAccum >= 0.4) { this._refreshAccum = 0; this.enemyMgr.refresh(); }
     this.enemyMgr.update(dt, p, this.combat.active);
     this.combat.update(dt);
     this.combatRS.update(dt);
@@ -570,13 +574,19 @@ class Game {
       this.saveGame();
     }
 
-    // weather & seasons: local biome climate drives a slow-moving weather front
+    // weather & seasons: local biome climate drives a slow-moving weather front.
+    // temperatureAt/moistureAt are two 3-octave fbm2 calls; the front is slowly
+    // eased, so sampling at ~4 Hz (or when the player crosses to a new column) is
+    // indistinguishable and skips the noise every other frame. Reused below for
+    // the survival felt-temperature too, instead of sampling a second time.
     const cx = Math.floor(p.x), cz = Math.floor(p.z);
-    const btemp = this.world.gen.temperatureAt(cx, cz);
-    this.weather.update(dt, this.world.time, {
-      temp: btemp,
-      moist: this.world.gen.moistureAt(cx, cz),
-    });
+    this._climAccum = (this._climAccum || 0) + dt;
+    if (!this._clim || this._climAccum >= 0.25 || cx !== this._climX || cz !== this._climZ) {
+      this._climAccum = 0; this._climX = cx; this._climZ = cz;
+      this._clim = { temp: this.world.gen.temperatureAt(cx, cz), moist: this.world.gen.moistureAt(cx, cz) };
+    }
+    const btemp = this._clim.temp;
+    this.weather.update(dt, this.world.time, { temp: btemp, moist: this._clim.moist });
     const wr = this.weather.renderState();
     // per-biome atmospheric colour grade: warm/amber in the heat, cool/blue in the cold
     const grade = [1 + (btemp - 0.5) * 0.16, 1 + (btemp - 0.5) * 0.02, 1 - (btemp - 0.5) * 0.16];
@@ -615,7 +625,7 @@ class Game {
       if (underground) {
         felt = 0.45;
       } else {
-        felt = this.world.gen.temperatureAt(cx, cz)
+        felt = btemp // cached biome temperature (same 4 Hz sample as the weather front)
           + this.weather.tempOffset()
           - (1 - this.world.daylight()) * 0.10
           - Math.max(0, (p.y - SEA) / 220);
