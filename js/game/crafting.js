@@ -259,6 +259,33 @@ push('button', 1, null, 'construction', 1, 2, [['planks', 1]]);
 // Terracotta flower pot.
 push('flower_pot', 1, 'construction_bench', 'construction', 1, 4, [['terracotta', 1]]);
 
+// ---- Decorative town blocks, batch 2 (schematic-import equivalents) ---------
+// Each new block is reachable by a simple recipe from already-gatherable stock.
+// Wood fixtures (Woodworking / Construction).
+push('note_block', 1, 'workbench', 'construction', 1, 6, [['planks', 4], ['plant_fibre', 1]]);
+push('lectern', 1, 'workbench', 'woodworking', 2, 8, [['planks', 5]]);
+push('beehive', 1, 'workbench', 'construction', 2, 8, [['planks', 3], ['plant_fibre', 3]]);
+push('bee_nest', 1, 'workbench', 'construction', 2, 8, [['oak_log', 3], ['plant_fibre', 2]]);
+push('scaffolding', 6, 'workbench', 'woodworking', 1, 6, [['planks', 3], ['cord', 1]]);
+// Stone / metal fixtures (Construction bench, Smithing).
+push('lodestone', 1, 'construction_bench', 'construction', 5, 12, [['stone_brick', 8], ['iron_bar', 1]]);
+push('ender_chest', 1, 'construction_bench', 'construction', 6, 16, [['stone_brick', 8], ['veilcrystal', 1]]);
+push('cauldron', 1, 'construction_bench', 'smithing', 4, 12, [['iron_bar', 4]]);
+push('hopper', 1, 'construction_bench', 'smithing', 4, 12, [['iron_bar', 4], ['planks', 1]]);
+push('bell', 1, 'construction_bench', 'smithing', 6, 14, [['gold_bar', 1], ['planks', 1]]);
+push('rail', 8, 'construction_bench', 'smithing', 2, 8, [['iron_bar', 1], ['planks', 1]]);
+push('daylight_detector', 1, 'construction_bench', 'construction', 3, 10, [['planks', 3], ['glasspane', 3]]);
+// Terrain (Construction bench).
+push('warped_nylium', 1, 'construction_bench', 'construction', 1, 4, [['dirt', 1], ['cyan_dye', 1]]);
+push('suspicious_gravel', 1, 'construction_bench', 'construction', 1, 4, [['gravel', 1], ['clay_lump', 1]]);
+// Plants / decals (Foraging by hand).
+push('glow_lichen', 1, null, 'foraging', 1, 4, [['plant_fibre', 1], ['cyan_dye', 1]]);
+push('warped_roots', 1, null, 'foraging', 1, 4, [['plant_fibre', 2], ['cyan_dye', 1]]);
+push('sea_pickle', 1, null, 'foraging', 1, 4, [['plant_fibre', 1], ['green_dye', 1]]);
+push('cobweb', 1, null, 'tailoring', 1, 4, [['cord', 2]]);
+// Special — an eerie, glowing portal pane (Runestone altar).
+push('nether_portal', 1, 'enchant_altar', 'enchanting', 3, 20, [['purple_dye', 1], ['veilcrystal', 1]]);
+
 export function availableRecipes(skills, discoveredItems) {
   return RECIPES.filter((rec) => !rec.discover || discoveredItems.has(rec.discover));
 }

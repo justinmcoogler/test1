@@ -180,6 +180,27 @@ blockItem('sign', 'Sign', 'sign', 'sign');
 blockItem('button', 'Button', 'button', 'planks');
 blockItem('flower_pot', 'Flower Pot', 'flower_pot', 'terracotta');
 
+// ---- decorative town blocks, batch 2 (schematic-import equivalents) ----
+blockItem('note_block', 'Note Block', 'note_block', 'note_block');
+blockItem('beehive', 'Beehive', 'beehive', 'beehive');
+blockItem('bee_nest', 'Bee Nest', 'bee_nest', 'bee_nest');
+blockItem('ender_chest', 'Ender Chest', 'ender_chest', 'ender_chest_front');
+blockItem('lodestone', 'Lodestone', 'lodestone', 'lodestone_top');
+blockItem('cauldron', 'Cauldron', 'cauldron', 'cauldron_top');
+blockItem('hopper', 'Hopper', 'hopper', 'hopper_top');
+blockItem('bell', 'Bell', 'bell', 'bell');
+blockItem('lectern', 'Lectern', 'lectern', 'lectern_top');
+blockItem('warped_nylium', 'Warped Nylium', 'warped_nylium', 'warped_nylium');
+blockItem('suspicious_gravel', 'Suspicious Gravel', 'suspicious_gravel', 'suspicious_gravel');
+blockItem('rail', 'Rail', 'rail', 'rail');
+blockItem('daylight_detector', 'Daylight Detector', 'daylight_detector', 'daylight_detector_top');
+blockItem('glow_lichen', 'Glow Lichen', 'glow_lichen', 'glow_lichen');
+blockItem('warped_roots', 'Warped Roots', 'warped_roots', 'warped_roots');
+blockItem('cobweb', 'Cobweb', 'cobweb', 'cobweb');
+blockItem('sea_pickle', 'Sea Pickle', 'sea_pickle', 'sea_pickle');
+blockItem('nether_portal', 'Nether Portal', 'nether_portal', 'nether_portal');
+blockItem('scaffolding', 'Scaffolding', 'scaffolding', 'scaffolding');
+
 // ---- dyes (colour wool / glass / clay / concrete) ----
 for (const [c] of COLORS) it(`${c}_dye`, `${cap(c.replace(/_/g, ' '))} Dye`, { desc: 'Colours wool, stained glass, terracotta and concrete.' });
 

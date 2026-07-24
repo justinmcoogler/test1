@@ -556,6 +556,48 @@ three need **no** extra art.
 | `block_ladder.png` | Ladder — two wooden rails with horizontal rungs | oak rungs, cross cutout | yes |
 | `block_sign.png` | Sign — oak plank board (lighter face across the top half) | worked oak, faint engraving band | no |
 
+### Batch T2 — Decorative town blocks, wave 2 (31) — palette: worked wood + dark iron + gold + nether teal/red
+
+These render from **procedural tiles** today; authoring the PNGs replaces the
+placeholders. Multi-face cubes list one row per face (`_top` / `_side` / `_front`).
+The four plant decals (`glow_lichen`, `warped_roots`, `cobweb`, `sea_pickle`) are
+**transparent cross cutouts**; `nether_portal` is a **translucent** swirl tile;
+every other tile is an **opaque** full-cube / slab / carpet face.
+
+| filename | what it is | style hint | transparent |
+|---|---|---|---|
+| `block_note_block.png` | Note block side — dark wood with a musical note | dark plank face, pale note glyph | no |
+| `block_note_block_top.png` | Note block top — plain dark wood | dark plank grain, no focal point | no |
+| `block_beehive.png` | Beehive side — planks with a hive slit + honey | worked wood, dark central band, amber drips | no |
+| `block_beehive_top.png` | Beehive top — planks with a honeycomb patch | worked wood, amber hex centre | no |
+| `block_bee_nest.png` | Bee nest side — log bark with a nest hole + honey | rough bark, dark hole, amber flecks | no |
+| `block_bee_nest_top.png` | Bee nest top — log end grain | concentric wood rings | no |
+| `block_ender_chest_front.png` | Ender chest front — dark obsidian-teal chest face | near-black teal wood, glowing teal latch | no |
+| `block_ender_chest_side.png` | Ender chest side — dark obsidian-teal chest side | near-black teal, banded frame | no |
+| `block_ender_chest_top.png` | Ender chest top — dark obsidian-teal lid | near-black teal, teal glint | no |
+| `block_lodestone.png` | Lodestone side — pale chiselled stone | light grey stone, faint vertical chisel | no |
+| `block_lodestone_top.png` | Lodestone top — compass rune | pale stone, dark compass ring + red/blue needle | no |
+| `block_cauldron.png` | Cauldron side — dark iron pot with legs | charcoal iron, rim band, stubby legs | no |
+| `block_cauldron_top.png` | Cauldron top — hollow iron rim with water | iron rim, dark hollow, shallow blue water | no |
+| `block_hopper.png` | Hopper side — dark metal funnel wall | charcoal metal, central spout | no |
+| `block_hopper_top.png` | Hopper top — wide funnel opening | charcoal metal rim, dark hole | no |
+| `block_bell.png` | Bell — gold bell with a crown loop | warm gold metal, dark mouth band | no |
+| `block_lectern.png` | Lectern side — wood podium stem | worked oak, shaded vertical stem | no |
+| `block_lectern_top.png` | Lectern top — open book on a slanted rest | oak rest, cream open book with text lines | no |
+| `block_warped_nylium.png` | Warped nylium top — teal fungus crust | vivid teal speckle over dark base | no |
+| `block_warped_nylium_side.png` | Warped nylium side — teal fringe over netherrack | dark red rock, teal fungus creeping from the top | no |
+| `block_netherrack.png` | Netherrack — dark red nether rock (nylium underside) | dull blood-red rock, darker mottling | no |
+| `block_suspicious_gravel.png` | Suspicious gravel — cracked gravel with a buried glint | loose grey pebbles, brushed cracks, faint gold speck | no |
+| `block_rail.png` | Rail — flat track (two steel rails on wooden ties) | brown ties, twin steel rails, top-down | no |
+| `block_daylight_detector_top.png` | Daylight detector top — glassy blue panel + sun disc | translucent blue glass, yellow sun | no |
+| `block_daylight_detector_side.png` | Daylight detector side — dark wood base, blue top edge | dark wood, thin blue glass edge | no |
+| `block_glow_lichen.png` | Glow lichen — teal glowing speckle patch | scattered teal glow dots, cross cutout | yes |
+| `block_warped_roots.png` | Warped roots — teal fungal roots with glow tips | wispy teal roots, bright tips, cross cutout | yes |
+| `block_cobweb.png` | Cobweb — white radial spider web | pale radial threads + rings, cross cutout | yes |
+| `block_sea_pickle.png` | Sea pickle — small green nubs with glow tips | short green nubs, bright glow caps, cross cutout | yes |
+| `block_nether_portal.png` | Nether portal — swirly translucent purple | translucent purple swirl, glowing | yes |
+| `block_scaffolding.png` | Scaffolding — tan bamboo frame | pale bamboo, node rings + vertical seams | no |
+
 ### Batch I9 — Dyes (16) — palette: the 16 dye colours, small pigment
 
 | filename | what it is | style hint | transparent |

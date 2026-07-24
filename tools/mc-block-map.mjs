@@ -80,6 +80,20 @@ export const MC_MAP = {
   // thin metal + wooden fixtures now modelled as real blocks
   iron_bars: 'iron_bars', chain: 'chain', ladder: 'ladder', flower_pot: 'flower_pot',
 
+  // ---- second wave of town blocks (schematic-import equivalents, batch 2) ----
+  note_block: 'note_block', lectern: 'lectern', bell: 'bell',
+  beehive: 'beehive', bee_nest: 'bee_nest', hopper: 'hopper', lodestone: 'lodestone',
+  ender_chest: 'ender_chest', daylight_detector: 'daylight_detector', scaffolding: 'scaffolding',
+  suspicious_gravel: 'suspicious_gravel', nether_portal: 'nether_portal',
+  glow_lichen: 'glow_lichen', sea_pickle: 'sea_pickle', cobweb: 'cobweb', web: 'cobweb',
+  // rails — the powered/detector/activator variants all collapse to the one flat track
+  rail: 'rail', powered_rail: 'rail', detector_rail: 'rail', activator_rail: 'rail',
+  // cauldrons — every fill state maps to the one iron cauldron
+  cauldron: 'cauldron', water_cauldron: 'cauldron', lava_cauldron: 'cauldron', powder_snow_cauldron: 'cauldron',
+  // nether flora & nylium — crimson (red) folds into the one teal warped set
+  warped_nylium: 'warped_nylium', crimson_nylium: 'warped_nylium',
+  warped_roots: 'warped_roots', crimson_roots: 'warped_roots', nether_sprouts: 'warped_roots',
+
   // ores
   coal_ore: 'coal_seam', deepslate_coal_ore: 'coal_seam', coal_block: 'coal_seam',
   iron_ore: 'iron_ore', deepslate_iron_ore: 'iron_ore',

@@ -615,6 +615,150 @@ PAINTERS.sign = (c, x, y, r) => {
   for (let xx = 6; xx < 26; xx += 2) { px(c, x, y, xx, 7, '#7a5f38'); px(c, x, y, xx, 11, '#7a5f38'); } // faint engraving
 };
 
+// ---- Second wave of town blocks (batch 2) — distinct tiles carry identity ----
+// Cubes & fixtures.
+PAINTERS.note_block = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#5a4632', 0.04);
+  for (let ly = 3; ly < LP; ly += 6) for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, ly, '#463628'); // plank grooves
+  const nx = 13, ny = 8, ink = '#161616';                       // a musical note glyph
+  for (let j = 0; j < 4; j++) px(c, x, y, nx, ny + j, ink);
+  px(c, x, y, nx - 1, ny + 4, ink); px(c, x, y, nx - 2, ny + 4, ink); px(c, x, y, nx - 2, ny + 3, ink);
+  px(c, x, y, nx + 1, ny - 1, ink); px(c, x, y, nx + 2, ny - 1, ink); px(c, x, y, nx + 2, ny, ink);
+};
+PAINTERS.note_block_top = (c, x, y, r) => { noisyFill(c, x, y, r, '#6a5238', 0.04); for (let lx = 3; lx < LP; lx += 5) for (let ly = 0; ly < LP; ly++) px(c, x, y, lx, ly, '#54402c'); };
+PAINTERS.beehive = (c, x, y, r) => {
+  PAINTERS.planks(c, x, y, r);
+  for (let ly = 13; ly <= 17; ly++) for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, ly, shade('#5a4028', (r() - 0.5) * 0.1)); // hive slit band
+  for (let lx = 6; lx < 26; lx += 5) { px(c, x, y, lx, 15, '#e0a52a'); px(c, x, y, lx, 16, '#c98a1f'); }                        // honey glints
+};
+PAINTERS.beehive_top = (c, x, y, r) => { PAINTERS.planks(c, x, y, r); for (let lx = 12; lx < 20; lx++) for (let ly = 12; ly < 20; ly++) px(c, x, y, lx, ly, shade('#d8a838', (r() - 0.5) * 0.12)); };
+PAINTERS.bee_nest = (c, x, y, r) => {
+  bark(c, x, y, r, '#8a6a44', '#6a4f30');
+  for (let ly = 18; ly < 24; ly++) for (let lx = 11; lx < 21; lx++) px(c, x, y, lx, ly, shade('#3a2a1a', (r() - 0.5) * 0.08)); // nest hole
+  for (let lx = 12; lx < 20; lx += 3) px(c, x, y, lx, 20, '#e0a52a');
+};
+PAINTERS.bee_nest_top = (c, x, y, r) => rings(c, x, y, r, '#b0895a', '#8a6a44');
+const enderFrame = (c, x, y, r, base, top) => {
+  noisyFill(c, x, y, r, base, 0.04);
+  for (let lx = 0; lx < LP; lx++) { px(c, x, y, lx, 0, '#0e1a1a'); px(c, x, y, lx, LP - 1, '#0e1a1a'); }
+  for (let ly = 0; ly < LP; ly++) { px(c, x, y, 0, ly, '#0e1a1a'); px(c, x, y, LP - 1, ly, '#0e1a1a'); }
+  if (top === 'front') { for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, 7, '#0e1a1a'); px(c, x, y, 7, 7, '#3fe0c0'); px(c, x, y, 8, 7, '#3fe0c0'); px(c, x, y, 7, 8, '#2ab89a'); px(c, x, y, 8, 8, '#2ab89a'); }
+};
+PAINTERS.ender_chest_front = (c, x, y, r) => enderFrame(c, x, y, r, '#1d2b2b', 'front');
+PAINTERS.ender_chest_side = (c, x, y, r) => enderFrame(c, x, y, r, '#1d2b2b', 'side');
+PAINTERS.ender_chest_top = (c, x, y, r) => { enderFrame(c, x, y, r, '#243636', 'side'); px(c, x, y, 15, 15, '#3fe0c0'); px(c, x, y, 16, 16, '#2ab89a'); };
+PAINTERS.lodestone = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#b7bcc2', 0.05, { chance: 0.1, color: '#9aa0a6' });
+  for (let lx = 0; lx < LP; lx += 8) for (let ly = 0; ly < LP; ly++) if (r() < 0.5) px(c, x, y, lx, ly, shade('#9aa0a6', -0.05));
+};
+PAINTERS.lodestone_top = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#c2c7cd', 0.04);
+  for (let a = 0; a < 48; a++) { const ang = a / 48 * Math.PI * 2; px(c, x, y, Math.round(15.5 + Math.cos(ang) * 6), Math.round(15.5 + Math.sin(ang) * 6), '#4a5560'); } // compass ring
+  for (let j = 0; j < 3; j++) { px(c, x, y, 16, 7 + j, '#c0303a'); px(c, x, y, 16, 21 + j, '#3a5fd0'); } // N red / S blue needle
+  px(c, x, y, 16, 16, '#2a2f36');
+};
+PAINTERS.cauldron = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#3a3d42', 0.05, { chance: 0.06, color: '#2a2d31' });
+  for (let lx = 0; lx < LP; lx++) { px(c, x, y, lx, 0, '#565b61'); px(c, x, y, lx, 1, '#4a4f55'); } // top rim
+  for (const lx of [4, 5, 26, 27]) for (let ly = 27; ly < LP; ly++) px(c, x, y, lx, ly, '#22252a'); // legs
+};
+PAINTERS.cauldron_top = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#4a4f55', 0.04);
+  for (let lx = 0; lx < LP; lx++) { px(c, x, y, lx, 0, '#565b61'); px(c, x, y, lx, LP - 1, '#565b61'); }
+  for (let ly = 0; ly < LP; ly++) { px(c, x, y, 0, ly, '#565b61'); px(c, x, y, LP - 1, ly, '#565b61'); }
+  for (let lx = 4; lx < 28; lx++) for (let ly = 4; ly < 28; ly++) px(c, x, y, lx, ly, shade('#20232a', (r() - 0.5) * 0.06)); // hollow interior
+  for (let lx = 6; lx < 26; lx++) for (let ly = 6; ly < 26; ly++) if (r() < 0.5) px(c, x, y, lx, ly, shade('#2f5f8a', (r() - 0.5) * 0.1)); // shallow water
+};
+PAINTERS.hopper = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#34373c', 0.05, { chance: 0.06, color: '#26292d' });
+  for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, 0, '#4a4e54'); // rim
+  for (let ly = 4; ly < LP; ly++) for (let lx = 13; lx < 19; lx++) px(c, x, y, lx, ly, shade('#1c1e22', (r() - 0.5) * 0.08)); // spout
+};
+PAINTERS.hopper_top = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#3a3d42', 0.04);
+  for (let lx = 0; lx < LP; lx++) { px(c, x, y, lx, 0, '#4a4e54'); px(c, x, y, lx, LP - 1, '#4a4e54'); }
+  for (let ly = 0; ly < LP; ly++) { px(c, x, y, 0, ly, '#4a4e54'); px(c, x, y, LP - 1, ly, '#4a4e54'); }
+  for (let lx = 5; lx < 27; lx++) for (let ly = 5; ly < 27; ly++) px(c, x, y, lx, ly, shade('#1e2024', (r() - 0.5) * 0.06)); // funnel opening
+};
+PAINTERS.bell = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#e6c132', 0.04, { chance: 0.08, color: '#fff08a' });
+  for (let lx = 0; lx < LP; lx++) { px(c, x, y, lx, LP - 1, '#a8862a'); px(c, x, y, lx, LP - 2, '#c29a2e'); } // bell mouth
+  for (let ly = 0; ly < 4; ly++) px(c, x, y, LP / 2, ly, '#8a6a1e');                                          // crown loop
+  for (let ly = 4; ly < LP; ly++) { px(c, x, y, 3, ly, shade('#c29a2e', -0.1)); px(c, x, y, LP - 4, ly, shade('#c29a2e', -0.1)); }
+};
+PAINTERS.lectern = (c, x, y, r) => {
+  PAINTERS.planks(c, x, y, r);
+  for (let lx = 13; lx < 19; lx++) for (let ly = 6; ly < LP; ly++) px(c, x, y, lx, ly, shade('#8a6a3f', -0.08)); // stem
+};
+PAINTERS.lectern_top = (c, x, y, r) => {
+  PAINTERS.planks(c, x, y, r);
+  for (let lx = 6; lx < 26; lx++) for (let ly = 8; ly < 22; ly++) px(c, x, y, lx, ly, shade('#e8e0cc', (r() - 0.5) * 0.05)); // open book
+  for (let ly = 8; ly < 22; ly++) px(c, x, y, 16, ly, '#b0a488');                                                            // spine
+  for (let ly = 10; ly < 20; ly += 2) { for (let lx = 8; lx < 15; lx++) px(c, x, y, lx, ly, '#9a8f74'); for (let lx = 18; lx < 25; lx++) px(c, x, y, lx, ly, '#9a8f74'); } // text
+};
+// Ground / terrain.
+PAINTERS.netherrack = (c, x, y, r) => { noisyFill(c, x, y, r, '#6a2b2b', 0.07, { chance: 0.12, color: '#4a1d1d' }); for (let i = 0; i < 6; i++) px(c, x, y, Math.floor(r() * LP), Math.floor(r() * LP), '#7d3535'); };
+PAINTERS.warped_nylium = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#1c8a7a', 0.06, { chance: 0.12, color: '#2fb89a' });
+  for (let i = 0; i < 14; i++) px(c, x, y, Math.floor(r() * LP), Math.floor(r() * LP), shade('#43d0b0', (r() - 0.5) * 0.2));
+};
+PAINTERS.warped_nylium_side = (c, x, y, r) => {
+  PAINTERS.netherrack(c, x, y, r);
+  for (let lx = 0; lx < LP; lx++) { const depth = 2 + Math.floor(r() * 4); for (let ly = 0; ly < depth; ly++) px(c, x, y, lx, ly, shade('#1c8a7a', (r() - 0.5) * 0.15)); } // teal fringe
+};
+PAINTERS.suspicious_gravel = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#9a938c', 0.09, { chance: 0.15, color: '#7c766f' });
+  for (let i = 0; i < 3; i++) { let lx = Math.floor(r() * LP); let ly = Math.floor(r() * LP); for (let j = 0; j < 5; j++) { px(c, x, y, (lx + j) % LP, ly, '#5f5a54'); if (r() < 0.5) ly = (ly + 1) % LP; } } // brushed cracks
+  px(c, x, y, 16, 16, '#c2b06a'); px(c, x, y, 17, 16, '#a89652'); // a buried glint
+};
+PAINTERS.rail = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#7a5a38', 0.05);                                                             // wooden ties base
+  for (let ly = 2; ly < LP; ly += 8) for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, ly, shade('#5f4529', (r() - 0.5) * 0.1)); // cross ties
+  for (const rx of [9, 10, 21, 22]) for (let ly = 0; ly < LP; ly++) px(c, x, y, rx, ly, rx % 2 ? '#8a8d93' : '#b9bcc2');         // steel rails
+};
+PAINTERS.daylight_detector_top = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#2f4a63', 0.04);
+  for (let lx = 3; lx < 29; lx++) for (let ly = 3; ly < 29; ly++) px(c, x, y, lx, ly, shade('#3f6fae', (r() - 0.5) * 0.12)); // glassy blue panel
+  for (let a = 0; a < 20; a++) { const ang = a / 20 * Math.PI * 2; px(c, x, y, Math.round(16 + Math.cos(ang) * 5), Math.round(16 + Math.sin(ang) * 5), '#e6c437'); } // sun disc
+  px(c, x, y, 16, 16, '#f2d658');
+};
+PAINTERS.daylight_detector_side = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#5a4632', 0.04);
+  for (let ly = 0; ly < 4; ly++) for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, ly, shade('#3f6fae', (r() - 0.5) * 0.1)); // blue top edge
+  for (let ly = 6; ly < LP; ly += 5) for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, ly, '#463628');
+};
+// Plants / decals — transparent cross cutouts.
+PAINTERS.glow_lichen = (c, x, y, r) => cross(c, x, y, r, () => {
+  for (let i = 0; i < 44; i++) { const lx = Math.floor(r() * LP), ly = Math.floor(r() * LP); if (r() < 0.6) px(c, x, y, lx, ly, r() < 0.5 ? '#2fb89a' : '#5fe0c0'); }
+});
+PAINTERS.warped_roots = (c, x, y, r) => cross(c, x, y, r, () => {
+  for (let i = 0; i < 5; i++) { const sx = 4 + Math.floor(r() * (LP - 8)), h = 6 + Math.floor(r() * 10); for (let j = 0; j < h; j++) px(c, x, y, sx + Math.round(Math.sin(j * 0.6) * 1.5), LP - 1 - j, shade('#1f9a86', (r() - 0.5) * 0.2)); }
+  for (let i = 0; i < 5; i++) px(c, x, y, 4 + Math.floor(r() * (LP - 8)), 6 + Math.floor(r() * 6), '#5fe0c0'); // glow tips
+});
+PAINTERS.cobweb = (c, x, y, r) => cross(c, x, y, r, () => {
+  const col = '#d8dde2', mid = LP / 2;
+  for (let a = 0; a < 8; a++) { const ang = a / 8 * Math.PI * 2; for (let t = 0; t < mid; t++) px(c, x, y, Math.round(mid + Math.cos(ang) * t), Math.round(mid + Math.sin(ang) * t), col); } // radial threads
+  for (const rad of [4, 8, 12]) for (let a = 0; a < 32; a++) { const ang = a / 32 * Math.PI * 2; px(c, x, y, Math.round(mid + Math.cos(ang) * rad), Math.round(mid + Math.sin(ang) * rad), col); } // rings
+});
+PAINTERS.sea_pickle = (c, x, y, r) => cross(c, x, y, r, () => {
+  for (const [bx, h] of [[11, 7], [16, 10], [21, 6]]) {
+    for (let j = 0; j < h; j++) px(c, x, y, bx, LP - 2 - j, shade('#6fae3a', (r() - 0.5) * 0.15));
+    px(c, x, y, bx, LP - 2 - h, '#c9f06a'); px(c, x, y, bx - 1, LP - 1 - h, '#a8d84a'); // glow tip
+  }
+  for (let lx = 8; lx < 24; lx++) px(c, x, y, lx, LP - 1, '#4a6a2a'); // base crust
+});
+// Special — swirly translucent purple portal (mirrors the stained-glass alpha path).
+PAINTERS.nether_portal = (c, x, y, r) => {
+  c.clearRect(x, y, TILE, TILE);
+  c.fillStyle = 'rgba(120,40,180,0.5)'; c.fillRect(x, y, TILE, TILE);
+  for (let i = 0; i < 130; i++) { const ang = r() * Math.PI * 2, rad = r() * 15; const lx = Math.round(16 + Math.cos(ang) * rad), ly = Math.round(16 + Math.sin(ang) * rad); if (lx >= 0 && lx < LP && ly >= 0 && ly < LP) px(c, x, y, lx, ly, r() < 0.5 ? 'rgba(180,110,230,0.7)' : 'rgba(90,20,140,0.6)'); }
+};
+PAINTERS.scaffolding = (c, x, y, r) => {
+  noisyFill(c, x, y, r, '#c9a85e', 0.05);
+  for (let ly = 2; ly < LP; ly += 7) for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, ly, shade('#a8863f', (r() - 0.5) * 0.1)); // bamboo node rings
+  for (const lx of [8, 16, 24]) for (let ly = 0; ly < LP; ly++) px(c, x, y, lx, ly, shade('#9a7a35', -0.05));                    // vertical seams
+};
+
 // Reserve atlas slots for any pack-only tiles (new station faces) so they get a
 // UV; the real art is blitted over the placeholder by applyTexturePack().
 for (const name of Object.keys(TEXPACK_TILES)) {

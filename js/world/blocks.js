@@ -227,6 +227,34 @@ def('button', { label: 'Button', shape: 'button', hardness: 0.6, tool: 'axe', ti
 // Flower pot — a short terracotta box that sits on surfaces.
 def('flower_pot', { label: 'Flower Pot', shape: 'pot', hardness: 0.6, tool: 'pickaxe', tiles: { all: 'terracotta' } });
 
+// ---- Second wave of town blocks (schematic-import equivalents, batch 2) ------
+// APPENDED after the first town batch so existing ids never shift; new ids only
+// (Uint16 chunk storage + the town-data grid pack the id, saves depend on this).
+// Cubes & fixtures — full cubes unless a shape is named. Multi-face tiles carry
+// the identity where a single face isn't enough.
+def('note_block', { label: 'Note Block', hardness: 1.8, tool: 'axe', tiles: { top: 'note_block_top', side: 'note_block' } });
+def('beehive', { label: 'Beehive', hardness: 1.6, tool: 'axe', tiles: { top: 'beehive_top', side: 'beehive' } });
+def('bee_nest', { label: 'Bee Nest', hardness: 1.6, tool: 'axe', tiles: { top: 'bee_nest_top', side: 'bee_nest' } });
+def('ender_chest', { label: 'Ender Chest', hardness: 6, tool: 'pickaxe', minTier: 2, directional: true, drops: 'rough_stone', tiles: { top: 'ender_chest_top', side: 'ender_chest_side', front: 'ender_chest_front' } });
+def('lodestone', { label: 'Lodestone', hardness: 3.5, tool: 'pickaxe', drops: 'rough_stone', tiles: { top: 'lodestone_top', side: 'lodestone' } });
+def('cauldron', { label: 'Cauldron', hardness: 3.0, tool: 'pickaxe', tiles: { top: 'cauldron_top', side: 'cauldron' } });
+def('hopper', { label: 'Hopper', shape: 'slab', hardness: 3.0, tool: 'pickaxe', tiles: { top: 'hopper_top', side: 'hopper' } });
+def('bell', { label: 'Bell', shape: 'pot', hardness: 3.0, tool: 'pickaxe', tiles: { all: 'bell' } });
+def('lectern', { label: 'Lectern', shape: 'pot', hardness: 1.8, tool: 'axe', tiles: { top: 'lectern_top', side: 'lectern' } });
+// Ground / terrain.
+def('warped_nylium', { label: 'Warped Nylium', hardness: 2.2, tool: 'pickaxe', drops: 'dirt', tiles: { top: 'warped_nylium', side: 'warped_nylium_side', bottom: 'netherrack' } });
+def('suspicious_gravel', { label: 'Suspicious Gravel', hardness: 0.9, tool: 'shovel', tiles: { all: 'suspicious_gravel' } });
+def('rail', { label: 'Rail', shape: 'carpet', hardness: 1.0, tool: 'pickaxe', tiles: { all: 'rail' } });
+def('daylight_detector', { label: 'Daylight Detector', shape: 'slab', hardness: 1.5, tool: 'axe', tiles: { top: 'daylight_detector_top', side: 'daylight_detector_side' } });
+// Plants / decals — transparent cross cutouts (walk-through, drop themselves).
+def('glow_lichen', { label: 'Glow Lichen', shape: 'cross', solid: false, opaque: false, hardness: 0.2, tool: null, emissive: 0.5, tiles: { all: 'glow_lichen' } });
+def('warped_roots', { label: 'Warped Roots', shape: 'cross', solid: false, opaque: false, hardness: 0.1, tool: null, tiles: { all: 'warped_roots' } });
+def('cobweb', { label: 'Cobweb', shape: 'cross', solid: false, opaque: false, hardness: 0.4, tool: null, tiles: { all: 'cobweb' } });
+def('sea_pickle', { label: 'Sea Pickle', shape: 'cross', solid: false, opaque: false, hardness: 0.2, tool: null, emissive: 0.4, tiles: { all: 'sea_pickle' } });
+// Special — a swirly, emissive, translucent portal (renders in the cutout pass).
+def('nether_portal', { label: 'Nether Portal', solid: false, opaque: false, transparent: true, hardness: 0.6, drops: null, emissive: 0.6, tiles: { all: 'nether_portal' } });
+def('scaffolding', { label: 'Scaffolding', shape: 'fence', hardness: 0.6, tool: 'axe', tiles: { all: 'scaffolding' } });
+
 export function blockByName(name) { return BLOCKS[B[name]]; }
 export function isSolid(id) { return BLOCKS[id]?.solid === true; }
 export function isOpaque(id) { return BLOCKS[id]?.opaque === true; }
