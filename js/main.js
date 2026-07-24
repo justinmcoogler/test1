@@ -474,12 +474,61 @@ class Game {
     }
   }
 
+  // Frame-rate self-test (tap the FPS badge). Measures the frame rate as it is,
+  // then again with the scene rendered at a quarter of the pixels. If the rate
+  // doesn't move, the device isn't running out of GPU — something is holding the
+  // frame rate down (vsync/browser cap, iOS Low Power Mode, thermal throttle),
+  // and rendering less will never help. If it climbs, we really are fill-bound
+  // and lowering quality is the fix. Removes the guesswork on real hardware.
+  runPerfSelfTest() {
+    if (this._probe) return;
+    const r = this.renderer;
+    const savedScale = r.renderScale, savedDynamic = r.dynamicResolution;
+    r.dynamicResolution = false; // keep the adaptive scaler out of the measurement
+    this.ui.toast('Frame-rate test running — hold still for ~5s…', 'gold');
+    const phase = { t: 0, frames: 0, stage: 0, base: 0 };
+    const SETTLE = 0.6, MEASURE = 1.8;
+    this._probe = (dt) => {
+      phase.t += dt;
+      if (phase.t > SETTLE) phase.frames++;          // ignore the settle window
+      if (phase.t < SETTLE + MEASURE) return;
+      const fps = phase.frames / MEASURE;
+      phase.t = 0; phase.frames = 0;
+      if (phase.stage === 0) {                        // baseline done → shrink hard
+        phase.base = fps;
+        phase.stage = 1;
+        r.renderScale = 0.25; r.resize();
+        return;
+      }
+      // restore before reporting
+      r.renderScale = savedScale; r.dynamicResolution = savedDynamic; r.resize();
+      this._probe = null;
+      const base = Math.round(phase.base), low = Math.round(fps);
+      const gain = fps / Math.max(1, phase.base);
+      let verdict;
+      if (gain > 1.25) {
+        verdict = `GPU fill-bound — ${base}→${low} FPS at quarter pixels. Lower Graphics quality helps.`;
+      } else if (base <= 34) {
+        verdict = `Frame rate is capped at ~${base}, not GPU-bound (quarter pixels gave ${low}). `
+          + 'Check iOS Low Power Mode / battery saver, or try the downloaded file instead of the in-app browser.';
+      } else {
+        verdict = `Running at ~${base} FPS, not GPU-bound (quarter pixels gave ${low}).`;
+      }
+      this.ui.toast(verdict, gain > 1.25 ? 'gold' : 'warn');
+      console.log('[perf self-test]', { baselineFps: base, quarterPixelFps: low, gain: +gain.toFixed(2),
+        dpr: window.devicePixelRatio, canvas: [r.canvas.width, r.canvas.height],
+        tier: r.qualityTier, renderDistance: r.renderDistance, chunkMeshes: r.chunkMeshes.size });
+    };
+  }
+
   // ---------------------------------------------------------------- loop
   start() {
     let last = performance.now();
     // FPS badge: average over ~0.5s windows so the number is readable, not a blur
     let fpsAccum = 0, fpsFrames = 0;
     const fpsEl = document.getElementById('fps-badge');
+    // tap the FPS badge to find out WHY the frame rate is what it is
+    fpsEl?.addEventListener('click', () => this.runPerfSelfTest());
     const loop = (now) => {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
@@ -489,10 +538,12 @@ class Game {
       } catch (e) {
         console.error('tick error', e);
       }
+      if (this._probe) this._probe(dt);
       if (fpsEl) {
         fpsAccum += dt; fpsFrames++;
         if (fpsAccum >= 0.5) {
           const fps = Math.round(fpsFrames / fpsAccum);
+          this.lastFps = fps;
           fpsEl.textContent = `${fps} FPS`;
           fpsEl.className = fps < 30 ? 'bad' : fps < 50 ? 'low' : '';
           fpsAccum = 0; fpsFrames = 0;

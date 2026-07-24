@@ -137,7 +137,7 @@ body.classic-cam #crosshair { display: none; }
 #fps-badge { position: absolute; top: 12px; left: calc(50% - 210px); background: rgba(0, 0, 0, 0.5);
   border: 1px solid var(--edge); border-radius: 6px; padding: 3px 8px; color: #8fe08a;
   font-size: calc(12px * var(--text-scale)); font-weight: 700; letter-spacing: 0.5px;
-  pointer-events: none; min-width: 58px; text-align: center; }
+  pointer-events: auto; cursor: pointer; min-width: 58px; text-align: center; }
 #fps-badge.low { color: #e0b04a; }
 #fps-badge.bad { color: #e06a5a; }
 /* phones: FPS tucks into the very top-left corner; vitals drop below it, so the
