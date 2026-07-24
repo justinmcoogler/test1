@@ -805,6 +805,22 @@ export const ENEMY_TYPES = {
       box(0, 0.7, 0.55, 0.36, 0.36, 0.4, [0.85, 0.85, 0.8]),
     ]),
   },
+  wolf: {
+    label: 'Wolf', behavior: 'aggressive', tier: 1,
+    hp: 30, atk: 8, acc: 62, evasion: 14, armor: 1, speed: 8, moveRange: 5,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 55, huntXp: 42, respawn: 160, aggroRange: 8,
+    drops: [
+      { item: 'cured_hide', qty: [1, 2], chance: 0.75 },
+      { item: 'sinew', qty: [1, 2], chance: 0.85 },
+    ],
+    desc: 'A grey hunter with a heavy shoulder mane. It howls at dusk and answers when another howls back.',
+    recommend: 'Fast and it commits — keep your back to a tree so only one reaches you.',
+    model: M([
+      box(0, 0.5, 0, 0.38, 0.38, 0.56, [0.72, 0.7, 0.66]),
+      box(0, 0.75, 0.25, 0.38, 0.38, 0.38, [0.78, 0.76, 0.72]),
+    ]),
+  },
   pig: {
     label: 'Pig', behavior: 'defensive', tier: 0,
     hp: 18, atk: 4, acc: 52, evasion: 8, armor: 1, speed: 4, moveRange: 3,

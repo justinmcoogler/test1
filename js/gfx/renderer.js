@@ -129,16 +129,40 @@ export class Renderer {
     const fps = this._scaleFrames / this._scaleAccum;
     this._scaleAccum = 0; this._scaleFrames = 0;
     if (this._scaleCd > 0) return;
-    let s = this.renderScale, cd = 1.2;
+    let s = this.renderScale;
     const floor = this.scaleFloor || 0.5; // Low tier lets it drop further on weak GPUs
-    // vsync quantises frame rate (60→30→20…), so a device stuck at 30 needs the
-    // resolution cut hard enough to push frame time back under ~16ms in one or
-    // two steps, not eight. Drop aggressively when badly behind, gently near the
-    // target, and only sharpen back up with genuine headroom (a solid ~58+).
-    if (fps < 34 && s > floor) { s = Math.max(floor, +(s - 0.2).toFixed(2)); cd = 0.6; } // stuck at 30 → big cut
-    else if (fps < 50 && s > floor) s = Math.max(floor, +(s - 0.1).toFixed(2));
-    else if (fps >= 58 && s < 1) s = Math.min(1, +(s + 0.1).toFixed(2));
-    if (s !== this.renderScale) { this.renderScale = s; this._scaleCd = cd; this.resize(); }
+
+    // Aim at the rate the DISPLAY can actually deliver, not a hardcoded 60. A
+    // phone in Low Power Mode is capped at 30, a plain screen does 60, ProMotion
+    // 120 — and chasing 60 on a 30-capped device would drive the resolution to
+    // the blur floor and never recover, since 58 is unreachable there. The peak
+    // rate we've recently sustained is that ceiling; it decays slowly so the
+    // target follows the device if a cap switches on mid-session.
+    this._fpsPeak = Math.max(fps, (this._fpsPeak ?? fps) * 0.98);
+    const ceiling = Math.max(28, Math.min(120, this._fpsPeak));
+
+    // Did the last cut actually buy anything? If we shrank the frame and the
+    // rate didn't move, we aren't fill-bound — something else is holding it
+    // down. Give the pixels back and stop cutting for a while.
+    if (this._droppedAt != null) {
+      const helped = fps > this._droppedAt * 1.06;
+      this._droppedAt = null;
+      if (!helped) {
+        this._noDropUntil = 12;                     // seconds of hands-off
+        s = Math.min(1, +(s + 0.1).toFixed(2));
+        if (s !== this.renderScale) { this.renderScale = s; this._scaleCd = 2; this.resize(); }
+        return;
+      }
+    }
+    this._noDropUntil = Math.max(0, (this._noDropUntil || 0) - 0.5);
+
+    if (fps < ceiling * 0.75 && s > floor && !this._noDropUntil) {
+      s = Math.max(floor, +(s - 0.1).toFixed(2));
+      this._droppedAt = fps;                        // measure whether it helped
+    } else if (fps > ceiling * 0.92 && s < 1) {
+      s = Math.min(1, +(s + 0.1).toFixed(2));
+    }
+    if (s !== this.renderScale) { this.renderScale = s; this._scaleCd = 1.2; this.resize(); }
   }
 
   setFPSCamera(eye, yaw, pitch) {

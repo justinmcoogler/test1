@@ -23,10 +23,16 @@ test('allMobTypes lists every registered mob, sorted', () => {
   for (const t of Object.keys(ENEMY_TYPES)) assert.ok(list.includes(t));
 });
 
-test('native mobs default ON; imported mobs default OFF', () => {
-  const native = mc.allMobTypes().find((t) => !ENEMY_TYPES[t].imported);
-  assert.ok(native, 'expected at least one native mob');
-  assert.equal(mc.mobActive(native), true);
+test('the shipped roster is active; everything else defaults OFF', () => {
+  // The starter set is deliberately small — the farm animals plus the wolf
+  // (docs/MOB_BRIEF.md). The rest stay in the library but out of new worlds.
+  const ROSTER = ['cow', 'pig', 'sheep', 'chicken', 'duck', 'goat', 'horse', 'rabbit', 'wolf'];
+  for (const t of ROSTER) {
+    assert.ok(ENEMY_TYPES[t], `${t} should exist in the registry`);
+    assert.equal(mc.mobActive(t), true, `${t} should ship active`);
+  }
+  const offRoster = mc.allMobTypes().filter((t) => !ROSTER.includes(t));
+  for (const t of offRoster) assert.equal(mc.mobActive(t), false, `${t} should ship inactive`);
 
   // synthetic imported entry exercises the imported fallback branch
   ENEMY_TYPES.__imp_test = { label: 'Test', imported: true, drops: [] };

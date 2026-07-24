@@ -88,7 +88,14 @@ export function buildMobSkinCanvas(type, def) {
 // skin override loads — it replaces the model in place.
 export function registerRemadeMob(renderer, type, def) {
   const tex = renderer.createMobTexture(buildMobSkinCanvas(type, def));
-  const anims = buildPartAnimations(def.rig || 'lumberer', def.parts, def.animOverrides);
+  // def.anims adds named clips (howl, graze, peck…) on top of the rig's
+  // idle/walk/attack; def.animOverrides retunes what the rig already built.
+  const extra = { ...(def.anims || {}), ...(def.animOverrides || {}) };
+  const anims = buildPartAnimations(def.rig || 'lumberer', def.parts, Object.keys(extra).length ? extra : null);
   renderer.deleteModel(type);
   renderer.registerAnimatedModel(type, remakeParts(def), anims, tex);
+  // ambient clips fire occasionally while the creature is idle — this is what
+  // makes a wolf feel like a wolf rather than a walking box.
+  const model = renderer.modelCache.get(type);
+  if (model && def.ambient) model.ambient = def.ambient;
 }

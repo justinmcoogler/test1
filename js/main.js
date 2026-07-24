@@ -452,10 +452,15 @@ class Game {
     this.renderer.highQuality = tier === 'high';
     this.renderer.scaleFloor = tier === 'low' ? 0.35 : 0.5;
     this.renderer.precipMult = tier === 'low' ? 0.5 : 1; // Medium/High keep full precip (old default look)
-    this.renderer.dprCap = tier === 'low' ? 1.5 : 2;     // a DPR-3 phone would else render at 2× = 4× the pixels
-    const rdCap = tier === 'low' ? 3 : tier === 'medium' ? 5 : 8;
+    // A DPR-3 phone would otherwise render at 2x — four times the pixels of the
+    // css size — for no visible gain on pixel art, so cap it. The view distance
+    // and entity range stay generous: profiling showed the frame is cheap, and a
+    // phone that looks slow is usually frame-capped (Low Power Mode) rather than
+    // short of GPU, which no amount of trimming can fix.
+    this.renderer.dprCap = tier === 'low' ? 1.5 : 2;
+    const rdCap = tier === 'low' ? 4 : tier === 'medium' ? 6 : 8;
     this.renderer.renderDistance = Math.min(s.renderDistance, rdCap);
-    this._entityCull = tier === 'low' ? 30 : 44;         // nearer prop/enemy pop-in on phones = less overdraw
+    this._entityCull = 44;
     this.renderer.resize();                              // pick up the DPR cap
     document.body.classList.toggle('classic-cam', !!s.classicCamera);
     if (s.classicCamera) document.exitPointerLock?.();
@@ -2015,7 +2020,31 @@ class Game {
       return evaluatePose(model, 'attack', this.world.time - (e.attackStart || 0));
     }
     if (e.movingT > 0 && model.animations.walk) {
+      e._ambT = null; e._ambPlay = 0;   // moving cancels any ambient in progress
       return evaluatePose(model, 'walk', this.world.time + offset);
+    }
+    // Ambient clips — a wolf howling, a cow grazing, a hen pecking. They fire on
+    // a per-creature timer while it's standing around, play once, and hand back
+    // to idle. Timers are seeded per entity so a herd never acts in lockstep.
+    const amb = model.ambient;
+    if (amb) {
+      const clips = amb.clips || [amb.clip];
+      const [lo, hi] = amb.every || [12, 28];
+      if (e._ambT == null) e._ambT = lo + Math.random() * (hi - lo);
+      if (e._ambPlay > 0) {
+        e._ambPlay -= dt;
+        if (e._ambPlay > 0) return evaluatePose(model, e._ambClip, this.world.time - e._ambStart);
+        e._ambT = lo + Math.random() * (hi - lo);
+      } else if ((e._ambT -= dt) <= 0) {
+        const clip = clips[(Math.random() * clips.length) | 0];
+        if (model.animations[clip]) {
+          e._ambClip = clip;
+          e._ambStart = this.world.time;
+          e._ambPlay = model.animations[clip].length || 1;
+          return evaluatePose(model, clip, 0);
+        }
+        e._ambT = lo + Math.random() * (hi - lo);
+      }
     }
     return evaluatePose(model, 'idle', this.world.time + offset);
   }

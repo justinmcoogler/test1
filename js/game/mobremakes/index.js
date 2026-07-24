@@ -9,7 +9,8 @@ import { DRYLANDS } from './batch_drylands.js';
 import { FROST } from './batch_frost.js';
 import { EMBER } from './batch_ember.js';
 import { FARM } from './batch_farm.js';
+import { WOLF } from './batch_wolf.js';
 
 export const MOB_REMAKES = {
-  ...WARDENS, ...MEADOW, ...WETLANDS, ...HIGHLANDS, ...DRYLANDS, ...FROST, ...EMBER, ...FARM,
+  ...WARDENS, ...MEADOW, ...WETLANDS, ...HIGHLANDS, ...DRYLANDS, ...FROST, ...EMBER, ...FARM, ...WOLF,
 };

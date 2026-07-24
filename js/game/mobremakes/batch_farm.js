@@ -7,6 +7,33 @@
 // the def format). +z is FORWARD — faces/eyes live on the south UV face.
 import { b, part } from './mcmodel.js';
 
+// Ambient clips — the small behaviours that make a paddock feel alive. Each
+// plays once on a per-animal timer while it's standing still (see poseFor).
+// GRAZE: head drops to the grass, holds there, comes back up. The hold is the
+// readable part, so it takes half the clip.
+const GRAZE = (deg = 62) => ({
+  length: 3.4, loop: false,
+  parts: {
+    head: { rotate: [[0, [0, 0, 0]], [0.6, [deg, 0, 0]], [2.6, [deg, 0, 0]], [3.4, [0, 0, 0]]] },
+    body: { rotate: [[0, [0, 0, 0]], [0.6, [4, 0, 0]], [2.6, [4, 0, 0]], [3.4, [0, 0, 0]]] },
+  },
+});
+// PECK: a sharp stab down and straight back — birds don't linger.
+const PECK = {
+  length: 1.1, loop: false,
+  parts: {
+    head: { rotate: [[0, [0, 0, 0]], [0.16, [64, 0, 0]], [0.34, [10, 0, 0]], [0.5, [58, 0, 0]], [0.72, [0, 0, 0]], [1.1, [0, 0, 0]]] },
+    tail: { rotate: [[0, [0, 0, 0]], [0.16, [-18, 0, 0]], [0.72, [0, 0, 0]], [1.1, [0, 0, 0]]] },
+  },
+};
+// SNIFF: quick nose bobs with the ears twitching back.
+const SNIFF = {
+  length: 1.6, loop: false,
+  parts: {
+    head: { rotate: [[0, [0, 0, 0]], [0.2, [16, 0, 0]], [0.4, [2, 0, 0]], [0.6, [16, 0, 0]], [0.8, [2, 0, 0]], [1.0, [12, 0, 0]], [1.6, [0, 0, 0]]] },
+  },
+};
+
 export const FARM = {
   // --------------------------------------------------------------------------
   // cow — Holstein grazer: barrel body in black-and-white patches, horns, an
@@ -52,6 +79,8 @@ export const FARM = {
       P.noise(40, 14, 6, 16, white, 0.05); P.rect(40, 26, 6, 4, black);
     },
     // vanilla cow: body 12x10x18, head 8x8x6, legs 4x12x4, ~26px at the horns
+
+    anims: { graze: GRAZE(58) }, ambient: { clip: 'graze', every: [9, 22] },
     parts: [
       part('body', [0, 12, 0], [
         b([-6, 12, -9], [12, 10, 18], { all: [0, 0, 26, 16], up: [0, 17, 26, 10] }),
@@ -107,6 +136,8 @@ export const FARM = {
       P.noise(34, 32, 10, 10, pink, 0.05); P.strokes(34, 32, 10, 10, 6, pdk, 3);
     },
     // vanilla pig: body 10x8x16, head 8x8x8, legs 4x6x4 — low and stocky
+
+    anims: { graze: GRAZE(46) }, ambient: { clip: 'graze', every: [8, 19] },
     parts: [
       part('body', [0, 6, 0], [
         b([-5, 6, -8], [10, 8, 16], { all: [0, 0, 26, 16], up: [0, 17, 26, 10] }),
@@ -165,6 +196,8 @@ export const FARM = {
       P.noise(42, 42, 10, 10, wool, 0.06); P.strokes(42, 42, 10, 10, 12, woolDk, 3);
     },
     // vanilla sheep: body 8x10x16 under a fleece, head 6x6x8, legs 4x12x4, 26px
+
+    anims: { graze: GRAZE(60) }, ambient: { clip: 'graze', every: [8, 20] },
     parts: [
       part('body', [0, 12, 0], [
         b([-5, 12, -8], [10, 10, 16], { all: [0, 0, 26, 16], up: [0, 17, 26, 10] }),
@@ -221,6 +254,8 @@ export const FARM = {
       P.noise(22, 32, 6, 14, leg, 0.06); P.bands(22, 32, 6, 14, 2, '#a5701e'); P.rect(22, 44, 6, 2, clawd);
     },
     // vanilla chicken: body 6x8x6, head 4x6x3, beak 4x2x2, wings 1x5x6, legs 3x5x3
+
+    anims: { peck: PECK }, ambient: { clip: 'peck', every: [5, 13] },
     parts: [
       part('body', [0, 5, 0], [
         b([-3, 5, -4], [6, 6, 8], { all: [0, 0, 16, 16], up: [18, 0, 14, 10] }),
@@ -281,6 +316,8 @@ export const FARM = {
       P.noise(8, 32, 12, 6, foot, 0.05); P.strokes(8, 32, 12, 6, 6, billDk, 2); P.rect(8, 32, 12, 1, billDk);
     },
     // waterfowl build: a long low boat body, upright neck, flat bill, web feet
+
+    anims: { peck: PECK }, ambient: { clip: 'peck', every: [6, 15] },
     parts: [
       part('body', [0, 5, 0], [
         b([-3, 5, -6], [6, 6, 12], { all: [0, 0, 20, 14], up: [22, 0, 16, 10] }),
@@ -341,6 +378,8 @@ export const FARM = {
       P.noise(26, 16, 8, 10, hide, 0.06); P.rect(26, 22, 8, 4, dark);
     },
     // vanilla goat proportions: body 10x9x16, head 6x6x7, legs 4x12x4, swept horns
+
+    anims: { graze: GRAZE(56) }, ambient: { clip: 'graze', every: [9, 21] },
     parts: [
       part('body', [0, 12, 0], [
         b([-5, 12, -8], [10, 9, 16], { all: [0, 0, 24, 16], up: [0, 17, 24, 10] }),
@@ -401,6 +440,8 @@ export const FARM = {
       P.noise(54, 0, 8, 26, mane, 0.06); P.strokes(54, 0, 8, 26, 30, '#0e0906', 6); P.strokes(54, 0, 8, 26, 14, '#3a2a1c', 5);
     },
     // vanilla horse proportions: body 10x10x22, legs 4x14x4, arched neck, long head
+
+    anims: { graze: GRAZE(64) }, ambient: { clip: 'graze', every: [12, 28] },
     parts: [
       part('body', [0, 14, 0], [
         b([-5, 14, -11], [10, 10, 22], { all: [0, 0, 26, 16], up: [0, 17, 26, 10] }),
@@ -455,6 +496,8 @@ export const FARM = {
     },
     // vanilla rabbit proportions: small and hunched — body 6x4x8, head 5x4x4,
     // tall upright ears, heavy hind haunches and long back feet
+
+    anims: { sniff: SNIFF }, ambient: { clip: 'sniff', every: [5, 12] },
     parts: [
       part('body', [0, 3, 0], [
         b([-3, 3, -4], [6, 4, 8], { all: [0, 0, 16, 12], up: [18, 0, 14, 8] }),
