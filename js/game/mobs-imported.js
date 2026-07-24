@@ -7841,7 +7841,7 @@ export const IMPORTED_RIGS = {
   "tree_monster_small": "lumberer",
   "corvus": "floater",
   "baby_dragon": "biped",
-  "bat_pony_models": "biped",
+  "bat_pony_models": "floater",
   "dragon": "biped",
   "cat": "lumberer",
   "living_armor": "biped",

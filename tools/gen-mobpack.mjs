@@ -51,7 +51,16 @@ function makeIdFactory() {
 export function convertBBModel(json, opts = {}) {
   const res = json.resolution || { width: 64, height: 64 };
   const texW = res.width || 64, texH = res.height || 64;
-  const elements = (json.elements || []).filter((e) => e.from && e.to);
+  // Skip Blockbench guide cubes that shouldn't render: ones the artist hid
+  // (visibility:false) or excluded from export, and unmapped placeholders whose
+  // every face has a zero-area UV (e.g. a `bb_main` bounding box, uv [0,0,0,0]).
+  // Rendering these buried the real model inside a big flat cube.
+  const uvUnmapped = (e) => {
+    const vals = Object.values(e.faces || {}).filter((f) => Array.isArray(f.uv));
+    return vals.length > 0 && vals.every((f) => f.uv[0] === f.uv[2] || f.uv[1] === f.uv[3]);
+  };
+  const elements = (json.elements || []).filter((e) =>
+    e.from && e.to && e.visibility !== false && e.export !== false && !uvUnmapped(e));
   const byUuid = new Map(elements.map((e) => [e.uuid, e]));
 
   // bounding box → centre on x/z, feet at y=0; Minecraft units are 1/16 block.
