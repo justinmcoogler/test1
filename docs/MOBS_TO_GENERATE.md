@@ -1,12 +1,12 @@
-# Emberveil — Mob Generation List (real-world route)
+# Sproutlands — Mob Generation List (real-world route)
 
 Feed this to the mob-file + texture generator. Each entry becomes one
-**`emberveil-mob` v1 JSON** (the format the in-game importer already loads) plus
+**`mob` v1 JSON** (the format the in-game importer already loads) plus
 a **32×32-per-tile texture** on the mob's own UV sheet (same 32px scale as blocks).
 
-## Output each mob as `emberveil-mob` v1
+## Output each mob as `mob` v1
 ```
-{ "format":"emberveil-mob", "version":1, "id":"red_deer", "label":"Red Deer",
+{ "format":"mob", "version":1, "id":"red_deer", "label":"Red Deer",
   "scale":1.0,
   "texture": { "width":64, "height":64, "rgbaBase64":"…" },   // 64² sheet, 32px feel
   "parts": [ { "id":"body","parent":null,"pivot":[…],"boxes":[ { "from":[…],"size":[…],"uv":{…} } ] }, … ],

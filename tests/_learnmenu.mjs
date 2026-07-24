@@ -34,7 +34,7 @@ const r = await page.evaluate(() => {
     marker: m ? [m[0], m[1], m[2]] : null,
     player: [Math.round(g.player.x), Math.round(g.player.y), Math.round(g.player.z)],
     kit,
-    savedMode: (JSON.parse(localStorage.getItem('emberveil_slot_1') || '{}').meta || {}).mode,
+    savedMode: (JSON.parse(localStorage.getItem('sproutlands_slot_1') || '{}').meta || {}).mode,
   };
 });
 console.log(JSON.stringify(r, null, 2));

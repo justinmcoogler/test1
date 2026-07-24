@@ -1,4 +1,4 @@
-// Convert a Blockbench .bbmodel into an Emberveil "emberveil-mob" JSON file.
+// Convert a Blockbench .bbmodel into an Sproutlands "mob" JSON file.
 //
 //   node tools/bbmodel-to-mob.mjs <in.bbmodel> [out.json] [options]
 //
@@ -15,7 +15,7 @@
 // box-UV modes, the bone/outliner hierarchy, baked cube + group rotations
 // (emitted via the optional part.rotation the loader now understands), embedded
 // textures (base64 -> dataUri), and rotation/position animation channels mapped
-// onto Emberveil's idle/walk/attack slots. See docs/MOB_FORMAT.md.
+// onto Sproutlands's idle/walk/attack slots. See docs/MOB_FORMAT.md.
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 
@@ -49,7 +49,7 @@ for (const el of bb.elements || []) {
   if (el.type && el.type !== 'cube') { meshSkipped++; continue; }
   elements.set(el.uuid, el);
 }
-if (meshSkipped) console.warn(`[warn] skipped ${meshSkipped} non-cube (mesh) element(s) — Emberveil is box-only`);
+if (meshSkipped) console.warn(`[warn] skipped ${meshSkipped} non-cube (mesh) element(s) — Sproutlands is box-only`);
 
 // ---------------------------------------------------------------- scale/frame
 // bounding box over all cube corners -> scale to target height, feet at y=0,
@@ -98,7 +98,7 @@ function boxUV(el) {
 // ---------------------------------------------------------------- parts
 const parts = [];
 const usedIds = new Set();
-const boneOfPart = new Map(); // bbmodel group uuid -> emberveil part id
+const boneOfPart = new Map(); // bbmodel group uuid -> sproutlands part id
 const uniq = (base) => { let n = base || 'part', i = 2; while (usedIds.has(n)) n = `${base}_${i++}`; usedIds.add(n); return n; };
 
 const rot3 = (r) => invert ? [-num(r[0]), -num(r[1]), num(r[2])] : [num(r[0]), num(r[1]), num(r[2])];
@@ -163,7 +163,7 @@ const tex0 = (bb.textures || [])[0];
 if (!tex0 || !tex0.source) { console.error('[error] no embedded texture found (textures[0].source)'); process.exit(1); }
 const dataUri = tex0.source.startsWith('data:') ? tex0.source : `data:image/png;base64,${tex0.source}`;
 const texture = { dataUri, width: res.width, height: res.height };
-if ((bb.textures || []).length > 1) console.warn(`[warn] ${bb.textures.length} textures — only the first ("${tex0.name}") is used (Emberveil mobs carry one skin)`);
+if ((bb.textures || []).length > 1) console.warn(`[warn] ${bb.textures.length} textures — only the first ("${tex0.name}") is used (Sproutlands mobs carry one skin)`);
 
 // ---------------------------------------------------------------- animations
 function canonical(name) {
@@ -211,7 +211,7 @@ const stats = {
   desc: `Imported from Blockbench (${bb.meta?.model_format || 'generic'}).`,
 };
 const mob = {
-  format: 'emberveil-mob', version: 1, id,
+  format: 'mob', version: 1, id,
   label: opt.label || bb.model_identifier || bb.name || id,
   parts, texture, stats, drops: [],
   animations: anims,

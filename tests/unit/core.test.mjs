@@ -16,8 +16,8 @@ import { QUESTS } from '../../js/game/quests.js';
 import { NPC_DEFS, DIALOGUES } from '../../js/game/npcs.js';
 
 test('seeded rng is deterministic', () => {
-  const a = mulberry32(hashSeed('emberveil'));
-  const b = mulberry32(hashSeed('emberveil'));
+  const a = mulberry32(hashSeed('sproutlands'));
+  const b = mulberry32(hashSeed('sproutlands'));
   for (let i = 0; i < 100; i++) assert.equal(a(), b());
   assert.notEqual(mulberry32(1)(), mulberry32(2)());
 });

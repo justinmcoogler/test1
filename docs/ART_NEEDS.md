@@ -1,4 +1,4 @@
-# Emberveil — Art Needs (real-world route)
+# Sproutlands — Art Needs (real-world route)
 
 All art is **32×32 RGBA PNG** (`TILE = 32`) — blocks tile seamlessly (opaque),
 item/UI icons are transparent. Mobs are listed separately in

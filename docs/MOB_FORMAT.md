@@ -1,4 +1,4 @@
-# The `emberveil-mob` file format (v1)
+# The `mob` file format (v1)
 
 One JSON file = one complete creature: box model, skin texture, animations,
 combat stats, drops, and world-spawn rules. Drop files into `mobs/` and list
@@ -27,7 +27,7 @@ The working reference file is [`mobs/glimmerfox.json`](../mobs/glimmerfox.json)
 
 ```json
 {
-  "format": "emberveil-mob",
+  "format": "mob",
   "version": 1,
   "id": "glimmer_fox",
   "label": "Glimmer Fox",

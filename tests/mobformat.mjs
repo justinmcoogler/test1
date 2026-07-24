@@ -1,4 +1,4 @@
-// Custom mob pipeline e2e: the sample emberveil-mob file loads from mobs/,
+// Custom mob pipeline e2e: the sample mob file loads from mobs/,
 // gets a textured animated model, spawns, animates, fights, and drops loot.
 import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
@@ -58,8 +58,8 @@ try {
       catch (e) { return e.message; }
     };
     out.push(await tryLoad({ format: 'nope' }));
-    out.push(await tryLoad({ format: 'emberveil-mob', version: 1, id: 'mudback_boar', parts: [{ id: 'a', boxes: [{ from: [0, 0, 0], size: [1, 1, 1] }] }], texture: { width: 64, height: 64, rgbaBase64: 'x' }, stats: { hp: 1, atk: 1, speed: 1 } }));
-    out.push(await tryLoad({ format: 'emberveil-mob', version: 1, id: 'bad_drop', parts: [{ id: 'a', boxes: [{ from: [0, 0, 0], size: [1, 1, 1] }] }], texture: { width: 64, height: 64, rgbaBase64: 'x' }, stats: { hp: 1, atk: 1, speed: 1 }, drops: [{ item: 'not_an_item' }] }));
+    out.push(await tryLoad({ format: 'mob', version: 1, id: 'mudback_boar', parts: [{ id: 'a', boxes: [{ from: [0, 0, 0], size: [1, 1, 1] }] }], texture: { width: 64, height: 64, rgbaBase64: 'x' }, stats: { hp: 1, atk: 1, speed: 1 } }));
+    out.push(await tryLoad({ format: 'mob', version: 1, id: 'bad_drop', parts: [{ id: 'a', boxes: [{ from: [0, 0, 0], size: [1, 1, 1] }] }], texture: { width: 64, height: 64, rgbaBase64: 'x' }, stats: { hp: 1, atk: 1, speed: 1 }, drops: [{ item: 'not_an_item' }] }));
     return out;
   });
   check('bad format rejected', rejects[0].includes('format'), rejects[0]);

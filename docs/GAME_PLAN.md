@@ -1,4 +1,4 @@
-# Emberveil — Master Content Plan
+# Sproutlands — Master Content Plan
 
 > ## ⚙️ REALISTIC SPINE v3 — LOCKED (supersedes the v2 material tiers below)
 >
@@ -40,7 +40,7 @@
 # Master Content Plan v2 (Minecraft/RuneScape blend) — historical reference
 
 > **v2 replaces v1 wholesale.** Theme mandate: Minecraft-familiar materials and gear
-> structure + RuneScape-style tier rhythm and skilling depth + original Emberveil
+> structure + RuneScape-style tier rhythm and skilling depth + original Sproutlands
 > content at the caps — a deliberate blend, never a copy of either. All ids are new;
 > the v0 (original) and v1 catalogs are dead. Old saves will not carry over.
 
@@ -53,14 +53,14 @@
 | **Gems** | Sapphire → Emerald → Ruby → Diamond → **Veilstone** — random while mining any rock (ring+level scaled), cut by Crafting, socketed into jewelry, enchanted by Runecraft |
 | **Trees** | Oak (1) → Birch (15) → Willow (30) → Spruce (45) → **Duskwood** (60) → **Veilwood** (75) |
 | **Fish** | shrimp → cod → trout → salmon → tuna → lobster → swordfish → **glowfin** → **veilray** (levels 1–90, methods: net/rod/cage/harpoon) |
-| **Gear per metal** | Full Minecraft-style kit (sword + pickaxe/axe/shovel/hoe + helmet/chestplate/leggings/boots) **+ one signature weapon unique to Emberveil per tier** |
+| **Gear per metal** | Full Minecraft-style kit (sword + pickaxe/axe/shovel/hoe + helmet/chestplate/leggings/boots) **+ one signature weapon unique to Sproutlands per tier** |
 | **Ranged/Magic** | Per-wood shortbow/longbow + crossbow line with per-metal ammo · per-wood/element staves + rune-powered spellbook · hide/studded armor (Ranged) · robes (Magic) |
 | **Rings → bands** | R0 (<260) lv 1–25 · R1 (260–520) 20–50 · R2 (520–900) 45–75 · R3 (900+) 70–99 · distance = rarity everywhere |
 | **Skills (22)** | Mining, Woodcutting, Fishing, Hunter, Farming, Foraging, Archaeology · Smithing, Crafting, Fletching, Cooking, Herblore, Construction, Runecraft · Hitpoints, Strength, Defense, Ranged, Magic, Healing, Slayer, Beastlore |
 
 **Mob slot framework:** every biome×ring defines mob *slots* by role (skitterer/brute/
 stalker/caster/flyer/tank/boss) with stat ranges and drop-table templates derived from
-the ring — so creatures mass-imported through the emberveil-mob pipeline plug into
+the ring — so creatures mass-imported through the mob pipeline plug into
 drops, Slayer tasks, and Beastlore without redesign.
 
 **Differentiators vs MC/RS:** two combat modes, the custom-mob importer + Beastlore
@@ -135,7 +135,7 @@ Two audit passes ran over the full design (Appendices B and C). All fixes below 
 
 Reading done — engine conventions confirmed (nodes.js `tree_*`/`ore_*` node-type ids, STATION_LABELS in crafting.js, v0/v1 dead ids in items.js and GAME_PLAN.md). Registry follows.
 
-# EMBERVEIL v2 — CANONICAL ID REGISTRY (LAW)
+# SPROUTLANDS v2 — CANONICAL ID REGISTRY (LAW)
 
 **Total: 288 ids.** Floor forced by mandated matrices (63-id metal kits, 32-id ranged/magic weapon lines, 36-id ranged/mage armor, 9 fish × raw+cooked, 6 woods × logs+planks). The 8-id overage vs the 280 ceiling is the price of full hoe/shovel kits at all six metals; flag if the cap is hard.
 
@@ -554,7 +554,7 @@ Source files consulted: /home/user/test1/docs/GAME_PLAN.md (Appendix A), /home/u
 
 # PART 1 — MINING & SMITHING
 
-# EMBERVEIL v2 — MINING + SMITHING (FULL DEPTH)
+# SPROUTLANDS v2 — MINING + SMITHING (FULL DEPTH)
 
 Engine grounding used: `nodes.js` schema (`xp/time/charges[min,max]/respawn(s)/drops{weight}/rare{chance}`, `rollNodeDrops` rare chance × `(1+luck)`), `skills.js` curve `xpForLevel(n)=60n^2.4+80n` (cum. XP: lv10≈12.4k · lv15≈34.9k · lv30≈196k · lv45≈532k · lv60≈1.07M · lv75≈1.84M · lv99≈3.61M), engine crit-gather (4%+0.16%/lvl, double yield) and gather-time mult (floor 0.45), combat `dmg *= 1 - armor/(armor+30)`, stations from `crafting.js` STATION_LABELS.
 
@@ -675,7 +675,7 @@ Distribution when triggered (drops as uncut_*):
 | 75 | riftstone → veil_flux; veilsteel_pickaxe | 1.5% flat uncut_veilstone side-roll; time ×0.60 | 240 | R3 |
 | 85 | Prospector II | gem roll ×1.5 (replaces ×1.25); veilstone weight ×2 in R3 | — | — |
 | 90 | Master Miner | essence 12%; gem result upgrades one tier 10% of procs | — | — |
-| 99 | Emberveil Forgeheart (capstone) | 10% chance of +1 bonus ore per gather; Ore Sense 24 blocks | — | — |
+| 99 | Sproutlands Forgeheart (capstone) | 10% chance of +1 bonus ore per gather; Ore Sense 24 blocks | — | — |
 
 ---
 
@@ -852,7 +852,7 @@ Set 41 (+shield 47) → 57.7% / 61.0%. Riftblade vs armor-30 target: effective a
 | 76-79 | veilsteel shovel/hoe → helm/boots → legs → chest |
 | 85 | veilsteel_shield |
 | 90 | veilsteel_riftblade |
-| 99 | Forgemaster of Emberveil (capstone): Masterwork 20%; signature-weapon proc rates +25% on gear you forged |
+| 99 | Forgemaster of Sproutlands (capstone): Masterwork 20%; signature-weapon proc rates +25% on gear you forged |
 
 ---
 
@@ -942,7 +942,7 @@ Engine notes applied (from `/home/user/test1/js/game/skills.js`, `/home/user/tes
 | 80 | Veil Attunement | tree_veilwood charges +1 (4-7) |
 | 85 | Timber V | double-log total +20% |
 | 90 | Master Feller | -10% further chop time; floor lowered to 40% for WC |
-| 99 | Arborlord of Emberveil | +25% WC XP; Wastenot → 20%; title |
+| 99 | Arborlord of Sproutlands | +25% WC XP; Wastenot → 20%; title |
 
 ## WC Node Table (nodes.js schema: xp/time/charges/respawn; every field final)
 
@@ -1031,7 +1031,7 @@ All recipes at **workbench**, **knife** (SM1) in inventory required. Craft level
 | 80 | veilwood_longbow | 2 veilwood_log + 1 bowstring | 300 | atk 38 / 2.6, +3 range | 750 | equip R80 |
 | 85 | Master's Draw | passive | — | -15% further fletch time (total -20%) | — | |
 | 90 | Flawless Grain | passive | — | bows/staves/xbows fletch at +10% coin value (vendor) | — | |
-| 99 | Grand Fletcher of Emberveil | passive | — | ammo batches +3, 10% chance metal bar refunded on ammo crafts; title | — | |
+| 99 | Grand Fletcher of Sproutlands | passive | — | ammo batches +3, 10% chance metal bar refunded on ammo crafts; title | — | |
 
 Total damage at cap (reference for combat agent, vs `armor/(armor+30)` mitigation): veilwood_shortbow + veilsteel_arrow = 49 per 1.8s; veil_crossbow + veilsteel_bolt = 65 per 2.4s with 20% armor pierce; both gated R75.
 
@@ -1207,7 +1207,7 @@ Catch speed scales by engine gatherTimeMult (−0.6%/lv, floor 45%); crit (engin
 
 # PART 4 — HUNTER, FORAGING & FARMING
 
-# EMBERVEIL v2 — FULL DEPTH: HUNTER · FORAGING · FARMING
+# SPROUTLANDS v2 — FULL DEPTH: HUNTER · FORAGING · FARMING
 
 Engine anchors used: `skills.js` curve (cum. XP: lv15≈34.9k, lv30≈196k, lv45≈531k, lv60≈1.07M, lv75≈1.84M, lv99≈3.60M), `nodes.js` schema (xp/time/charges/respawn, `rare[].chance × (1+luck)`, distance-luck param), `gatherTimeMult` floor 0.45, `critChance` = double yield. Coin values are base VENDOR-BUY (player sells at 100%; vendors sell to player at ×1.6). All ids verbatim from the registry; new ids flagged in REGISTRY GAPS.
 
@@ -1924,7 +1924,7 @@ Essence sinks: RC binding, HB magic_potion (×3). Coin 2.
 
 # PART 7 — CONSTRUCTION & THE COMBAT GEAR CURVE
 
-# EMBERVEIL v2 — CONSTRUCTION + COMBAT GEAR CURVE
+# SPROUTLANDS v2 — CONSTRUCTION + COMBAT GEAR CURVE
 
 **Engine grounding (verified):** dmg = atkTotal × power × (1 − armor/(armor+30)) (`js/game/combat.js:400-401`); melee atkTotal = weapon.atk + 0.4×ST, ranged = weapon.atk + 0.4×R, magic = staff.atk + 0.45×MG + equip magic (`combat.js:342-369`); hit = clamp(60 + weapon.acc + 0.5×skill − target.evasion, 5, 95); `spd` = initiative; XP curve 60n^2.4+80n → lv99 ≈ 3.62M (`skills.js:107-111`); recipe format = station+skill+level+xp (`crafting.js`); stations/blocks are placeable items (`items.js:147-167`). Crit assumed ×1.75 dmg. All Construction placeables use delegated `cn_*` namespace; engine station ids (`workbench`, `furnace`, `anvil_block`, `campfire`, `alchemy_table`, `loom_block`, `enchant_altar`, `construction_bench`) are retained law. Adjacency buffs: furniture within 2 blocks of its station; same-type buffs do not stack. `stone` and `glass_pane` are missing registry ids — used below, flagged under REGISTRY GAPS.
 
@@ -2211,7 +2211,7 @@ Checks: monotonic eff-dmg within each band; no tier gap >15 levels without a wea
 
 Engine grounding confirmed (skills.js `xpForLevel = 60n^2.4+80n` → 99 ≈ 3.61M XP; combat.js `armor/(armor+30)` soak, dmg = weaponAtk + 0.4-0.45×lvl, XP = 1.5×dmg dealt; MOB_FORMAT.md stats block + 9 biomes; enemies.js drop schema `{item,qty:[a,b],chance}`). Deliverable follows.
 
-# EMBERVEIL v2 — COMBAT SKILLS + SLAYER + BEASTLORE + MOB SLOT FRAMEWORK
+# SPROUTLANDS v2 — COMBAT SKILLS + SLAYER + BEASTLORE + MOB SLOT FRAMEWORK
 
 ## §0 ENGINE BINDINGS (law for every table below)
 
@@ -2612,7 +2612,7 @@ Tame mechanics: consumable = beast_treat ×(1+tier) per attempt; success = 55% �
 | any | caster, tank | never (tank: BL85) | 5 | 20% | tank pets late |
 | any | boss | never | — | — | — |
 
-### §8.2 Custom-mob auto-enroll (emberveil-mob imports; runs at mobloader validate)
+### §8.2 Custom-mob auto-enroll (mob imports; runs at mobloader validate)
 
 | rule | spec |
 |---|---|
@@ -2770,7 +2770,7 @@ Mob-specific rare whitelist (the ≤1 extra line): uncut gems (ring-appropriate)
 
 # APPENDIX B — ADVERSARIAL COHERENCE AUDIT (fixes ratified by the rulings)
 
-# EMBERVEIL v2 — ADVERSARIAL COHERENCE AUDIT
+# SPROUTLANDS v2 — ADVERSARIAL COHERENCE AUDIT
 
 Severity: **CRIT** = ships broken / dead-locks progression · **HIGH** = two docs disagree on the same law · **MED** = contract mismatch, needs one owner to yield · **LOW** = tune/wording.
 
@@ -2860,7 +2860,7 @@ Severity: **CRIT** = ships broken / dead-locks progression · **HIGH** = two doc
 
 # APPENDIX C — ECONOMY & PACING AUDIT (fixes ratified by the rulings)
 
-# EMBERVEIL v2 — ECONOMY & PACING AUDIT
+# SPROUTLANDS v2 — ECONOMY & PACING AUDIT
 
 Baseline used: curve `60n^2.4+80n` → cum. XP lv50=683k · lv75=1.84M · lv99=3.61M. "Hours" assume focused play at the cap-content XP/hr each doc's own numbers produce (node charges/respawns respected). Median target band: **150–250 h to 99**.
 

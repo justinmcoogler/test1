@@ -1,4 +1,4 @@
-# Emberveil — Realism Roadmap (post-combat-pass)
+# Sproutlands — Realism Roadmap (post-combat-pass)
 
 The realistic-route build order. Each job is a tested commit pushed to the
 working branch. The combat de-magick pass (mana→stamina, spells→Fantasy
@@ -48,6 +48,6 @@ feasible on mobile.
 
 ## Job 6 — Mob import  ⟶ DEFERRED (user uploads the pack)
 Importer + validation harness ready (`docs/MOBS_TO_GENERATE.md` defines the
-`emberveil-mob` format; the combat pass added the optional `bleed` field). On
+`mob` format; the combat pass added the optional `bleed` field). On
 upload: spin an agent to import + validate every mob, wire per-biome spawn
 tables, retire the fantasy `ENEMY_TYPES`, and test.

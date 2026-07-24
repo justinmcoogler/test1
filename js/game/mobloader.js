@@ -1,4 +1,4 @@
-// Loader for custom creature files ("emberveil-mob" JSON, v1).
+// Loader for custom creature files ("mob" JSON, v1).
 // A mob file bundles: box-model parts with per-face texture UVs, an embedded
 // 64×64 skin texture, keyframed part animations (idle/walk/attack), combat
 // stats, drops, and optional world-spawn rules. See docs/MOB_FORMAT.md.
@@ -15,7 +15,7 @@ function fail(id, msg) { throw new Error(`mob "${id}": ${msg}`); }
 
 export function parseMobFile(json) {
   const id = json.id || '?';
-  if (json.format !== 'emberveil-mob') fail(id, 'format must be "emberveil-mob"');
+  if (json.format !== 'mob') fail(id, 'format must be "mob"');
   if (json.version !== 1) fail(id, `unsupported version ${json.version}`);
   if (!/^[a-z][a-z0-9_]{2,31}$/.test(json.id || '')) fail(id, 'id must be snake_case, 3-32 chars');
   if (ENEMY_TYPES[json.id] && !loadedMobs.has(json.id)) fail(id, 'id collides with a built-in creature');

@@ -1,4 +1,4 @@
-// Validates the Minecraft → Emberveil schematic conversion: every mapping target
+// Validates the Minecraft → Sproutlands schematic conversion: every mapping target
 // is a real block, common ids map the way a builder expects, and a synthetic
 // Sponge .schem round-trips through the NBT/varint reader into placed cells with
 // an accurate unmapped report.
@@ -9,7 +9,7 @@ import { LEGACY_IDS } from '../../tools/mc-legacy-ids.mjs';
 import { convertSchematic } from '../../tools/import-schematic.mjs';
 import { B } from '../../js/world/blocks.js';
 
-test('every mapping target is a real Emberveil block', () => {
+test('every mapping target is a real Sproutlands block', () => {
   for (const [mcId, ours] of Object.entries(MC_MAP)) {
     assert.ok(ours in B, `MC_MAP[${mcId}] → "${ours}" is not a real block`);
   }

@@ -1,6 +1,6 @@
-# Minecraft schematics → Emberveil
+# Minecraft schematics → Sproutlands
 
-Drop Minecraft build files here and convert them into Emberveil structures.
+Drop Minecraft build files here and convert them into Sproutlands structures.
 
 ## Supported formats
 - `.schem` — Sponge (WorldEdit `//schem save`, most modern builds)

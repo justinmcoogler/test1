@@ -1,4 +1,4 @@
-# Emberveil
+# Sproutlands
 
 A playable, original **voxel sandbox RPG** for the browser — block-based exploration,
 mining, building and crafting fused with deep skill progression, regenerating resource

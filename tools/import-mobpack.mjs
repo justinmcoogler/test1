@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Import a licensed Blockbench mob pack (models/open_standard/*.bbmodel) into
-// Emberveil. Reads the pack catalog, converts every open-standard model via
+// Sproutlands. Reads the pack catalog, converts every open-standard model via
 // convertBBModel (skipping ones with no embedded texture), slugifies each
 // catalog `title` into a unique snake_case type id (deduped so it never clashes
 // with a native ENEMY_TYPES id or another import), and emits two GENERATED

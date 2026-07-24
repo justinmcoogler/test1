@@ -88,7 +88,7 @@ console.log('SPAWN entities', before, '->', after);
 
 // read back the persisted override
 const persisted = await page.evaluate(() => {
-  const raw = localStorage.getItem('emberveil.mobconfig');
+  const raw = localStorage.getItem('sproutlands.mobconfig');
   return raw ? JSON.parse(raw) : null;
 });
 console.log('PERSISTED', JSON.stringify(persisted));

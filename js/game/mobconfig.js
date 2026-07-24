@@ -2,7 +2,7 @@
 //
 // Player-authored tweaks (which mobs spawn, how densely, in which biomes, and
 // what they drop) live here, layered on top of the immutable ENEMY_TYPES
-// registry in enemies.js. Persisted to localStorage under 'emberveil.mobconfig'
+// registry in enemies.js. Persisted to localStorage under 'sproutlands.mobconfig'
 // and read LIVE by worldgen spawning (js/world/world.js) and combat drops
 // (combat.js / combatrs.js). Node-safe: with no localStorage it starts empty.
 //
@@ -11,7 +11,7 @@
 import { ENEMY_TYPES } from './enemies.js';
 import { MOB_DEFAULTS } from './mobconfig-defaults.js';
 
-export const MOBCONFIG_KEY = 'emberveil.mobconfig';
+export const MOBCONFIG_KEY = 'sproutlands.mobconfig';
 
 function loadOverrides() {
   try {

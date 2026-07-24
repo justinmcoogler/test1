@@ -1,8 +1,8 @@
 {
-  "format": "emberveil-mob",
+  "format": "mob",
   "version": 1,
-  "id": "emberveil_chicken",
-  "label": "Emberveil Chicken",
+  "id": "meadow_chicken",
+  "label": "Meadow Chicken",
   "parts": [
     {
       "id": "body",
@@ -797,7 +797,7 @@
     }
   ],
   "texture": {
-    "file": "emberveil_chicken.png",
+    "file": "meadow_chicken.png",
     "width": 256,
     "height": 256
   },

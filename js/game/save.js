@@ -1,6 +1,6 @@
 // Save slots in localStorage + settings. Autosave handled by main loop.
-const SLOT_PREFIX = 'emberveil_slot_';
-const SETTINGS_KEY = 'emberveil_settings';
+const SLOT_PREFIX = 'sproutlands_slot_';
+const SETTINGS_KEY = 'sproutlands_settings';
 export const NUM_SLOTS = 3;
 
 export const DEFAULT_SETTINGS = {

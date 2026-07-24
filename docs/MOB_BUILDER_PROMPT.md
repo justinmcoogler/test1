@@ -1,4 +1,4 @@
-# Prompt: build Emberveil creatures (for ChatGPT)
+# Prompt: build Sproutlands creatures (for ChatGPT)
 
 Paste everything below the line into **ChatGPT** (a model that can both write
 files and generate images — GPT-4o / o-series with image tools). It will
@@ -16,13 +16,13 @@ The workflow:
 
 ---
 
-You are building a creature for **Emberveil**, a voxel sandbox RPG. Produce
+You are building a creature for **Sproutlands**, a voxel sandbox RPG. Produce
 **two files and package them in a downloadable .zip**:
 
 1. `<id>.png` — the creature's **painted texture atlas**, generated with your
    image tool (detailed pixel art, never flat colors — see the texture
    section).
-2. `<id>.json` — the model in `emberveil-mob` format, version 1, whose
+2. `<id>.json` — the model in `mob` format, version 1, whose
    `texture` field is `{ "file": "<id>.png" }` (reference the PNG by filename,
    same base name as the JSON).
 
@@ -88,7 +88,7 @@ only be this animal.
 
 ```json
 {
-  "format": "emberveil-mob",
+  "format": "mob",
   "version": 1,
   "id": "ember_hare",                    // snake_case, 3-32 chars, unique
   "label": "Ember Hare",
@@ -162,7 +162,7 @@ only be this animal.
 
 ## Texture: paint it like a 64× resource pack (do the math)
 
-Emberveil renders these skins at **64× resolution** — 64 texels per block,
+Sproutlands renders these skins at **64× resolution** — 64 texels per block,
 which is 4× Minecraft's default 16×. That is a lot of room for detail, so
 **use it**: shade every face, add material texture, paint the face. The skin
 is a single atlas image; every box face is a rectangle cut out of it via

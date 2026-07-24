@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const out = process.argv[2] || join(root, 'dist', 'emberveil.html');
+const out = process.argv[2] || join(root, 'dist', 'sproutlands.html');
 
 const result = await build({
   entryPoints: [join(root, 'js/main.js')],

@@ -1,4 +1,4 @@
-# Emberveil — Realistic Texture Manifest (v3)
+# Sproutlands — Realistic Texture Manifest (v3)
 
 Generated from `js/game/materials.js` — 381 textures, all **32×32 PNG**. `block_*.png` = world tiles (opaque, tile seamlessly), `item_*.png` = inventory icons (transparent). Filenames are load-bearing — the texture-pack loader consumes them exactly.
 

@@ -1,4 +1,4 @@
-// Emberveil — main orchestration: boot, game loop, interactions, camera, save.
+// Sproutlands — main orchestration: boot, game loop, interactions, camera, save.
 import { buildAtlas } from './gfx/textures.js';
 import { Renderer } from './gfx/renderer.js';
 import { World, initSlabSet } from './world/world.js';
@@ -1778,7 +1778,7 @@ class Game {
     el.className = 'fullscreen-overlay';
     el.innerHTML = `<div class="title-box">
       <h2>Play time is used up!</h2>
-      <p style="color:var(--ink-dim);margin-top:10px">Complete a lesson to earn more time in Emberveil.<br>
+      <p style="color:var(--ink-dim);margin-top:10px">Complete a lesson to earn more time in Sproutlands.<br>
       Your world is saved and waiting for you.</p>
       <p style="color:var(--ink-dim);margin-top:14px;font-size:13px">Lessons: ${Object.keys(this.education.lessonsDone).length} completed ·
       ${Math.round(this.education.playtimeTotalSec / 60)} minutes played all-time</p>
@@ -2201,4 +2201,28 @@ function startLearningMode() {
 
 initAudio(loadSettings());
 renderTitle();
-window.addEventListener('error', (e) => console.error('[emberveil]', e.message));
+window.addEventListener('error', (e) => console.error('[sproutlands]', e.message));
+
+// ---- PWA: installable + auto-updating (hosted builds only) -----------------
+// The browser fires beforeinstallprompt when the app qualifies to install;
+// stash it and reveal the title-screen "Install" button.
+let _deferredInstall = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _deferredInstall = e;
+  $('install-btn')?.classList.remove('hidden');
+});
+window.addEventListener('appinstalled', () => { $('install-btn')?.classList.add('hidden'); _deferredInstall = null; });
+$('install-btn')?.addEventListener('click', async () => {
+  if (!_deferredInstall) return;
+  _deferredInstall.prompt();
+  await _deferredInstall.userChoice.catch(() => {});
+  _deferredInstall = null;
+  $('install-btn')?.classList.add('hidden');
+});
+// Register the service worker for offline play + auto-update on redeploy. Skip
+// on localhost (so tests never load stale cached modules) and in the inlined
+// single-file build (no sw.js beside it).
+if ('serviceWorker' in navigator && !window.__EMBEDDED && !['localhost', '127.0.0.1'].includes(location.hostname)) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}

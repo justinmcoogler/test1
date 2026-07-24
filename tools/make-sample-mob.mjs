@@ -1,4 +1,4 @@
-// Generates mobs/glimmerfox.json — the reference "emberveil-mob" file.
+// Generates mobs/glimmerfox.json — the reference "mob" file.
 // Paints the 64×64 skin programmatically (raw RGBA) so no image tools needed.
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
@@ -46,7 +46,7 @@ const legBox = (x, z) => ({
 });
 
 const mob = {
-  format: 'emberveil-mob',
+  format: 'mob',
   version: 1,
   id: 'glimmer_fox',
   label: 'Glimmer Fox',

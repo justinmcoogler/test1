@@ -81,7 +81,7 @@ jewelryMetals().forEach((m) => {
 
 // ---- emit ----
 const batches = [...new Set(rows.map((r) => r.batch))];
-let md = `# Emberveil — Realistic Texture Manifest (v3)\n\n`;
+let md = `# Sproutlands — Realistic Texture Manifest (v3)\n\n`;
 md += `Generated from \`js/game/materials.js\` — ${rows.length} textures, all **32×32 PNG**. ` +
   `\`block_*.png\` = world tiles (opaque, tile seamlessly), \`item_*.png\` = inventory icons (transparent). ` +
   `Filenames are load-bearing — the texture-pack loader consumes them exactly.\n\n`;

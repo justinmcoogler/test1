@@ -4,8 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Emberveil — Voxel Sandbox RPG</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='1' y='1' width='14' height='14' fill='%23e2b13c'/><rect x='3' y='3' width='10' height='10' fill='%235f9e46'/></svg>">
+<title>Sproutlands — Voxel Sandbox RPG</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%234a7a3a'/><rect x='4' y='12' width='8' height='2' fill='%236b4a2a'/><rect x='7' y='6' width='2' height='6' fill='%233e7d32'/><rect x='3' y='6' width='4' height='2' fill='%236fbf4a'/><rect x='9' y='5' width='4' height='2' fill='%236fbf4a'/><rect x='7' y='4' width='2' height='2' fill='%23a8e57a'/></svg>">
+<meta name="theme-color" content="#5f9e46">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -15,7 +18,7 @@
 <!-- ===== Title screen ===== -->
 <div id="title-screen" class="fullscreen-overlay">
   <div class="title-box">
-    <h1 class="game-title">EMBERVEIL</h1>
+    <h1 class="game-title">SPROUTLANDS</h1>
     <p class="game-subtitle">A voxel sandbox role-playing adventure</p>
     <div id="save-slots" class="save-slots"></div>
     <button id="learning-mode-btn" class="slot-btn learn-btn"></button>
@@ -23,6 +26,7 @@
       <input id="seed-input" type="text" placeholder="World seed (optional)" autocomplete="off">
     </div>
     <p class="title-hint" id="title-hint"></p>
+    <button id="install-btn" class="install-btn hidden">Install Sproutlands</button>
   </div>
 </div>
 

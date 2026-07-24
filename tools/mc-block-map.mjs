@@ -1,4 +1,4 @@
-// Minecraft block id → Emberveil block name. Used by tools/import-schematic.mjs
+// Minecraft block id → Sproutlands block name. Used by tools/import-schematic.mjs
 // to convert .schem / .schematic builds into our block set, and to report what
 // has no good equivalent. mapBlock() returns { block, quality }:
 //   'exact'  — a faithful equivalent
@@ -187,7 +187,7 @@ export function normalizeId(raw) {
   return String(raw).toLowerCase().replace(/^minecraft:/, '').replace(/\[.*\]$/, '').trim();
 }
 
-// Decorative wood/stone families that collapse to a single Emberveil block
+// Decorative wood/stone families that collapse to a single Sproutlands block
 // regardless of the source material (wood stays OAK-only): every *_trapdoor →
 // trapdoor, every *_sign / *_wall_sign / *_hanging_sign → sign, every *_button →
 // button. Checked before the generic shape-suffix handling so they win.

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Convert Minecraft schematic files into Emberveil structure JSON.
+// Convert Minecraft schematic files into Sproutlands structure JSON.
 //
 //   node tools/import-schematic.mjs <file.schem|.schematic|.litematic|.nbt> [out.json]
 //   node tools/import-schematic.mjs assets/schematics/*.schem      (batch)
@@ -283,7 +283,7 @@ function main(argv) {
     }
   }
   if (allUnmapped.size) {
-    console.log(`\n════ blocks with NO Emberveil mapping (across all files) ════`);
+    console.log(`\n════ blocks with NO Sproutlands mapping (across all files) ════`);
     for (const [id, count] of [...allUnmapped].sort((a, b) => b[1] - a[1])) console.log(`  ${id.padEnd(30)} ×${count}`);
     console.log(`\nAdd these to MC_MAP in tools/mc-block-map.mjs to convert them.`);
   }
