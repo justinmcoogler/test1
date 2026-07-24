@@ -259,7 +259,7 @@ export class Renderer {
   // Renders one registered mob model into a square 2D canvas via an FBO, in a
   // static 3/4 rest pose framed on the model's bounds, so the settings panel can
   // show what each mob looks like. Returns false if the model isn't registered.
-  renderMobThumb(modelName, out2d) {
+  renderMobThumb(modelName, out2d, yaw = 0, pitch = 0) {
     const gl = this.gl;
     const model = this.modelCache.get(modelName);
     if (!model) return false;
@@ -288,9 +288,15 @@ export class Renderer {
     gl.disable(gl.CULL_FACE); // some imported meshes wind faces inconsistently
 
     // frame the camera on the model's bounds; look from front-right-above.
+    // yaw orbits horizontally around the model's up axis and pitch tilts the
+    // elevation, so the admin preview can be dragged to spin the model. yaw 0 /
+    // pitch 0 reproduces the original front-right 3/4 view.
     const b = model.bounds || { cx: 0, cy: 0.9, cz: 0, r: 1 };
     const dist = b.r * 3.4 + 0.6;
-    const dir = [0.55, 0.42, 0.9]; const dl = Math.hypot(...dir);
+    const baseAz = Math.atan2(0.9, 0.55), horiz = Math.hypot(0.55, 0.9);
+    const az = baseAz + yaw;
+    const elev = Math.max(-1.4, Math.min(1.4, 0.42 + pitch));
+    const dir = [Math.cos(az) * horiz, elev, Math.sin(az) * horiz]; const dl = Math.hypot(...dir);
     const target = [b.cx, b.cy, b.cz];
     const eye = [b.cx + dir[0] / dl * dist, b.cy + dir[1] / dl * dist, b.cz + dir[2] / dl * dist];
     const proj = mat4Identity(new Float32Array(16));

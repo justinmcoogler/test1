@@ -1085,6 +1085,7 @@ export class UI {
       : '<div class="admin-empty">No mobs match your search.</div>';
     this._wireAdminList(host);
     this._fillAdminThumbs(host);
+    this._fillAdminPreview(host);
   }
 
   // Paint a small 3/4 model preview into each row's thumbnail. Rendered once per
@@ -1117,6 +1118,41 @@ export class UI {
     }
   }
 
+  // Large, drag-to-rotate model preview shown in the expanded mob row. Renders
+  // the live model via the renderer's offscreen FBO at the current orbit angle;
+  // dragging spins it (yaw) and tilts it (pitch). The angle persists across
+  // rows so you can compare mobs from the same view.
+  _fillAdminPreview(host) {
+    const r = this.game?.renderer;
+    const canvas = host.querySelector('canvas.admin-preview');
+    if (!r || typeof r.renderMobThumb !== 'function' || !canvas) return;
+    this._preview ??= { yaw: 0, pitch: 0 };
+    const type = canvas.dataset.mob;
+    let raf = 0;
+    const draw = () => { raf = 0; if (!r.renderMobThumb(type, canvas, this._preview.yaw, this._preview.pitch)) canvas.classList.add('admin-preview-empty'); };
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(draw); };
+    draw();
+    // pointer-drag orbit (works with mouse, pen, and touch via pointer events)
+    let dragging = false, lastX = 0, lastY = 0;
+    canvas.addEventListener('pointerdown', (e) => {
+      dragging = true; lastX = e.clientX; lastY = e.clientY;
+      canvas.classList.add('grabbing'); try { canvas.setPointerCapture(e.pointerId); } catch { /* not supported */ }
+      e.preventDefault();
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX, dy = e.clientY - lastY; lastX = e.clientX; lastY = e.clientY;
+      this._preview.yaw += dx * 0.012;
+      this._preview.pitch = Math.max(-1.1, Math.min(1.1, this._preview.pitch - dy * 0.012));
+      schedule();
+    });
+    const end = (e) => { if (!dragging) return; dragging = false; canvas.classList.remove('grabbing'); try { canvas.releasePointerCapture(e.pointerId); } catch { /* ignore */ } };
+    canvas.addEventListener('pointerup', end);
+    canvas.addEventListener('pointercancel', end);
+    // double-click resets to the default 3/4 view
+    canvas.addEventListener('dblclick', () => { this._preview.yaw = 0; this._preview.pitch = 0; schedule(); });
+  }
+
   _adminMobHTML(type) {
     const def = ENEMY_TYPES[type];
     const open = this._adminExpanded.has(type);
@@ -1142,6 +1178,10 @@ export class UI {
       .join('');
     const drops = mobDropsFor(type).map((d) => this._adminDropRowHTML(d)).join('');
     return `<div class="admin-detail">
+      <div class="admin-preview-wrap">
+        <canvas class="admin-preview" data-mob="${type}" width="260" height="260"></canvas>
+        <div class="admin-preview-hint">drag to rotate</div>
+      </div>
       <div class="admin-field">
         <label>Spawn rate <span class="admin-rate-val">${(+rate).toFixed(2)}×</span></label>
         <input type="range" class="admin-rate" min="0" max="4" step="0.05" value="${rate}">
