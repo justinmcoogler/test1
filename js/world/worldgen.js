@@ -516,9 +516,10 @@ export class WorldGen {
     // Smooth the whole lane so EVERY road column is within one block of each of
     // its 4-neighbour road columns — not just consecutive centre cells. A
     // diagonal climb can leave a shoulder two steps above a lower centre one
-    // cell over, a lateral seam the 1-block auto-step can't cross; raising the
-    // lower column to (highestRoadNeighbour − 1) removes it. Raise-only and
-    // iterated to a fixed point, so it converges and never lowers the road.
+    // cell over: a lateral seam you couldn't cross in a single jump. Raising the
+    // lower column to (highestRoadNeighbour − 1) keeps every step to one block
+    // (a single hop). Raise-only and iterated to a fixed point, so it converges
+    // and never lowers the road.
     let changed = true;
     for (let pass = 0; changed && pass < 64; pass++) {
       changed = false;

@@ -30,7 +30,8 @@ test('every road steps at most one block — always walkable', () => {
 
 test('the whole lane is walkable — every road column is within 1 block of its road-neighbours', () => {
   // The real guarantee (not just the centre line): shoulders on a diagonal climb
-  // must not leave a >1 lateral seam the 1-block auto-step can't cross.
+  // must not leave a >1 lateral seam — every step across the lane stays one
+  // block, i.e. always crossable in a single jump.
   for (const seed of [12345, 59, 1, 777, 4242]) {
     const gen = new WorldGen(seed);
     let worst = 0, worstAt = '';
