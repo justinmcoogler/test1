@@ -70,6 +70,10 @@ export class Renderer {
     this.view = mat4Identity();
     this.pv = mat4Identity();
     this.tmp = mat4Identity();
+    // persistent per-frame scratch (reused every draw() — no allocation)
+    this._baseMat = new Float32Array(16);
+    this._partMat = new Float32Array(16);
+    this._visible = [];
     this.planes = [];
     this.camPos = [0, 40, 0];
     this.fov = 72 * Math.PI / 180;
@@ -525,7 +529,7 @@ export class Renderer {
     setTerrainUniforms(tp);
 
     const pcx = Math.floor(this.camPos[0] / CHUNK), pcz = Math.floor(this.camPos[2] / CHUNK);
-    const visible = [];
+    const visible = this._visible; visible.length = 0;
     for (const [key, m] of this.chunkMeshes) {
       const dx = m.cx - pcx, dz = m.cz - pcz;
       if (Math.max(Math.abs(dx), Math.abs(dz)) > this.renderDistance) continue;
@@ -561,8 +565,8 @@ export class Renderer {
     gl.uniform1i(wp.uniforms.uAtlas, 0);
     gl.uniform3f(wp.uniforms.uTint, 0, 0, 0);
     const ambient = Math.max(0.35, this.daylight);
-    const baseMat = new Float32Array(16);
-    const partMat = new Float32Array(16);
+    const baseMat = this._baseMat;
+    const partMat = this._partMat;
     for (const e of opts.entities || []) {
       const model = this.modelCache.get(e.model);
       if (!model) continue;
