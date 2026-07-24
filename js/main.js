@@ -1487,6 +1487,12 @@ class Game {
       emit('chestOpened', { id });
       return true;
     }
+    if (def.shape === 'panel') { // trapdoor — swing it open or closed
+      const f = this.world.facingAt(hit.x, hit.y, hit.z);
+      this.world.setFacing(hit.x, hit.y, hit.z, f ^ 8); // flip the open bit (3)
+      SFX.place();
+      return true;
+    }
     return false;
   }
 

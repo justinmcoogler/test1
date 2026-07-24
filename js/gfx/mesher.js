@@ -163,7 +163,7 @@ export function meshChunk(world, cx, cz) {
           continue;
         }
         if (CUSTOM_SHAPES.has(def.shape)) {
-          const facing = world.facingAt(wx, y, wz); // dir (bits 0-1) + top-half (bit 2)
+          const facing = world.facingAt(wx, y, wz); // dir (bits 0-1) + top-half (bit 2) + trapdoor-open (bit 3)
           const light = { sky: skyAt(x, y + 1, z), blk: Math.max(blockAt(x, y, z), def.emissive) };
           const target = def.transparent ? cutout : opaque;
           let sides = null;

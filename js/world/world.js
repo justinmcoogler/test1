@@ -36,7 +36,8 @@ export class World {
     this.chestContents = new Map();   // chestId → [{item,qty}]
     this.chestMeta = new Map();       // chestId → def (incl. requiresBossDead)
     this.crops = new Map();           // "x,y,z" → ripeAt (player-planted crops)
-    this.blockFacing = new Map();     // "x,y,z" → 0-3 facing for directional blocks
+    this.blockFacing = new Map();     // "x,y,z" → facing bits (0-1 dir, 2 top-half, 3 trapdoor-open)
+    this.facingEdits = new Map();     // player-set facings that must survive the town re-stamp
     this.time = 0;                    // world-time seconds, persisted
     this.dirtyChunks = new Set();     // chunk keys needing remesh
 
@@ -45,7 +46,7 @@ export class World {
     this.structEditsByChunk = indexEditsByChunk(s.edits, CHUNK);
     this.markers = s.markers;
     for (const ch of s.chests) this.chestMeta.set(ch.id, ch);
-    for (const [x, y, z, f] of s.facings || []) this.blockFacing.set(`${x},${y},${z}`, f & 7);
+    for (const [x, y, z, f] of s.facings || []) this.blockFacing.set(`${x},${y},${z}`, f & 15);
 
     // The imported circular town of Greywall is the true starting point: seat
     // the player + the first NPCs on its central plaza and grow from there.
@@ -93,7 +94,9 @@ export class World {
 
     // Stamp the imported town over the flattened pad (block id + facing).
     if (townReady()) {
-      const setFacing = (x, y, z, f) => this.blockFacing.set(`${x},${y},${z}`, f & 7);
+      // A player-edited facing (e.g. a trapdoor they swung open) wins over the
+      // schematic's imported orientation, so skip cells recorded in facingEdits.
+      const setFacing = (x, y, z, f) => { const key = `${x},${y},${z}`; if (!this.facingEdits.has(key)) this.blockFacing.set(key, f & 15); };
       for (let lz = 0; lz < CHUNK; lz++) {
         for (let lx = 0; lx < CHUNK; lx++) {
           const top = stampTownColumn(cx * CHUNK + lx, cz * CHUNK + lz, lx, lz, setLocal, setFacing);
@@ -287,7 +290,9 @@ export class World {
   facingAt(x, y, z) { return this.blockFacing.get(`${x},${y},${z}`) ?? 0; }
   setFacing(x, y, z, facing) {
     const key = `${x},${y},${z}`;
-    if (facing) this.blockFacing.set(key, facing & 7); else this.blockFacing.delete(key); // bits: 0-1 dir, 2 top-half
+    const f = facing & 15; // bits: 0-1 dir, 2 top-half, 3 trapdoor-open
+    if (f) this.blockFacing.set(key, f); else this.blockFacing.delete(key);
+    this.facingEdits.set(key, f); // remember the choice so a town re-stamp won't revert it
     this.dirtyChunks.add(chunkKey(Math.floor(x / CHUNK), Math.floor(z / CHUNK)));
   }
 
@@ -300,7 +305,7 @@ export class World {
     const idx = lidx(x - cx * CHUNK, y, z - cz * CHUNK);
     if (c.blocks[idx] === id && !record) return;
     c.blocks[idx] = id;
-    this.blockFacing.delete(`${x},${y},${z}`); // stale facing goes with the old block
+    this.blockFacing.delete(`${x},${y},${z}`); this.facingEdits.delete(`${x},${y},${z}`); // stale facing goes with the old block
     if (id !== B.air && y + 1 > (c.contentTop || 0)) c.contentTop = Math.min(WORLD_H, y + 1); // building upward raises the mesh ceiling
     c.mapStamp = (c.mapStamp || 0) + 1; // invalidates cached map tiles
     if (record) {
@@ -514,6 +519,8 @@ export class World {
     const id = this.getBlock(x, y, z);
     if (!isSolid(id)) return 0;
     const shape = BLOCKS[id]?.shape;
+    // An open trapdoor is a hole you fall through; closed, it's a thin board to stand on.
+    if (shape === 'panel') return ((this.facingAt(x, y, z) >> 3) & 1) ? 0 : SHAPE_COLLISION.panel;
     if (shape && SHAPE_COLLISION[shape] !== undefined) return SHAPE_COLLISION[shape];
     return SLAB_BLOCKS.has(id) ? 0.6 : 1;
   }
@@ -558,7 +565,9 @@ export class World {
     for (const [k, at] of this.crops) crops[k] = Math.round(at);
     const facing = {};
     for (const [k, f] of this.blockFacing) facing[k] = f;
-    return { seed: this.seed, time: Math.round(this.time), edits, nodeStates, chests, crops, facing };
+    const facingEdits = {};
+    for (const [k, f] of this.facingEdits) facingEdits[k] = f;
+    return { seed: this.seed, time: Math.round(this.time), edits, nodeStates, chests, crops, facing, facingEdits };
   }
 
   deserialize(data) {
@@ -577,6 +586,8 @@ export class World {
     for (const [k, at] of Object.entries(data.crops || {})) this.crops.set(k, at);
     this.blockFacing.clear();
     for (const [k, f] of Object.entries(data.facing || {})) this.blockFacing.set(k, f);
+    this.facingEdits.clear();
+    for (const [k, f] of Object.entries(data.facingEdits || {})) this.facingEdits.set(k, f);
     this.chestContents.clear();
     for (const [id, c] of Object.entries(data.chests || {})) {
       this.chestContents.set(id, c);

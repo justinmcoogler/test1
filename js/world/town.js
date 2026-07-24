@@ -1,6 +1,6 @@
 // Streams the imported circular town (js/world/town-data.js, a gzip'd Uint16
 // grid) into worldgen. The grid inflates once at load (async), then each town
-// chunk stamps its columns from it. Block id lives in bits 0-11, facing 12-14.
+// chunk stamps its columns from it. Block id lives in bits 0-11, facing 12-15.
 import { TOWN } from './town-data.js';
 import { TOWN_PAD } from './worldgen.js';
 
@@ -44,7 +44,7 @@ export function stampTownColumn(wx, wz, lx, lz, setLocal, setFacing) {
   for (let gy = 0; gy < TOWN.gh; gy++) {
     const packed = GRID[gy * TOWN.gl * TOWN.gw + colBase];
     if (packed) {
-      const id = packed & 0x0fff, f = (packed >> 12) & 7;
+      const id = packed & 0x0fff, f = (packed >> 12) & 0xf;
       const wy = TOWN_BASE + gy;
       setLocal(lx, wy, lz, id);
       if (f && setFacing) setFacing(wx, wy, wz, f);

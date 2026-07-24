@@ -137,11 +137,21 @@ export function emitShape(target, def, wx, y, wz, light, facing, sides) {
     }
 
     case 'panel': {
-      // trapdoor: a thin 2px board hugging the floor, or the ceiling when the
-      // facing top-half bit (bit 2) is set. facing low bits pick the front tile.
-      const top = (facing >> 2) & 1, t = 2 / 16;
-      if (top) box(target, def, wx, y, wz, 0, 1 - t, 0, 1, 1, 1, light, facing & 3);
-      else box(target, def, wx, y, wz, 0, 0, 0, 1, t, 1, light, facing & 3);
+      // trapdoor. Closed: a thin 2px board on the floor, or the ceiling when the
+      // top-half bit (bit 2) is set. Open (bit 3): the board swings vertical and
+      // hugs the wall its facing (bits 0-1) points at. dir picks the front tile.
+      const dir = facing & 3, top = (facing >> 2) & 1, open = (facing >> 3) & 1, t = 2 / 16;
+      if (open) {
+        const [fx, fz] = FRONT_N[dir];
+        if (fx === 1) box(target, def, wx, y, wz, 1 - t, 0, 0, 1, 1, 1, light, dir);
+        else if (fx === -1) box(target, def, wx, y, wz, 0, 0, 0, t, 1, 1, light, dir);
+        else if (fz === 1) box(target, def, wx, y, wz, 0, 0, 1 - t, 1, 1, 1, light, dir);
+        else box(target, def, wx, y, wz, 0, 0, 0, 1, 1, t, light, dir);
+      } else if (top) {
+        box(target, def, wx, y, wz, 0, 1 - t, 0, 1, 1, 1, light, dir);
+      } else {
+        box(target, def, wx, y, wz, 0, 0, 0, 1, t, 1, light, dir);
+      }
       break;
     }
 
