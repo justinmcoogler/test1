@@ -98,13 +98,16 @@ export function buildStarterStructures() {
       for (let y = 27; y <= 29; y++) set(x, y, z, B.water);
       set(x, GROUND, z, B.air); set(x, F, z, B.air);
     } else if (d <= 5.6) {
-      // step-down fishing ledge: sand top at y=30, one step below the plateau
+      // step-down fishing ledge: sand top at y=29, level with the water surface
       set(x, 29, z, B.sand);
       set(x, GROUND, z, B.air); set(x, F, z, B.air);
+      // reeds root right where the ledge meets the water (a basin cell beside it)
+      const byWater = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => Math.hypot(x + dx, (z + dz) - 18) <= 4.2);
+      if (byWater && (x * 7 + z * 13) % 3 === 0) set(x, GROUND, z, B.reed);
     } else if (d <= 6.5) {
-      // plateau lip you step down from, with a few reeds
+      // plateau lip you step down from — dry, so grass tufts rather than reeds
       set(x, GROUND, z, B.sand);
-      if ((x * 7 + z * 13) % 5 === 0) set(x, F, z, B.reed);
+      if ((x * 7 + z * 13) % 5 === 0) set(x, F, z, B.tall_grass);
     }
   }
   // spots sit in the water, an easy cast from the ledge

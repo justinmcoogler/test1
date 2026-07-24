@@ -49,6 +49,8 @@ export class World {
     this.crops = new Map();           // "x,y,z" → ripeAt (player-planted crops)
     this.blockFacing = new Map();     // "x,y,z" → facing bits (0-1 dir, 2 top-half, 3 trapdoor-open)
     this.facingEdits = new Map();     // player-set facings that must survive the town re-stamp
+    this.waterLevel = new Map();      // "x,y,z" → flow level 1-8 for CA-driven water (no entry = permanent source)
+    this.waterActive = new Set();     // water cells awaiting a flow re-evaluation
     this.time = 0;                    // world-time seconds, persisted
     this.dirtyChunks = new Set();     // chunk keys needing remesh
 
@@ -180,10 +182,17 @@ export class World {
             continue;
           }
         }
-        // small plants (pure decoration)
+        // small plants (pure decoration). Reeds are the exception: they only
+        // sprout on grass right at the waterline with a water block beside them.
         if (grassy && above === B.air) {
           for (const p of biome.plants) {
-            if (hash2(this.seed + 903 + B[p.block], wx, wz) < p.d) { setLocal(lx, h + 1, lz, B[p.block]); bumpTop(h + 1); break; }
+            if (hash2(this.seed + 903 + B[p.block], wx, wz) >= p.d) continue;
+            if (p.block === 'reed') {
+              if (h > SEA) continue; // above the shoreline — no water to root beside
+              const beside = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => gen.heightAt(wx + dx, wz + dz) < h);
+              if (!beside) continue; // no submerged neighbour → not next to water
+            }
+            setLocal(lx, h + 1, lz, B[p.block]); bumpTop(h + 1); break;
           }
         }
         // surface nodes
@@ -342,7 +351,9 @@ export class World {
     this.dirtyChunks.add(chunkKey(Math.floor(x / CHUNK), Math.floor(z / CHUNK)));
   }
 
-  setBlock(x, y, z, id, record = true) {
+  // fromWater=true marks a change the water sim made itself, so it isn't re-fed
+  // back into the sim as a fresh player edit (the sim propagates on its own).
+  setBlock(x, y, z, id, record = true, fromWater = false) {
     if (y < 0 || y >= WORLD_H) return;
     const cx = Math.floor(x / CHUNK), cz = Math.floor(z / CHUNK);
     const k = chunkKey(cx, cz);
@@ -351,7 +362,7 @@ export class World {
     const idx = lidx(x - cx * CHUNK, y, z - cz * CHUNK);
     if (c.blocks[idx] === id && !record) return;
     c.blocks[idx] = id;
-    this.blockFacing.delete(`${x},${y},${z}`); this.facingEdits.delete(`${x},${y},${z}`); // stale facing goes with the old block
+    if (!fromWater) { this.blockFacing.delete(`${x},${y},${z}`); this.facingEdits.delete(`${x},${y},${z}`); } // stale facing goes with the old block
     if (id !== B.air && y + 1 > (c.contentTop || 0)) c.contentTop = Math.min(WORLD_H, y + 1); // building upward raises the mesh ceiling
     c.mapStamp = (c.mapStamp || 0) + 1; // invalidates cached map tiles
     if (record) {
@@ -364,6 +375,99 @@ export class World {
     if (lx === CHUNK - 1) this.dirtyChunks.add(chunkKey(cx + 1, cz));
     if (lz === 0) this.dirtyChunks.add(chunkKey(cx, cz - 1));
     if (lz === CHUNK - 1) this.dirtyChunks.add(chunkKey(cx, cz + 1));
+    if (!fromWater) this._touchWater(x, y, z); // a player edit may let nearby water flow or recede
+  }
+
+  // ---- Flowing water (a small cellular automaton) ------------------------
+  // Water blocks carry a flow level 1-8. A cell with NO waterLevel entry is a
+  // permanent source (generated ocean/lakes) that never drains and feeds level
+  // 7 outward. Flowing cells derive their level from neighbours each tick and
+  // dry up when their supply is cut, so digging a channel connects two bodies
+  // and filling one in makes it recede. Only edits seed the sim (via _touchWater
+  // on setBlock); untouched oceans stay dormant, so cost tracks activity.
+  waterLevelAt(x, y, z) {
+    if (this.getBlock(x, y, z) !== B.water) return 0;
+    const e = this.waterLevel.get(cellKey(x, y, z));
+    return e === undefined ? 8 : e; // no entry ⇒ permanent source, full
+  }
+
+  // Seed the sim: queue this water cell and any water neighbour for review.
+  _touchWater(x, y, z) {
+    for (const [dx, dy, dz] of [[0, 0, 0], [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
+      const by = y + dy; if (by < 0 || by >= WORLD_H) continue;
+      if (this.getBlock(x + dx, by, z + dz) === B.water) this.waterActive.add(cellKey(x + dx, by, z + dz));
+    }
+  }
+
+  _canFlowInto(x, y, z) {
+    if (y < 0 || y >= WORLD_H) return false;
+    return this.getBlock(x, y, z) === B.air && !this.nodeAt(x, y, z);
+  }
+
+  // Level a flowing cell would receive: full if fed from directly above, else
+  // one below the strongest horizontal neighbour.
+  _incomingLevel(x, y, z) {
+    if (this.getBlock(x, y + 1, z) === B.water) return 8;
+    let best = 0;
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      if (this.getBlock(x + dx, y, z + dz) === B.water) best = Math.max(best, this.waterLevelAt(x + dx, y, z + dz) - 1);
+    }
+    return best;
+  }
+
+  _placeFlow(x, y, z, level) {
+    this.setBlock(x, y, z, B.water, true, true);
+    this.waterLevel.set(cellKey(x, y, z), level);
+    this._activateWaterAround(x, y, z);
+  }
+
+  _activateWaterAround(x, y, z) {
+    for (const [dx, dy, dz] of [[0, 0, 0], [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
+      const by = y + dy; if (by < 0 || by >= WORLD_H) continue;
+      if (this.getBlock(x + dx, by, z + dz) === B.water) this.waterActive.add(cellKey(x + dx, by, z + dz));
+    }
+  }
+
+  _evalWater(x, y, z) {
+    if (this.getBlock(x, y, z) !== B.water) return; // only water cells act
+    if (this.nodeAt(x, y, z)) return;               // leave fishing-spot water untouched
+    const key = cellKey(x, y, z);
+    const isSource = !this.waterLevel.has(key);     // no entry ⇒ permanent source
+    if (!isSource) {
+      const supply = this._incomingLevel(x, y, z);
+      if (supply <= 0) { // supply cut — this flow dries up
+        this.setBlock(x, y, z, B.air, true, true);
+        this.waterLevel.delete(key);
+        this._activateWaterAround(x, y, z);
+        return;
+      }
+      const cur = this.waterLevel.get(key);
+      if (cur !== supply) { this.waterLevel.set(key, supply); this._activateWaterAround(x, y, z); }
+    }
+    // spread: prefer falling straight down, else creep outward one level lower
+    const level = this.waterLevelAt(x, y, z);
+    if (this._canFlowInto(x, y - 1, z)) {
+      this._placeFlow(x, y - 1, z, 8); // a falling column is full while fed
+    } else if (level > 1) {
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (this._canFlowInto(x + dx, y, z + dz)) this._placeFlow(x + dx, y, z + dz, level - 1);
+      }
+    }
+  }
+
+  tickWater(dt) {
+    if (this.waterActive.size === 0) return;
+    this._waterTick = (this._waterTick || 0) + dt;
+    if (this._waterTick < 0.10) return; // ~10 flow steps a second
+    this._waterTick = 0;
+    const batch = [...this.waterActive];
+    this.waterActive.clear();
+    const MAX = 2048; // cap work per step; overflow rides to the next tick
+    for (let i = 0; i < batch.length; i++) {
+      if (i >= MAX) { this.waterActive.add(batch[i]); continue; }
+      const [x, y, z] = batch[i].split(',').map(Number);
+      this._evalWater(x, y, z);
+    }
   }
 
   // ---- Day/night clock ---------------------------------------------------
@@ -509,6 +613,7 @@ export class World {
         }
       }
     }
+    this.tickWater(dt);
   }
 
   // ---- Chests ------------------------------------------------------------
@@ -613,7 +718,9 @@ export class World {
     for (const [k, f] of this.blockFacing) facing[k] = f;
     const facingEdits = {};
     for (const [k, f] of this.facingEdits) facingEdits[k] = f;
-    return { seed: this.seed, time: Math.round(this.time), edits, nodeStates, chests, crops, facing, facingEdits };
+    const waterLevels = {};
+    for (const [k, l] of this.waterLevel) waterLevels[k] = l;
+    return { seed: this.seed, time: Math.round(this.time), edits, nodeStates, chests, crops, facing, facingEdits, waterLevels };
   }
 
   deserialize(data) {
@@ -634,6 +741,8 @@ export class World {
     for (const [k, f] of Object.entries(data.facing || {})) this.blockFacing.set(k, f);
     this.facingEdits.clear();
     for (const [k, f] of Object.entries(data.facingEdits || {})) this.facingEdits.set(k, f);
+    this.waterLevel.clear();
+    for (const [k, l] of Object.entries(data.waterLevels || {})) this.waterLevel.set(k, l);
     this.chestContents.clear();
     for (const [id, c] of Object.entries(data.chests || {})) {
       this.chestContents.set(id, c);
