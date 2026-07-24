@@ -313,6 +313,9 @@ button:disabled { opacity: 0.45; cursor: default; }
 .admin-search { width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 7px 10px;
   background: rgba(0,0,0,0.35); border: 1px solid var(--edge); border-radius: 8px; color: var(--ink); font-family: var(--font); font-size: 13px; }
 .admin-search:focus { outline: none; border-color: var(--gold); }
+.admin-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.admin-toolbar .admin-search { margin-bottom: 0; flex: 1; }
+.admin-toolbar .admin-btn { flex: none; white-space: nowrap; }
 .admin-list { max-height: 320px; overflow-y: auto; border: 1px solid var(--edge); border-radius: 8px; }
 .admin-empty { padding: 16px; color: var(--ink-dim); text-align: center; font-size: 13px; }
 .admin-mob { border-bottom: 1px solid rgba(255,255,255,0.06); }

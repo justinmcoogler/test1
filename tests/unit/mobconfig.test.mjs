@@ -56,6 +56,17 @@ test('setMobConfig merges patches without dropping prior keys', () => {
   mc.resetMobConfig(type);
 });
 
+test('exportMobDefaults emits a valid, re-importable defaults module', async () => {
+  const type = mc.allMobTypes()[0];
+  mc.setMobConfig(type, { active: false, rate: 2.5, biomes: ['boreal_forest'] });
+  const text = mc.exportMobDefaults();
+  assert.match(text, /export const MOB_DEFAULTS = /);
+  const url = 'data:text/javascript;base64,' + Buffer.from(text).toString('base64');
+  const { MOB_DEFAULTS } = await import(url);
+  assert.deepEqual(MOB_DEFAULTS[type], { active: false, rate: 2.5, biomes: ['boreal_forest'] });
+  mc.resetMobConfig(type);
+});
+
 test('overrides persist to localStorage and round-trip through a fresh load', async () => {
   const type = mc.allMobTypes()[0];
   const drops = [{ item: 'coin', qty: [1, 3], chance: 0.5 }];

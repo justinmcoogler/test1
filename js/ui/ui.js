@@ -2,7 +2,7 @@
 import { ITEMS } from '../game/items.js';
 import { ENEMY_TYPES } from '../game/enemies.js';
 import { BIOMES } from '../world/worldgen.js';
-import { mobActive, mobRate, mobBiomes, mobDropsFor, setMobConfig, resetMobConfig, saveMobConfig, allMobTypes } from '../game/mobconfig.js';
+import { mobActive, mobRate, mobBiomes, mobDropsFor, setMobConfig, resetMobConfig, saveMobConfig, allMobTypes, exportMobDefaults } from '../game/mobconfig.js';
 import { SKILL_DEFS, SKILL_UNLOCKS, xpForLevel } from '../game/skills.js';
 import { RECIPES, STATION_LABELS, canCraft, craft, minFuel } from '../game/crafting.js';
 import { EQUIP_SLOTS, EQUIP_LABELS, HOTBAR_SIZE, INV_SIZE } from '../game/inventory.js';
@@ -1017,7 +1017,10 @@ export class UI {
       </div>
       <div id="admin-panel" class="${s.debugTools ? '' : 'hidden'}">
         <p class="admin-hint">Per-mob spawn &amp; drop overrides, saved to this browser and read live by world generation and combat. Imported mobs are off until you activate them.</p>
-        <input type="search" id="admin-search" class="admin-search" placeholder="Search mobs…" autocomplete="off">
+        <div class="admin-toolbar">
+          <input type="search" id="admin-search" class="admin-search" placeholder="Search mobs…" autocomplete="off">
+          <button id="admin-export" class="admin-btn" title="Download js/game/mobconfig-defaults.js with your current config baked in — commit it to ship these settings to everyone">Save as game defaults</button>
+        </div>
         <div id="admin-list" class="admin-list"></div>
       </div>
     </div>
@@ -1052,6 +1055,17 @@ export class UI {
     const search = $('admin-search');
     search.value = this._adminSearch || '';
     search.addEventListener('input', () => { this._adminSearch = search.value; this.renderAdminList(); });
+    $('admin-export')?.addEventListener('click', () => {
+      // Download the ready-to-commit defaults source file. The browser can't
+      // write to the repo, so this hands you the file to drop in / send over.
+      const text = exportMobDefaults();
+      const url = URL.createObjectURL(new Blob([text], { type: 'text/javascript' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = 'mobconfig-defaults.js';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.toast('Saved mobconfig-defaults.js — commit it to ship these settings to everyone.', 'info');
+    });
     if (s.debugTools) this.renderAdminList();
   }
 
