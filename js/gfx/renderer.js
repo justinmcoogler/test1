@@ -4,6 +4,7 @@ import {
   SKY_VS, SKY_FS, uploadWorldMesh, deleteMesh, createAtlasTexture,
 } from './gl.js';
 import { meshChunk } from './mesher.js';
+import { buildSnapshot } from './mesh-snapshot.js';
 import { CHUNK, WORLD_H } from '../world/worldgen.js';
 import {
   mat4Identity, mat4Perspective, mat4Multiply, mat4View, mat4LookAt,
@@ -66,6 +67,12 @@ export class Renderer {
     this.atlasTex = createAtlasTexture(gl, getAtlasCanvas());
     this.chunkMeshes = new Map(); // chunkKey → {opaque, cutout, water}
     this.modelCache = new Map();  // modelName → mesh
+    // async mesh worker (off-thread chunk meshing; falls back to synchronous)
+    this._meshJobId = 0;
+    this._meshLatest = new Map(); // chunkKey → latest requested job id (staleness guard)
+    this._meshWorker = null;
+    this._meshReady = false;
+    this._initMeshWorker();
     this.proj = mat4Identity();
     this.view = mat4Identity();
     this.pv = mat4Identity();
@@ -139,24 +146,76 @@ export class Renderer {
   }
 
   // ---- chunk mesh lifecycle ----
-  remeshChunk(world, cx, cz) {
-    const key = `${cx},${cz}`;
-    const old = this.chunkMeshes.get(key);
-    if (old) {
-      deleteMesh(this.gl, old.opaque); deleteMesh(this.gl, old.cutout); deleteMesh(this.gl, old.water);
-    }
-    const m = meshChunk(world, cx, cz);
+  // Spin up the off-thread mesher. In the single-file build the worker code is
+  // bundled and injected as a string (window.__MESH_WORKER_SRC) and run from a
+  // Blob; in dev it's a module worker loaded from source. Any failure leaves
+  // _meshWorker null and everything falls back to synchronous meshing.
+  _initMeshWorker() {
+    if (typeof Worker === 'undefined') return;
+    try {
+      let worker;
+      const src = (typeof window !== 'undefined' && window.__MESH_WORKER_SRC) || null;
+      if (src) {
+        // single-file build: the worker is bundled to a self-contained IIFE and
+        // injected as a string; run it from a Blob (classic worker)
+        worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'application/javascript' })));
+      } else {
+        // dev: a module worker loaded from source (document-relative so it works
+        // without import.meta, which would be a syntax error in the IIFE bundle)
+        worker = new Worker('js/gfx/mesh.worker.js', { type: 'module' });
+      }
+      worker.onmessage = (e) => this._onMeshWorkerMessage(e.data);
+      worker.onerror = () => { this._meshWorker = null; this._meshReady = false; };
+      worker.postMessage({ type: 'init', tileUV });
+      this._meshWorker = worker;
+    } catch { this._meshWorker = null; }
+  }
+
+  _onMeshWorkerMessage(msg) {
+    if (msg.type === 'ready') { this._meshReady = true; return; }
+    if (msg.type !== 'meshed') return;
+    const key = `${msg.cx},${msg.cz}`;
+    // discard results that a newer request (or a dropChunk) has superseded
+    if (this._meshLatest.get(key) !== msg.id) return;
+    this._meshLatest.delete(key);
+    this._uploadChunkMesh(key, msg.cx, msg.cz, msg.top, msg.opaque, msg.cutout, msg.water);
+  }
+
+  // Upload built {verts,indices} sections into GL, replacing any existing mesh.
+  _uploadChunkMesh(key, cx, cz, top, opaque, cutout, water) {
     const gl = this.gl;
+    const old = this.chunkMeshes.get(key);
+    if (old) { deleteMesh(gl, old.opaque); deleteMesh(gl, old.cutout); deleteMesh(gl, old.water); }
     this.chunkMeshes.set(key, {
-      cx, cz,
-      top: world.getChunk(cx, cz)?.contentTop ?? WORLD_H, // for a tight vertical frustum-cull box
-      opaque: m.opaque ? uploadWorldMesh(gl, m.opaque.verts, m.opaque.indices) : null,
-      cutout: m.cutout ? uploadWorldMesh(gl, m.cutout.verts, m.cutout.indices) : null,
-      water: m.water ? uploadWorldMesh(gl, m.water.verts, m.water.indices) : null,
+      cx, cz, top: top ?? WORLD_H,
+      opaque: opaque ? uploadWorldMesh(gl, opaque.verts, opaque.indices) : null,
+      cutout: cutout ? uploadWorldMesh(gl, cutout.verts, cutout.indices) : null,
+      water: water ? uploadWorldMesh(gl, water.verts, water.indices) : null,
     });
   }
 
+  // Synchronous mesh (fallback + edits that want instant feedback).
+  remeshChunk(world, cx, cz) {
+    const key = `${cx},${cz}`;
+    this._meshLatest.delete(key); // a sync result wins over any in-flight async job
+    const m = meshChunk(world, cx, cz);
+    this._uploadChunkMesh(key, cx, cz, world.getChunk(cx, cz)?.contentTop ?? WORLD_H, m.opaque, m.cutout, m.water);
+  }
+
+  // Off-thread mesh: snapshot the 3×3 neighbourhood and hand it to the worker.
+  // The old mesh stays on screen until the result arrives (no flicker/holes).
+  remeshChunkAsync(world, cx, cz) {
+    if (!this._meshWorker || !this._meshReady) { this.remeshChunk(world, cx, cz); return; }
+    const key = `${cx},${cz}`;
+    const id = ++this._meshJobId;
+    this._meshLatest.set(key, id);
+    const { snapshot, transfer } = buildSnapshot(world, cx, cz);
+    const top = world.getChunk(cx, cz)?.contentTop ?? WORLD_H;
+    this._meshWorker.postMessage({ type: 'mesh', id, top, snapshot }, transfer);
+  }
+
   dropChunk(key) {
+    this._meshLatest.delete(key); // cancel any in-flight async result for this chunk
     const m = this.chunkMeshes.get(key);
     if (!m) return;
     deleteMesh(this.gl, m.opaque); deleteMesh(this.gl, m.cutout); deleteMesh(this.gl, m.water);
@@ -164,6 +223,7 @@ export class Renderer {
   }
 
   hasMesh(cx, cz) { return this.chunkMeshes.has(`${cx},${cz}`); }
+  isMeshInFlight(cx, cz) { return this._meshLatest.has(`${cx},${cz}`); }
 
   // Gradient sky + sun/moon + stars (high quality only). Four screen-corner rays
   // are reconstructed from the camera basis; the fragment paints the dome.

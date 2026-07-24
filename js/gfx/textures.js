@@ -13,6 +13,10 @@ const LP = TILE / G; // 32 logical pixels per side
 
 export const tileUV = {}; // name → {u0,v0,u1,v1}
 
+// Populate tileUV from a table computed on the main thread — lets the mesh
+// worker (which has no canvas to build the atlas) resolve faceUV() identically.
+export function setTileUV(uv) { for (const k in uv) tileUV[k] = uv[k]; }
+
 function px(ctx, x0, y0, lx, ly, color) {
   ctx.fillStyle = color;
   ctx.fillRect(x0 + lx * G, y0 + ly * G, G, G);

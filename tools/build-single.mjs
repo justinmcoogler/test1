@@ -16,6 +16,17 @@ const result = await build({
   write: false,
 });
 const js = result.outputFiles[0].text;
+
+// The mesh worker can't load module files in the single-file build, so bundle it
+// to a self-contained IIFE and inject it as a string the renderer runs via Blob.
+const workerResult = await build({
+  entryPoints: [join(root, 'js/gfx/mesh.worker.js')],
+  bundle: true,
+  format: 'iife',
+  minify: true,
+  write: false,
+});
+const workerJs = workerResult.outputFiles[0].text;
 const css = await readFile(join(root, 'css/style.css'), 'utf8');
 let html = await readFile(join(root, 'index.html'), 'utf8');
 
@@ -44,7 +55,7 @@ html = html.replace(/<link rel="stylesheet" href="css\/fonts.css">/, `<style>\n$
 html = html.replace(/<link rel="stylesheet" href="css\/style.css">/, `<style>\n${css}\n</style>`);
 html = html.replace(
   /<script type="module" src="js\/main.js"><\/script>/,
-  () => `<script>window.__EMBEDDED=1;window.__EMBEDDED_MOBS=${JSON.stringify(mobs)}</script>\n<script>\n${js}\n</script>`
+  () => `<script>window.__EMBEDDED=1;window.__EMBEDDED_MOBS=${JSON.stringify(mobs)};window.__MESH_WORKER_SRC=${JSON.stringify(workerJs)}</script>\n<script>\n${js}\n</script>`
 );
 
 await mkdir(dirname(out), { recursive: true });

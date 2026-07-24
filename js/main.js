@@ -720,6 +720,8 @@ class Game {
       if (!this.world.hasChunk(cx, cz)) { this.world.dirtyChunks.delete(key); continue; }
       if (!neighborsLoaded(cx, cz)) continue; // defer until neighbors stream in
       this.world.dirtyChunks.delete(key);
+      // edits/water: mesh synchronously so a broken/placed block updates instantly
+      // (bounded to meshBudget/frame); new-chunk streaming below goes off-thread
       this.renderer.remeshChunk(this.world, cx, cz);
       meshBudget--;
     }
@@ -728,9 +730,10 @@ class Game {
         for (let dx = -r; dx <= r && meshBudget > 0; dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
           const cx = pcx + dx, cz = pcz + dz;
-          if (this.renderer.hasMesh(cx, cz) || !this.world.hasChunk(cx, cz)) continue;
+          // skip chunks already meshed OR already queued on the worker
+          if (this.renderer.hasMesh(cx, cz) || this.renderer.isMeshInFlight(cx, cz) || !this.world.hasChunk(cx, cz)) continue;
           if (!neighborsLoaded(cx, cz)) continue;
-          this.renderer.remeshChunk(this.world, cx, cz);
+          this.renderer.remeshChunkAsync(this.world, cx, cz);
           this.discovered.add(`${cx},${cz}`);
           meshBudget--;
         }
