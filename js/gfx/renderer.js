@@ -5,6 +5,7 @@ import {
 } from './gl.js';
 import { meshChunk } from './mesher.js';
 import { buildSnapshot } from './mesh-snapshot.js';
+import { ChunkBatch, MultiDraw } from './chunkpool.js';
 import { CHUNK, WORLD_H } from '../world/worldgen.js';
 import {
   mat4Identity, mat4Perspective, mat4Multiply, mat4View, mat4LookAt,
@@ -65,8 +66,11 @@ export class Renderer {
     this.sunDir = [0.4, 0.85, 0.2];
     this.daylight = 1; // 0.25 night … 1 noon, driven by the world clock
     this.atlasTex = createAtlasTexture(gl, getAtlasCanvas());
-    this.chunkMeshes = new Map(); // chunkKey → {opaque, cutout, water}
+    this.chunkMeshes = new Map(); // chunkKey → {cx, cz, top, opaque, cutout, water}
     this.modelCache = new Map();  // modelName → mesh
+    // Shared-buffer + WEBGL_multi_draw batcher (one GPU draw per world pass).
+    // Null when the extension is missing → falls back to the per-chunk loop.
+    this._initBatcher();
     // async mesh worker (off-thread chunk meshing; falls back to synchronous)
     this._meshJobId = 0;
     this._meshLatest = new Map(); // chunkKey → latest requested job id (staleness guard)
@@ -147,6 +151,30 @@ export class Renderer {
   }
 
   // ---- chunk mesh lifecycle ----
+  // Set up the shared-buffer multi-draw batcher when the GPU supports it. Each
+  // pass (opaque/cutout/water) gets one ChunkBatch (shared VBO/IBO + VAO); a
+  // whole pass then draws in a single multiDrawElementsWEBGL call. When the
+  // extension is absent (older/software GL) this stays null and the renderer
+  // uses the classic one-VAO-per-chunk path. window.__noMultiDraw forces the
+  // fallback (used to A/B the two paths in tests).
+  _initBatcher() {
+    this.batcher = null;
+    const gl = this.gl;
+    if (typeof window !== 'undefined' && window.__noMultiDraw) return;
+    let ext = null;
+    try { ext = gl.getExtension('WEBGL_multi_draw'); } catch { ext = null; }
+    if (!ext || typeof ext.multiDrawElementsWEBGL !== 'function') return;
+    this.batcher = {
+      ext,
+      md: new MultiDraw(gl, ext),
+      opaque: new ChunkBatch(gl),
+      cutout: new ChunkBatch(gl),
+      water: new ChunkBatch(gl),
+      // per-frame scratch arrays of visible records for each pass (reused)
+      recs: { opaque: [], cutout: [], water: [] },
+    };
+  }
+
   // Spin up the off-thread mesher. In the single-file build the worker code is
   // bundled and injected as a string (window.__MESH_WORKER_SRC) and run from a
   // Blob; in dev it's a module worker loaded from source. Any failure leaves
@@ -183,9 +211,22 @@ export class Renderer {
   }
 
   // Upload built {verts,indices} sections into GL, replacing any existing mesh.
+  // Pooled path: sub-allocate into the shared per-pass buffers (record ranges).
+  // Fallback path: one VAO/VBO/IBO per chunk section (classic).
   _uploadChunkMesh(key, cx, cz, top, opaque, cutout, water) {
     const gl = this.gl;
+    const b = this.batcher;
     const old = this.chunkMeshes.get(key);
+    if (b) {
+      if (old) { b.opaque.free(old.opaque); b.cutout.free(old.cutout); b.water.free(old.water); }
+      this.chunkMeshes.set(key, {
+        cx, cz, top: top ?? WORLD_H,
+        opaque: opaque ? b.opaque.put(opaque.verts, opaque.indices) : null,
+        cutout: cutout ? b.cutout.put(cutout.verts, cutout.indices) : null,
+        water: water ? b.water.put(water.verts, water.indices) : null,
+      });
+      return;
+    }
     if (old) { deleteMesh(gl, old.opaque); deleteMesh(gl, old.cutout); deleteMesh(gl, old.water); }
     this.chunkMeshes.set(key, {
       cx, cz, top: top ?? WORLD_H,
@@ -219,7 +260,9 @@ export class Renderer {
     this._meshLatest.delete(key); // cancel any in-flight async result for this chunk
     const m = this.chunkMeshes.get(key);
     if (!m) return;
-    deleteMesh(this.gl, m.opaque); deleteMesh(this.gl, m.cutout); deleteMesh(this.gl, m.water);
+    const b = this.batcher;
+    if (b) { b.opaque.free(m.opaque); b.cutout.free(m.cutout); b.water.free(m.water); }
+    else { deleteMesh(this.gl, m.opaque); deleteMesh(this.gl, m.cutout); deleteMesh(this.gl, m.water); }
     this.chunkMeshes.delete(key);
   }
 
@@ -590,16 +633,25 @@ export class Renderer {
     setTerrainUniforms(tp);
 
     const pcx = Math.floor(this.camPos[0] / CHUNK), pcz = Math.floor(this.camPos[2] / CHUNK);
+    const bat = this.batcher;
     const visible = this._visible; visible.length = 0;
+    if (bat) { bat.recs.opaque.length = 0; bat.recs.cutout.length = 0; bat.recs.water.length = 0; }
     for (const [key, m] of this.chunkMeshes) {
       const dx = m.cx - pcx, dz = m.cz - pcz;
       if (Math.max(Math.abs(dx), Math.abs(dz)) > this.renderDistance) continue;
       const minX = m.cx * CHUNK, minZ = m.cz * CHUNK;
       if (!aabbInFrustum(this.planes, minX, 0, minZ, minX + CHUNK, m.top ?? WORLD_H, minZ + CHUNK)) continue;
       visible.push(m);
+      if (bat) {
+        if (m.opaque) bat.recs.opaque.push(m.opaque);
+        if (m.cutout) bat.recs.cutout.push(m.cutout);
+        if (m.water) bat.recs.water.push(m.water);
+      }
     }
 
-    for (const m of visible) {
+    // opaque terrain — one multi-draw for the whole visible set, else per-chunk
+    if (bat) bat.md.draw(bat.opaque, bat.recs.opaque);
+    else for (const m of visible) {
       if (!m.opaque) continue;
       gl.bindVertexArray(m.opaque.vao);
       gl.drawElements(gl.TRIANGLES, m.opaque.count, gl.UNSIGNED_INT, 0);
@@ -607,7 +659,8 @@ export class Renderer {
 
     setTerrainUniforms(tpc); // switch to the discarding build for foliage
     gl.disable(gl.CULL_FACE);
-    for (const m of visible) {
+    if (bat) bat.md.draw(bat.cutout, bat.recs.cutout);
+    else for (const m of visible) {
       if (!m.cutout) continue;
       gl.bindVertexArray(m.cutout.vao);
       gl.drawElements(gl.TRIANGLES, m.cutout.count, gl.UNSIGNED_INT, 0);
@@ -681,7 +734,8 @@ export class Renderer {
     gl.disable(gl.CULL_FACE);
     gl.uniform1f(tp.uniforms.uOpacity, 0.78);
     gl.uniform1f(tp.uniforms.uWater, this.highQuality ? 1 : 0); // fresnel shimmer on water
-    for (const m of visible) {
+    if (bat) bat.md.draw(bat.water, bat.recs.water);
+    else for (const m of visible) {
       if (!m.water) continue;
       gl.bindVertexArray(m.water.vao);
       gl.drawElements(gl.TRIANGLES, m.water.count, gl.UNSIGNED_INT, 0);
