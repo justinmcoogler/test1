@@ -48,14 +48,22 @@ import { clamp } from './core/math.js';
 import {
   loadSettings, saveSettings, listSlots, saveSlot, loadSlot, deleteSlot, NUM_SLOTS,
 } from './game/save.js';
+import {
+  splitSave, joinSave, listCharacters, loadCharacter, saveCharacter,
+  deleteCharacter, newCharacter, migrateSlot, exportCharacter, importCharacter,
+} from './game/characters.js';
 import { initAudio, setVolumes, setMusicMood, setNightAmbience, SFX } from './core/audio.js';
 
 const $ = (id) => document.getElementById(id);
 
 class Game {
-  constructor(slot, seedText, saveData) {
+  constructor(slot, seedText, saveData, character = null) {
     this.slot = slot;
     this.seedText = seedText;
+    // Who is playing. A world remembers the last character in it, but the title
+    // screen can hand a different one in — that is the whole point of the split.
+    this.characterId = character?.id || saveData?.meta?.characterId || null;
+    this.characterName = character?.name || saveData?.meta?.characterName || 'Wanderer';
     this.settings = loadSettings();
     this.canvas = $('game-canvas');
     this.renderer = new Renderer(this.canvas);
@@ -2772,11 +2780,21 @@ class Game {
       // load (js/game/waystones.js), so they can never drift from their stone.
       waystones: this.waystones.serialize(),
     };
-    saveSlot(this.slot, data);
+    // Two files, not one (js/game/characters.js). The character goes to its own
+    // key so it can be carried into another world; the slot keeps the world and
+    // a note of who was last in it. `characterId` is set when the game starts,
+    // so this can never mint a second character for the same body.
+    const { character, world } = splitSave(data, { id: this.characterId, name: this.characterName });
+    saveCharacter(character);
+    saveSlot(this.slot, { meta: { ...data.meta, characterId: character.id, characterName: character.name, version: 2 }, ...world });
   }
 
   restore(d) {
-    this._restored = true;
+    // `_restored` gates the spawn seating below, so it has to mean "this body
+    // already has a coordinate in THIS world" — not merely "there was a save".
+    // A character carried into a new seed restores their skills and pack but
+    // has no position, and must still be put down at the spawn point.
+    this._restored = Number.isFinite(d.player?.x) && Number.isFinite(d.player?.z);
     this.world.deserialize(d.world);
     this.player.deserialize(d.player);
     this.inventory.deserialize(d.inventory);
@@ -2852,12 +2870,18 @@ function renderTitle() {
       b.innerHTML = `<span>Slot ${s.slot} — <b>New Adventure</b></span><span class="slot-sub">start fresh</span>`;
     } else {
       const mins = Math.floor(s.playtime / 60);
-      const seedSafe = String(s.seedText).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-      b.innerHTML = `<span>Slot ${s.slot} — <b>Continue</b><br><span class="slot-sub">Total level ${s.totalLevel} · ${mins}m played · seed "${seedSafe}"</span></span><span class="slot-del" title="Delete save">${pixelIcon('trash', 15)}</span>`;
+      const esc = (t) => String(t).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+      const who = s.characterName ? `${esc(s.characterName)} · ` : '';
+      b.innerHTML = `<span>Slot ${s.slot} — <b>Continue</b><br><span class="slot-sub">${who}Total level ${s.totalLevel} · ${mins}m played · seed "${esc(s.seedText)}"</span></span><span class="slot-del" title="Delete world">${pixelIcon('trash', 15)}</span>`;
     }
     b.addEventListener('click', (e) => {
       if (e.target.closest?.('.slot-del')) {
-        if (confirm(`Delete save in slot ${s.slot}?`)) { deleteSlot(s.slot); renderTitle(); }
+        // Deleting a world never deletes the character who was in it — that is
+        // the point of them being separate, and the wording has to say so or
+        // people will not risk the button.
+        if (confirm(`Delete the world in slot ${s.slot}? The character keeps their skills and pack.`)) {
+          deleteSlot(s.slot); renderTitle();
+        }
         return;
       }
       startGame(s.slot, s.empty);
@@ -2871,21 +2895,150 @@ function renderTitle() {
       + `<span class="slot-sub">${hasSave ? 'continue lessons · finish a lesson to earn play time' : 'for kids · finish lessons to earn play time'}</span></span>`;
     learnBtn.onclick = () => { SFX.uiClick?.(); startLearningMode(); };
   }
+  const charBtn = $('characters-btn');
+  if (charBtn) charBtn.onclick = () => { SFX.uiClick?.(); renderCharacters(); };
   $('title-hint').textContent = isTouchDevice()
     ? 'Left stick to move · drag right side to look · Action button to gather and fight'
     : 'WASD to move · mouse to look · hold left click to gather · E for inventory';
 }
 
+// Start a world. `opts.character` is a character record to bring into it; with
+// none, the slot's own last occupant is used, and failing that a new one is
+// minted. That single rule covers all four cases the title screen can produce:
+// continue, new world with a new character, new world with an old character,
+// and an old world entered by somebody else.
+// ---------------------------------------------------------- character screen
+// The list of people you can be, and the two ways a character moves between
+// devices: a code out, a code in.
+let pendingCharacter = null;   // chosen here, consumed by the next world you open
+
+function charMsg(text, bad = false) {
+  const el = $('char-msg');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle('bad', !!bad);
+}
+
+function renderCharacters() {
+  $('title-screen').classList.add('hidden');
+  $('character-screen').classList.remove('hidden');
+  charMsg('');
+  const listEl = $('character-list');
+  const chars = listCharacters();
+  listEl.innerHTML = '';
+  if (!chars.length) {
+    const p = document.createElement('p');
+    p.className = 'char-blurb';
+    p.textContent = 'No characters yet. Create one below, or just start a world — a character is made for you.';
+    listEl.appendChild(p);
+  }
+  const esc = (t) => String(t).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  for (const c of chars) {
+    const row = document.createElement('div');
+    row.className = 'slot-btn';
+    const mins = Math.floor(c.playtime / 60);
+    const chosen = pendingCharacter?.id === c.id;
+    row.innerHTML = `<span><b>${esc(c.name)}</b>${chosen ? ' — selected' : ''}<br>`
+      + `<span class="slot-sub">Total level ${c.totalLevel} · ${mins}m played</span></span>`;
+    const tools = document.createElement('span');
+    tools.className = 'char-row';
+    const pick = document.createElement('button');
+    pick.className = 'link-btn';
+    pick.textContent = chosen ? 'Selected' : 'Play';
+    pick.onclick = () => {
+      // Choosing a character does not start anything — it decides who walks into
+      // whichever world you pick next, including a brand-new one.
+      pendingCharacter = loadCharacter(c.id);
+      charMsg(`${c.name} is ready. Pick a world on the title screen — a new slot takes them somewhere fresh.`);
+      renderCharacters();
+    };
+    const exp = document.createElement('button');
+    exp.className = 'link-btn';
+    exp.textContent = 'Copy code';
+    exp.onclick = async () => {
+      const code = exportCharacter(loadCharacter(c.id));
+      try {
+        await navigator.clipboard.writeText(code);
+        charMsg(`${c.name} copied — paste that code on another device to bring them along.`);
+      } catch {
+        // Clipboard access is refused often enough (no permission, no secure
+        // context) that the fallback has to be a real answer, not an apology.
+        $('char-code').value = code;
+        charMsg('Clipboard is blocked here — the code is in the box below, copy it by hand.');
+      }
+    };
+    const del = document.createElement('button');
+    del.className = 'link-btn';
+    del.textContent = 'Delete';
+    del.onclick = () => {
+      if (!confirm(`Delete ${c.name}? Their skills and pack are gone for good. Worlds they visited are untouched.`)) return;
+      deleteCharacter(c.id);
+      if (pendingCharacter?.id === c.id) pendingCharacter = null;
+      renderCharacters();
+    };
+    tools.append(pick, exp, del);
+    row.appendChild(tools);
+    listEl.appendChild(row);
+  }
+
+  $('char-new').onclick = () => {
+    const name = $('char-name').value.trim() || 'Wanderer';
+    const c = newCharacter(name);
+    saveCharacter(c);
+    $('char-name').value = '';
+    pendingCharacter = c;
+    charMsg(`${c.name} created and selected. Pick a world on the title screen.`);
+    renderCharacters();
+  };
+  $('char-import').onclick = () => {
+    const r = importCharacter($('char-code').value);
+    if (!r.ok) { charMsg(r.error, true); return; }
+    saveCharacter(r.character);
+    $('char-code').value = '';
+    charMsg(`${r.character.name} imported.`);
+    renderCharacters();
+  };
+  $('char-back').onclick = () => {
+    $('character-screen').classList.add('hidden');
+    $('title-screen').classList.remove('hidden');
+    renderTitle();
+  };
+}
+
 async function startGame(slot, isNew, opts = {}) {
   const seedInput = $('seed-input').value.trim();
-  let saveData = null;
+  let world = null;
+  // A character picked on the character screen wins over the world's own last
+  // occupant — that is how you take someone into a seed they have never seen.
+  let character = opts.character || pendingCharacter || null;
+  pendingCharacter = null;
   let seedText;
   if (isNew) {
     seedText = seedInput || `${Math.floor(Math.random() * 999999)}`;
   } else {
-    saveData = loadSlot(slot);
-    seedText = saveData?.meta?.seedText || saveData?.world?.seed?.toString() || '0';
+    world = loadSlot(slot);
+    // A save written before characters existed is one undivided blob. Split it
+    // on the way in and write both halves back, so the upgrade happens once,
+    // silently, the first time an old save is opened.
+    const moved = migrateSlot(world);
+    if (moved) {
+      saveCharacter(moved.character);
+      world = { meta: { seedText: moved.seedText, characterId: moved.character.id, characterName: moved.character.name, version: 2 }, ...moved.world };
+      saveSlot(slot, world);
+      character = character || moved.character;
+    }
+    seedText = world?.meta?.seedText || world?.world?.seed?.toString() || '0';
+    character = character || loadCharacter(world?.meta?.characterId);
   }
+  if (!character) character = newCharacter(opts.name || 'Wanderer');
+  // The payload the game actually restores from: this character's things, in
+  // this world. A character new to a world contributes no position, and main
+  // then seats them at that world's spawn.
+  const saveData = (world || !isNew) || opts.character
+    ? joinSave(character, world, { seedText })
+    : joinSave(character, null, { seedText });
+  // A brand-new character in a brand-new world has nothing to restore.
+  const fresh = isNew && !opts.character && !character.skills;
   $('title-screen').classList.add('hidden');
   $('loading-screen').classList.remove('hidden');
 
@@ -2893,7 +3046,7 @@ async function startGame(slot, isNew, opts = {}) {
   // custom creature files: spawn rules must land before chunks generate
   const mobFiles = await fetchMobFiles();
   for (const f of mobFiles) { try { injectSpawnRules(f); } catch (e) { console.error('[mobs]', e.message); } }
-  const game = new Game(slot, seedText, saveData);
+  const game = new Game(slot, seedText, fresh ? null : saveData, character);
   for (const f of mobFiles) {
     try { await registerMob(game, f); } catch (e) { console.error('[mobs]', e.message); }
   }

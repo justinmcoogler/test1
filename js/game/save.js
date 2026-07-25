@@ -51,6 +51,10 @@ export function saveSettings(s) {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch { /* private mode */ }
 }
 
+// A slot is a WORLD now (js/game/characters.js explains the split). It still
+// reports a total level and a playtime because that is what the title screen
+// shows, but those belong to whichever character was last in it — the slot
+// carries the character's id and name so the list can say who is where.
 export function listSlots() {
   const out = [];
   for (let i = 1; i <= NUM_SLOTS; i++) {
@@ -65,6 +69,9 @@ export function listSlots() {
         playtime: d.meta?.playtime || 0,
         savedAt: d.meta?.savedAt || 0,
         mode: d.meta?.mode || d.education?.mode || 'free',
+        characterId: d.meta?.characterId || null,
+        characterName: d.meta?.characterName || null,
+        version: d.meta?.version || 1,
       });
     } catch {
       out.push({ slot: i, empty: true, corrupt: true });

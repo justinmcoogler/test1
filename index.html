@@ -25,6 +25,28 @@
     <div class="title-row">
       <input id="seed-input" type="text" placeholder="World seed (optional)" autocomplete="off">
     </div>
+    <button id="characters-btn" class="link-btn">Characters…</button>
+  </div>
+</div>
+
+<!-- ===== Characters ===== -->
+<!-- A character is separate from the world it is in, so it can be carried into
+     another one — or off this device entirely as a pasteable code. -->
+<div id="character-screen" class="fullscreen-overlay hidden">
+  <div class="title-box">
+    <h2 class="game-title small">Characters</h2>
+    <p class="char-blurb">Your skills, pack, mounts and pets travel with you. Worlds keep their own terrain, quests and clock.</p>
+    <div id="character-list" class="save-slots"></div>
+    <div class="title-row">
+      <input id="char-name" type="text" placeholder="New character name" autocomplete="off" maxlength="24">
+      <button id="char-new" class="link-btn">Create</button>
+    </div>
+    <div class="title-row">
+      <input id="char-code" type="text" placeholder="Paste a character code to import" autocomplete="off">
+      <button id="char-import" class="link-btn">Import</button>
+    </div>
+    <p id="char-msg" class="char-msg"></p>
+    <button id="char-back" class="link-btn">Back</button>
     <p class="title-hint" id="title-hint"></p>
     <button id="install-btn" class="install-btn hidden">Install Sproutlands</button>
   </div>

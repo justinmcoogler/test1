@@ -452,8 +452,13 @@ export class Player {
   }
 
   deserialize(d) {
+    // x/y/z may be absent: a character carried into a NEW world arrives with a
+    // body but no coordinate (js/game/characters.js), and main.js then seats
+    // them at that world's spawn. Keeping the current value rather than taking
+    // `undefined` is what makes that land somewhere real instead of at NaN.
     Object.assign(this, {
-      x: d.x, y: d.y, z: d.z, yaw: d.yaw ?? Math.PI, pitch: d.pitch ?? 0,
+      x: d.x ?? this.x, y: d.y ?? this.y, z: d.z ?? this.z,
+      yaw: d.yaw ?? Math.PI, pitch: d.pitch ?? 0,
       hp: Math.max(1, d.hp ?? this.maxHp), maxHp: d.maxHp ?? 40,
       energy: d.energy ?? 100, mana: d.mana ?? 20, maxMana: d.maxMana ?? 20,
     });

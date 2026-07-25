@@ -845,6 +845,9 @@ export class World {
   }
 
   deserialize(data) {
+    // A character walking into a brand-new seed brings no world with them, so
+    // "nothing to restore" is an ordinary call rather than a mistake.
+    if (!data) return;
     this.time = data.time || 0;
     this.editedBlocks.clear();
     for (const [k, arr] of Object.entries(data.edits || {})) {
