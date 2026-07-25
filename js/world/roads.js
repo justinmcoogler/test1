@@ -656,9 +656,20 @@ export class Roads {
       // own subsoil, which is exactly what a fresh cutting exposes — so it only
       // needs a face where there is nothing to expose: fresh fill, or a cave
       // mouth the grade happened to open right beside the lane.
-      // A bridge has no shoulder at all: there is nothing out there to grade, and
-      // laying the usual dirt face hung soil in the air beside the deck.
-      surf = bridge || isSolid(blocks[base + y * step]) ? 0 : B.dirt;
+      // No shoulder anywhere near water. A bridge has nothing out there to grade,
+      // and laying the usual dirt face hung soil in the air beside the deck — but
+      // the visible problem was at the bridge ENDS. There the centre line steps
+      // back above the waterline, so the deck stops and the ordinary road
+      // cross-section resumes instantly, wrapping a dirt collar around the end of
+      // the span hard against the timber. A shoreline is not a cutting and has no
+      // face to expose, so leave the beach or the bank showing instead.
+      // Out over water there is nothing to grade, so a bridge gets no shoulder at
+      // all. Elsewhere the shoulder is LOAD-BEARING wherever the road was graded
+      // up: skip it and the lane has a hole beside it. So near the waterline it
+      // becomes beach sand rather than dirt — the fill is still there, but it
+      // reads as the shore the bridge lands on instead of a dirt collar wrapped
+      // round the end of the span.
+      surf = bridge || isSolid(blocks[base + y * step]) ? 0 : (hNat <= SEA + 2 ? B.sand : B.dirt);
     } else if (a <= coreEdge) {
       const r = hash2(seed + S_PAVE, wx, wz);
       surf = bridge ? B.planks
@@ -666,7 +677,10 @@ export class Roads {
           : r < 0.09 ? B.gravel : r < 0.18 ? B.mossy_cobble : r < 0.24 ? B.stone : B.cobble;
     } else {
       const r = hash2(seed + S_PAVE, wx, wz);
-      surf = bridge ? B.planks : r < 0.12 ? B.cobble : r < 0.17 ? B.dirt : B.gravel;
+      // The verge's 5% dirt becomes sand near the waterline for the same reason as
+      // the shoulder: beside a bridge a single dirt cell reads as soil on the deck.
+      surf = bridge ? B.planks : r < 0.12 ? B.cobble
+        : r < 0.17 ? (hNat <= SEA + 2 ? B.sand : B.dirt) : B.gravel;
     }
     // Where the road climbs, build the riser AS A STEP. The grade rises a block
     // roughly every 14 blocks walked, and only stairs and slabs are walkable
