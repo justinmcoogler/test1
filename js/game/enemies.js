@@ -810,6 +810,24 @@ export const ENEMY_TYPES = {
       box(0, 0.7, 0.55, 0.36, 0.36, 0.4, [0.85, 0.85, 0.8]),
     ]),
   },
+  skeleton: {
+    label: 'Skeleton', behavior: 'aggressive', tier: 1, nocturnal: true,
+    hp: 26, atk: 9, acc: 68, evasion: 10, armor: 1, speed: 6, moveRange: 4,
+    abilities: ['bone_arrow'], ranged: true, range: 6,
+    element: null, weak: [], resist: [],
+    xp: 75, huntXp: 0, respawn: 165, aggroRange: 10,
+    drops: [
+      { item: 'bone_needle', qty: [1, 2], chance: 0.6 },
+      { item: 'arrow', qty: [2, 6], chance: 0.7 },
+      { item: 'old_coin', qty: [1, 2], chance: 0.2 },
+    ],
+    desc: 'It holds its distance and draws. You hear the bow creak before you see the arrow.',
+    recommend: 'It out-ranges you unarmed — break line of sight, close the gap, and finish it inside its guard.',
+    model: M([
+      box(0, 0.75, 0, 0.5, 0.75, 0.25, [0.8, 0.78, 0.7]),
+      box(0, 1.5, 0, 0.5, 0.5, 0.5, [0.85, 0.83, 0.75]),
+    ]),
+  },
   spider: {
     label: 'Spider', behavior: 'aggressive', tier: 1, nocturnal: true,
     hp: 24, atk: 8, acc: 64, evasion: 20, armor: 1, speed: 9, moveRange: 6,

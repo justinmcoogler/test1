@@ -5,7 +5,7 @@ import { writeFileSync } from 'node:fs';
 import { ENEMY_TYPES } from '../js/game/enemies.js';
 
 const KEEP = new Set(['cow', 'pig', 'sheep', 'chicken', 'duck', 'goat', 'horse', 'rabbit', 'wolf',
-  'rat', 'bob', 'goblin', 'zombie', 'spider']);
+  'rat', 'bob', 'goblin', 'zombie', 'spider', 'skeleton']);
 const all = Object.keys(ENEMY_TYPES).sort();
 const missing = [...KEEP].filter((k) => !all.includes(k));
 if (missing.length) { console.error('roster mobs missing from ENEMY_TYPES:', missing); process.exit(1); }

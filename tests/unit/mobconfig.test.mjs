@@ -27,7 +27,7 @@ test('the shipped roster is active; everything else defaults OFF', () => {
   // The starter set is deliberately small — the farm animals plus the wolf
   // (docs/MOB_BRIEF.md). The rest stay in the library but out of new worlds.
   const ROSTER = ['cow', 'pig', 'sheep', 'chicken', 'duck', 'goat', 'horse', 'rabbit', 'wolf',
-    'rat', 'bob', 'goblin', 'zombie', 'spider'];
+    'rat', 'bob', 'goblin', 'zombie', 'spider', 'skeleton'];
   for (const t of ROSTER) {
     assert.ok(ENEMY_TYPES[t], `${t} should exist in the registry`);
     assert.equal(mc.mobActive(t), true, `${t} should ship active`);

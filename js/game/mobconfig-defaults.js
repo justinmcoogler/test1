@@ -137,7 +137,7 @@ export const MOB_DEFAULTS = {
   "sheep_2": { active: false },
   "shell_snapper": { active: false },
   "skeletal_archer": { active: false },
-  "skeleton": { active: false },
+  "skeleton": { active: true },
   "snow_golem": { active: false },
   "snow_hare": { active: false },
   "soul_spear_summoner": { active: false },

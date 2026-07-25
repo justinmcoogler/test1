@@ -40,7 +40,104 @@ const LURCH = {
   },
 };
 
+// The bow arm stays up and forward, holding the stave across the body; the draw
+// arm sits lower and pulls back. Static rest rotations, so the pose reads even
+// when no clip is playing.
+const BOW_ARM = [-88, 0, 0];
+const DRAW_ARM = [-62, 0, 0];
+
+// LOOSE — nock, draw, hold on the target, release with a snap of recoil. The
+// hold is what telegraphs the shot: it is the player's cue to break line of
+// sight, so it takes the middle half of the clip.
+const LOOSE = {
+  length: 2.2, loop: false,
+  parts: {
+    arm1: { rotate: [[0, [0, 0, 0]], [0.4, [-16, 0, 0]], [1.5, [-18, 0, 0]], [1.65, [14, 0, 0]], [2.2, [0, 0, 0]]] },
+    arm0: { rotate: [[0, [0, 0, 0]], [0.4, [4, 0, 0]], [1.5, [4, 0, 0]], [1.65, [-6, 0, 0]], [2.2, [0, 0, 0]]] },
+    head: { rotate: [[0, [0, 0, 0]], [0.4, [8, 0, 0]], [1.5, [8, 0, 0]], [1.65, [-5, 0, 0]], [2.2, [0, 0, 0]]] },
+    body: { rotate: [[0, [0, 0, 0]], [1.5, [0, 0, 0]], [1.65, [-4, 0, 0]], [2.2, [0, 0, 0]]] },
+  },
+};
+// RATTLE — dry bones shifting: a shiver through the ribs and a head twitch.
+const RATTLE = {
+  length: 1.5, loop: false,
+  parts: {
+    body: { rotate: [[0, [0, 0, 0]], [0.14, [0, 5, 2]], [0.3, [0, -5, -2]], [0.46, [0, 4, 2]], [0.62, [0, -3, -1]], [1.5, [0, 0, 0]]] },
+    head: { rotate: [[0, [0, 0, 0]], [0.14, [0, -14, 0]], [0.34, [0, 12, 0]], [0.6, [0, -6, 0]], [1.5, [0, 0, 0]]] },
+  },
+};
+
 export const UNDEAD = {
+  // --------------------------------------------------------------------------
+  // skeleton — a gaunt archer. Player skeleton, but every limb pared to 2x2
+  // (the deliberate slender exception in the brief) so daylight shows between
+  // the bones, and it carries a bow across its body. Keeps its distance and
+  // makes you close. (biped)
+  // --------------------------------------------------------------------------
+  skeleton: {
+    texW: 64, texH: 64, rig: 'biped',
+    paint(ctx, P) {
+      const bone = '#ccc7b4', boneDk = '#9c9683', boneLt = '#e6e1d0';
+      const gap = '#1a1c18', rot = '#6f6a52', ember = '#c8562a', cloth = '#4a4536';
+      // ribcage — pale bone with black gaps between the ribs
+      P.noise(0, 0, 16, 18, bone, 0.06, { chance: 0.08, color: boneDk });
+      P.bands(2, 2, 12, 11, 2, gap);                     // ribs
+      P.rect(7, 1, 2, 15, boneLt);                       // sternum
+      P.rect(0, 16, 16, 2, gap);                         // pelvis shadow
+      P.spots(0, 0, 16, 18, 8, rot);
+      P.noise(18, 0, 16, 6, bone, 0.05); P.strokes(18, 0, 16, 6, 6, boneDk, 2);
+      // arms — long thin bones with a knobbed joint
+      P.noise(40, 0, 10, 20, bone, 0.06); P.strokes(40, 0, 10, 20, 6, boneDk, 2);
+      P.rect(40, 9, 10, 2, boneDk); P.rect(40, 18, 10, 2, boneLt);
+      P.spots(40, 0, 10, 20, 5, rot);
+      // legs
+      P.noise(40, 22, 10, 20, bone, 0.06); P.strokes(40, 22, 10, 20, 6, boneDk, 2);
+      P.rect(40, 32, 10, 2, boneDk); P.rect(40, 40, 10, 2, boneDk);
+      // skull sides — cheekbone ridge, a scrap of rotted hood
+      P.noise(0, 20, 14, 14, bone, 0.06); P.strokes(0, 24, 14, 3, 5, boneDk, 2);
+      P.rect(0, 20, 14, 2, cloth);
+      // skull face — deep black sockets with a cold ember in each, nasal void,
+      // a grinning row of teeth
+      P.noise(16, 20, 14, 14, bone, 0.05);
+      P.rect(16, 20, 14, 2, cloth);
+      P.rect(18, 24, 4, 4, gap); P.rect(24, 24, 4, 4, gap);
+      P.px(19, 25, ember); P.px(25, 25, ember);
+      P.rect(22, 28, 2, 2, gap);                          // nasal cavity
+      P.rect(18, 31, 10, 2, boneLt); P.bands(18, 31, 10, 2, 2, gap);  // teeth
+      P.spots(16, 20, 14, 14, 6, rot);
+      // bow — a dark stave with a pale string down its length
+      P.noise(52, 0, 6, 26, '#5c4326', 0.06); P.strokes(52, 0, 6, 26, 10, '#3f2c17', 3);
+      P.rect(52, 0, 6, 2, '#33240f'); P.rect(52, 24, 6, 2, '#33240f');
+      P.noise(52, 28, 4, 22, '#ded7c2', 0.04);            // string
+    },
+    anims: { loose: LOOSE, rattle: RATTLE },
+    ambient: { clips: ['rattle', 'rattle', 'loose'], every: [7, 17] },
+    animOverrides: {
+      // the aim is the attack — draw, hold, release
+      attack: { length: 0.9, parts: {
+        arm1: { rotate: [[0, [0, 0, 0]], [0.2, [-18, 0, 0]], [0.55, [-20, 0, 0]], [0.68, [16, 0, 0]], [0.9, [0, 0, 0]]] },
+        head: { rotate: [[0, [0, 0, 0]], [0.2, [8, 0, 0]], [0.68, [-6, 0, 0]], [0.9, [0, 0, 0]]] },
+      } },
+    },
+    parts: [
+      part('body', [0, 12, 0], [
+        b([-4, 12, -2], [8, 12, 4], { all: [0, 0, 16, 18], up: [18, 0, 16, 6] }),
+      ]),
+      part('head', [0, 24, 0], [
+        b([-4, 24, -4], [8, 8, 8], { all: [0, 20, 14, 14], south: [16, 20, 14, 14] }),
+      ]),
+      // arm0 holds the stave out front; arm1 is the draw hand
+      part('arm0', [-3, 24, 0], [
+        b([-6, 12, -1], [2, 12, 2], [40, 0, 10, 20]),
+        b([-8, 20, -1], [2, 14, 2], [52, 0, 6, 26]),      // bow stave, across the grip
+        b([-7, 21, 0], [1, 12, 1], [52, 28, 4, 22]),      // string
+      ], { rotation: BOW_ARM }),
+      part('arm1', [3, 24, 0], [b([4, 12, -1], [2, 12, 2], [40, 0, 10, 20])], { rotation: DRAW_ARM }),
+      part('leg0', [-2, 12, 0], [b([-3, 0, -1], [2, 12, 2], [40, 22, 10, 20])]),
+      part('leg1', [2, 12, 0], [b([1, 0, -1], [2, 12, 2], [40, 22, 10, 20])]),
+    ],
+  },
+
   zombie: {
     texW: 64, texH: 64, rig: 'biped',
     paint(ctx, P) {

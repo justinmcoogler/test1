@@ -33,6 +33,9 @@ export const ABILITIES = {
   mire_grip: { label: 'Mire Grip', style: 'melee', range: 1, power: 1, status: { id: 'slow', turns: 2, chance: 0.8 } },
   skull_rush: { label: 'Skull Rush', style: 'melee', range: 3, power: 1.5, telegraph: 'paws the ground…', push: 1, cd: 3 },
   shard_spit: { label: 'Shard Spit', style: 'ranged', range: 4, power: 1 },
+  // a nocked arrow: longer reach than any thrown attack, and it hits harder
+  // the further the archer is from you, which is what forces the close
+  bone_arrow: { label: 'Bone Arrow', style: 'ranged', range: 6, power: 1.15 },
   sand_slash: { label: 'Sand Slash', style: 'melee', range: 1, power: 1.2 },
   venom_fang: { label: 'Venom Fang', style: 'melee', range: 1, power: 1, status: { id: 'poison', turns: 4, chance: 0.85 } },
   chill_bite: { label: 'Chill Bite', style: 'melee', range: 1, power: 1.1, element: 'ice', status: { id: 'slow', turns: 2, chance: 0.6 } },
