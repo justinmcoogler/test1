@@ -132,7 +132,9 @@ export function buildTown(api) {
   const WOODS = [B.fernwood_log, B.emberpine_log, B.oak_log];
   const INFILL = [B.white_terracotta, B.white_concrete, B.light_gray_terracotta ?? B.white_terracotta];
   const DOORS = [B.oak_door, B.birch_door, B.pine_door, B.cedar_door, B.ash_door, B.walnut_door];
-  const STONES = [B.cobble, B.stone_brick, B.granite ?? B.stone_brick];
+  // Plinths and rubble walls stay in the grey family. Granite renders pink here,
+  // which turns a stone footing into a patio.
+  const STONES = [B.cobble, B.stone_brick, B.andesite ?? B.cobble, B.mossy_cobble ?? B.cobble];
   const ROOFS = {
     thatch: { stair: B.thatch, slab: B.thatch_slab },
     tile: { stair: B.brick_stairs, slab: B.brick_slab },
@@ -206,9 +208,12 @@ export function buildTown(api) {
   };
 
   // --- street furniture ----------------------------------------------------
+  // A lamp standard, tall enough to light over head height rather than glow in
+  // your face. Doorways get a lantern set into the wall instead — a post in a
+  // three-wide lane is a bollard, not a lamp.
   const lamp = (x, z) => {
     const y = fy(x, z);
-    set(x, y, z, B.planks_fence); set(x, y + 1, z, B.planks_fence); set(x, y + 2, z, B.sea_lantern);
+    box(x, y, z, x, y + 2, z, B.planks_fence); set(x, y + 3, z, B.sea_lantern);
   };
   // Real blocks only. The old clutter list named crate/barrel/hay_bale, none of
   // which exist, so filter(Boolean) quietly reduced every pile to bare planks.
@@ -261,10 +266,13 @@ export function buildTown(api) {
     // its two-block apron, and the plinth is packed down to meet the fall on the
     // low side. On a slope that reads as a stone retaining wall, which is what a
     // hillside burgage plot actually looked like.
+    // Look two rings out so nothing next door stands higher than the floor, but
+    // only PAVE one ring — a two-block stone skirt round every house reads as a
+    // patio, not a footing.
     let base = -Infinity;
     for (let x = gx0 - 2; x <= gx1 + 2; x++) for (let z = gz0 - 2; z <= gz1 + 2; z++) base = Math.max(base, gy(x, z));
     const FL = base + 1;
-    for (let x = gx0 - 2; x <= gx1 + 2; x++) for (let z = gz0 - 2; z <= gz1 + 2; z++) {
+    for (let x = gx0 - 1; x <= gx1 + 1; x++) for (let z = gz0 - 1; z <= gz1 + 1; z++) {
       for (let y = gy(x, z); y <= base; y++) set(x, y, z, stoneId);
     }
     rect(gx0, gz0, gx1, gz1, base, floorMat);
@@ -332,27 +340,6 @@ export function buildTown(api) {
       TOWN_PLAN.rooms.push({ name, storey: s, y: ys, x0: f.x0 + 1, z0: f.z0 + 1, x1: f.x1 - 1, z1: f.z1 - 1 });
     }
 
-    // --- vertical circulation ---------------------------------------------
-    // A quarter-turn flight in the corner: wallH one-block risers a walker steps
-    // up, and a hole cut through the deck over the top of the run so the climb
-    // has headroom the whole way. An upper storey you cannot reach is worse than
-    // no upper storey.
-    for (let s = 0; s + 1 < storeys; s++) {
-      const f = foot[s], ys = storeyY(s), deck = ys + wallH;
-      // Successive flights alternate corners. Stacking them would drop a riser
-      // straight through the stairwell hole of the flight below.
-      const far = s % 2 === 1;
-      const ax = far ? f.x1 - 1 : f.x0 + 1, az = far ? f.z1 - 1 : f.z0 + 1;
-      const dx = far ? -1 : 1, dz = far ? -1 : 1;
-      const path = [[ax, az], [ax + dx, az], [ax + dx * 2, az], [ax + dx * 2, az + dz]];
-      for (let i = 0; i < wallH && i < path.length + 1; i++) {
-        const p = path[Math.min(i, path.length - 1)];
-        setF(p[0], ys + i, p[1], STAIRW, dx > 0 ? 1 : 3);
-      }
-      for (const [px, pz] of path) set(px, deck, pz, B.air);
-      set(ax + dx * 2, deck, az + dz * 2, floorMat);   // the landing you step out onto
-    }
-
     // --- the way in --------------------------------------------------------
     const dx0 = ox !== 0 ? (ox > 0 ? gx1 : gx0) : cx + (opts.door ?? 0);
     const dz0 = oz !== 0 ? (oz > 0 ? gz1 : gz0) : cz + (opts.door ?? 0);
@@ -369,10 +356,10 @@ export function buildTown(api) {
         const bx = ox !== 0 ? dx0 : dx0 + d, bz = ox !== 0 ? dz0 + d : dz0;
         set(bx, FL + h, bz, timber);
       }
-    } else {
+    } else if (!opts.arcade) {
       set(dx0, FL + 1, dz0, B.air);                  // the head of the doorway
       setF(dx0, FL, dz0, doorId, dirBits);           // the leaf, which swings open
-    }
+    }                                                // an arcade IS the way in
     TOWN_PLAN.doors.push({ name, x: dx0, y: FL, z: dz0 });
 
     // The doorstep must actually be walkable from the street. The apron is level
@@ -397,13 +384,18 @@ export function buildTown(api) {
     // on the room side of it. A house whose chimney lands on nothing is a house
     // with a decorative pipe.
     const top = foot[storeys - 1], yRoof = storeyY(storeys - 1) + wallH;
-    const ridge = roof(top.x0, top.z0, top.x1, top.z1, yRoof, T.roof, axis, infill, 2, 1);
+    // A gabled roof rises half its span, so a two-block eave on a six-wide
+    // cottage buries the walls under the hat. Deep eaves for the big buildings,
+    // a single course for the small ones.
+    const span = axis === 'x' ? top.x1 - top.x0 : top.z1 - top.z0;
+    const eave = span >= 8 ? 2 : 1;
+    const ridge = roof(top.x0, top.z0, top.x1, top.z1, yRoof, T.roof, axis, infill, eave, 1);
     // close the wall head up to the roof underside, so the loft is sealed and
     // the only ways in are the door and the windows
     for (let x = top.x0; x <= top.x1; x++) for (let z = top.z0; z <= top.z1; z++) {
       if (x !== top.x0 && x !== top.x1 && z !== top.z0 && z !== top.z1) continue;
       const a = axis === 'x' ? x : z;
-      const a0 = (axis === 'x' ? top.x0 : top.z0) - 2, a1 = (axis === 'x' ? top.x1 : top.z1) + 2;
+      const a0 = (axis === 'x' ? top.x0 : top.z0) - eave, a1 = (axis === 'x' ? top.x1 : top.z1) + eave;
       const L = Math.min(a - a0, a1 - a);
       for (let y = yRoof; y < yRoof + L; y++) set(x, y, z, T.wall === 'stone' ? stoneId : infill);
     }
@@ -465,6 +457,29 @@ export function buildTown(api) {
     // every room gets a light hung from the ridge as well as its fire
     set(cx, storeyY(storeys - 1) + wallH - 1, cz, B.sea_lantern);
 
+    // --- vertical circulation ---------------------------------------------
+    // A quarter-turn flight in a corner: wallH one-block risers a walker steps
+    // up, and a hole cut through the deck over the top of the run so the climb
+    // keeps its headroom the whole way. An upper storey you cannot reach is
+    // worse than no upper storey, so this goes in AFTER the fit-out and clears
+    // whatever the furniture put in its way — function outranks decoration.
+    // Flight 0 takes the far corner, away from the hearth in the near one, and
+    // flights alternate so a riser never drops through the well below it.
+    for (let s = 0; s + 1 < storeys; s++) {
+      const f = foot[s], ys = storeyY(s), deck = ys + wallH;
+      const far = s % 2 === 0;
+      const ax = far ? f.x1 - 1 : f.x0 + 1, az = far ? f.z1 - 1 : f.z0 + 1;
+      const dx = far ? -1 : 1, dz = far ? -1 : 1;
+      const path = [[ax, az], [ax + dx, az], [ax + dx * 2, az], [ax + dx * 2, az + dz]];
+      for (const [px, pz] of [...path, [ax + dx * 2, az + dz * 2]]) box(px, ys, pz, px, ys + wallH - 1, pz, B.air);
+      for (let i = 0; i < wallH; i++) {
+        const p = path[Math.min(i, path.length - 1)];
+        setF(p[0], ys + i, p[1], STAIRW, dx > 0 ? 1 : 3);
+      }
+      for (const [px, pz] of path) set(px, deck, pz, B.air);
+      set(ax + dx * 2, deck, az + dz * 2, floorMat);   // the landing you step out onto
+    }
+
     // Sweep the threshold clear, LAST. A fit-out laid out from the interior
     // corners has no idea where the door ended up, and a barrel parked in the
     // one cell behind it seals the house just as completely as a missing
@@ -477,7 +492,11 @@ export function buildTown(api) {
 
     // --- what it looks like from the street --------------------------------
     const sx = dx0 + ox, sz = dz0 + oz;                            // the doorstep cell
-    lamp(sx + perp[0] * 2, sz + perp[1] * 2);
+    // Lantern set INTO the wall head beside the way in. A post in the street is
+    // a bollard in a three-wide lane and a glowing cube in your eyeline.
+    if (T.bay) for (const w of [-((T.bay - 1) >> 1) - 1, ((T.bay - 1) >> 1) + 1]) {
+      set(dx0 + perp[0] * w, FL + 3, dz0 + perp[1] * w, B.sea_lantern);
+    } else set(dx0, FL + 3, dz0, B.sea_lantern);
     if (T.sign) {                                                  // trade sign on a bracket
       set(sx + perp[0], FL + 3, sz + perp[1], timber);
       set(sx + perp[0] + ox, FL + 3, sz + perp[1] + oz, B.sign);
@@ -586,6 +605,7 @@ export function buildTown(api) {
   // else on the market turns its narrow gable to the street.
   const hall = building('moot hall', -9, -32, 3, -27, 'stonehouse', {
     face: 'S', eavesOn: true, storeys: 2, arcade: true, stone: B.stone_brick,
+    door: 1,                                        // between the arcade piers, not through one
   });
   {
     // the bell tower, hard against the hall's west gable
