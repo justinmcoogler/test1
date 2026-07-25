@@ -8,6 +8,7 @@ import { spawn } from 'node:child_process';
 import { World } from '../js/world/world.js';
 import { hashSeed } from '../js/core/rng.js';
 import { allIslands } from '../js/world/sky.js';
+import { allUndercities } from '../js/world/undercity.js';
 
 const SEED_TEXT = 'skyward';
 const PORT = 8771;
@@ -36,7 +37,14 @@ if (bridged) {
     from: [Math.round(mx + Math.cos(perp) * off), Math.round(mz + Math.sin(perp) * off)],
     at: [Math.round(mx), br.y, Math.round(mz)] });
 }
-if (!shots.length) { console.error('no islands on this seed'); process.exit(1); }
+// …and the underground city: stand on the terrace looking down over the plaza.
+const city = allUndercities(w.gen, 3)[0];
+if (city) {
+  shots.push({ ring: city.ring, name: 'undercity',
+    from: [city.x + Math.round(city.rxr * 0.62), city.z + Math.round(city.rzr * 0.42)],
+    at: [city.x, city.floor + 3, city.z], indoor: true, eye: city.floor + 15 });
+}
+if (!shots.length) { console.error('nothing to shoot on this seed'); process.exit(1); }
 
 const server = spawn('node', ['tests/server.mjs', String(PORT)], { stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 700));
@@ -68,7 +76,7 @@ try {
   await page.addStyleTag({ content: '#hud, #toasts, #minimap-wrap { display: none !important; }' });
 
   for (const s of shots) {
-    await page.evaluate(async ([fx, fz, ax, ay, az, r]) => {
+    await page.evaluate(async ([fx, fz, ax, ay, az, r, eye]) => {
       const g = window.__game, CH = 16;
       // A wide halo, and MESHED — an island only exists on screen once its
       // chunks are meshed, and it spans a lot of them.
@@ -80,7 +88,7 @@ try {
       }
       // Stand the player in the air at island height so the island is not a
       // speck on the horizon — this is a portrait, not a gameplay shot.
-      g.player.respawnAt(fx + 0.5, ay - 4, fz + 0.5);
+      g.player.respawnAt(fx + 0.5, eye != null ? eye : ay - 4, fz + 0.5);
       g.player.vx = g.player.vy = g.player.vz = 0;
       g.player.debug = true;              // creative flight: no gravity, no collision
       for (const key of [...g.world.dirtyChunks]) {
@@ -95,8 +103,8 @@ try {
         }
       }
       g.player.yaw = Math.atan2(-(ax + 0.5 - g.player.x), -(az + 0.5 - g.player.z));
-      g.player.pitch = -0.12;                     // looking slightly up at it
-    }, [s.from[0], s.from[1], s.at[0], s.at[1], s.at[2], 20]);
+      g.player.pitch = eye != null ? 0.22 : -0.12;   // down over a city, up at an island
+    }, [s.from[0], s.from[1], s.at[0], s.at[1], s.at[2], 20, s.eye ?? null]);
     await page.waitForTimeout(1200);
     const file = `${OUT}/sky-${s.name}.png`;
     await page.screenshot({ path: file });

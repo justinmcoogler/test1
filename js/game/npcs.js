@@ -108,9 +108,140 @@ NPC_DEFS.pip = {
   dialogue: 'pip_root',
 };
 
+// ---- the deep holds --------------------------------------------------------
+// Dwarves of the underground cities (js/world/undercity.js). Four roles, and
+// every hold in the world draws its people from these four: main.js registers
+// one model per NPC_DEFS entry at startup, so a hold discovered mid-game
+// cannot mint a new id and be seen.
+//
+// The silhouette is the whole job — a helm brim and a beard to the belt. At the
+// distance you first see one across a cavern that reads as a dwarf, and nothing
+// else in the roster does.
+Object.assign(NPC_DEFS, {
+  hold_warden: {
+    label: 'Hold Warden Brann',
+    role: 'Keeper of the deep hold',
+    model: humanoid(
+      { skin: [0.78, 0.6, 0.46], top: [0.36, 0.33, 0.38], sleeves: [0.3, 0.28, 0.32], bottom: [0.28, 0.26, 0.3] },
+      [
+        hb(-4.6, 30.5, -4.6, 9.2, 2, 9.2, [0.42, 0.42, 0.46]),   // 6 helm brim
+        hb(-3.5, 32, -3.5, 7, 3, 7, [0.5, 0.5, 0.55]),           // 7 helm dome
+        hb(-3.6, 18, -2.6, 7.2, 8, 1.6, [0.72, 0.68, 0.6]),      // 8 beard
+        hb(-4.6, 15, -2.5, 9.2, 5, 1.2, [0.45, 0.35, 0.2]),      // 9 belt + buckle
+      ]
+    ),
+    headExtra: [6, 7, 8],
+    dialogue: 'hold_warden_root',
+  },
+  hold_smith: {
+    label: 'Forge-Master Dural',
+    role: 'Smith of the deep forges',
+    model: humanoid(
+      { skin: [0.74, 0.55, 0.42], top: [0.34, 0.24, 0.2], sleeves: [0.3, 0.2, 0.17], bottom: [0.26, 0.22, 0.2] },
+      [
+        hb(-3.6, 18, -2.6, 7.2, 9, 1.6, [0.5, 0.28, 0.16]),      // 6 red beard
+        hb(-4.6, 13, -2.6, 9.2, 7, 1.4, [0.6, 0.5, 0.36]),       // 7 leather apron
+        hb(-3.4, 31, -3.4, 6.8, 2, 6.8, [0.36, 0.3, 0.26]),      // 8 headband
+      ]
+    ),
+    headExtra: [6, 8],
+    dialogue: 'hold_smith_root',
+    shop: {
+      sells: [
+        { item: 'iron_bar', price: 26 },
+        { item: 'coal', price: 5 },
+        { item: 'torch_item', price: 3 },
+        { item: 'copper_bar', price: 16 },
+      ],
+    },
+  },
+  hold_miner: {
+    label: 'Pitmaster Hesk',
+    role: 'Master of the rail and the seam',
+    model: humanoid(
+      { skin: [0.7, 0.56, 0.44], top: [0.3, 0.34, 0.3], sleeves: [0.26, 0.3, 0.26], bottom: [0.24, 0.26, 0.24] },
+      [
+        hb(-3.6, 18, -2.6, 7.2, 8, 1.6, [0.36, 0.3, 0.24]),      // 6 dark beard
+        hb(-3.5, 31, -3.5, 7, 3, 7, [0.5, 0.42, 0.16]),          // 7 pit helm
+        hb(-1.2, 33, -3.9, 2.4, 1.6, 1.2, [1, 0.95, 0.7]),       // 8 lamp on the helm
+      ]
+    ),
+    headExtra: [6, 7, 8],
+    dialogue: 'hold_miner_root',
+  },
+  hold_brewer: {
+    label: 'Cellarer Mab',
+    role: 'Keeper of the hold cellars',
+    model: humanoid(
+      { skin: [0.8, 0.62, 0.5], top: [0.42, 0.3, 0.34], sleeves: [0.36, 0.26, 0.3], bottom: [0.3, 0.24, 0.26] },
+      [
+        hb(-3.6, 18, -2.6, 7.2, 7, 1.6, [0.68, 0.6, 0.52]),      // 6 grey braid
+        hb(-4.4, 13, -2.4, 8.8, 6, 1.2, [0.8, 0.74, 0.6]),       // 7 apron
+      ]
+    ),
+    headExtra: [6],
+    dialogue: 'hold_brewer_root',
+    shop: {
+      sells: [
+        { item: 'travel_biscuit', price: 5 },
+        { item: 'minor_healing_tonic', price: 30 },
+      ],
+    },
+  },
+});
+
 // Dialogue graph. Options can carry action tags read by main.js/ui.js:
 //   startQuest:<id>, turnIn:<id>, startLesson:<area>, shop, close
 export const DIALOGUES = {
+  hold_warden_root: {
+    speaker: 'hold_warden',
+    text: () => `You came down the stair, then. Most don't — they see the mouth, decide it's a mine, and walk on. This is a HOLD, surfacer. We were cutting these halls when your Brookhollow was a ford and three huts.`,
+    options: [
+      { label: 'What is this place?', next: 'hold_warden_place' },
+      { label: 'What do you dig for?', next: 'hold_warden_dig' },
+      { label: 'I will look around.', action: 'close' },
+    ],
+  },
+  hold_warden_place: {
+    speaker: 'hold_warden',
+    text: () => `Rock, mostly. Rock and the patience to move it. The gallery you're standing on runs the whole ring; the rails go out to the seams and come back loaded. Mind the adits — we shore them, but the deep dark has its own opinions.`,
+    options: [{ label: 'Understood.', action: 'close' }],
+  },
+  hold_warden_dig: {
+    speaker: 'hold_warden',
+    text: () => `Whatever the seam gives. Iron for the forges, coal to feed them, silver when we're lucky and the wet doesn't get there first. Talk to Hesk about the rails and Dural about what comes off the anvil.`,
+    options: [{ label: 'I will.', action: 'close' }],
+  },
+  hold_smith_root: {
+    speaker: 'hold_smith',
+    text: () => `Mind the sparks. You want work done or you want to watch? Both cost the same down here, and one of them costs more later.`,
+    options: [
+      { label: 'Show me your goods.', action: 'shop' },
+      { label: 'Just passing.', action: 'close' },
+    ],
+  },
+  hold_miner_root: {
+    speaker: 'hold_miner',
+    text: () => `Rails run from the gallery out to every working seam and back. Don't stand on them when you hear the wheels — there's no brake worth the name on a loaded truck, and the adit walls don't move.`,
+    options: [
+      { label: 'Where do the adits go?', next: 'hold_miner_adits' },
+      { label: 'Noted.', action: 'close' },
+    ],
+  },
+  hold_miner_adits: {
+    speaker: 'hold_miner',
+    text: () => `Out and down, following the ore. Timber every few paces, lamp at every set. If the lamps stop, turn round — that's the rule that's kept me breathing forty years.`,
+    options: [{ label: 'Fair enough.', action: 'close' }],
+  },
+  hold_brewer_root: {
+    speaker: 'hold_brewer',
+    text: () => `You look like you've been walking in the dark a while. Sit if you like. The cellars are cut into the cold side of the rock — keeps better down here than anywhere above ever managed.`,
+    options: [
+      { label: 'What have you got?', action: 'shop' },
+      { label: 'Thank you.', action: 'close' },
+    ],
+  },
+
   pip_root: {
     speaker: 'pip',
     text: () => `Hi hi! I'm Pip, and this is Numbers Meadow! We learn by BUILDING. Put blocks on the soft mat and we'll count them together. Ready to play with numbers?`,

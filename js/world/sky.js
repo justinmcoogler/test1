@@ -125,7 +125,11 @@ function buildIsland(gen, rx, rz) {
   for (let k = 0; k < n; k++) {
     const r = randInt(rand, band.rMin, band.rMax);
     const crownH = Math.max(2, Math.round(r * 0.22));
-    const keelD = Math.max(4, Math.round(r * 0.95));
+    // Keel depth as a fraction of the island's RADIUS. This was 0.95, and with
+    // the jitter and spur multipliers on top the underside hung about twice the
+    // island's radius — a 44-wide rock trailing 45 blocks of stalactite, which
+    // read as organ pipes rather than as a broken-off piece of ground.
+    const keelD = Math.max(4, Math.round(r * 0.55));
     // Cluster members must not INTERPENETRATE. They are separate rocks with air
     // between them, and when they overlapped, one island's keel was written
     // through the next one's turf — a snow-capped island whose summit came out
@@ -418,10 +422,11 @@ function stampOne(gen, sky, cx, cz) {
         // column and the island's own salt is a pure function of position, so the
         // crags are identical whichever chunk draws them.
         const j = hash2(is.salt, x, z);
-        let deep = Math.max(1, Math.round(is.keelD * Math.pow(t, 0.7) * (0.68 + 0.62 * j)));
+        let deep = Math.max(1, Math.round(is.keelD * Math.pow(t, 0.7) * (0.62 + 0.46 * j)));
         // …and a few columns hang much further, which is what gives the underside
         // its spurs instead of a smooth taper.
-        if (j > 0.955 && t > 0.18) deep += Math.round(is.keelD * (0.35 + j * 0.5));
+        // Spurs: rarer and much shorter than they were. A few crags, not a fringe.
+        if (j > 0.972 && t > 0.22) deep += Math.round(is.keelD * (0.18 + j * 0.3));
         const yTop = is.y + dome;
         if (yTop < 3 || yTop >= WORLD_H - 1) continue;
         for (let dy = 0; dy < dome + deep; dy++) {

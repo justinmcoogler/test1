@@ -6,6 +6,7 @@ import { buildTown } from './town.js';
 import { LEARN_MEADOW } from './worldgen.js';
 import { stampMineshafts, mineshaftClaims } from './mineshaft.js';
 import { stampSky } from './sky.js';
+import { stampUndercity, undercityClaims, attachUndercitySink } from './undercity.js';
 import { stampDungeons, dungeonClaims } from './dungeon.js';
 import { stampSettlements, settlementClaims, attachSettlementSink } from './settlements.js';
 
@@ -453,6 +454,8 @@ export function buildStarterStructures() {
   // AFTER the blanket LIFT above, so a settlement's already-real coordinates are
   // never lifted a second time.
   attachSettlementSink({ npcs, markers });
+  // …and the dwarven holds publish their four folk the same way.
+  attachUndercitySink({ npcs });
 
   return { edits, nodes, spawns, npcs, chests, facings, markers };
 }
@@ -477,6 +480,10 @@ export function stampChunkStructures(gen, cx, cz, sink) {
   // The sky archipelago first. It lives 150-370 blocks up, so it cannot
   // collide with anything below and the ground passes keep their own order.
   stampSky(gen, cx, cz, sink);
+  // The undercity goes down before the mineshafts and dungeons, so a drift
+  // that happens to run into it breaks through into the city rather than the
+  // city carving a hole in a corridor you were walking.
+  stampUndercity(gen, cx, cz, sink);
   stampMineshafts(gen, cx, cz, sink);
   stampDungeons(gen, cx, cz, sink);
   // Towns go LAST on purpose. A town levels a platform and clears the air over it,
@@ -492,7 +499,8 @@ export function stampChunkStructures(gen, cx, cz, sink) {
 // ENTRANCE footprint only, not the whole site: a mineshaft's workings are 60
 // blocks across and blanking that much surface would leave a bald square.
 export function structureClaims(gen, x, z) {
-  return mineshaftClaims(gen, x, z) || dungeonClaims(gen, x, z) || settlementClaims(gen, x, z);
+  return mineshaftClaims(gen, x, z) || dungeonClaims(gen, x, z) || settlementClaims(gen, x, z)
+    || undercityClaims(gen, x, z);
 }
 
 // Index structure edits by chunk for fast application during generation.
