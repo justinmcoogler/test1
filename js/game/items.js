@@ -21,6 +21,11 @@ function it(id, label, opts = {}) {
 it('coin', 'Ember Coin', { stack: 9999, type: 'currency' });
 it('rootbound_heart', 'Rootbound Heart', { stack: 1, type: 'quest', desc: 'The still-pulsing core of the Rootgrave guardian.' });
 it('relic_fragment', 'Relic Fragment', { desc: 'A piece of something ancient. Enchanters prize these.' });
+// The one key in the world. Carried by the mini-boss guarding a procedural
+// dungeon's boss room (js/world/dungeon.js `theme.mini`) and spent turning that
+// dungeon's grate — see js/game/dungeonlock.js for why the lock needed an item
+// of its own instead of borrowing the relic fragment above.
+it('warden_key', "Warden's Key", { stack: 5, type: 'quest', desc: 'Cold iron, black with age, far too big for any door in Brookhollow. It turns the grate on a dungeon boss room once, then stays in the lock.' });
 it('waterlogged_cache', 'Waterlogged Cache', { stack: 5, type: 'usable', desc: 'A sealed box fished from the depths. Open it!' });
 
 // ---- raw materials ----

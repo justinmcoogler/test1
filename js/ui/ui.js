@@ -616,16 +616,19 @@ export class UI {
       }
     }
     // quest / travel markers (clamped to the minimap edge when far away)
-    const dot = (wx, wz) => {
+    const dot = (wx, wz, fill = '#e2b13c', r = 4, clamp = true) => {
       const mx = half + (wx - p.x) * scale, mz = half + (wz - p.z) * scale;
-      const cx2 = Math.max(6, Math.min(canvas.width - 6, mx));
-      const cz2 = Math.max(6, Math.min(canvas.height - 6, mz));
-      ctx.fillStyle = '#e2b13c';
+      if (!clamp && (mx < 2 || mx > canvas.width - 2 || mz < 2 || mz > canvas.height - 2)) return;
+      const cx2 = clamp ? Math.max(6, Math.min(canvas.width - 6, mx)) : mx;
+      const cz2 = clamp ? Math.max(6, Math.min(canvas.height - 6, mz)) : mz;
+      ctx.fillStyle = fill;
       ctx.beginPath();
-      ctx.arc(cx2, cz2, 4, 0, Math.PI * 2);
+      ctx.arc(cx2, cz2, r, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#000'; ctx.stroke();
     };
+    // discovered waystones, unclamped — a travel point you can actually see
+    for (const ws of this.game.waystones.list()) dot(ws.x, ws.z, '#7ec4f2', 3, false);
     const mk = this.game.quests.trackedMarker(this.game.world.markers);
     if (mk) dot(mk.pos[0], mk.pos[2]);
     if (this.game.travelDest) dot(this.game.travelDest[0], this.game.travelDest[2]);
@@ -949,12 +952,23 @@ export class UI {
   // Clicking an explored spot starts auto-travel (classic) / a guide trail (FP).
   renderMap(body) {
     body.innerHTML = `<canvas id="map-canvas"></canvas>
+      ${this.waystonePanelHTML()}
       <div style="color:var(--ink-dim);font-size:12px;margin-top:6px">
-        Click an explored spot to walk there. Gold diamond: Brookhollow · gold dot: quest objective · gold cross: travel mark · white arrow: you.
+        Click an explored spot to walk there. Gold diamond: Brookhollow · gold dot: quest objective · gold cross: travel mark · blue diamond: waystone · white arrow: you.
       </div>`;
+    this.bindWaystonePanel();
     const canvas = $('map-canvas');
-    canvas.width = Math.max(320, Math.min(760, (window.innerWidth || 800) - 100));
-    canvas.height = Math.max(280, Math.min(520, (window.innerHeight || 640) - 240));
+    // Size the map against the space actually left in the window, not against the
+    // viewport: the waystone panel is the point of opening this once you have a
+    // network, and pushing it below the fold would hide the whole feature on a
+    // landscape phone. `#map-canvas` is width:100% in CSS, so the drawing buffer
+    // is scaled to `shown` px wide — the height is chosen so that after that
+    // scaling the map occupies exactly the room left over.
+    const shown = Math.max(280, canvas.clientWidth || 700);
+    const room = Math.max(150, (body.clientHeight || 420) - (this.game.waystones.size ? 156 : 52));
+    canvas.width = Math.round(Math.min(760, shown));
+    canvas.height = Math.round(Math.min(520, room * (canvas.width / shown)));
+    canvas.style.maxHeight = `${Math.round(room)}px`;
     const ctx = canvas.getContext('2d');
     const p = this.game.player;
     ctx.fillStyle = '#0d1015';
@@ -978,6 +992,12 @@ export class UI {
       ctx.strokeStyle = '#000'; ctx.stroke();
     };
     diamond(ox, oz, 6, '#e2b13c'); // Brookhollow (world origin)
+    // every discovered waystone, with the one you're standing at ringed
+    const standing = this.game.departureWaystone();
+    for (const ws of this.game.waystones.list()) {
+      const wx = ox + (ws.x + 0.5) * scale, wz = oz + (ws.z + 0.5) * scale;
+      diamond(wx, wz, ws.id === standing?.id ? 6 : 4.5, ws.id === standing?.id ? '#ffffff' : '#7ec4f2');
+    }
     const mk = this.game.quests.trackedMarker(this.game.world.markers);
     if (mk) {
       ctx.fillStyle = '#e2b13c';
@@ -1017,6 +1037,54 @@ export class UI {
       }
       this.game.setTravelDest(wx, wz);
       this.closeWindow();
+    });
+  }
+
+  // ---- waystone fast travel ----
+  // The network lives inside the map window on purpose: it IS a map feature, it
+  // inherits the window's responsive layout, and so it cannot overlap the HUD in
+  // either orientation. Each entry is `flex: 1 1 200px`, which lays the list out
+  // as one column on a phone held upright and two or three in landscape or on
+  // desktop, with a 44px minimum touch target throughout.
+  waystonePanelHTML() {
+    const g = this.game;
+    const list = g.waystones.list();
+    const here = g.departureWaystone();
+    let note;
+    if (!list.length) {
+      note = 'None yet — a lit standing stone marks the miles along every main road out of Brookhollow. Walk up to one.';
+    } else if (!here) {
+      note = 'Stand at a waystone to travel instantly between two of them; from anywhere else, picking one walks you to it.';
+    } else if (list.length < 2) {
+      note = `You are at ${here.name}. Find a second stone and the route opens.`;
+    } else {
+      note = `Departing ${here.name} — choose where to arrive.`;
+    }
+    const rows = list.map((ws) => {
+      const at = !!here && ws.id === here.id;
+      const away = Math.round(Math.hypot(ws.x - g.player.x, ws.z - g.player.z));
+      return `<button class="ws-btn" data-ws="${ws.id}" ${at ? 'disabled' : ''} style="flex:1 1 200px;min-width:0;min-height:44px;`
+        + 'display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 10px;border-radius:6px;text-align:left;'
+        + `background:${at ? 'rgba(226,177,60,0.16)' : 'rgba(44,50,60,0.9)'};border:1px solid ${at ? 'var(--gold)' : 'var(--edge)'};color:var(--ink)">`
+        + `<span style="font-size:13px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ws.name}</span>`
+        + `<span style="font-size:11px;color:var(--ink-dim)">${g.waystoneWhere(ws)} · ${at ? 'you are here' : `${away} blocks away`}</span>`
+        + '</button>';
+    }).join('');
+    return `<div id="ws-net" style="margin-top:8px">
+      <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+        <b style="color:var(--gold);font-size:13px">Waystone network</b>
+        <span style="color:var(--ink-dim);font-size:11.5px;flex:1 1 160px">${note}</span>
+      </div>
+      ${rows ? `<div id="ws-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-height:26vh;overflow-y:auto">${rows}</div>` : ''}
+    </div>`;
+  }
+
+  bindWaystonePanel() {
+    document.querySelectorAll('#ws-list .ws-btn').forEach((b) => {
+      b.addEventListener('click', () => {
+        SFX.uiClick();
+        if (this.game.travelToWaystone(b.dataset.ws)) this.closeWindow();
+      });
     });
   }
 

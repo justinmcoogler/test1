@@ -6,6 +6,7 @@ import { buildTown } from './town.js';
 import { LEARN_MEADOW } from './worldgen.js';
 import { stampMineshafts, mineshaftClaims } from './mineshaft.js';
 import { stampDungeons, dungeonClaims } from './dungeon.js';
+import { stampSettlements, settlementClaims, attachSettlementSink } from './settlements.js';
 
 const key = (x, y, z) => `${x},${y},${z}`;
 
@@ -443,6 +444,15 @@ export function buildStarterStructures() {
   // attach it after the blanket lift so its fields aren't mangled by m[1]+=LIFT.
   markers.learnMat = learnMat;
 
+  // Procedural towns (js/world/settlements.js) are discovered chunk by chunk long
+  // after this runs, and their PEOPLE and map markers are not blocks, so they
+  // cannot ride the chunk sink. Hand settlements.js the two live collections
+  // world.js publishes — `world.structure.npcs` and `world.markers` — so a town's
+  // villagers and its waypoint appear the moment the town generates. Attached
+  // AFTER the blanket LIFT above, so a settlement's already-real coordinates are
+  // never lifted a second time.
+  attachSettlementSink({ npcs, markers });
+
   return { edits, nodes, spawns, npcs, chests, facings, markers };
 }
 
@@ -465,6 +475,12 @@ export function buildStarterStructures() {
 export function stampChunkStructures(gen, cx, cz, sink) {
   stampMineshafts(gen, cx, cz, sink);
   stampDungeons(gen, cx, cz, sink);
+  // Towns go LAST on purpose. A town levels a platform and clears the air over it,
+  // so it has to be able to overwrite a shaft head or a dungeon stair that a
+  // region roll happened to put on the same ground — the alternative (teaching
+  // mineshaft.js and dungeon.js to refuse those sites) is a cleaner fix but it
+  // belongs to those modules; `settlementNear` is exported and ready for it.
+  stampSettlements(gen, cx, cz, sink);
 }
 
 // Surface columns a site's entrance owns. Worldgen's vegetation/node/mob scatter
@@ -472,7 +488,7 @@ export function stampChunkStructures(gen, cx, cz, sink) {
 // ENTRANCE footprint only, not the whole site: a mineshaft's workings are 60
 // blocks across and blanking that much surface would leave a bald square.
 export function structureClaims(gen, x, z) {
-  return mineshaftClaims(gen, x, z) || dungeonClaims(gen, x, z);
+  return mineshaftClaims(gen, x, z) || dungeonClaims(gen, x, z) || settlementClaims(gen, x, z);
 }
 
 // Index structure edits by chunk for fast application during generation.

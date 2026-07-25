@@ -30,6 +30,14 @@ import { registerImportedMobs } from './game/mobpack.js';
 import { registerProps } from './game/proppack.js';
 import { EducationManager } from './game/education.js';
 import { LessonRunner } from './game/lessons.js';
+import { WAYSTONE_SPACING } from './world/roads.js';
+import {
+  WaystoneNet, atWaystone, waystonesNear, waystoneLanding, BEARINGS, WAYSTONE_HEIGHT,
+} from './game/waystones.js';
+import {
+  KEY_ITEM as DUNGEON_KEY, dungeonNear, grateCells, isGrateCell, gateOpen, gateVerdict,
+  openGate, markBossDead, bossChestSealed, sealedChestMsg, keyHolderId, bossSpawnId,
+} from './game/dungeonlock.js';
 import { hashSeed } from './core/rng.js';
 import { on, emit, clearAllListeners } from './core/events.js';
 import { clamp } from './core/math.js';
@@ -68,6 +76,10 @@ class Game {
 
     this.discovered = new Set();
     this.discoveredItems = new Set(['fernwood_log', 'rough_stone', 'plant_fibre']);
+    // Waystone fast-travel network. Built before restore() so a save can fill it.
+    this.waystones = new WaystoneNet();
+    this.nearWaystone = null;    // the stone you're standing at, if any
+    this.waystonesInSight = [];  // stones close enough to label in the world
     this.flags = {};
     this.playtime = 0;
     this.dialogueOpen = false;
@@ -357,6 +369,10 @@ class Game {
     on('combatEnd', (e) => this.onCombatEnd(e));
     on('combatFx', (fx) => this.onCombatFx(fx));
     on('questCompleted', () => { this.autosaveTimer = Math.min(this.autosaveTimer, 2); });
+    // A procedural dungeon's two flagged bosses: the key holder on the way in and
+    // the boss behind the grate. Keyed by SPAWN ID, not mob type — see the note in
+    // js/game/dungeonlock.js and BOSS_FLAGS at the foot of this file.
+    on('enemyKilled', ({ id, boss }) => this.onDungeonBossKilled(id, boss));
     on('nodeDepleted', ({ node }) => {
       const [x, y, z] = [node.x, node.y, node.z];
       this.renderer.spawnParticles(x + 0.5, y + 0.6, z + 0.5, [0.6, 0.6, 0.5], 10, 3, 0.7);
@@ -636,6 +652,9 @@ class Game {
         this.updateInteraction(dt);
       }
       this.quests.checkReach(p.x, p.z, p.y, this.world.markers);
+      // waystone discovery — see updateWaystones for why 4 Hz is plenty
+      this._wsAccum = (this._wsAccum || 0) + dt;
+      if (this._wsAccum >= 0.25) { this._wsAccum = 0; this.updateWaystones(); }
     } else {
       this.ui.setPrompt(null);
       this.ui.setGatherProgress(null);
@@ -1038,6 +1057,13 @@ class Game {
       this.walkTo(hit.x + 0.5, hit.z + 0.5, 12);
       return;
     }
+    // a locked dungeon grate: walk up and try the key, whether the tap was a
+    // plain click or the mine gesture — you cannot dig your way past it either
+    if (bdef?.name === 'iron_bars' && this.dungeonGateAt(hit.x, hit.y, hit.z)) {
+      this.pendingInteract = { kind: 'gate', x: hit.x, y: hit.y, z: hit.z, range: 3.2 };
+      this.walkTo(hit.x + 0.5, hit.z + 0.5, 12);
+      return;
+    }
     const stations = ['workbench', 'furnace', 'anvil_block', 'campfire', 'alchemy_table', 'loom_block', 'enchant_altar', 'construction_bench'];
     if (bdef && (stations.includes(bdef.name) || bdef.name === 'chest_block') && !isBreak) {
       this.pendingInteract = { kind: bdef.name === 'chest_block' ? 'chest' : 'station', x: hit.x, y: hit.y, z: hit.z, range: 3.2 };
@@ -1102,13 +1128,12 @@ class Game {
     } else if (pi.kind === 'chest') {
       const chest = this.world.getChestAt(pi.x, pi.y, pi.z);
       const id = chest ? chest.id : this.world.registerPlayerChest(pi.x, pi.y, pi.z);
-      const meta = this.world.chestMeta.get(id);
-      if (meta?.requiresBossDead && !this.flags[meta.requiresBossDead]) {
-        this.ui.toast('The chest is bound shut by living roots… defeat the guardian.', 'warn');
-        return;
-      }
+      const sealed = this.chestSealedReason(id);
+      if (sealed) { this.ui.toast(sealed, 'warn'); return; }
       this.ui.openChestUI(id);
       emit('chestOpened', { id });
+    } else if (pi.kind === 'gate') {
+      this.tryDungeonGate(pi.x, pi.y, pi.z);
     } else if (pi.kind === 'break') {
       this.autoBreak = { x: pi.x, y: pi.y, z: pi.z };
     } else if (pi.kind === 'door') {
@@ -1172,7 +1197,9 @@ class Game {
       }
       return;
     }
-    this.ui.setPrompt(this.moveTarget && this.pendingInteract ? 'Walking…' : null);
+    this.ui.setPrompt(this.moveTarget && this.pendingInteract
+      ? 'Walking…'
+      : (this.nearWaystone ? this.waystonePrompt() : null));
     if (!this.breaking && !this.gather) this.ui.setGatherProgress(null);
   }
 
@@ -1214,6 +1241,153 @@ class Game {
     this.ui.toast(this.settings.classicCamera
       ? 'Walking to the marked spot — click anywhere to stop.'
       : 'Spot marked — follow the gold dots.', 'gold');
+  }
+
+  // ---------------------------------------------------------------- waystones
+  // Walking up to a standing stone puts it on your network. Called on a throttle
+  // from tick(): eight dot products, and a block probe only for an arterial whose
+  // mile mark is actually within reach — which for almost every column is none.
+  updateWaystones() {
+    const p = this.player;
+    this.waystonesInSight = waystonesNear(this.world, p.x, p.z, 34);
+    const here = this.waystonesInSight.find((ws) => atWaystone(ws, p.x, p.y, p.z)) || null;
+    this.nearWaystone = here;
+    if (!here || !this.waystones.add(here)) return;
+    this.ui.toast(`Waystone discovered — ${here.name}. Open the Map to travel the network.`, 'gold');
+    SFX.questDone();
+    this.autosaveTimer = Math.min(this.autosaveTimer, 3);
+    if (this.ui.currentWindow === 'map') this.ui.renderWindowBody();
+  }
+
+  // What the HUD says while you stand at a stone. This is the signpost finally
+  // reading as something: the name it generated for itself, plus how to use it.
+  waystonePrompt() {
+    const ws = this.nearWaystone;
+    if (!ws) return null;
+    const n = this.waystones.size;
+    const how = this.touch ? 'the Map button' : 'the Map (M)';
+    return n > 1
+      ? `${ws.name} · ${this.waystoneWhere(ws)} — open ${how} to travel the network (${n} stones)`
+      : `${ws.name} · ${this.waystoneWhere(ws)} — find another waystone to travel between them`;
+  }
+
+  // The discovered stone you could depart from, or null. Fast travel is
+  // stone-to-stone: standing at one is what buys the ride.
+  departureWaystone() {
+    const w = this.nearWaystone;
+    return w && this.waystones.has(w.id) ? w : null;
+  }
+
+  // "Ashfen Crossing · 2048 E" — the bearing and mile mark of a stone, so two
+  // stones that happen to draw the same name are still told apart in a list.
+  waystoneWhere(ws) {
+    return `${ws.n * WAYSTONE_SPACING} ${BEARINGS[ws.dir] || '?'}`;
+  }
+
+  // Travel the network. Between two discovered stones this is instant — that is
+  // what a waystone network IS, and a phone player is not walking 4000 blocks in
+  // real time. Away from a stone it falls back to the existing map-travel walk,
+  // so the destination is never simply refused.
+  travelToWaystone(id) {
+    const dest = this.waystones.get(id);
+    if (!dest) return false;
+    const from = this.departureWaystone();
+    if (from && from.id === dest.id) {
+      this.ui.toast(`You are already at ${dest.name}.`, '');
+      return false;
+    }
+    if (!from) {
+      this.setTravelDest(dest.x + 0.5, dest.z + 0.5);
+      this.ui.toast(`No stone to depart from — walking to ${dest.name}.`, 'warn');
+      return true;
+    }
+    // Generate and mesh the arrival before moving, so nobody lands in void.
+    const [lx, lz] = waystoneLanding(this.world, dest);
+    const pcx = Math.floor(lx / CHUNK), pcz = Math.floor(lz / CHUNK);
+    for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) this.world.ensureChunk(pcx + dx, pcz + dz);
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) this.renderer.remeshChunk(this.world, pcx + dx, pcz + dz);
+    const y = this.world.groundNear(lx, lz, dest.y) ?? (this.world.surfaceAt(lx, lz) + 1);
+    this.combatRS.disengageAll();
+    this.player.respawnAt(lx + 0.5, y, lz + 0.5);
+    this.cancelClassicActions();
+    this.travelDest = null;
+    this.controls.worldMove = null;
+    this.nearWaystone = dest;
+    this.waystonesInSight = [dest];
+    this.renderer.spawnParticles(lx + 0.5, y + 1, lz + 0.5, [0.55, 0.8, 1], 26, 3, 1.1, 0.08);
+    SFX.questDone();
+    this.ui.toast(`${from.name} → ${dest.name}.`, 'gold');
+    this.saveGame();
+    return true;
+  }
+
+  // ------------------------------------------------------- dungeon grate locks
+  // The dungeon whose locked grate this cell belongs to, or null. Cheap first
+  // test (is it even iron bars?) before the region lookup.
+  dungeonGateAt(x, y, z) {
+    if (this.world.getBlock(x, y, z) !== B.iron_bars) return null;
+    const dg = dungeonNear(this.world.gen, x, z);
+    if (!dg || !isGrateCell(dg, x, y, z)) return null;
+    return gateOpen(this.flags, dg) ? null : dg;   // already dissolved: ordinary bars
+  }
+
+  // Try the grate. Returns true when the interaction was consumed (locked or
+  // opened), false when this wasn't a grate at all.
+  tryDungeonGate(x, y, z) {
+    const dg = this.dungeonGateAt(x, y, z);
+    if (!dg) return false;
+    const v = gateVerdict(this.flags, dg, this.inventory.count(DUNGEON_KEY));
+    if (v.act !== 'unlock') {
+      this.warnGather(`gate:${dg.x},${dg.z}`, v.msg);
+      return true;
+    }
+    this.inventory.remove(DUNGEON_KEY, v.spend);
+    openGate(this.flags, dg);
+    for (const [gx, gy, gz] of grateCells(dg)) this.world.setBlock(gx, gy, gz, B.air, true);
+    const d = dg.door;
+    this.renderer.spawnParticles(d.x + 0.5, d.y + 1.5, d.z + 0.5, [0.75, 0.78, 0.85], 24, 3.5, 0.9);
+    SFX.breakBlock();
+    this.ui.toast(v.msg, 'gold');
+    this.autosaveTimer = Math.min(this.autosaveTimer, 3);
+    return true;
+  }
+
+  // Why this chest won't open, or null.
+  //
+  // Hand-built boss chests carry `requiresBossDead`, a world flag keyed by mob
+  // TYPE (js/world/structures.js + BOSS_FLAGS below). A procedural dungeon's
+  // hoard cannot use that: its boss type is ordinary roster fodder elsewhere in
+  // the world, so one kill anywhere would unseal every dungeon of that theme. It
+  // is keyed by the dungeon's own anchor instead.
+  chestSealedReason(id) {
+    const meta = this.world.chestMeta.get(id);
+    if (!meta) return null;
+    if (meta.requiresBossDead && !this.flags[meta.requiresBossDead]) {
+      return 'The chest is bound shut by living roots… defeat the guardian.';
+    }
+    if (!id.startsWith('dg:')) return null;
+    const dg = dungeonNear(this.world.gen, meta.x, meta.z);
+    if (dg && bossChestSealed(this.flags, dg, id)) return sealedChestMsg(dg);
+    return null;
+  }
+
+  // A flagged dungeon creature died. The key holder hands over the key; the boss
+  // unseals its own hoard. Both are matched on SPAWN ID, which is what keeps one
+  // grave wight's death from unsealing every crypt in the world.
+  onDungeonBossKilled(id, boss) {
+    if (!boss || typeof id !== 'string' || !id.startsWith('dg:')) return;
+    const [x, , z] = id.slice(3).split(',').map(Number);
+    if (!Number.isFinite(x) || !Number.isFinite(z)) return;
+    const dg = dungeonNear(this.world.gen, x, z);
+    if (!dg) return;
+    if (id === keyHolderId(dg)) {
+      this.inventory.add(DUNGEON_KEY, 1);
+      this.ui.toast(`${ITEMS[DUNGEON_KEY].label} taken from the warden — the grate below will turn.`, 'gold');
+    } else if (id === bossSpawnId(dg)) {
+      markBossDead(this.flags, dg);
+      this.ui.toast('The hoard behind the throne unseals.', 'gold');
+    } else return;
+    this.autosaveTimer = Math.min(this.autosaveTimer, 3);
   }
 
   // classic-mode camera: orbit the player, pulled in when terrain blocks the view
@@ -1259,6 +1433,11 @@ class Game {
     const enemyNear = this.enemyInFront();
 
     let prompt = null;
+    // "Break <block>" is a SOFT prompt — true of nearly every block you can look
+    // at, and so outranked by anything with something to say. Standing at a
+    // waystone and happening to face its own masonry must read as the waystone,
+    // not as "Hold LMB: Break Stone Brick Slab".
+    let soft = false;
     if (npcNear) {
       prompt = `${touchMode ? 'Tap Action' : 'F / Right-click'}: Talk to ${NPC_DEFS[npcNear.id].label}`;
       this.currentSelection = null;
@@ -1268,6 +1447,7 @@ class Game {
       prompt = `${touchMode ? 'Tap Action' : 'Click'}: Attack ${enemyNear.def.label}`;
     } else if (hit) {
       prompt = this.promptForHit(hit, actionBtn, touchMode);
+      soft = !hit.node;
     }
 
     // chest / station prompts override
@@ -1275,10 +1455,21 @@ class Game {
       const def = BLOCKS[hit.id];
       if (def && ['workbench', 'furnace', 'anvil_block', 'campfire', 'alchemy_table', 'loom_block', 'enchant_altar', 'construction_bench'].includes(def.name)) {
         prompt = `${touchMode ? 'Tap Action' : 'F / Right-click'}: Use ${def.label}`;
+        soft = false;
       } else if (def?.name === 'chest_block') {
         prompt = `${touchMode ? 'Tap Action' : 'F / Right-click'}: Open chest`;
+        soft = false;
+      } else if (def?.name === 'iron_bars' && this.dungeonGateAt(hit.x, hit.y, hit.z)) {
+        // "locked", never an odd wall you happen to be unable to mine
+        prompt = this.inventory.count(DUNGEON_KEY) > 0
+          ? `${touchMode ? 'Tap Action' : 'F / Right-click'}: Unlock the grate (${ITEMS[DUNGEON_KEY].label})`
+          : 'Locked grate — the warden of this place carries the key';
+        soft = false;
       }
     }
+    // A waystone you're standing at names itself and says what it is for. It
+    // outranks a soft break prompt and nothing else.
+    if (this.nearWaystone && (!prompt || soft)) prompt = this.waystonePrompt();
     this.ui.setPrompt(prompt);
 
     // classic combat: no skilling while creatures are on you
@@ -1459,7 +1650,20 @@ class Game {
     // boss-warded chests can't be smashed open either
     if (def.name === 'chest_block') {
       const chest = this.world.getChestAt(hit.x, hit.y, hit.z);
-      if (chest?.meta.requiresBossDead && !this.flags[chest.meta.requiresBossDead]) {
+      const sealed = chest && this.chestSealedReason(chest.id);
+      if (sealed) {
+        this.warnGather(`chest:${chest.id}`, sealed);
+        this.ui.setGatherProgress(null);
+        this.breaking = null;
+        return;
+      }
+    }
+    // Nor can a locked grate be mined through — that is the whole lock. Once its
+    // key has turned, the bars are gone and this never fires again.
+    if (def.name === 'iron_bars') {
+      const dg = this.dungeonGateAt(hit.x, hit.y, hit.z);
+      if (dg) {
+        this.warnGather(`gate:${dg.x},${dg.z}`, gateVerdict(this.flags, dg, 0).msg);
         this.ui.setGatherProgress(null);
         this.breaking = null;
         return;
@@ -1528,8 +1732,9 @@ class Game {
     if (def.name === 'chest_block') {
       const chest = this.world.getChestAt(x, y, z);
       if (chest) {
-        if (chest.meta.requiresBossDead && !this.flags[chest.meta.requiresBossDead]) {
-          this.ui.toast('The chest is bound shut by living roots…', 'warn');
+        const sealed = this.chestSealedReason(chest.id);
+        if (sealed) {
+          this.ui.toast(sealed, 'warn');
           this.world.setBlock(x, y, z, B.chest_block, true); // restore it
           return;
         }
@@ -1647,15 +1852,14 @@ class Game {
     if (def.name === 'chest_block') {
       const chest = this.world.getChestAt(hit.x, hit.y, hit.z);
       const id = chest ? chest.id : this.world.registerPlayerChest(hit.x, hit.y, hit.z);
-      const meta = this.world.chestMeta.get(id);
-      if (meta?.requiresBossDead && !this.flags[meta.requiresBossDead]) {
-        this.ui.toast('The chest is bound shut by living roots… defeat the guardian.', 'warn');
-        return true;
-      }
+      const sealed = this.chestSealedReason(id);
+      if (sealed) { this.ui.toast(sealed, 'warn'); return true; }
       this.ui.openChestUI(id);
       emit('chestOpened', { id });
       return true;
     }
+    // a locked dungeon grate: turn the warden's key in it
+    if (def.name === 'iron_bars' && this.tryDungeonGate(hit.x, hit.y, hit.z)) return true;
     if (def.shape === 'panel' || def.shape === 'door') { // trapdoor / door — swing it
       const f = this.world.facingAt(hit.x, hit.y, hit.z);
       this.world.setFacing(hit.x, hit.y, hit.z, f ^ 8); // flip the open bit (3)
@@ -2226,6 +2430,22 @@ class Game {
           sub: def.role, color: '#ffe9a8',
         });
       }
+      // Waystones name themselves in the world — the signposts carry no text a
+      // renderer could draw, so the marker floats its generated name instead.
+      for (const ws of this.waystonesInSight) {
+        const capY = ws.y + WAYSTONE_HEIGHT;   // just over the capstone
+        // The stone you're standing at is never occluded to you — skip the
+        // raycast, which at point-blank range clips the menhir's own courses.
+        if (ws !== this.nearWaystone
+            && !this.labelVisible(ws.x + 0.5, capY, ws.z + 0.5, `ws:${ws.id}`)) continue;
+        const known = this.waystones.has(ws.id);
+        labels.push({
+          x: ws.x + 0.5, y: capY + 0.7, z: ws.z + 0.5,
+          name: ws.name,
+          sub: known ? `waystone · ${this.waystoneWhere(ws)}` : 'waystone — step up to it',
+          color: known ? '#a9dcff' : '#9aa6b0',
+        });
+      }
       for (const e of this.enemyMgr.entities.values()) {
         const d = Math.hypot(e.x - this.player.x, e.z - this.player.z);
         if (d > 18) continue;
@@ -2265,6 +2485,9 @@ class Game {
       flags: this.flags,
       discovered: [...this.discovered],
       discoveredItems: [...this.discoveredItems],
+      // Flat [x, z, y, dir, n] tuples; names are recomputed from the column on
+      // load (js/game/waystones.js), so they can never drift from their stone.
+      waystones: this.waystones.serialize(),
     };
     saveSlot(this.slot, data);
   }
@@ -2282,6 +2505,7 @@ class Game {
     this.flags = d.flags || {};
     this.discovered = new Set(d.discovered || []);
     this.discoveredItems = new Set(d.discoveredItems || []);
+    this.waystones.deserialize(d.waystones); // absent in pre-waystone saves — fine
     this.playtime = d.meta?.playtime || 0;
   }
 }

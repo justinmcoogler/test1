@@ -2,16 +2,20 @@
 // Guards the four things the roads promise: they exist on every compass point
 // however far you walk, they are a pure function of the seed, they never step
 // more than one block (so you can always walk them), and a waystone stands
-// every 256 blocks. Plus the two things they must NOT do: depend on which
-// chunks generated first, or touch Brookhollow.
+// every WAYSTONE_SPACING blocks. Plus the two things they must NOT do: depend on
+// which chunks generated first, or touch Brookhollow.
+//
+// And the thing the roadside BUILDINGS promise, which is the one that keeps
+// getting broken by accident: you can walk into them. See the flood-fill test at
+// the bottom of the file, which is the crofts' equivalent of the town's.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { World } from '../../js/world/world.js';
+import { World, initSlabSet } from '../../js/world/world.js';
 import { WorldGen, CHUNK, MANOR_PAD, LEARN_MEADOW, FROST_CAMP } from '../../js/world/worldgen.js';
 import {
-  roadsFor, ARTERIALS, PRIMARIES, ROAD_START, WAYSTONE_SPACING, alongOf,
+  roadsFor, ARTERIALS, PRIMARIES, ROAD_START, WAYSTONE_SPACING, WAYSTONE_COURSES, alongOf,
 } from '../../js/world/roads.js';
-import { B } from '../../js/world/blocks.js';
+import { B, BLOCKS } from '../../js/world/blocks.js';
 
 // What the running surface can be made of. Deliberately excludes the shoulder's
 // bare subsoil, the bridge parapets and the waystone furniture — those are not
@@ -193,7 +197,19 @@ test('you can actually walk an arterial — the paved lane is one connected surf
     `walked ${seen.size} of ${stand.size} lane columns without reaching the far end of the stretch`);
 });
 
-test('a waystone stands every 256 blocks along every PRIMARY arterial', () => {
+// Load every chunk the 3x3-footed standing stone at (x, z) touches.
+function loadStone(w, x, z) {
+  for (let cx = (x - 1) >> 4; cx <= (x + 1) >> 4; cx++) {
+    for (let cz = (z - 1) >> 4; cz <= (z + 1) >> 4; cz++) w.ensureChunk(cx, cz);
+  }
+}
+
+test('a waystone stands every 1024 blocks along every PRIMARY arterial', () => {
+  // Rare landmarks, not roadside furniture: WAYSTONE_SPACING is the number under
+  // test, so the sampled marks are derived from it rather than written out — and
+  // the assertion below that no stone stands on the OLD 256 grid is what would
+  // catch the constant quietly going back.
+  //
   // The secondary lanes that fork off the arterials get none: waystones mark the
   // trunk network you navigate by, and a lane is a byway.
   const w = new World(20260725);
@@ -201,47 +217,139 @@ test('a waystone stands every 256 blocks along every PRIMARY arterial', () => {
   let built = 0, ceded = 0;
   for (let d = 0; d < PRIMARIES; d++) {
     for (let n = 1; n <= 4; n++) {
+      // `column` hands back reused scratch — copy out before anything else
+      // touches the Roads instance.
       const c = roads.waystoneColumn(w.gen, d, n);
       const x = c[0], z = c[1];
       const s = roads.along(w.gen, d, x, z);
-      assert.ok(Math.abs(s - n * WAYSTONE_SPACING) < 2,
+      assert.ok(Math.abs(s - n * WAYSTONE_SPACING) < 3,
         `arterial ${d} waystone ${n} sits at the ${n * WAYSTONE_SPACING}-block mark (s=${s.toFixed(2)})`);
       // A waystone declines to build on ground a hand-built site already owns
-      // (the pads, Frostwatch, worldgen's own lanes) — the same columns the road
-      // itself steps around.
-      if (roads.arterialAt(w.gen, x, z) !== d) { ceded++; continue; }
-      w.ensureChunk(x >> 4, z >> 4);
-      const y = roads.surfaceY(w.gen, d, s);
-      assert.equal(w.getBlock(x, y + 1, z), B.stone_brick, `waystone ${d}/${n} has a standing stone`);
-      assert.equal(w.getBlock(x, y + 2, z), B.stone_brick, `waystone ${d}/${n} stone is two tall`);
-      assert.equal(w.getBlock(x, y + 3, z), B.torch_post, `waystone ${d}/${n} is lit`);
+      // (the pads, Frostwatch, worldgen's own lanes), and it will not wade out
+      // onto a bridge. `waystoneBaseY` is the builder's own verdict on that.
+      const y = roads.waystoneBaseY(w.gen, d, n);
+      if (y < 0) { ceded++; continue; }
+      loadStone(w, x, z);
+      for (let i = 0; i < WAYSTONE_COURSES.length; i++) {
+        assert.equal(w.getBlock(x, y + 1 + i, z), WAYSTONE_COURSES[i],
+          `waystone ${d}/${n} course ${i} at (${x},${y + 1 + i},${z})`);
+      }
       built++;
     }
   }
-  assert.ok(ceded <= 2, `almost every waystone gets to build (${ceded} ceded to hand-built ground)`);
+  assert.ok(ceded <= 3, `almost every waystone gets to build (${ceded} ceded to hand-built ground)`);
   assert.equal(built + ceded, PRIMARIES * 4, 'every sampled waystone was accounted for');
+  assert.ok(built >= 20, `enough stones actually built to have tested anything (${built})`);
+});
+
+test('a waystone READS as a waystone: broad base, narrow shaft, banded, lit', () => {
+  // The old marker was two stone bricks and a torch, which is a bollard. What
+  // makes a menhir legible from the road is the silhouette, so that is what is
+  // asserted: a base course three blocks across, a shaft one block across, a
+  // clear taper between them, more than one material up the shaft so it is not a
+  // smooth pillar, and a light in it.
+  const w = new World(20260725);
+  const roads = roadsFor(w.gen);
+  let checked = 0;
+  for (let d = 0; d < PRIMARIES; d++) {
+    for (let n = 1; n <= 3; n++) {
+      const c = roads.waystoneColumn(w.gen, d, n);
+      const x = c[0], z = c[1];
+      const y = roads.waystoneBaseY(w.gen, d, n);
+      if (y < 0) continue;
+      loadStone(w, x, z);
+
+      // Height: it stands well clear of a player, not at knee height.
+      assert.ok(WAYSTONE_COURSES.length >= 6,
+        `the stone is several blocks tall (${WAYSTONE_COURSES.length} courses)`);
+
+      // The base course is a full 3x3 of solid stone…
+      let base = 0;
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) if (w.collisionHeight(x + dx, y + 1, z + dz) > 0) base++;
+      }
+      assert.equal(base, 9, `waystone ${d}/${n} has a broad base course (${base}/9 cells)`);
+
+      // …and by the time you are two courses up, only the shaft is left. Counted
+      // as "how much of the 3x3 ring survives", which is the taper.
+      let ring = 0;
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          if (dx === 0 && dz === 0) continue;
+          if (w.getBlock(x + dx, y + 3, z + dz) !== B.air) ring++;
+        }
+      }
+      assert.equal(ring, 0, `waystone ${d}/${n} tapers to a one-block shaft (${ring} cells still 3 wide)`);
+      assert.notEqual(w.getBlock(x, y + 3, z), B.air, `waystone ${d}/${n} shaft continues above the base`);
+
+      // Carved, not cast: the shaft is banded rather than one material.
+      const shaft = new Set();
+      for (let i = 2; i < WAYSTONE_COURSES.length; i++) shaft.add(w.getBlock(x, y + 1 + i, z));
+      assert.ok(shaft.size >= 3,
+        `waystone ${d}/${n} shaft is dressed stone, not one smooth pillar (${shaft.size} materials)`);
+
+      // Lit, so it is findable at night.
+      let glow = 0;
+      for (let i = 0; i < WAYSTONE_COURSES.length; i++) {
+        glow = Math.max(glow, BLOCKS[w.getBlock(x, y + 1 + i, z)]?.emissive ?? 0);
+      }
+      assert.ok(glow >= 0.5, `waystone ${d}/${n} carries a light (brightest course ${glow})`);
+
+      // And it stands BESIDE the lane, not in it: the road is still walkable past
+      // it, with two clear blocks over the paving.
+      const road = roads.column(w.gen, d, n * WAYSTONE_SPACING, 0);
+      const rx = road[0], rz = road[1];
+      loadStone(w, rx, rz);
+      const ry = roads.surfaceY(w.gen, d, roads.along(w.gen, d, rx, rz));
+      assert.ok(w.collisionHeight(rx, ry, rz) > 0, `waystone ${d}/${n}: the lane past it is paved`);
+      assert.equal(w.collisionHeight(rx, ry + 1, rz), 0, `waystone ${d}/${n} does not block the lane`);
+      assert.equal(w.collisionHeight(rx, ry + 2, rz), 0, `waystone ${d}/${n} leaves headroom on the lane`);
+      checked++;
+    }
+  }
+  assert.ok(checked >= 15, `looked at a real sample of stones (${checked})`);
 });
 
 test('waystones appear at that spacing and nowhere in between', () => {
   const w = new World(4242);
   const roads = roadsFor(w.gen);
-  const dir = 0, sFrom = ROAD_START, sTo = 700;
+  const dir = 0;
+  // A window wide enough to hold exactly ONE mark, swept block by block. If the
+  // spacing ever shrinks back, the sweep finds extra stones and this fails.
+  const mark = WAYSTONE_SPACING;
+  const sFrom = mark - 150, sTo = mark + 150;
   loadStretch(w, dir, sFrom, sTo);
-  const marks = [];
+  roads.window(w.gen, dir, sFrom - 2, sTo + 2);
+  const found = [];
   for (let s = sFrom; s <= sTo; s++) {
-    for (let a = -4; a <= 4; a += 1) {
+    for (let a = -7; a <= 7; a++) {
       const c = roads.column(w.gen, dir, s, a);
-      const x = c[0], z = c[1], at = roads.along(w.gen, dir, x, z);
-      const y = roads.surfaceY(w.gen, dir, at);
-      if (w.getBlock(x, y + 3, z) !== B.torch_post) continue;
-      const mark = Math.round(at);
-      if (!marks.includes(mark)) marks.push(mark);
+      const x = c[0], z = c[1];
+      const at = roads.along(w.gen, dir, x, z);
+      if (at < sFrom || at > sTo) continue;
+      const y = roads.gradeAt(at);
+      // The lantern course is the stone's signature; nothing else the road pass
+      // lays stands a light on a graded verge.
+      if (w.getBlock(x, y + 1 + WAYSTONE_COURSES.indexOf(B.sea_lantern), z) !== B.sea_lantern) continue;
+      const key = `${x},${z}`;
+      if (!found.includes(key)) found.push(key);
     }
   }
-  assert.ok(marks.length >= 2, `found the waystones along the stretch (${marks.join(', ')})`);
-  for (const at of marks) {
-    const off = Math.abs(at - Math.round(at / WAYSTONE_SPACING) * WAYSTONE_SPACING);
-    assert.ok(off <= 2, `a lit marker at s=${at} is ${off} off the 256-block grid`);
+  assert.equal(found.length, 1, `exactly one waystone in the window (${found.join(' | ')})`);
+
+  // …and none on the grid the old spacing used, which is the actual regression.
+  for (const s of [256, 512, 768, mark + 256, mark + 512]) {
+    const c = roads.column(w.gen, dir, s, 0);
+    const x = c[0], z = c[1];
+    for (let dcx = -1; dcx <= 1; dcx++) for (let dcz = -1; dcz <= 1; dcz++) w.ensureChunk((x >> 4) + dcx, (z >> 4) + dcz);
+    for (let dx = -7; dx <= 7; dx++) {
+      for (let dz = -7; dz <= 7; dz++) {
+        for (let y = 60; y < 140; y++) {
+          assert.notEqual(w.getBlock(x + dx, y, z + dz), B.sea_lantern,
+            `nothing stands at the old 256-block mark s=${s} (found a light at ${x + dx},${y},${z + dz})`);
+        }
+      }
+    }
   }
 });
 
@@ -473,4 +581,188 @@ test('trails leave the roads, run a few hundred blocks, and stop', () => {
   }
   assert.ok(orphan / found.length < 0.02,
     `${orphan}/${found.length} worn cells sit nowhere near a road they could have left`);
+});
+
+test('a good fraction of trails LEAD somewhere, and the somewhere is built', () => {
+  // A path that stops in an empty field wasted your time. `trailSite` is the
+  // builder's own answer to "does this trail end at anything", so this checks the
+  // schedule produces a decent number of them, that all three kinds occur, and
+  // that the blocks are really in the world where it says.
+  const w = new World(20260725);
+  const roads = roadsFor(w.gen);
+  const sites = [];
+  for (let d = 0; d < ARTERIALS; d++) {
+    for (let k = 1; k <= 26; k++) {
+      const s = roads.trailSite(w.gen, d, k);
+      if (s) sites.push({ d, k, x: s.x, z: s.z, y: s.y, kind: s.kind });
+    }
+  }
+  assert.ok(sites.length > 25, `trails lead somewhere often enough to matter (${sites.length} sites)`);
+  const kinds = new Set(sites.map((s) => s.kind));
+  assert.equal(kinds.size, 3, `all three kinds of destination occur (${[...kinds].join(',')})`);
+
+  // Every site is out in the country at the far end of a path, not hard against
+  // the road it left — that is the whole point of walking to it.
+  for (const s of sites) {
+    assert.equal(roads.arterialAt(w.gen, s.x, s.z), -1,
+      `the site at ${s.x},${s.z} does not sit on a road`);
+  }
+
+  // …and one of each kind is really standing there. Built at all is the test:
+  // the exact block list is the builder's business, but a site must be MADE of
+  // something a chunk of empty moorland is not.
+  const wrought = new Set([
+    B.stone_brick, B.mossy_stone_brick, B.stone_brick_slab, B.cobble_wall, B.cauldron,
+    B.torch_post, B.glow_lichen, B.timber_wall, B.thatch, B.thatch_slab, B.oak_log,
+    B.planks_fence, B.campfire, B.stump, B.brown_wool, B.white_wool, B.mossy_cobble,
+  ]);
+  for (const kind of [0, 1, 2]) {
+    const s = sites.find((q) => q.kind === kind);
+    for (let cx = (s.x - 6) >> 4; cx <= (s.x + 6) >> 4; cx++) {
+      for (let cz = (s.z - 6) >> 4; cz <= (s.z + 6) >> 4; cz++) w.ensureChunk(cx, cz);
+    }
+    let n = 0;
+    for (let dx = -5; dx <= 5; dx++) {
+      for (let dz = -5; dz <= 5; dz++) {
+        for (let y = s.y; y <= s.y + 5; y++) if (wrought.has(w.getBlock(s.x + dx, y, s.z + dz))) n++;
+      }
+    }
+    assert.ok(n >= 12, `kind ${kind} at ${s.x},${s.z} is actually built (${n} wrought blocks)`);
+  }
+});
+
+// ---- Wayside crofts --------------------------------------------------------
+// The town has a flood-fill enterability test (tests/unit/town.test.mjs) because
+// its houses were built with doors you could see and not use. The crofts are
+// built by a different module with a different door rule and now carry
+// furniture, so they need their own — and they earned it: writing this found a
+// corner doorway that touched no interior cell (every cottage on a diagonal
+// arterial was sealed) and an oak stamped straight up through a doorframe.
+
+// Flood-fill the ground around a croft with the PLAYER's own movement rule —
+// two blocks of headroom, step up at most one, drop at most four, four compass
+// neighbours — starting from open ground on every side of it, and report what
+// the walk reached. Same rule the town's test uses.
+function walkTo(w, ax, az, fy, R = 24) {
+  const X0 = ax - R, X1 = ax + R, Z0 = az - R, Z1 = az + R;
+  const Y0 = Math.max(1, fy - 22), Y1 = fy + 18;
+  for (let cx = X0 >> 4; cx <= X1 >> 4; cx++) for (let cz = Z0 >> 4; cz <= Z1 >> 4; cz++) w.ensureChunk(cx, cz);
+  // A door counts as passable: the player walks up and swings it open. Anything
+  // else with collision — a slab, a fence, a table leg, a chest — does not.
+  const open = (x, y, z) => {
+    const id = w.getBlock(x, y, z);
+    if (BLOCKS[id]?.shape === 'door') return true;
+    return w.collisionHeight(x, y, z) === 0;
+  };
+  const stand = (x, y, z) => !open(x, y - 1, z) && open(x, y, z) && open(x, y + 1, z);
+  const SX = X1 - X0 + 1, SY = Y1 - Y0 + 1, SZ = Z1 - Z0 + 1;
+  const idx = (x, y, z) => ((x - X0) * SY + (y - Y0)) * SZ + (z - Z0);
+  const inBox = (x, y, z) => x >= X0 && x <= X1 && y >= Y0 && y <= Y1 && z >= Z0 && z <= Z1;
+  const seen = new Uint8Array(SX * SY * SZ);
+  const queue = [];
+  const push = (x, y, z) => {
+    if (!inBox(x, y, z) || seen[idx(x, y, z)]) return;
+    seen[idx(x, y, z)] = 1; queue.push(x, y, z);
+  };
+  let starts = 0;
+  for (const [sx, sz] of [[ax - R + 1, az], [ax + R - 1, az], [ax, az - R + 1], [ax, az + R - 1],
+    [ax - R + 1, az - R + 1], [ax + R - 1, az + R - 1]]) {
+    for (let y = Y1 - 1; y > Y0; y--) if (stand(sx, y, sz)) { push(sx, y, sz); starts++; break; }
+  }
+  for (let h = 0; h < queue.length; h += 3) {
+    const x = queue[h], y = queue[h + 1], z = queue[h + 2];
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, nz = z + dz;
+      // highest landing first, matching world.groundNear; +1 up, 4 down, and a
+      // step up also needs headroom in the column you jump from
+      for (let ny = y + 1; ny >= y - 4; ny--) {
+        if (!inBox(nx, ny, nz)) continue;
+        if (ny > y && !open(x, y + 2, z)) continue;
+        if (stand(nx, ny, nz)) { push(nx, ny, nz); break; }
+      }
+    }
+  }
+  return { starts, stand, reached: (x, y, z) => inBox(x, y, z) && seen[idx(x, y, z)] === 1 };
+}
+
+// The first `want` crofts the seed offers, as plain copies — `croftPlan` returns
+// reused scratch, and generating a chunk certainly touches it again.
+function croftsOf(w, want) {
+  const roads = roadsFor(w.gen);
+  const out = [];
+  for (let d = 0; d < ARTERIALS && out.length < want; d++) {
+    for (let n = 2; n <= 14 && out.length < want; n++) {
+      const p = roads.croftPlan(w.gen, d, n);
+      if (p) out.push({ d, n, ...p });
+    }
+  }
+  return out;
+}
+
+test('every wayside croft can be walked into, and its kist reached', () => {
+  initSlabSet();
+  for (const seed of [20260725, 777, 31337]) {
+    const w = new World(seed);
+    const crofts = croftsOf(w, 4);
+    assert.ok(crofts.length === 4, `seed ${seed} offers crofts to test (${crofts.length})`);
+    const sealed = [], thin = [], shut = [];
+    for (const p of crofts) {
+      const { starts, stand, reached } = walkTo(w, p.ax, p.az, p.fy);
+      assert.ok(starts >= 4, `open ground around the croft at ${p.ax},${p.az} to start the walk from`);
+      const y = p.fy + 1;
+      let floor = 0, got = 0, firstMiss = null;
+      for (let x = p.ix0; x <= p.ix1; x++) {
+        for (let z = p.iz0; z <= p.iz1; z++) {
+          if (!stand(x, y, z)) continue;                 // wall, or a fitting standing there
+          floor++;
+          if (reached(x, y, z)) got++;
+          else if (!firstMiss) firstMiss = `${x},${y},${z}`;
+        }
+      }
+      const where = `croft ${p.d}/${p.n} at ${p.ax},${p.az}`;
+      if (floor < 6) thin.push(`${where}: only ${floor} free floor cells — furniture filled it in?`);
+      else if (got === 0) sealed.push(`${where}: SEALED, no way in (e.g. ${firstMiss})`);
+      else if (got < floor) sealed.push(`${where}: ${floor - got}/${floor} floor cells cut off (e.g. ${firstMiss})`);
+      // and the kist is a chest you can actually stand next to and open
+      assert.equal(w.getBlock(p.chestX, p.chestY, p.chestZ), B.chest_block, `${where} has a kist`);
+      const beside = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+        .some(([dx, dz]) => reached(p.chestX + dx, p.chestY, p.chestZ + dz));
+      if (!beside) shut.push(`${where}: the kist at ${p.chestX},${p.chestZ} is walled in`);
+    }
+    assert.deepEqual(thin, [], `seed ${seed}: rooms that are not rooms`);
+    assert.deepEqual(sealed, [], `seed ${seed}: you cannot get in`);
+    assert.deepEqual(shut, [], `seed ${seed}: you cannot get at the loot`);
+  }
+});
+
+test('a croft is furnished, and the doorway is left clear', () => {
+  const w = new World(20260725);
+  const crofts = croftsOf(w, 4);
+  const FITTINGS = new Set([
+    B.chest_block, B.cauldron, B.planks_slab, B.planks_fence, B.torch_post,
+    B.red_wool, B.thatch, B.white_wool, B.campfire,
+  ]);
+  for (const p of crofts) {
+    for (let cx = (p.ax - 10) >> 4; cx <= (p.ax + 10) >> 4; cx++) {
+      for (let cz = (p.az - 10) >> 4; cz <= (p.az + 10) >> 4; cz++) w.ensureChunk(cx, cz);
+    }
+    let fittings = 0;
+    for (let x = p.ix0; x <= p.ix1; x++) {
+      for (let z = p.iz0; z <= p.iz1; z++) {
+        for (const y of [p.fy + 1, p.fy + 2]) if (FITTINGS.has(w.getBlock(x, y, z))) fittings++;
+      }
+    }
+    const where = `croft ${p.d}/${p.n} at ${p.ax},${p.az}`;
+    assert.ok(fittings >= 8, `${where} is furnished, not an empty shell (${fittings} fittings)`);
+    // The doorway is a real two-block hole, and the cell you step into and its
+    // neighbours are clear — the invariant the furniture pass is written around.
+    assert.equal(BLOCKS[w.getBlock(p.doorX, p.fy + 1, p.doorZ)]?.shape, 'door', `${where}: lower door leaf`);
+    assert.equal(BLOCKS[w.getBlock(p.doorX, p.fy + 2, p.doorZ)]?.shape, 'door', `${where}: upper door leaf`);
+    for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const x = p.stepX + dx, z = p.stepZ + dz;
+      if (x < p.ix0 || x > p.ix1 || z < p.iz0 || z > p.iz1) continue;      // that one is the wall
+      assert.equal(w.collisionHeight(x, p.fy + 1, z), 0,
+        `${where}: nothing stands in ${x},${z}, beside the doorway`);
+    }
+  }
 });

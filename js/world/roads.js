@@ -21,6 +21,14 @@ import { B, isSolid } from './blocks.js';
 import { CHUNK, WORLD_H, SEA, MANOR_PAD, LEARN_MEADOW, FROST_CAMP } from './worldgen.js';
 import { valueNoise2 } from '../core/noise.js';
 import { hash2 } from '../core/rng.js';
+// The surface footprint of a mineshaft headframe / dungeon stair. Imported from
+// the two leaf modules rather than through structures.js so nothing here can
+// reach back round into worldgen's hand-built content. Roadside BUILDINGS have
+// to consult it: those sites stamp AFTER this pass (js/world/world.js), so a
+// cottage that shared ground with a headframe got a plank frame driven through
+// its doorway and came out sealed.
+import { mineshaftClaims } from './mineshaft.js';
+import { dungeonClaims } from './dungeon.js';
 
 // ---- Geometry --------------------------------------------------------------
 // 8 primary arterials radiate from Brookhollow; 8 secondary LANES fork off them
@@ -128,11 +136,33 @@ for (let d = 0; d < ARTERIALS; d++) {
 const EDGE_WOBBLE = 1.05;   // how far the paving edges breathe, in blocks
 const EDGE_RAGGED = 0.4;    // chance an outermost paving cell is left unpaved
 
-export const WAYSTONE_SPACING = 256;
-const WS_OFFSET = 2.7;      // waystone furniture sits on the verge, off the lane
-// Stacked upward from the road surface. Module-level so placing one allocates
-// nothing.
-const WS_MARKER = [B.stone_brick, B.stone_brick, B.torch_post];
+// Rare landmarks, not roadside furniture: far enough apart that meeting one is
+// an event and close enough that a road always eventually delivers you to the
+// next. At 1024 there is one roughly every quarter hour of walking.
+export const WAYSTONE_SPACING = 1024;
+const WS_OFFSET = 2.7;      // the signpost and bench sit on the verge, off the lane
+// The standing stone stands back further than the furniture does, so its broad
+// base course never intrudes on the paved core you actually walk (coreEdge tops
+// out near 2.1, and the base reaches one block inboard of WS_STONE).
+const WS_STONE = 4.2;
+// The stone's own column, course by course from the road surface upward: the
+// centre of the broad base course, then the shaft. ONE block square against a
+// three-block base, so the taper reads from the road at a glance, and banded
+// mossy/clean rather than a smooth run — an unbroken pillar reads as scenery,
+// alternating courses read as a stone somebody dressed. The lantern sits under
+// the capstone near the top so the glow spills sideways and you can find the
+// thing at night.
+export const WAYSTONE_COURSES = [
+  B.cobble, B.stone_brick, B.mossy_stone_brick, B.stone_brick,
+  B.mossy_stone_brick, B.stone_brick, B.sea_lantern, B.stone_brick_slab,
+];
+const WS_SHAFT = WAYSTONE_COURSES;
+const WS_TOP = WS_SHAFT.length + 1;       // courses above the road surface
+const WS_FOOT = 8;          // deepest the base course will reach for solid ground
+const WS_YARD = 3;          // columns round the stone kept clear of trees
+// How far ALONG the route one waystone reaches: its yard is WS_YARD wide, the
+// signpost stands at s+3 and the bench runs s-1..s+1.
+const WS_REACH = WS_YARD + 4;
 const WS_SIGN = [B.planks_fence, B.sign];
 const WS_BENCH = [B.planks_slab];
 
@@ -160,14 +190,19 @@ const S_WANDER1 = 5101, S_WANDER2 = 5209, S_WANDER3 = 5417, S_EDGE_CORE = 5303, 
 // back from the lane it sits, and how far out from the road a chunk has to look
 // to find one that reaches it. Rare on purpose — see _crofts.
 // CROFT_SPAN is the widest a cottage plus its eaves reaches from its anchor.
+// CROFT_OFFSET has to leave room for the doorstep: the cottage's apron reaches
+// W+1 (≤5) toward the lane and the stepped path off its threshold another
+// CROFT_RAMP, and none of that may land inside the graded corridor (GRADE_HW).
 const CROFT_SPACING = 190, CROFT_CHANCE = 0.28, CROFT_START = 260;
-const CROFT_OFFSET = 11, CROFT_REACH = 20, CROFT_SPAN = 6;
+const CROFT_OFFSET = 15, CROFT_REACH = 22, CROFT_SPAN = 7;
+const CROFT_RAMP = 4;       // treads of the path off the threshold
+const CROFT_FOOT = 8;       // deepest a tread will reach for solid ground
 // Two crofts nearer than this destroy each other: building one levels a tall air
 // column over its whole footprint, so an overlapping neighbour loses its walls.
 // Sites are offered independently per road, and a fork runs close to its parent
 // for a while after it leaves, so collisions are not hypothetical.
 const CROFT_APART = 18;
-const S_CROFT = 6101, S_CROFT_SIDE = 6203, S_CROFT_ART = 6301;
+const S_CROFT = 6101, S_CROFT_SIDE = 6203, S_CROFT_ART = 6301, S_CROFT_KIT = 6407;
 // Finite TRAILS. Unlike a road, a trail does no earthworks: it is a worn line
 // over whatever ground is already there, so it needs no height profile, makes no
 // ≤1-step promise of its own beyond the terrain's, and never claims a column in
@@ -177,9 +212,24 @@ const TRAIL_SPACING = 120, TRAIL_CHANCE = 0.55, TRAIL_START = 150;
 const TRAIL_MIN = 90, TRAIL_MAX = 240;    // how far a trail runs before it peters out
 const TRAIL_HW = 1.15;                    // half-width of the worn line
 const S_TRAIL = 7101, S_TRAIL_LEN = 7207, S_TRAIL_TURN = 7309, S_TRAIL_W = 7411;
+// A trail LEADS somewhere: a fraction of them end at a small hand-crafted site.
+// SITE_SPAN is the half-extent of the largest one, so it also bounds how far past
+// the trail's own end a chunk has to look.
+const SITE_CHANCE = 0.42, SITE_SPAN = 4, SITE_KINDS = 3;
+const S_SITE = 7507, S_SITE_ART = 7603;
 // How far off a road its features can possibly land — the bound the roadside pass
-// rejects on. A trail dominates it.
-const FEATURE_REACH = Math.max(CROFT_OFFSET + CROFT_SPAN, TRAIL_MAX + TRAIL_HW + 2);
+// rejects on. A trail (and now the site at the end of it) dominates it.
+//
+// The 1.05 factor is the bit that is easy to get wrong, and the old bound did:
+// the reject compares the CHUNK's lateral distance against amp(s_chunk), but the
+// trail's own wander was sampled at its ORIGIN, which can be up to len·cos(turn)
+// further along the route. amp is 0.3-Lipschitz in s, so a trail contributes at
+// most len·(AMP_GROW·cos θ + sin θ) ≤ 1.045·len of extra lateral reach over the
+// chunk's own amp. Using len alone let a chunk holding the far end of a sharply
+// turned trail be rejected before the trail pass could run, which silently
+// truncated the trail — and would have chopped its destination in half.
+const FEATURE_REACH = Math.max(CROFT_OFFSET + CROFT_SPAN,
+  TRAIL_MAX * 1.05 + TRAIL_HW + SITE_SPAN + 8);
 const S_PAVE = 5407, S_RAGGED = 5501, S_WAYSIDE = 5701;
 const DIR_SALT = 131;
 
@@ -202,11 +252,27 @@ export class Roads {
     this._j0 = 0; this._j1 = 0;          // anchor index range currently in _R
     this._mask = new Uint8Array(CHUNK * CHUNK);   // 1 = this column is road
     this._roadY = new Int16Array(CHUNK * CHUNK);  // its graded surface
+    // 1 = a roadside STRUCTURE owns this column (a croft's pad, a waystone's
+    // footing, the site at the end of a trail). Separate from _mask because these
+    // are not lane: nothing may pave them and nothing reports a road height for
+    // them. What they do share is that the scatter pass ran before them, so
+    // whatever it seeded here has to be dropped — see _evict.
+    this._built = new Uint8Array(CHUNK * CHUNK);
     this._dirs = new Int32Array(ARTERIALS);       // arterials this chunk must carve
     this._fdirs = new Int32Array(ARTERIALS);      // …and those whose ROADSIDE features reach it
     this._col = new Int32Array(2);       // column-coordinate out-param
     this._col2 = new Int32Array(2);      // second out-param, for a croft's door bearing
     this._col3 = new Int32Array(2);      // third, for comparing rival croft sites
+    // One reused record for "everything about the croft at (road, station)".
+    // The builder and the public query both read it, so a test can never be
+    // looking at a cottage different from the one that got built.
+    this._plan = {
+      dir: -1, n: 0, s: 0, side: 1, ax: 0, az: 0, fy: 0, W: 0, D: 0, wallH: 4,
+      inX: 0, inZ: 0, doorX: 0, doorZ: 0, stepX: 0, stepZ: 0,
+      nx: 0, nz: 0, gx: 0, gz: 0, dn: 0, dg: 0,
+      ix0: 0, ix1: 0, iz0: 0, iz1: 0, chestX: 0, chestZ: 0, chestY: 0, chestV: 1,
+      timber: 0, infill: 0, roofId: 0, doorId: 0, doorTop: 0,
+    };
     // Frame origin of each road, expressed as (along, across) in that road's own
     // rotated axes. Zero for a primary, which starts at spawn. For a fork it is
     // the point on its PARENT's centre line where it leaves, so the two roads
@@ -221,6 +287,9 @@ export class Roads {
     this._anchorCol = new Int32Array(2);
     this._near = 0;                      // which exclusions this chunk can hit
     this._trunk = null;                  // bbox of worldgen's inter-town lanes
+    this._tf = { ox: 0, oz: 0, vx: 0, vz: 0, len: 0 };   // one trail's frame
+    this._krange = new Int32Array(2);     // trail-station index range
+    this._site = { dir: -1, k: 0, x: 0, z: 0, y: 0, kind: 0 };   // one trail's destination
   }
 
   // ---- Route ---------------------------------------------------------------
@@ -366,7 +435,7 @@ export class Roads {
   // Regrades, paves and furnishes every arterial column in one chunk, and drops
   // the scatter pass's trees/nodes/spawns that fell on them. Returns the highest
   // block written, or -1 if no arterial touches this chunk.
-  carve(gen, chunk, blocks, cx, cz, setFacing) {
+  carve(gen, chunk, blocks, cx, cz, setFacing, chestSink = null) {
     const ccx = cx * CHUNK + 7.5, ccz = cz * CHUNK + 7.5;
     // Coarse reject first: eight scalar tests decide whether this chunk can hold
     // any arterial at all. Nearly every chunk in the world leaves here.
@@ -383,7 +452,7 @@ export class Roads {
     for (let d = 0; d < ARTERIALS; d++) {
       const ux = U[d * 2], uz = U[d * 2 + 1];
       const s0 = ccx * ux + ccz * uz - this._s0[d];
-      if (s0 + CHUNK_R + TRAIL_MAX < RC_START[d]) continue;
+      if (s0 + CHUNK_R + TRAIL_MAX + SITE_SPAN < RC_START[d]) continue;
       const t0 = ccx * -uz + ccz * ux - this._t0[d];
       let amp = (s0 + CHUNK_R) * AMP_GROW;
       if (amp > RC_AMP[d]) amp = RC_AMP[d];
@@ -405,6 +474,7 @@ export class Roads {
     if (x0 + CHUNK > tb[0] - 2 && x0 < tb[1] + 2 && z0 + CHUNK > tb[2] - 2 && z0 < tb[3] + 2) this._near |= 8;
 
     this._mask.fill(0);
+    this._built.fill(0);
     let top = -1;
     for (let i = 0; i < nd; i++) {
       const d = dirs[i];
@@ -414,20 +484,33 @@ export class Roads {
       this.window(gen, d, Math.max(RC_START[d] - 1, s0 - CHUNK_R - 8), s0 + CHUNK_R + 8);
       const y = this._carveDir(gen, chunk, blocks, cx, cz, d, setFacing);
       if (y > top) top = y;
-      if (d < PRIMARIES) {   // waystones mark the trunk network, not the lanes
-        const w = this._waystones(gen, blocks, cx, cz, d, s0 - CHUNK_R - 8, s0 + CHUNK_R + 8);
-        if (w > top) top = w;
-      }
     }
     // Roadside features run AFTER every carve, so `_mask` is the complete road
-    // footprint by the time a trail asks whether a cell is already lane.
+    // footprint by the time a trail asks whether a cell is already lane — and so
+    // a waystone's signpost sees every direction's paving, not just its own.
+    //
+    // BUILDINGS before FOOTPATHS, in two separate passes over the directions
+    // rather than one. A trail is allowed to run up to a structure and stop, so it
+    // has to see the complete `_built` footprint; interleaving the two passes
+    // would have made "did a trail scuff this cottage floor" depend on which
+    // directions happened to be in this chunk's list, which is the one thing a
+    // chunk-local generator may never do.
     for (let i = 0; i < nf; i++) {
       const d = fdirs[i];
-      const ux = U[d * 2], uz = U[d * 2 + 1];
-      const s0 = ccx * ux + ccz * uz - this._s0[d];
-      const c = this._crofts(gen, chunk, blocks, cx, cz, d, s0 - CHUNK_R - CROFT_REACH, s0 + CHUNK_R + CROFT_REACH);
+      const s0 = ccx * U[d * 2] + ccz * U[d * 2 + 1] - this._s0[d];
+      if (d < PRIMARIES) {   // waystones mark the trunk network, not the lanes
+        const w = this._waystones(gen, blocks, cx, cz, d, s0 - CHUNK_R - WS_REACH, s0 + CHUNK_R + WS_REACH);
+        if (w > top) top = w;
+      }
+      const c = this._crofts(gen, chunk, blocks, cx, cz, d, s0 - CHUNK_R - CROFT_REACH,
+        s0 + CHUNK_R + CROFT_REACH, setFacing, chestSink);
       if (c > top) top = c;
-      this._trails(gen, chunk, blocks, cx, cz, d, s0);
+      const e = this._trailEnds(gen, blocks, cx, cz, d, s0);
+      if (e > top) top = e;
+    }
+    for (let i = 0; i < nf; i++) {
+      const d = fdirs[i];
+      this._trails(gen, chunk, blocks, cx, cz, d, ccx * U[d * 2] + ccz * U[d * 2 + 1] - this._s0[d]);
     }
     if (top >= 0) this._evict(chunk, cx, cz);
     return top;
@@ -444,22 +527,89 @@ export class Roads {
   // hearth column, never from anything this chunk happens to know — so each chunk
   // writes its own slice and the union is one coherent building however the
   // chunks load.
-  _crofts(gen, chunk, blocks, cx, cz, d, sLo, sHi) {
+  _crofts(gen, chunk, blocks, cx, cz, d, sLo, sHi, setFacing, chestSink) {
     let top = -1;
     const first = Math.ceil(sLo / CROFT_SPACING), last = Math.floor(sHi / CROFT_SPACING);
     for (let n = first; n <= last; n++) {
-      const s = n * CROFT_SPACING;
-      if (s < CROFT_START) continue;
-      if (hash2(gen.seed + S_CROFT, n, d) > CROFT_CHANCE) continue;   // most sites stay empty
-      if (this._blocked(gen, ...this.column(gen, d, s, 0, this._col), 15)) continue;
-      const side = hash2(gen.seed + S_CROFT_SIDE, n, d) < 0.5 ? 1 : -1;
-      const a0 = this.column(gen, d, s, CROFT_OFFSET * side, this._col);
-      if (!this._croftWins(gen, d, n, a0[0], a0[1])) continue;
-      const y = this._croft(gen, chunk, blocks, cx, cz, d, s, side, n);
+      if (!this._croftPlan(gen, d, n)) continue;
+      const y = this._croft(gen, chunk, blocks, cx, cz, setFacing, chestSink);
       if (y > top) top = y;
     }
     return top;
   }
+
+  // Everything about one croft that is a pure function of (seed, road, station):
+  // whether it exists at all, where it stands, its floor, its size, its
+  // materials, its doorway, the cell you step into from that doorway and where
+  // the kist sits. Filled into a reusable record; returns it, or null where no
+  // cottage stands there.
+  //
+  // The builder and the public `croftPlan` query both go through here, so a
+  // caller can never be looking at a cottage different from the one that got
+  // built — which is what makes the enterability test in tests/unit/roads.test.mjs
+  // a test of the real thing.
+  _croftPlan(gen, d, n) {
+    const s = n * CROFT_SPACING;
+    if (s < CROFT_START) return null;
+    if (hash2(gen.seed + S_CROFT, n, d) > CROFT_CHANCE) return null;   // most sites stay empty
+    const road = this.column(gen, d, s, 0, this._col2);
+    const rx = road[0], rz = road[1];
+    if (this._blocked(gen, rx, rz, 15)) return null;
+    const side = hash2(gen.seed + S_CROFT_SIDE, n, d) < 0.5 ? 1 : -1;
+    const a = this.column(gen, d, s, CROFT_OFFSET * side, this._col);
+    const ax = a[0], az = a[1];
+    if (!this._croftWins(gen, d, n, ax, az)) return null;
+    const fy = gen.heightAt(ax, az);
+    if (fy <= SEA + 1 || fy > H_HI - 8) return null;                   // not on a beach or a crag
+    if (this._siteTaken(gen, ax, az, CROFT_SPAN)) return null;         // a shaft head has this ground
+
+    const p = this._plan;
+    const r = (v) => hash2(gen.seed + S_CROFT_ART, n * 31 + v, d);
+    p.dir = d; p.n = n; p.s = s; p.side = side; p.ax = ax; p.az = az; p.fy = fy;
+    p.W = 3 + ((r(1) * 2) | 0); p.D = 3 + ((r(2) * 2) | 0);            // 3-4 half-extents
+    p.wallH = 4;
+    p.timber = r(3) < 0.5 ? B.oak_log : B.cedar_log;
+    p.infill = r(4) < 0.5 ? B.stone_brick : B.timber_wall;
+    p.roofId = r(5) < 0.6 ? B.thatch : B.planks;
+    p.doorId = r(6) < 0.5 ? B.oak_door : B.birch_door;
+    p.doorTop = p.doorId === B.oak_door ? B.oak_door_top : B.birch_door_top;
+    // The door faces the road, so the lane it serves is the way you go in — but
+    // it goes in ONE wall, the one more squarely turned to the lane. On a diagonal
+    // road both bearings are non-zero, and taking both put the doorway on the
+    // building's CORNER: a corner cell's four neighbours are two wall cells and
+    // two apron cells, so the hole opened onto the yard and touched no interior
+    // cell at all. Every cottage on a diagonal arterial was sealed.
+    const bx = rx - ax, bz = rz - az;
+    p.inX = Math.abs(bx) >= Math.abs(bz) ? Math.sign(bx) : 0;
+    p.inZ = p.inX !== 0 ? 0 : Math.sign(bz);
+    p.doorX = ax + p.inX * p.W; p.doorZ = az + p.inZ * p.D;
+    // The cell you land in once you are through the doorway. Everything the
+    // furniture pass places keeps clear of it and its neighbours.
+    p.stepX = p.doorX - p.inX; p.stepZ = p.doorZ - p.inZ;
+    p.ix0 = ax - p.W + 1; p.ix1 = ax + p.W - 1;
+    p.iz0 = az - p.D + 1; p.iz1 = az + p.D - 1;
+    // The room in door-relative axes: `n` points from the doorway into the room,
+    // `g` runs across it. Everything inside is laid out in these, which is what
+    // makes one layout work for all four door bearings and all four room sizes.
+    p.nx = -p.inX; p.nz = -p.inZ;
+    p.gx = p.inX !== 0 ? 0 : 1; p.gz = p.inX !== 0 ? 1 : 0;
+    p.dn = p.inX !== 0 ? p.W - 1 : p.D - 1;      // interior half-depth, door to back wall
+    p.dg = p.inX !== 0 ? p.D - 1 : p.W - 1;      // interior half-width, wall to wall
+    // The kist stands against the back wall, ONE cell off centre. Off centre so
+    // it is not in the way of the hearth, and not in a corner because a corner
+    // cell's only free neighbours are other wall cells — a chest that can get
+    // walled in by its own neighbours is furniture, not storage.
+    const kv = r(8) < 0.5 ? -1 : 1;
+    p.chestX = ax + p.nx * p.dn + p.gx * kv;
+    p.chestZ = az + p.nz * p.dn + p.gz * kv;
+    p.chestY = fy + 1;
+    p.chestV = kv;
+    return p;
+  }
+
+  // Public: the n-th croft on road `dir`, or null. Returns a REUSED record —
+  // copy what you need out of it before touching this Roads instance again.
+  croftPlan(gen, dir, n) { this._frame(gen); return this._croftPlan(gen, dir, n); }
 
   // Does this site beat every rival close enough to wreck it? Sites are totally
   // ordered by (road, station), the test is symmetric, and every term is a pure
@@ -481,25 +631,13 @@ export class Roads {
     return true;
   }
 
-  _croft(gen, chunk, blocks, cx, cz, d, s, side, n) {
-    // Anchor: the hearth corner, set back from the lane so the verge stays clear.
-    const a = this.column(gen, d, s, CROFT_OFFSET * side, this._col);
-    const ax = a[0], az = a[1];
-    const fy = gen.heightAt(ax, az);
-    if (fy <= SEA + 1 || fy > H_HI - 8) return -1;                    // not on a beach or a crag
+  _croft(gen, chunk, blocks, cx, cz, setFacing, chestSink) {
+    const p = this._plan;
+    const d = p.dir, n = p.n, ax = p.ax, az = p.az, fy = p.fy;
+    const W = p.W, D = p.D, wallH = p.wallH;
+    const inX = p.inX, inZ = p.inZ, dxc = p.doorX, dzc = p.doorZ;
     const r = (v) => hash2(gen.seed + S_CROFT_ART, n * 31 + v, d);
-    const W = 3 + ((r(1) * 2) | 0), D = 3 + ((r(2) * 2) | 0);         // 3-4 half-extents
-    const wallH = 4;
-    const timber = r(3) < 0.5 ? B.oak_log : B.cedar_log;
-    const infill = r(4) < 0.5 ? B.stone_brick : B.timber_wall;
-    const roofId = r(5) < 0.6 ? B.thatch : B.planks;
-    const doorId = r(6) < 0.5 ? B.oak_door : B.birch_door;
-    const doorTop = doorId === B.oak_door ? B.oak_door_top : B.birch_door_top;
-    // The door faces the road, so the lane it serves is the way you go in.
-    const inX = Math.sign(this.column(gen, d, s, 0, this._col2)[0] - ax);
-    const inZ = Math.sign(this._col2[1] - az);
 
-    const step = CHUNK * CHUNK;
     let top = -1;
     const put = (x, y, z, id) => {
       const lx = x - cx * CHUNK, lz = z - cz * CHUNK;
@@ -508,18 +646,35 @@ export class Roads {
       if (id !== B.air && y > top) top = y;
     };
 
-    for (let x = ax - W; x <= ax + W; x++) {
-      for (let z = az - D; z <= az + D; z++) {
+    // The YARD: claimed, but nothing built on it. It reaches two rings beyond the
+    // eaves, and further on the door side to cover the whole stepped path, because
+    // a tree's canopy spreads two columns and LEAVES ARE SOLID in this world. A
+    // pine rooted two cells off the apron therefore dropped a solid canopy across
+    // the doorstep, and a cottage with a perfectly good door became one you could
+    // not stand in front of. Claiming the trunk columns is what stops it: nodes on
+    // a claimed column are dropped before they are ever stamped (see _evict).
+    const gap = CROFT_RAMP + 3;
+    const yx0 = ax - W - 3 - (inX < 0 ? gap : 0), yx1 = ax + W + 3 + (inX > 0 ? gap : 0);
+    const yz0 = az - D - 3 - (inZ < 0 ? gap : 0), yz1 = az + D + 3 + (inZ > 0 ? gap : 0);
+    for (let x = yx0; x <= yx1; x++) for (let z = yz0; z <= yz1; z++) this._claim(cx, cz, x, z);
+    // The APRON runs a ring proud of the walls. Without it the plinth ends flush
+    // with the wall and a cottage on any slope has its doorway opening onto a
+    // ledge; with it there is a step of level ground to stand on all the way
+    // round, which is also what the eaves are already overhanging.
+    for (let x = ax - W - 1; x <= ax + W + 1; x++) {
+      for (let z = az - D - 1; z <= az + D + 1; z++) {
+        const inside = x >= ax - W && x <= ax + W && z >= az - D && z <= az + D;
         const edge = x === ax - W || x === ax + W || z === az - D || z === az + D;
-        // A pad: fill under it so it never stands on air, clear over it so it is
-        // never buried, both only as far as the site actually needs.
+        this._claim(cx, cz, x, z);
+        // Fill under it so it never stands on air, clear over it so it is never
+        // buried, both only as far as the site actually needs.
         for (let y = fy - 3; y < fy; y++) put(x, y, z, B.dirt);
         put(x, fy - 1, z, B.cobble);
         for (let y = fy; y <= fy + wallH + Math.max(W, D) + 1; y++) put(x, y, z, B.air);
-        put(x, fy, z, edge ? B.cobble : B.planks);                    // plinth course / floor
-        if (!edge) continue;
+        put(x, fy, z, !inside || edge ? B.cobble : B.planks);          // apron & plinth / floor
+        if (!inside || !edge) continue;
         const corner = (x === ax - W || x === ax + W) && (z === az - D || z === az + D);
-        for (let y = fy + 1; y <= fy + wallH; y++) put(x, y, z, corner ? timber : infill);
+        for (let y = fy + 1; y <= fy + wallH; y++) put(x, y, z, corner ? p.timber : p.infill);
         if (!corner && ((x + z) & 1) === 0) put(x, fy + 2, z, B.glasspane);   // a window or two
       }
     }
@@ -532,22 +687,145 @@ export class Roads {
         for (let z = az - D - 1; z <= az + D + 1; z++) {
           const off = along ? Math.abs(z - az) : Math.abs(x - ax);
           if (off !== half + 1 - k) continue;
-          put(x, y, z, roofId);
+          put(x, y, z, p.roofId);
         }
       }
     }
     for (let x = ax - (along ? W : 0); x <= ax + (along ? W : 0); x++) {
-      for (let z = az - (along ? 0 : D); z <= az + (along ? 0 : D); z++) put(x, fy + wallH + 2 + half, z, roofId);
+      for (let z = az - (along ? 0 : D); z <= az + (along ? 0 : D); z++) put(x, fy + wallH + 2 + half, z, p.roofId);
     }
     // The way in: a two-block door in the wall that faces the lane.
-    const dxc = inX !== 0 ? ax + inX * W : ax;
-    const dzc = inZ !== 0 ? az + inZ * D : az;
-    put(dxc, fy + 1, dzc, doorId);
-    put(dxc, fy + 2, dzc, doorTop);
-    // A hearth inside and a lantern at the door, so it reads as lived in.
+    put(dxc, fy + 1, dzc, p.doorId);
+    put(dxc, fy + 2, dzc, p.doorTop);
+    // …and a path off the threshold. The apron is level with the floor, so on a
+    // fall the ground beyond it is a drop you can leave by but never climb back
+    // up (the player steps up one block, not four). These are the steps: one
+    // tread per cell, one block of rise each, stopping the moment the natural
+    // ground comes up to meet them. CROFT_RAMP is short enough that the last
+    // tread still lands clear of the graded corridor — see CROFT_OFFSET.
+    //
+    // Run once per CARDINAL bearing the doorway faces. On a diagonal road the
+    // door lands on the building's corner and faces both ways at once; a single
+    // diagonal flight would be no use to a player, who moves on the four
+    // compass neighbours and cannot cut a corner.
+    for (let b = 0; b < 2; b++) {
+      const bx = b === 0 ? inX : 0, bz = b === 0 ? 0 : inZ;
+      if (bx === 0 && bz === 0) continue;
+      let ty = fy;
+      for (let k = 2; k <= CROFT_RAMP + 1; k++) {
+        const px = dxc + bx * k, pz = dzc + bz * k;
+        const hn = gen.heightAt(px, pz);
+        if (hn >= ty - 1 && hn <= ty) break;                           // the ground already meets it
+        ty += hn > ty ? 1 : -1;
+        this._claim(cx, cz, px, pz);
+        for (let y = ty; y > hn && y > ty - CROFT_FOOT; y--) put(px, y, pz, B.cobble);
+        if (hn > ty) put(px, ty, pz, B.cobble);                        // a cutting, not a fill
+        for (let y = ty + 1; y <= ty + 3; y++) put(px, y, pz, B.air);
+      }
+    }
+    // A hearth inside and a lantern over the door, so it reads as lived in.
     put(ax, fy + 1, az, B.campfire);
-    put(dxc - inX, fy + 3, dzc - inZ, B.sea_lantern);
+    put(p.stepX, fy + 3, p.stepZ, B.sea_lantern);
+
+    // ---- What is actually in it ---------------------------------------------
+    // A cottage nobody furnished reads as a prop. The vocabulary is the town's
+    // (js/world/town.js): a pallet with a bolster, a trestle board, a kist, a
+    // barrel, a stool, a rushlight.
+    //
+    // Everything below is placed in the room's door-relative axes: `u` counts
+    // from the middle toward the back wall (+dn) or the doorway (-dn), `v` runs
+    // across (±dg). Every fitting hugs the perimeter ring, so the interior CORE
+    // is empty by construction — which is the property that makes the room one
+    // connected floor whatever the seed does with it. On top of that, nothing at
+    // all goes in the cell you step into from the doorway or in its four
+    // neighbours. There is a flood-fill test for exactly this.
+    const dn = p.dn, dg = p.dg;
+    const clear = (x, z) => Math.abs(x - p.stepX) + Math.abs(z - p.stepZ) > 1
+      && !(x === ax && z === az);                                      // the hearth keeps its cell
+    const fit = (u, v, id, y = fy + 1) => {
+      const x = ax + p.nx * u + p.gx * v, z = az + p.nz * u + p.gz * v;
+      if (clear(x, z)) put(x, y, z, id);
+    };
+
+    // The pallet lies along one side wall, its head in the back corner.
+    const soft = r(7) < 0.4 ? B.red_wool : B.thatch;                   // a mattress or bare straw
+    for (let i = 0; i < 3; i++) fit(dn - i, -dg, i === 0 ? B.white_wool : soft);
+    // A trestle board down the other side wall — fence legs, slab top — with a
+    // stool at the near end of it.
+    for (let i = 0; i < 2; i++) { fit(dn - i, dg, B.planks_fence); fit(dn - i, dg, B.planks_slab, fy + 2); }
+    fit(dn - 2, dg, B.planks_slab);                                    // stool
+    fit(dn, -p.chestV, B.cauldron);                                    // barrel, back wall
+    fit(dn, 0, B.torch_post);                                          // rushlight between them
+
+    // The kist. Facing so its front looks into the room rather than into the wall.
+    if (clear(p.chestX, p.chestZ)) {
+      put(p.chestX, p.chestY, p.chestZ, B.chest_block);
+      // Facing 0=+Z 1=+X 2=-Z 3=-X; the front should look back down `n`.
+      if (setFacing) {
+        setFacing(p.chestX, p.chestY, p.chestZ,
+          p.nx !== 0 ? (p.nx < 0 ? 1 : 3) : (p.nz < 0 ? 0 : 2));
+      }
+      // Modest loot, and modest is the point: this is one crofter's kist beside a
+      // road, not a dungeon hoard. Deterministic from (seed, road, station), so
+      // the same cottage always holds the same few things.
+      // Only registered when a chest sink is supplied — see carveRoads.
+      if (chestSink && this._inChunk(cx, cz, p.chestX, p.chestZ)) {
+        chestSink(this._croftLoot(gen, d, n));
+      }
+    }
+
+    // The occupant. There is no per-chunk NPC sink in this generator (villagers
+    // come from the hand-built structure list only), so the best a chunk-local
+    // cottage can do is the smallholding's livestock — which at least means the
+    // place has something alive in the yard. See the report in the module header.
+    // Stood on the apron beside the doorstep, which is known to be level with the
+    // floor — so it never spawns inside the hillside the cottage is cut into.
+    const yx = dxc + inX + p.gx, yz = dzc + inZ + p.gz;
+    if (this._inChunk(cx, cz, yx, yz) && r(9) < 0.75) {
+      chunk.spawns.push({
+        id: `croft:${d}:${n}`, type: r(10) < 0.5 ? 'chicken' : 'duck',
+        x: yx, y: fy + 1, z: yz, fixed: true,
+      });
+    }
     return top;
+  }
+
+  _inChunk(cx, cz, x, z) {
+    const lx = x - cx * CHUNK, lz = z - cz * CHUNK;
+    return lx >= 0 && lx < CHUNK && lz >= 0 && lz < CHUNK;
+  }
+
+  // Does a mineshaft headframe or a dungeon stair already own this ground? Tested
+  // at the centre and the four extremes of a footprint `span` wide — the claim is
+  // an area, not a point, and a frame clipping one corner of a cottage is enough
+  // to block the doorway. Kept out of the cheap rolls above so it is only ever
+  // asked about a site that was otherwise going to build.
+  _siteTaken(gen, x, z, span) {
+    for (let i = 0; i < 5; i++) {
+      const qx = x + (i === 1 ? span : i === 2 ? -span : 0);
+      const qz = z + (i === 3 ? span : i === 4 ? -span : 0);
+      if (mineshaftClaims(gen, qx, qz) || dungeonClaims(gen, qx, qz)) return true;
+    }
+    return false;
+  }
+
+  // Mark a column as owned by a roadside structure. See `_built`.
+  _claim(cx, cz, x, z) {
+    const lx = x - cx * CHUNK, lz = z - cz * CHUNK;
+    if (lx >= 0 && lx < CHUNK && lz >= 0 && lz < CHUNK) this._built[lz * CHUNK + lx] = 1;
+  }
+
+  // What is in a croft's kist. A pure function of (seed, road, station) so every
+  // chunk — and every load of the same world — agrees.
+  _croftLoot(gen, dir, n) {
+    const p = this._plan;
+    const r = (v) => hash2(gen.seed + S_CROFT_KIT, n * 31 + v, dir);
+    const loot = [{ item: 'travel_biscuit', qty: 1 + ((r(1) * 2) | 0) }];
+    if (r(2) < 0.7) loot.push({ item: 'plant_fibre', qty: 2 + ((r(3) * 3) | 0) });
+    if (r(4) < 0.5) loot.push({ item: 'torch_item', qty: 2 + ((r(5) * 3) | 0) });
+    if (r(6) < 0.35) loot.push({ item: 'grain_seeds', qty: 1 + ((r(7) * 2) | 0) });
+    if (r(8) < 0.18) loot.push({ item: 'old_coin', qty: 1 });
+    return { id: `croft:${dir}:${n}`, x: p.chestX, y: p.chestY, z: p.chestZ, loot };
   }
 
   // ---- Trails ---------------------------------------------------------------
@@ -560,11 +838,53 @@ export class Roads {
   // each chunk paints only the slice of the route that falls inside it. Because a
   // trail is a surface treatment and not a regrade, two chunks painting the same
   // trail cannot disagree about its height — there is no height to agree on.
+  // Every trail station whose route or destination can reach this chunk. The
+  // window has to reach past the trail's own END: the site standing there is up to
+  // SITE_SPAN wide and the wobble puts it a couple of blocks off the straight
+  // bearing, so a chunk holding only the destination still has to see the ORIGIN
+  // station that produced it.
+  _trailRange(sChunk, d, out) {
+    const reach = TRAIL_MAX + CHUNK_R + SITE_SPAN + 6;
+    out[0] = Math.ceil((sChunk - reach) / TRAIL_SPACING);
+    out[1] = Math.floor((sChunk + reach) / TRAIL_SPACING);
+    return out;
+  }
+
+  // One trail's frame: origin on the parent's centre line, bearing turned well off
+  // it so a trail reads as leaving rather than paralleling, and how far it runs.
+  // Both passes go through here, so the path and the thing at the end of it can
+  // never disagree about where that end is.
+  _trailFrame(gen, d, k, sOrigin) {
+    const o = this.column(gen, d, sOrigin, 0, this._col);
+    const t = this._tf;
+    t.ox = o[0]; t.oz = o[1];
+    const side = hash2(gen.seed + S_TRAIL_W, k, d) < 0.5 ? 1 : -1;
+    const turn = 0.9 + hash2(gen.seed + S_TRAIL_TURN, k, d) * 0.7;      // 51-92 degrees
+    const th = Math.atan2(U[d * 2 + 1], U[d * 2]) + side * turn;
+    t.vx = Math.cos(th); t.vz = Math.sin(th);
+    t.len = TRAIL_MIN + hash2(gen.seed + S_TRAIL_LEN, k, d) * (TRAIL_MAX - TRAIL_MIN);
+    return t;
+  }
+
+  _trailEnds(gen, blocks, cx, cz, d, sChunk) {
+    const rg = this._trailRange(sChunk, d, this._krange);
+    let top = -1;
+    const half = SITE_SPAN + 2, x0 = cx * CHUNK, z0 = cz * CHUNK;
+    for (let k = rg[0]; k <= rg[1]; k++) {
+      const site = this._sitePlan(gen, d, k);
+      if (!site) continue;
+      // Every chunk the site can reach builds its own slice; the rest leave here.
+      if (site.x + half < x0 || site.x - half >= x0 + CHUNK
+        || site.z + half < z0 || site.z - half >= z0 + CHUNK) continue;
+      const y = this._trailEnd(gen, blocks, cx, cz, site);
+      if (y > top) top = y;
+    }
+    return top;
+  }
+
   _trails(gen, chunk, blocks, cx, cz, d, sChunk) {
-    const reach = TRAIL_MAX + CHUNK_R;
-    const first = Math.ceil((sChunk - reach) / TRAIL_SPACING);
-    const last = Math.floor((sChunk + reach) / TRAIL_SPACING);
-    for (let k = first; k <= last; k++) {
+    const rg = this._trailRange(sChunk, d, this._krange);
+    for (let k = rg[0]; k <= rg[1]; k++) {
       const sOrigin = k * TRAIL_SPACING;
       if (sOrigin < TRAIL_START + RC_START[d]) continue;
       if (hash2(gen.seed + S_TRAIL, k, d) > TRAIL_CHANCE) continue;
@@ -573,15 +893,8 @@ export class Roads {
   }
 
   _trail(gen, chunk, blocks, cx, cz, d, k, sOrigin) {
-    // Frame: origin on the parent's centre line, bearing turned well off it so a
-    // trail reads as leaving rather than paralleling.
-    const o = this.column(gen, d, sOrigin, 0, this._col);
-    const ox = o[0], oz = o[1];
-    const side = hash2(gen.seed + S_TRAIL_W, k, d) < 0.5 ? 1 : -1;
-    const turn = 0.9 + hash2(gen.seed + S_TRAIL_TURN, k, d) * 0.7;      // 51-92 degrees
-    const th = Math.atan2(U[d * 2 + 1], U[d * 2]) + side * turn;
-    const vx = Math.cos(th), vz = Math.sin(th);
-    const len = TRAIL_MIN + hash2(gen.seed + S_TRAIL_LEN, k, d) * (TRAIL_MAX - TRAIL_MIN);
+    const t = this._trailFrame(gen, d, k, sOrigin);
+    const ox = t.ox, oz = t.oz, vx = t.vx, vz = t.vz, len = t.len;
 
     // Clip to the s-range this chunk can possibly hold, so a long trail costs the
     // same per chunk as a short one.
@@ -604,6 +917,7 @@ export class Roads {
         if (lx < 0 || lx >= CHUNK || lz < 0 || lz >= CHUNK) continue;
         const li = lz * CHUNK + lx;
         if (this._mask[li]) continue;                                   // a road already owns it
+        if (this._built[li]) continue;                                  // …or a cottage, or a shrine
         if (this._blocked(gen, qx, qz, this._near)) continue;
         if (hash2(gen.seed + S_TRAIL_W + k, qx, qz) > fade * 0.9) continue;  // ragged, thinning
         const y = chunk.surfaceH[li];
@@ -615,6 +929,198 @@ export class Roads {
         blocks[i + step] = B.air;                                       // scuff the grass off it
       }
     }
+  }
+
+  // ---- Where a trail leads --------------------------------------------------
+  // A path that stops in an empty field is a path that wasted your time. A
+  // fraction of trails therefore end at something small and hand-made: a wayside
+  // shrine, a hunter's camp, or a ring of standing stones. Small and rare on
+  // purpose — five to nine blocks across, and roughly a quarter of trails get
+  // one, so finding one still means something.
+  //
+  // Chunk-local by exactly the same construction as the crofts: the site, its
+  // floor and every block are pure functions of (seed, parent road, station),
+  // the floor coming from `gen.heightAt` at the centre column rather than from
+  // anything one chunk knows.
+  // Whether the trail leaving road `d` at station `k` ends at anything, and if so
+  // where and what. Pure function of (seed, road, station); fills a reused record.
+  _sitePlan(gen, d, k) {
+    const sOrigin = k * TRAIL_SPACING;
+    if (sOrigin < TRAIL_START + RC_START[d]) return null;
+    if (hash2(gen.seed + S_TRAIL, k, d) > TRAIL_CHANCE) return null;    // no trail at all
+    const roll = hash2(gen.seed + S_SITE, k, d);
+    if (roll >= SITE_CHANCE) return null;                               // a trail that just peters out
+    const t = this._trailFrame(gen, d, k, sOrigin);
+    // The trail's own wobble at its far end, so the site sits where the path
+    // actually arrives rather than on the straight bearing.
+    const wob = (valueNoise2(gen.seed + S_TRAIL + k, t.len / 26, 2.5) - 0.5) * 5;
+    const ex = Math.round(t.ox + t.vx * t.len - t.vz * wob);
+    const ez = Math.round(t.oz + t.vz * t.len + t.vx * wob);
+    // It never builds on ground something else already owns: the hand-built pads
+    // and lanes, or any arterial — checked at the centre and at the four extremes
+    // of the footprint, because clipping a road corridor would put a wall across
+    // a lane you are supposed to be able to walk.
+    if (this._blocked(gen, ex, ez, 15)) return null;
+    const half = SITE_SPAN + 1;
+    if (this.arterialAt(gen, ex, ez) !== -1) return null;
+    for (let i = 0; i < 4; i++) {
+      const qx = ex + (i === 0 ? half : i === 1 ? -half : 0), qz = ez + (i === 2 ? half : i === 3 ? -half : 0);
+      if (this.arterialAt(gen, qx, qz) !== -1) return null;
+    }
+    const fy = gen.heightAt(ex, ez);
+    if (fy <= SEA + 1 || fy > H_HI - 8) return null;                    // not on a beach or a crag
+    if (this._siteTaken(gen, ex, ez, SITE_SPAN)) return null;           // a shaft head has this ground
+    const s = this._site;
+    s.dir = d; s.k = k; s.x = ex; s.z = ez; s.y = fy;
+    s.kind = (roll / SITE_CHANCE * SITE_KINDS) | 0;
+    return s;
+  }
+
+  // Public: where the trail leaving road `dir` at station `k` leads, or null.
+  // Returns a REUSED record — copy what you need out of it.
+  trailSite(gen, dir, k) { this._frame(gen); return this._sitePlan(gen, dir, k); }
+
+  _trailEnd(gen, blocks, cx, cz, site) {
+    const ex = site.x, ez = site.z, fy = site.y, d = site.dir, k = site.k;
+    const x0 = cx * CHUNK, z0 = cz * CHUNK;
+    let top = -1;
+    const put = (x, y, z, id) => {
+      const lx = x - x0, lz = z - z0;
+      if (lx < 0 || lx >= CHUNK || lz < 0 || lz >= CHUNK || y < 1 || y >= WORLD_H) return;
+      blocks[(y * CHUNK + lz) * CHUNK + lx] = id;
+      if (id !== B.air && y > top) top = y;
+    };
+    // Level ground for one cell: fill to the site's floor, clear the air over it.
+    // Called only on the cells a site actually stands on, so the ground around
+    // stays the biome's own rather than a paved disc.
+    const pad = (x, z, id, up) => {
+      const hn = gen.heightAt(x, z);
+      this._claim(cx, cz, x, z);
+      for (let y = fy - 1; y > hn && y > fy - 8; y--) put(x, y, z, B.cobble);
+      for (let y = fy + 1; y <= fy + up; y++) put(x, y, z, B.air);
+      if (id) put(x, fy, z, id);
+      else if (hn < fy) put(x, fy, z, B.dirt);
+    };
+    // A ring of yard round the site, claimed but never built on, so a tree cannot
+    // root against a shrine and drop a solid canopy over it. Same reasoning as a
+    // croft's yard — see `_croft`.
+    for (let x = ex - SITE_SPAN - 2; x <= ex + SITE_SPAN + 2; x++) {
+      for (let z = ez - SITE_SPAN - 2; z <= ez + SITE_SPAN + 2; z++) this._claim(cx, cz, x, z);
+    }
+    const r = (v) => hash2(gen.seed + S_SITE_ART, k * 37 + v, d);
+    if (site.kind === 0) this._shrine(gen, put, pad, r, ex, ez, fy);
+    else if (site.kind === 1) this._camp(gen, put, pad, r, ex, ez, fy);
+    else this._stoneRing(gen, put, pad, r, ex, ez, fy);
+    return top;
+  }
+
+  // A wayside shrine: an old flagged platform, a two-course altar with a votive
+  // light on it, a standing stone either side, and an offering bowl in front.
+  _shrine(gen, put, pad, r, ex, ez, fy) {
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dz = -2; dz <= 2; dz++) {
+        const edge = Math.abs(dx) === 2 && Math.abs(dz) === 2;
+        if (edge && hash2(gen.seed + S_RAGGED, ex + dx, ez + dz) < 0.6) continue;   // broken flags
+        pad(ex + dx, ez + dz, hash2(gen.seed + S_PAVE, ex + dx, ez + dz) < 0.45 ? B.mossy_cobble : B.cobble, 6);
+      }
+    }
+    put(ex, fy + 1, ez, B.stone_brick);
+    put(ex, fy + 2, ez, B.mossy_stone_brick);
+    put(ex, fy + 3, ez, B.torch_post);                                  // the votive light
+    const ax = r(1) < 0.5 ? 1 : 0, az = 1 - ax;                         // which way the pair stands
+    for (const sg of [-1, 1]) {
+      const px = ex + ax * sg * 2, pz = ez + az * sg * 2;
+      for (let y = fy + 1; y <= fy + 2 + ((r(2) * 2) | 0); y++) put(px, y, pz, B.mossy_stone_brick);
+    }
+    put(ex + az * 1, fy + 1, ez + ax * 1, B.cauldron);                  // offering bowl
+    put(ex - az * 1, fy + 1, ez - ax * 1, r(3) < 0.5 ? B.allium : B.oxeye_daisy);
+  }
+
+  // A hunter's camp: a lean-to you can shelter under, a firepit, a drying rack
+  // with a hide on it, and a log to sit on.
+  //
+  // EVERY pad is laid before ANY fitting. `pad` clears the air above the cell it
+  // levels, so a pad called after the roof went on took the roof's eave straight
+  // back off again — which is exactly what happened to this camp's thatch and to
+  // the stone circle's shorter stones.
+  _camp(gen, put, pad, r, ex, ez, fy) {
+    // Which way the lean-to opens. The shelter is 3 wide and 2 deep, its back to
+    // the weather, so the whole camp reads as facing one way.
+    const f = (r(1) * 4) | 0;
+    const fx = f === 1 ? 1 : f === 3 ? -1 : 0, fz = f === 0 ? 1 : f === 2 ? -1 : 0;
+    const gx = fz, gz = fx;                                             // across the opening
+    const cxp = ex + fx * 3, czp = ez + fz * 3;                         // the firepit
+    const rx = ex - gx * 3, rz = ez - gz * 3;                           // the drying rack
+    for (let a = -2; a <= 2; a++) for (let b = -2; b <= 2; b++) pad(ex + a, ez + b, 0, 5);
+    for (let a = -1; a <= 1; a++) {
+      for (let b = -1; b <= 1; b++) pad(cxp + a, czp + b, a === 0 && b === 0 ? B.gravel : B.cobble, 4);
+    }
+    for (const sg of [0, 1]) pad(rx + fx * sg * 2, rz + fz * sg * 2, 0, 5);
+    pad(cxp + gx, czp + gz, 0, 4);
+
+    // Back wall, corner posts, and a roof sloping from the wall out over the
+    // opening — so it reads as something you could crawl under out of the rain.
+    for (let a = -1; a <= 1; a++) {
+      const bx = ex + gx * a - fx, bz = ez + gz * a - fz;
+      for (let y = fy + 1; y <= fy + 2; y++) put(bx, y, bz, B.timber_wall);
+    }
+    for (const sg of [-1, 1]) {
+      const px = ex + gx * sg, pz = ez + gz * sg;
+      put(px, fy + 1, pz, B.oak_log); put(px, fy + 2, pz, B.oak_log);
+    }
+    for (let a = -1; a <= 1; a++) {
+      put(ex + gx * a - fx, fy + 3, ez + gz * a - fz, B.thatch);
+      put(ex + gx * a, fy + 3, ez + gz * a, B.thatch);
+      put(ex + gx * a + fx, fy + 2, ez + gz * a + fz, B.thatch_slab);   // the low eave
+    }
+    put(cxp, fy + 1, czp, B.campfire);
+    put(cxp + gx, fy + 1, czp + gz, B.stump);                           // a log to sit on
+    // Drying rack: two posts, a crossbar, and a hide hanging off it.
+    for (const sg of [0, 1]) {
+      const px = rx + fx * sg * 2, pz = rz + fz * sg * 2;
+      for (let y = fy + 1; y <= fy + 3; y++) put(px, y, pz, B.planks_fence);
+    }
+    put(rx + fx, fy + 3, rz + fz, B.planks_fence);
+    put(rx + fx, fy + 2, rz + fz, r(2) < 0.6 ? B.brown_wool : B.white_wool);
+  }
+
+  // A ring of standing stones round a low cairn. Nothing is levelled but the
+  // stones' own columns and a scatter of trodden ground, so the circle keeps
+  // whatever ground the moor gave it. Pads first — see _camp.
+  _stoneRing(gen, put, pad, r, ex, ez, fy) {
+    const rad = 3;
+    const stoneH = (px, pz) => 2 + ((hash2(gen.seed + S_SITE_ART, px, pz) * 3) | 0);   // 2-4: uneven
+    const onRing = (dx, dz) => {
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        if (Math.round(Math.cos(a) * rad) === dx && Math.round(Math.sin(a) * rad) === dz) return true;
+      }
+      return false;
+    };
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dz = -2; dz <= 2; dz++) {
+        if ((dx === 0 && dz === 0) || onRing(dx, dz)) continue;
+        if (hash2(gen.seed + S_TRAIL_W, ex + dx, ez + dz) > 0.35) continue;
+        pad(ex + dx, ez + dz, r(1) < 0.5 ? B.gravel : B.dirt, 4);
+      }
+    }
+    pad(ex, ez, B.gravel, 5);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const px = ex + Math.round(Math.cos(a) * rad), pz = ez + Math.round(Math.sin(a) * rad);
+      pad(px, pz, B.mossy_cobble, stoneH(px, pz) + 3);
+    }
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const px = ex + Math.round(Math.cos(a) * rad), pz = ez + Math.round(Math.sin(a) * rad);
+      const h = stoneH(px, pz);
+      const mossy = hash2(gen.seed + S_PAVE, px, pz) < 0.5;
+      for (let y = fy + 1; y <= fy + h; y++) put(px, y, pz, mossy ? B.mossy_stone_brick : B.stone_brick);
+      put(px, fy + h + 1, pz, B.stone_brick_slab);
+    }
+    put(ex, fy + 1, ez, B.mossy_cobble);                                // the cairn
+    put(ex, fy + 2, ez, B.cobble_wall);
+    put(ex, fy + 3, ez, B.glow_lichen);
   }
 
   _boxNear(x0, z0, px, pz, r) {
@@ -773,10 +1279,11 @@ export class Roads {
   }
 
   // ---- Waystones -----------------------------------------------------------
-  // Every WAYSTONE_SPACING blocks along each arterial: a lit standing stone, a
-  // signpost and a bench, all on the verge and clear of the running lane. Each
-  // piece re-reads the graded height of the column it actually lands on, so a
-  // waystone straddling a chunk border comes out identical from either side.
+  // Every WAYSTONE_SPACING blocks along each arterial: a standing stone, a
+  // signpost and a bench, all clear of the running lane. The signpost and bench
+  // re-read the graded height of the column they actually land on, so a waystone
+  // straddling a chunk border comes out identical from either side; the stone
+  // itself is levelled off one height for all nine of its columns (see _menhir).
   _waystones(gen, blocks, cx, cz, d, sLo, sHi) {
     let top = -1;
     const first = Math.ceil(sLo / WAYSTONE_SPACING), last = Math.floor(sHi / WAYSTONE_SPACING);
@@ -784,7 +1291,7 @@ export class Roads {
       const s = n * WAYSTONE_SPACING;
       if (s < RC_START[d]) continue;
       const side = waysideOf(gen.seed, d, n);
-      let y = this._prop(gen, blocks, cx, cz, d, s, WS_OFFSET * side, WS_MARKER);
+      let y = this._menhir(gen, blocks, cx, cz, d, s, side);
       if (y > top) top = y;
       y = this._prop(gen, blocks, cx, cz, d, s + 3, WS_OFFSET * side, WS_SIGN);
       if (y > top) top = y;
@@ -793,6 +1300,85 @@ export class Roads {
         if (y > top) top = y;
       }
     }
+    return top;
+  }
+
+  // The standing stone itself — a menhir, not a bollard. What makes one legible
+  // from the road is the SILHOUETTE, so it is built out of that: a rough base
+  // course three blocks across, a kerb of wall-posts and slabs stepping in off
+  // it, and a shaft one block square rising six more courses out of the middle.
+  // Base three wide against a shaft one wide is a taper you read at a glance;
+  // the shaft's alternating mossy courses are what stop it reading as a smooth
+  // pillar; and the lantern set under its capstone is how you find it at night.
+  //
+  // Chunk-local, and levelled: all nine columns sit at the road's own graded
+  // height at `s`, which is `gradeAt(s)` — a pure function of (seed, road, s),
+  // not of anything one chunk happens to know. A plinth that followed the ground
+  // under each cell would be rubble, and a plinth that took its level from the
+  // centre column's chunk would come out at two different heights depending on
+  // which side of a chunk border you asked from.
+  _menhir(gen, blocks, cx, cz, d, s, side) {
+    const c = this.column(gen, d, s, WS_STONE * side, this._col);
+    const ax = c[0], az = c[1];
+    // Cheap out for every chunk the stone cannot reach, before the profile
+    // window — which is the only expensive thing in here.
+    const lx = ax - cx * CHUNK, lz = az - cz * CHUNK;
+    if (lx < -WS_YARD || lx > CHUNK + WS_YARD || lz < -WS_YARD || lz > CHUNK + WS_YARD) return -1;
+    // It declines to stand on ground something hand-built already owns (the same
+    // columns the road itself steps around), and it does not wade: a waystone
+    // stands on the bank, never out on a bridge.
+    if (this._blocked(gen, ax, az, 15)) return -1;
+    if (gen.heightAt(ax, az) <= SEA) return -1;
+    this.window(gen, d, s, s);
+    const y = this.gradeAt(s);
+    if (y < 1 || y + WS_TOP + 2 >= WORLD_H) return -1;
+
+    const step = CHUNK * CHUNK;
+    let top = -1;
+    const put = (x, yy, z, id) => {
+      const px = x - cx * CHUNK, pz = z - cz * CHUNK;
+      if (px < 0 || px >= CHUNK || pz < 0 || pz >= CHUNK || yy < 1 || yy >= WORLD_H) return;
+      blocks[(yy * CHUNK + pz) * CHUNK + px] = id;
+      if (id !== B.air && yy > top) top = yy;
+    };
+
+    // A ring of ground round the stone, claimed but not built on. The shaft's
+    // upper courses stand at canopy height, and leaves are SOLID here, so a tree
+    // rooted three columns away wrote pine needles straight through the middle of
+    // the stone. Claiming the trunk columns drops those nodes before they are
+    // stamped (see _evict) and gives the landmark the clearing it wants anyway.
+    for (let dx = -WS_YARD; dx <= WS_YARD; dx++) {
+      for (let dz = -WS_YARD; dz <= WS_YARD; dz++) this._claim(cx, cz, ax + dx, az + dz);
+    }
+    // Footing and headroom first: on fill the stone would otherwise stand on
+    // air, and in a cutting it would be buried to the shoulders.
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const x = ax + dx, z = az + dz, hn = gen.heightAt(x, z);
+        this._claim(cx, cz, x, z);
+        for (let yy = y; yy > hn && yy > y - WS_FOOT; yy--) put(x, yy, z, B.cobble);
+        for (let yy = y + 1; yy <= y + WS_TOP + 1; yy++) put(x, yy, z, B.air);
+      }
+    }
+    // Course 1: the broad base, weathered at the corners.
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const corner = dx !== 0 && dz !== 0;
+        put(ax + dx, y + 1, az + dz, corner ? B.mossy_cobble : B.cobble);
+      }
+    }
+    // Course 2: the step in. Wall-posts on the corners, slabs on the flats —
+    // both half-shapes, so the base visibly narrows into the shaft rather than
+    // jumping from three wide to one.
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        if (dx === 0 && dz === 0) continue;
+        put(ax + dx, y + 2, az + dz, dx !== 0 && dz !== 0 ? B.cobble_wall : B.stone_brick_slab);
+      }
+    }
+    // The shaft. WS_SHAFT[0] is the base course's own centre, already laid above
+    // and repeated here so the exported course list reads as one column.
+    for (let i = 0; i < WS_SHAFT.length; i++) put(ax, y + 1 + i, az, WS_SHAFT[i]);
     return top;
   }
 
@@ -814,22 +1400,33 @@ export class Roads {
   // The scatter pass ran before the road existed, so anything it seeded on a
   // road column has just been paved over. Drop those entries rather than leave
   // trees and spawn points to be stamped back on top of the lane.
+  //
+  // `_built` columns go the same way, and that is not cosmetic: a node is stamped
+  // into `blocks` AFTER this module runs (js/world/world.js), so an oak seeded on
+  // a column a cottage now stands on put its trunk straight up through the
+  // building — including, repeatably, through the doorway and the upper door
+  // leaf, which sealed the cottage. It is the exact failure the enterability
+  // test in tests/unit/roads.test.mjs catches.
   _evict(chunk, cx, cz) {
-    const mask = this._mask;
-    const inRoad = (x, z) => {
+    const mask = this._mask, built = this._built;
+    const taken = (x, z) => {
       const lx = x - cx * CHUNK, lz = z - cz * CHUNK;
-      return lx >= 0 && lx < CHUNK && lz >= 0 && lz < CHUNK && mask[lz * CHUNK + lx] === 1;
+      if (lx < 0 || lx >= CHUNK || lz < 0 || lz >= CHUNK) return false;
+      const li = lz * CHUNK + lx;
+      return mask[li] === 1 || built[li] === 1;
     };
     let w = 0;
     for (let i = 0; i < chunk.nodes.length; i++) {
       const n = chunk.nodes[i];
-      if (!inRoad(n.x, n.z)) chunk.nodes[w++] = n;
+      if (!taken(n.x, n.z)) chunk.nodes[w++] = n;
     }
     chunk.nodes.length = w;
     w = 0;
     for (let i = 0; i < chunk.spawns.length; i++) {
       const sp = chunk.spawns[i];
-      if (!inRoad(sp.x, sp.z)) chunk.spawns[w++] = sp;
+      // `fixed` spawns are the ones this pass placed on purpose (a croft's
+      // livestock); only the scatter pass's wandering mobs get cleared.
+      if (sp.fixed || !taken(sp.x, sp.z)) chunk.spawns[w++] = sp;
     }
     chunk.spawns.length = w;
   }
@@ -864,10 +1461,23 @@ export class Roads {
     return -1;
   }
 
-  // The column carrying the n-th waystone's lit marker on arterial `dir`. One
-  // definition, shared by the builder and by anything looking for one.
+  // The column the n-th waystone's standing stone rises out of, on arterial
+  // `dir`. One definition, shared by the builder and by anything looking for one.
   waystoneColumn(gen, dir, n, out = this._col) {
-    return this.column(gen, dir, n * WAYSTONE_SPACING, WS_OFFSET * waysideOf(gen.seed, dir, n), out);
+    return this.column(gen, dir, n * WAYSTONE_SPACING, WS_STONE * waysideOf(gen.seed, dir, n), out);
+  }
+
+  // The height the n-th waystone's stone is levelled to, and the courses standing
+  // on it — so a caller (or a test) can look for the thing without reproducing
+  // the builder's arithmetic. Returns -1 where no stone stands there.
+  waystoneBaseY(gen, dir, n) {
+    this._frame(gen);
+    const s = n * WAYSTONE_SPACING;
+    if (s < RC_START[dir] || dir >= PRIMARIES) return -1;
+    const c = this.waystoneColumn(gen, dir, n, this._col);
+    if (this._blocked(gen, c[0], c[1], 15)) return -1;
+    if (gen.heightAt(c[0], c[1]) <= SEA) return -1;
+    return this.surfaceY(gen, dir, s);
   }
 }
 
@@ -880,6 +1490,13 @@ export function alongOf(dir, x, z) { return x * U[dir * 2] + z * U[dir * 2 + 1];
 export function acrossOf(dir, x, z) { return x * -U[dir * 2 + 1] + z * U[dir * 2]; }
 
 // The one entry point world.js calls during chunk generation.
-export function carveRoads(gen, chunk, blocks, cx, cz, setFacing) {
-  return roadsFor(gen).carve(gen, chunk, blocks, cx, cz, setFacing);
+//
+// `chestSink` is optional and takes the same {id, x, y, z, loot} record that
+// stampChunkStructures' `chest` sink does. Supply it and a wayside croft's kist
+// comes with its (deterministic, modest) contents; leave it out and the kist is
+// still there and still usable, just empty — there is no way for this module to
+// register chest metadata on its own, because the chunk record it is handed
+// carries blocks, nodes and spawns and nothing else.
+export function carveRoads(gen, chunk, blocks, cx, cz, setFacing, chestSink) {
+  return roadsFor(gen).carve(gen, chunk, blocks, cx, cz, setFacing, chestSink);
 }

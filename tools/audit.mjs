@@ -47,6 +47,10 @@ for (const q of QUESTS) for (const it of (q.rewards && q.rewards.items) || []) a
 for (const npc of Object.values(NPC_DEFS)) for (const s of (npc.shop && npc.shop.sells) || []) addRoot(s.item); // buyable
 // starting kit + hardcoded gather (crops, caches) from main.js
 ['worn_hatchet', 'travel_biscuit', 'grainsheaf', 'grain_seeds', 'golden_grain', 'old_coin', 'rough_gem', 'relic_fragment'].forEach(addRoot);
+// Granted by main.js when a procedural dungeon's key holder dies — the mini-boss
+// roster (js/world/dungeon.js `theme.mini`) is endless and region-anchored, so it
+// isn't in the hand-built spawn list this audit walks.
+addRoot('warden_key');
 // basic terrain blocks you can just dig
 ['dirt', 'rough_stone', 'sand', 'gravel'].forEach(addRoot);
 // every block that appears in the world drops its item when broken
