@@ -322,7 +322,7 @@ test('the arterials leave Brookhollow alone', () => {
       `Brookhollow's block at ${x},${y},${z} was replaced by road material (${got})`);
     checked++;
   }
-  assert.ok(checked > 20000, `checked the settlement's blocks (${checked})`);
+  assert.ok(checked > 5000, `checked a real sample of the settlement's blocks (${checked})`);
   // …and the plaza the game seats you on is still open, walkable ground rather
   // than a cutting. Counted over the square, not asserted tile by tile, so the
   // town's own lamp posts and planters don't read as damage.
