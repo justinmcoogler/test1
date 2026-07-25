@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { World } from '../../js/world/world.js';
-import { WorldGen, CHUNK } from '../../js/world/worldgen.js';
+import { WorldGen, CHUNK, MANOR_PAD, LEARN_MEADOW, FROST_CAMP } from '../../js/world/worldgen.js';
 import {
   roadsFor, ARTERIALS, ROAD_START, WAYSTONE_SPACING, alongOf,
 } from '../../js/world/roads.js';
@@ -343,25 +343,50 @@ test('the arterials leave Brookhollow alone', () => {
   assert.ok(open > tiles * 0.8, `the spawn plaza is still open ground (${open} of ${tiles} tiles walkable)`);
 });
 
-test('the arterials actually wind — they are not straight lines with a wobble', () => {
-  // The roads used to leave spawn essentially straight: 22 blocks of lateral
-  // drift over 3000 travelled, which reads as an arrow to the horizon. The
-  // ceiling on this is geometric, not cosmetic — the paved corridor is a band
-  // measured perpendicular to the compass axis, so a centre line that turns
-  // faster than ~0.6 lateral per block travelled makes the pavement pinch.
+test('the arterials actually wind — and the lane survives the bends', () => {
+  // The measure is BOW WITHIN A SIGHTLINE, not total drift. An arterial that
+  // accumulates 49 blocks of offset over 3000 travelled still looks like an
+  // arrow, because gradual drift is only ~6 blocks of deviation across the ~60
+  // blocks you can see before fog — which the eye reads as straight. What makes
+  // a road look like it winds is a kink inside every sightline.
   const gen = new WorldGen(20260725);
   const roads = roadsFor(gen);
-  let maxLat = 0, maxBend = 0;
-  for (let dir = 0; dir < 8; dir++) {
-    let prev = null;
-    for (let s = ROAD_START; s <= 3000; s += 4) {
-      const v = roads.wander(gen.seed, dir, s);
-      maxLat = Math.max(maxLat, Math.abs(v));
-      if (prev !== null) maxBend = Math.max(maxBend, Math.abs(v - prev) / 4);
-      prev = v;
+  let bow = 0;
+  for (let d = 0; d < ARTERIALS; d++) {
+    for (let s0 = 90; s0 < 2000; s0 += 10) {
+      const a = roads.wander(gen.seed, d, s0), b = roads.wander(gen.seed, d, s0 + 60);
+      for (let k = 6; k < 60; k += 3) {
+        const chord = a + (b - a) * (k / 60);
+        bow = Math.max(bow, Math.abs(roads.wander(gen.seed, d, s0 + k) - chord));
+      }
     }
   }
-  assert.ok(maxLat > 35, `roads should wander well off the bearing (max ${maxLat.toFixed(0)} blocks)`);
-  assert.ok(maxBend > 0.25, `and bend noticeably while doing it (steepest ${maxBend.toFixed(2)})`);
-  assert.ok(maxBend < 0.6, `but not so fast the paved corridor pinches (steepest ${maxBend.toFixed(2)})`);
+  assert.ok(bow > 10, `the road should bow visibly inside one sightline (max ${bow.toFixed(1)} blocks over 60)`);
+
+  // The ceiling on winding is NOT a slope number — an earlier version of this
+  // test asserted one that had been reasoned about rather than measured, and it
+  // was wrong by a factor of two. The real constraint is that the paved lane
+  // stays a lane through the bends, so measure that directly: walk the centre
+  // line and require paving around it, except where the road deliberately
+  // declines to build (the hand-built pads, the camp, worldgen's baked lanes).
+  const w = new World(20260725);
+  const r2 = roadsFor(w.gen);
+  const near = (x, z, p, rad) => Math.hypot(x - p.x, z - p.z) < rad;
+  const thin = [];
+  for (let d = 0; d < ARTERIALS; d++) {
+    for (let s = 90; s <= 900; s += 7) {
+      const c = r2.column(w.gen, d, s, 0), x = c[0], z = c[1];
+      for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) w.ensureChunk((x + dx) >> 4, (z + dz) >> 4);
+      const y = r2.surfaceY(w.gen, d, alongOf(d, x, z));
+      let n = 0;
+      for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+        for (const yy of [y - 1, y, y + 1]) if (PAVING.has(w.getBlock(x + dx, yy, z + dz))) { n++; break; }
+      }
+      if (n >= 8) continue;
+      if (near(x, z, MANOR_PAD, 40) || near(x, z, LEARN_MEADOW, 40) || near(x, z, FROST_CAMP, 82)
+          || w.gen.pathSet.has(x + ',' + z)) continue;      // declines to build here, by design
+      thin.push(`${d}@s${s} (${x},${z}) only ${n}/25 paved`);
+    }
+  }
+  assert.deepEqual(thin.slice(0, 6), [], `${thin.length} points where the bend thinned the lane`);
 });

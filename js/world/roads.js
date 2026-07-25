@@ -43,17 +43,25 @@ export const ROAD_START = 76;
 // up with distance — capped, and always a small fraction of `s` — so the eight
 // arterials leave spawn on their true bearings and can never swing far enough
 // to tangle with the neighbour 45° away.
-// How far the centre line is allowed to wander off the compass bearing, and how
-// fast that freedom grows with distance from spawn. These are bounded by a
-// geometric constraint, not taste: the paved corridor is defined as the band
-// |t - wander(s)| <= GRADE_HW measured PERPENDICULAR to the compass axis, so if
-// the centre line turns faster than about 0.6 blocks of lateral per block of
-// travel, that band stops approximating the road and the pavement pinches and
-// breaks up. Measured over eight arterials and 3000 blocks, these values bend at
-// most 0.50 and drift up to 49 blocks off the bearing — the road visibly winds
-// instead of arrowing at the horizon, and the surface stays continuous.
+// How far the centre line wanders off the compass bearing. THREE octaves, and
+// the shortest one is what actually makes the road read as winding.
+//
+// The measure that matters is not total drift, it is BOW WITHIN A SIGHTLINE:
+// over the ~60 blocks you can see before the fog takes the road, how far does it
+// bow away from the straight line joining the ends of that stretch? Two long
+// octaves gave 49 blocks of drift over 3000 travelled and still looked like an
+// arrow, because 49 blocks accumulated that gradually is 6 blocks of bow in
+// view — a 10% deviation the eye reads as straight. The third octave at
+// WANDER_L3 puts a kink inside every sightline and takes the bow to ~15.
+//
+// The ceiling is walkability, and it is checked rather than assumed: the paved
+// corridor is a band measured PERPENDICULAR to the compass axis, so where the
+// centre line runs at angle θ the lane narrows by cos θ. tests/unit/roads.test.mjs
+// flood-fills 300 blocks of every arterial with the player's own movement rule,
+// which is the real bound on how hard these may be pushed.
 const AMP_MAX = 70, AMP_GROW = 0.30;
-const WANDER_L1 = 300, WANDER_L2 = 110, WANDER_MIX = 0.70;
+const WANDER_L1 = 300, WANDER_L2 = 95, WANDER_L3 = 55;
+const WANDER_W1 = 0.45, WANDER_W2 = 0.30, WANDER_W3 = 0.25;
 
 // ---- The height profile ----------------------------------------------------
 // Anchors every ANCHOR_K blocks along the centre line hold the natural ground
@@ -98,7 +106,7 @@ const BRIDGE_BENT = 4;      // blocks between the piles carrying a bridge deck
 
 // Salts. Each road gets its own noise streams so two arterials never wander in
 // step, and the paving/edge rolls stay independent of the route.
-const S_WANDER1 = 5101, S_WANDER2 = 5209, S_EDGE_CORE = 5303, S_EDGE_VERGE = 5387;
+const S_WANDER1 = 5101, S_WANDER2 = 5209, S_WANDER3 = 5417, S_EDGE_CORE = 5303, S_EDGE_VERGE = 5387;
 // Wayside crofts: how often a site is OFFERED, how rarely it is taken, how far
 // back from the lane it sits, and how far out from the road a chunk has to look
 // to find one that reaches it. Rare on purpose — see _crofts.
@@ -147,7 +155,8 @@ export class Roads {
     if (amp > AMP_MAX) amp = AMP_MAX;
     const n1 = valueNoise2(seed + S_WANDER1 + dir * DIR_SALT, s / WANDER_L1, 0.5);
     const n2 = valueNoise2(seed + S_WANDER2 + dir * DIR_SALT, s / WANDER_L2, 3.5);
-    return amp * (WANDER_MIX * (2 * n1 - 1) + (1 - WANDER_MIX) * (2 * n2 - 1));
+    const n3 = valueNoise2(seed + S_WANDER3 + dir * DIR_SALT, s / WANDER_L3, 7.5);
+    return amp * (WANDER_W1 * (2 * n1 - 1) + WANDER_W2 * (2 * n2 - 1) + WANDER_W3 * (2 * n3 - 1));
   }
 
   // The lattice column `across` blocks to the side of the centre line at `s`.

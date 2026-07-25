@@ -62,15 +62,11 @@ try {
 
   // yaw 0 = north (-z). The town runs from the kirk/moot at z=-27 down to the
   // wide market mouth at z=+10; x spans -30..25.
-  await shot('town-plan',     -2, 108, -10, 0,             -1.45);
-  await shot('town-funnel',   -2,  68,   6, 0,             -0.05);
-  await shot('door-close',   -11,  67,  -8, Math.PI * 1.5,  0.02); // a two-block door up close
-  // Out on the arterials: a timber bridge and a wayside croft.
-  await shot('bridge',          4,  70, 1444, 0,            -0.18);
-  await shot('bridge-far',      4,  78, 1462, 0,            -0.35);
-  await shot('croft',        -566,  72,  -12, Math.PI * 1.5, -0.15);
-  await shot('croft-wide',   -560,  80,   -4, Math.PI * 1.3, -0.32);
-  await shot('road-wind',       0, 104,  520, 0,            -0.62); // the road winding away
+  // dir 6 runs north and swings from x=+18 to x=-12 over 200 blocks. Overhead at
+  // an altitude the harness actually meshes.
+  await shot('road-bend-a',   6, 104, -170, 0, -1.5);
+  await shot('road-bend-b',  -2, 104, -250, 0, -1.5);
+  await shot('road-bend-obl', 6,  92, -140, 0, -0.62);
   if (errors.length) { console.log('PAGE ERRORS:'); errors.forEach((e) => console.log(' •', e)); }
 } finally {
   await browser.close();
