@@ -29,7 +29,7 @@ import { CHUNK, WORLD_H, ringAt } from './worldgen.js';
 import { mulberry32, hash2 } from '../core/rng.js';
 import {
   ANCHOR, RANGE, anchorIn, regionRange, cachedLayout,
-  beginStamp, overlaps, put, putNode, randInt,
+  beginStamp, overlaps, put, putNode, putSpawn, randInt,
 } from './sites.js';
 
 const SALT = 553117;
@@ -76,6 +76,19 @@ const CRUSTS = [
   { top: B.snow, soil: B.gravel, core: B.deepslate, keel: B.deepslate, soilD: 2 },
 ];
 
+// What LIVES up here, by ring. The Mistgrazer is on every band on purpose: it is
+// the reason to fly up at all, rather than only things that try to stop you. An
+// archipelago populated purely by predators is an obstacle course, not a place.
+//
+// The Anvilhead is top-band only because it browses the meteoric seams — it
+// guards the payoff by standing on it. The Warden is one per high cluster.
+const FAUNA = [
+  null,
+  [['mistgrazer', 3], ['tetherling', 2]],
+  [['mistgrazer', 3], ['tetherling', 2], ['lancewing', 2]],
+  [['mistgrazer', 2], ['lancewing', 3], ['anvilhead', 2], ['tetherling', 1]],
+];
+
 // Ore on an island, by ring. Meteoric only exists in the top band: that is the
 // reason to get up there, and the reason a Riftwing is worth taming.
 const ORES = [
@@ -91,6 +104,10 @@ const ORES = [
 const BRIDGE_RISE = 7;
 const BRIDGE_MAX = 96;
 const BRIDGE_HW = 1;              // deck half-width: three planks across
+
+// How far clear of an island's building anything living is placed. Matches the
+// widest structure footprint (the hall) plus a pace.
+const BUILD_CLEAR = 11;
 
 // What stands on an island, by ring. The low shelf is somewhere people still
 // go, the middle is what is left of them, the top is older than either.
@@ -172,7 +189,7 @@ function buildIsland(gen, rx, rz) {
     }
 
     const salt = (gen.seed ^ Math.imul(cx, 0x9e3779b1) ^ Math.imul(cz, 0x85ebca6b) ^ SALT) >>> 0;
-    isles.push({ cx, cz, r, y, crownH, keelD, wob, keel, crust, ring, veins, salt });
+    isles.push({ cx, cz, r, y, crownH, keelD, wob, keel, crust, ring, veins, salt, beasts: [] });
     const reach = Math.ceil(r * 1.35);
     if (cx - reach < minX) minX = cx - reach;
     if (cx + reach > maxX) maxX = cx + reach;
@@ -217,9 +234,45 @@ function buildIsland(gen, rx, rz) {
   const big = isles.reduce((m, i) => (i.r > m.r ? i : m), isles[0]);
   for (const is of isles) {
     if (is !== big && rand() > 0.55) continue;
-    if (is.r < 11) continue;                                // no room for anything
+    // Big enough for a building AND for something to live outside it. Below
+    // this the build footprint plus its BUILD_CLEAR ring swallows the whole
+    // island and the fauna pass has nowhere left to stand — which showed up as
+    // five bare rocks in a hundred and sixty.
+    if (is.r < BUILD_CLEAR + 5) continue;
     is.build = SITE_KINDS[ring][Math.floor(rand() * SITE_KINDS[ring].length)];
     is.buildRot = Math.floor(rand() * 4);
+  }
+
+  // ---- what lives here -----------------------------------------------------
+  // Placed AFTER the buildings are decided, and outside their footprint. Done
+  // before, a Lancewing was left standing inside the hall on its own island —
+  // the spawn is a record rather than a block, so the mason simply built around
+  // it and nothing complained.
+  const table = FAUNA[ring];
+  let wsum = 0;
+  for (const [, wt] of table) wsum += wt;
+  for (const is of isles) {
+    const keepOut = is.build ? BUILD_CLEAR : 0;
+    const want = Math.max(1, Math.round(is.r / 7));
+    for (let i = 0; i < want; i++) {
+      let roll = rand() * wsum, type = table[0][0];
+      for (const [t, wt] of table) { roll -= wt; if (roll <= 0) { type = t; break; } }
+      // Somewhere on the turf, outside anything built, inside the rim.
+      const ba = rand() * Math.PI * 2;
+      const lo = keepOut / Math.max(1, is.r), hi = 0.72;
+      if (lo >= hi) continue;                       // a small island that is all building
+      const bd = lo + rand() * (hi - lo);
+      is.beasts.push({
+        type,
+        x: is.cx + Math.round(Math.cos(ba) * is.r * bd),
+        z: is.cz + Math.round(Math.sin(ba) * is.r * bd),
+      });
+    }
+    // One Warden to a high cluster, over the biggest rock — the thing at the top
+    // of the sky, and it should be a meeting rather than a patrol.
+    if (ring === 3 && is === isles[0] && rand() < 0.5) {
+      is.beasts.push({ type: 'skyveil_warden', x: is.cx + keepOut + 3, z: is.cz, boss: true });
+    }
   }
 
   return { x: ax, z: az, ring, isles, bridges, minX, maxX, minZ, maxZ, top, band };
@@ -445,6 +498,13 @@ function stampOne(gen, sky, cx, cz) {
     // Ore, stamped after the rock so a vein is never overwritten by its own island.
     for (const v of is.veins) {
       putNode({ type: v.type, x: v.x, y: v.y, z: v.z, ready: true });
+    }
+    // …and the fauna, standing on the island's actual domed surface rather than
+    // at its nominal height, so nothing is left hovering or buried in the crown.
+    for (const b of is.beasts) {
+      const sy = surfOf(is, b.x, b.z);
+      if (sy < 0) continue;
+      putSpawn({ id: `sky:${b.x},${sy},${b.z}`, type: b.type, x: b.x, y: sy + 1, z: b.z, fixed: true });
     }
   }
   // Bridges and buildings go down AFTER every rock in the cluster, so a deck cut

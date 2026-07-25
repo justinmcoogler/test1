@@ -10,7 +10,9 @@ import { BLOCKS, B } from '../js/world/blocks.js';
 import { RECIPES, minFuel } from '../js/game/crafting.js';
 import { NODE_TYPES, PROP_NODE_TYPES } from '../js/game/nodes.js';
 import { ENEMY_TYPES } from '../js/game/enemies.js';
-import { BIOMES } from '../js/world/worldgen.js';
+import { allIslands } from '../js/world/sky.js';
+import { allUndercities } from '../js/world/undercity.js';
+import { BIOMES, WorldGen } from '../js/world/worldgen.js';
 import { buildStarterStructures } from '../js/world/structures.js';
 import { QUESTS } from '../js/game/quests.js';
 import { NPC_DEFS } from '../js/game/npcs.js';
@@ -33,6 +35,20 @@ const spawnedMobs = new Set();
 for (const biome of Object.values(BIOMES)) for (const e of biome.enemies || []) spawnedMobs.add(e.type);
 for (const sp of struct.spawns) spawnedMobs.add(sp.type);
 for (const def of Object.values(ENEMY_TYPES)) for (const ph of def.phases || []) for (const s of ph.summon || []) spawnedMobs.add(s);
+// The sky archipelago and the dwarven holds carry their own creatures, and
+// neither is a biome or a hand-built structure — the audit would otherwise call
+// every one of them dead. Walked for real rather than declared: this asks the
+// generator where the islands and the holds are and reads what it put on them,
+// so a creature that stopped spawning is still caught.
+{
+  const gen = new WorldGen(20260725);
+  for (const cluster of allIslands(gen, 5)) {
+    for (const isle of cluster.isles) for (const b of isle.beasts || []) spawnedMobs.add(b.type);
+  }
+  for (const hold of allUndercities(gen, 3)) {
+    for (const sp of hold.spawns || []) spawnedMobs.add(sp.type);
+  }
+}
 
 // ── roots: items obtainable without crafting ────────────────────────────────
 const roots = new Set(['coin']);

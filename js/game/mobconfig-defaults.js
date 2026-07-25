@@ -157,4 +157,9 @@ export const MOB_DEFAULTS = {
   "ridgewing": { active: true },
   "stormjack": { active: true },
   "riftwing": { active: true },
+  "mistgrazer": { active: true },
+  "lancewing": { active: true },
+  "tetherling": { active: true },
+  "anvilhead": { active: true },
+  "skyveil_warden": { active: true },
 };

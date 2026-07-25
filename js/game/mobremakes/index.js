@@ -3,6 +3,7 @@
 // batch; a type present here overrides the flat legacy model in enemies.js.
 import { WARDENS } from './batch_wardens.js';
 import { DEEPKIN } from './batch_deepkin.js';
+import { SKYFAUNA } from './batch_skyfauna.js';
 import { MEADOW } from './batch_meadow.js';
 import { WETLANDS } from './batch_wetlands.js';
 import { HIGHLANDS } from './batch_highlands.js';
@@ -12,5 +13,5 @@ import { EMBER } from './batch_ember.js';
 import { FARM } from './batch_farm.js';
 
 export const MOB_REMAKES = {
-  ...WARDENS, ...DEEPKIN, ...MEADOW, ...WETLANDS, ...HIGHLANDS, ...DRYLANDS, ...FROST, ...EMBER, ...FARM,
+  ...WARDENS, ...DEEPKIN, ...SKYFAUNA, ...MEADOW, ...WETLANDS, ...HIGHLANDS, ...DRYLANDS, ...FROST, ...EMBER, ...FARM,
 };

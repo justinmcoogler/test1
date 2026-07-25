@@ -26,7 +26,10 @@ const result = await page.evaluate(async () => {
     // The mounts ship active on purpose: they are the only way up to the sky
     // archipelago, so a default world with them switched off has a whole
     // vertical axis in it that nothing can reach.
-    'ridgewing', 'stormjack', 'riftwing'];
+    'ridgewing', 'stormjack', 'riftwing',
+    // …and the sky fauna, for the same reason: an archipelago you can reach but
+    // which has nothing living on it is scenery.
+    'mistgrazer', 'lancewing', 'tetherling', 'anvilhead', 'skyveil_warden'];
   const CELL = 150, PAD = 20;
   const cols = 3;                                   // idle | walk | ambient
   const sheet = document.createElement('canvas');

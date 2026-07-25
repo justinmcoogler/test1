@@ -26,6 +26,7 @@ import { World, initSlabSet } from '../../js/world/world.js';
 import { WorldGen, CHUNK, WORLD_H, ringAt } from '../../js/world/worldgen.js';
 import { stampChunkStructures } from '../../js/world/structures.js';
 import { B, BLOCKS } from '../../js/world/blocks.js';
+import { ENEMY_TYPES } from '../../js/game/enemies.js';
 import { allIslands, skyAt, skySurfaceAt, highestIsland, SKY_REGION, SKY_HALF } from '../../js/world/sky.js';
 
 const SEEDS = [20260725, 7, 4242];
@@ -382,4 +383,62 @@ test('islands carry buildings, and they sit ON the surface', () => {
     for (let y = is.y; y < is.y + is.crownH + 9; y++) if (w.getBlock(is.cx, y, is.cz) !== B.air) stack++;
     assert.ok(stack >= 2, `${is.build} at ${is.cx},${is.cz} actually built something (${stack} blocks up the centre)`);
   }
+});
+
+// ---- what lives up there ---------------------------------------------------
+test('every island carries creatures, banded by ring', () => {
+  for (const seed of SEEDS) {
+    const gen = new WorldGen(seed);
+    const byRing = new Map();
+    let bare = 0, total = 0;
+    for (const s of allIslands(gen, 5)) {
+      for (const is of s.isles) {
+        total++;
+        if (!is.beasts || !is.beasts.length) { bare++; continue; }
+        for (const b of is.beasts) {
+          assert.ok(ENEMY_TYPES[b.type], `${b.type} is a real creature`);
+          (byRing.get(s.ring) || byRing.set(s.ring, new Set()).get(s.ring)).add(b.type);
+        }
+      }
+    }
+    assert.equal(bare, 0, `seed ${seed}: no island is lifeless (${bare} of ${total})`);
+
+    // The gate that matters: the Anvilhead browses the meteoric seams, so it must
+    // exist ONLY where the meteoric ore does. Meeting one on the low shelf would
+    // mean the payoff is reachable on the first mount.
+    for (const [ring, kinds] of byRing) {
+      if (ring < 3) assert.ok(!kinds.has('anvilhead'), `seed ${seed}: an Anvilhead on ring ${ring}`);
+      if (ring < 3) assert.ok(!kinds.has('skyveil_warden'), `seed ${seed}: a Warden on ring ${ring}`);
+    }
+    assert.ok(byRing.get(3)?.has('anvilhead'), `seed ${seed}: the top band has Anvilheads on it`);
+
+    // …and something worth flying up FOR, on every band. An archipelago of
+    // nothing but predators is an obstacle course.
+    for (const [ring, kinds] of byRing) {
+      assert.ok(kinds.has('mistgrazer') || kinds.has('tetherling'),
+        `seed ${seed}: ring ${ring} has life that is not hunting you`);
+    }
+  }
+});
+
+test('sky creatures stand on the island surface, not in the air or in the rock', () => {
+  const w = new World(20260725);
+  let checked = 0;
+  for (const s of allIslands(w.gen, 4)) {
+    for (const is of s.isles) {
+      if (checked >= 20) break;
+      for (let a = -2; a <= 2; a++) for (let b = -2; b <= 2; b++) w.ensureChunk((is.cx >> 4) + a, (is.cz >> 4) + b);
+      for (const bst of is.beasts) {
+        const sy = skySurfaceAt(w.gen, bst.x, bst.z);
+        if (sy < 0) continue;                       // outside the rim, not placed
+        checked++;
+        // solid under its feet, open where it stands and at head height
+        assert.notEqual(w.getBlock(bst.x, sy, bst.z), B.air, `${bst.type} at ${bst.x},${bst.z} stands on rock`);
+        assert.equal(w.getBlock(bst.x, sy + 1, bst.z), B.air, `${bst.type} is not buried in the crown`);
+        assert.equal(w.getBlock(bst.x, sy + 2, bst.z), B.air, `${bst.type} has headroom`);
+      }
+    }
+    if (checked >= 20) break;
+  }
+  assert.ok(checked >= 10, `a real sample of placed creatures (${checked})`);
 });

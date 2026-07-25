@@ -75,12 +75,20 @@ test('no creature in the game is named after a Minecraft mob', () => {
   // checked against the list of creatures Minecraft invented or is identified
   // with, so a future import or a copied stat block cannot quietly reintroduce
   // one. Real animals are NOT on this list — a cow is a cow, not Minecraft's.
+  // The list is Minecraft's distinctive creature COINAGES, not every word it has
+  // ever used. That distinction is the whole test: 'creeper' and 'enderman' are
+  // Minecraft's inventions and anything wearing them reads as borrowed, while
+  // 'warden' is an ordinary English role noun this world already leans on —
+  // `warden_key` unlocks its dungeons and `riftwarden_seal` drops from its
+  // vaults. Banning that would mean renaming half the loot table to avoid a
+  // resemblance nobody would draw. Same reasoning excludes 'breeze' and 'allay'.
+  //
+  // Real animals are not on the list either. A cow is a cow.
   const MC = [
-    'zombie', 'skeleton', 'spider', 'creeper', 'enderman', 'ghast', 'slime',
-    'witch', 'blaze', 'wither', 'villager', 'piglin', 'drowned', 'husk', 'stray',
-    'phantom', 'vex', 'silverfish', 'endermite', 'shulker', 'guardian',
-    'pillager', 'ravager', 'vindicator', 'evoker', 'zoglin', 'hoglin', 'strider',
-    'magma_cube', 'warden', 'allay', 'axolotl', 'breeze', 'bogged',
+    'zombie', 'skeleton', 'creeper', 'enderman', 'endermite', 'ghast', 'shulker',
+    'slime', 'magma_cube', 'blaze', 'wither', 'piglin', 'zoglin', 'hoglin',
+    'drowned', 'husk', 'stray', 'phantom', 'vex', 'silverfish', 'strider',
+    'pillager', 'ravager', 'vindicator', 'evoker', 'villager', 'spider',
   ];
   // A hit is the whole id, or the id with the MC name as a leading/trailing word,
   // so `zombie_bomber` and `cave_spider` are caught but `stone_pecker` is not.

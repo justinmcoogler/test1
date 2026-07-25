@@ -1072,6 +1072,131 @@ export const ENEMY_TYPES = {
       box(0, 0.3, -0.74, 0.22, 0.12, 0.6, [0.28, 0.32, 0.4]),
     ]),
   },
+  // ---- sky fauna -----------------------------------------------------------
+  // The life of the archipelago (js/world/sky.js). Ring-banded like the islands
+  // they live on, so what you meet up there tells you which band you reached.
+  //
+  // The Mistgrazer is the point of the whole set: something worth flying up FOR,
+  // rather than only things that try to stop you. An archipelago populated only
+  // by predators is an obstacle course.
+  mistgrazer: {
+    label: 'Mistgrazer', behavior: 'defensive', tier: 1,
+    hp: 34, atk: 6, acc: 52, evasion: 8, armor: 2, speed: 4, moveRange: 3,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 40, huntXp: 44, respawn: 180, aggroRange: 0,
+    headBoxes: [1],
+    drops: [
+      { item: 'boar_haunch', qty: [1, 2], chance: 0.8 },
+      { item: 'cured_hide', qty: [1, 2], chance: 0.6 },
+      { item: 'sinew', qty: [1, 2], chance: 0.4 },
+    ],
+    desc: 'A long-necked grazer that walks the island turf in small herds, cropping the moss and paying you no attention whatsoever. Its coat holds the cloud damp like a fleece.',
+    recommend: 'The reason it is worth flying up at all: hide and meat you cannot get on the ground, from something that will not fight you for it.',
+    model: M([
+      box(0, 0.5, 0, 0.7, 0.6, 1.15, [0.78, 0.76, 0.7]),
+      box(0, 1.15, 0.5, 0.3, 0.3, 0.4, [0.7, 0.68, 0.62]),
+      box(0, 0.95, 0.42, 0.24, 0.5, 0.24, [0.74, 0.72, 0.66]),
+      box(-0.24, 0, 0.4, 0.16, 0.5, 0.16, [0.6, 0.58, 0.54]),
+      box(0.24, 0, 0.4, 0.16, 0.5, 0.16, [0.6, 0.58, 0.54]),
+      box(-0.24, 0, -0.4, 0.16, 0.5, 0.16, [0.6, 0.58, 0.54]),
+      box(0.24, 0, -0.4, 0.16, 0.5, 0.16, [0.6, 0.58, 0.54]),
+    ]),
+  },
+
+  lancewing: {
+    label: 'Lancewing', behavior: 'aggressive', tier: 2,
+    hp: 42, atk: 13, acc: 74, evasion: 28, armor: 1, speed: 14, moveRange: 7,
+    abilities: ['sand_slash'], element: null, weak: [], resist: [],
+    xp: 110, huntXp: 60, respawn: 200, aggroRange: 12,
+    headBoxes: [1],
+    drops: [
+      { item: 'sinew', qty: [2, 3], chance: 0.6 },
+      { item: 'cured_hide', qty: [1, 1], chance: 0.3 },
+    ],
+    desc: 'A needle of a bird with its wings swept back, and it does not circle. It climbs until you lose it against the light, and then it is already coming down.',
+    recommend: 'It attacks from ABOVE. Keep something over your head — a bridge deck, an eave, an overhang — or keep looking up.',
+    model: M([
+      box(0, 0.3, 0, 0.3, 0.3, 1.0, [0.34, 0.36, 0.44]),
+      box(0, 0.42, 0.6, 0.22, 0.22, 0.3, [0.4, 0.42, 0.5]),
+      box(0, 0.4, 0.85, 0.1, 0.1, 0.3, [0.86, 0.8, 0.5]),      // the beak, the lance
+      box(-0.75, 0.36, -0.1, 1.2, 0.07, 0.4, [0.3, 0.32, 0.4]),
+      box(0.75, 0.36, -0.1, 1.2, 0.07, 0.4, [0.3, 0.32, 0.4]),
+      box(0, 0.3, -0.62, 0.12, 0.08, 0.45, [0.28, 0.3, 0.36]),
+    ]),
+  },
+
+  tetherling: {
+    label: 'Tetherling', behavior: 'defensive', tier: 0,
+    hp: 14, atk: 2, acc: 40, evasion: 6, armor: 0, speed: 2, moveRange: 2,
+    abilities: [], element: null, weak: ['fire'], resist: [],
+    xp: 16, huntXp: 12, respawn: 120, aggroRange: 0,
+    headBoxes: [0],
+    drops: [
+      { item: 'amber_resin', qty: [1, 2], chance: 0.5 },
+      { item: 'plant_fibre', qty: [1, 3], chance: 0.6 },
+    ],
+    desc: 'A gas-filled bladder the size of a barrel, moored to the rock by a tangle of root-like tethers. It drifts on the slack and does nothing else at all.',
+    recommend: 'Harmless. It is what makes the archipelago feel inhabited rather than staged — leave it be, or cut it down for resin.',
+    model: M([
+      box(0, 0.9, 0, 0.7, 0.75, 0.7, [0.7, 0.66, 0.5]),
+      box(0, 0.4, 0, 0.18, 0.55, 0.18, [0.46, 0.4, 0.3]),
+      box(-0.2, 0.1, 0.2, 0.07, 0.4, 0.07, [0.42, 0.36, 0.28]),
+      box(0.2, 0.1, -0.2, 0.07, 0.4, 0.07, [0.42, 0.36, 0.28]),
+      box(0, 1.35, 0, 0.3, 0.2, 0.3, [0.82, 0.78, 0.6]),
+    ]),
+  },
+
+  anvilhead: {
+    label: 'Anvilhead', behavior: 'defensive', tier: 3,
+    hp: 96, atk: 18, acc: 62, evasion: 4, armor: 8, speed: 4, moveRange: 3,
+    abilities: ['boulder_swat'], element: null, weak: [], resist: ['nature'],
+    xp: 240, huntXp: 180, respawn: 300, aggroRange: 5,
+    headBoxes: [1],
+    drops: [
+      { item: 'meteoric_ore', qty: [1, 2], chance: 0.55 },
+      { item: 'cured_hide', qty: [2, 3], chance: 0.5 },
+      { item: 'relic_fragment', qty: [1, 1], chance: 0.25 },
+    ],
+    desc: 'A slab-headed grazer that browses the meteoric seams and has the iron in its hide to show for it. It will not start anything. It will finish it.',
+    recommend: 'It guards the payoff by standing on it. Heavily armoured and slow — you can simply leave, and on a first visit you should.',
+    model: M([
+      box(0, 0.55, 0, 0.95, 0.7, 1.3, [0.4, 0.4, 0.44]),
+      box(0, 0.85, 0.72, 0.75, 0.55, 0.5, [0.46, 0.46, 0.5]),   // the anvil head
+      box(0, 1.15, 0.72, 0.85, 0.16, 0.3, [0.56, 0.54, 0.5]),   // its brow plate
+      box(-0.34, 0, 0.45, 0.24, 0.55, 0.24, [0.36, 0.36, 0.4]),
+      box(0.34, 0, 0.45, 0.24, 0.55, 0.24, [0.36, 0.36, 0.4]),
+      box(-0.34, 0, -0.45, 0.24, 0.55, 0.24, [0.36, 0.36, 0.4]),
+      box(0.34, 0, -0.45, 0.24, 0.55, 0.24, [0.36, 0.36, 0.4]),
+      box(0, 1.0, -0.2, 0.3, 0.22, 0.3, [0.62, 0.44, 0.2]),     // meteoric crust on its back
+    ]),
+  },
+
+  skyveil_warden: {
+    label: 'Skyveil Warden', behavior: 'aggressive', tier: 3, boss: true,
+    hp: 220, atk: 24, acc: 78, evasion: 18, armor: 6, speed: 11, moveRange: 6,
+    abilities: ['shard_spit', 'void_gaze'], element: null, weak: [], resist: ['nature'],
+    xp: 900, respawn: 900, aggroRange: 14,
+    headBoxes: [1],
+    drops: [
+      { item: 'flawless_veilcrystal', qty: [1, 1], chance: 0.6 },
+      { item: 'meteoric_ore', qty: [2, 4], chance: 0.7 },
+      { item: 'relic_fragment', qty: [2, 3], chance: 0.6 },
+    ],
+    desc: 'It was set here to watch the high islands and it has not stopped. Six wings, no face worth the name, and a ring of veilcrystal turning slowly where its head should be.',
+    recommend: 'The thing at the top of the sky. Do not meet it on a Ridgewing — you cannot climb away from it, and down is a long way.',
+    model: M([
+      box(0, 0.7, 0, 0.6, 0.9, 1.1, [0.26, 0.3, 0.4]),
+      box(0, 1.35, 0.35, 0.4, 0.4, 0.4, [0.3, 0.34, 0.44]),
+      box(0, 1.55, 0.35, 0.62, 0.12, 0.62, [0.6, 0.86, 0.9]),   // the turning ring
+      box(-0.95, 1.0, 0.25, 1.4, 0.08, 0.5, [0.24, 0.28, 0.38]),
+      box(0.95, 1.0, 0.25, 1.4, 0.08, 0.5, [0.24, 0.28, 0.38]),
+      box(-0.85, 0.75, -0.25, 1.2, 0.08, 0.45, [0.24, 0.28, 0.38]),
+      box(0.85, 0.75, -0.25, 1.2, 0.08, 0.45, [0.24, 0.28, 0.38]),
+      box(-0.7, 0.5, -0.6, 1.0, 0.08, 0.4, [0.24, 0.28, 0.38]),
+      box(0.7, 0.5, -0.6, 1.0, 0.08, 0.4, [0.24, 0.28, 0.38]),
+      box(0, 0.6, -0.8, 0.2, 0.16, 0.6, [0.55, 0.82, 0.86]),
+    ]),
+  },
 };
 
 // ---- Minecraft-proportioned remodel ----------------------------------------
@@ -1372,6 +1497,9 @@ const SKINS = {
   slagwalker: 'skin_stone', ashen_penitent: 'skin_stone', shardcaster: 'skin_glow',
   // mounts
   ridgewing: 'skin_hide', stormjack: 'skin_hide', riftwing: 'skin_glow',
+  // sky fauna
+  mistgrazer: 'skin_fur', lancewing: 'skin_hide', tetherling: 'skin_hide',
+  anvilhead: 'skin_stone', skyveil_warden: 'skin_glow',
   hookleg: 'skin_scales', seepmass: 'skin_stone',
   stone_golem: 'skin_stone', veil_crawler: 'skin_scales', gaze_orb: 'skin_glow',
 };
@@ -1389,6 +1517,7 @@ const HEAD_BOX = {
   // the deepkin — slagwalker's head is box 2 (torso, seam, head)
   slagwalker: 2, ashen_penitent: 1, shardcaster: 1, hookleg: 1, seepmass: 1,
   ridgewing: 1, stormjack: 1, riftwing: 1,
+  mistgrazer: 1, lancewing: 1, tetherling: 0, anvilhead: 1, skyveil_warden: 1,
 };
 for (const [type, def] of Object.entries(ENEMY_TYPES)) {
   def.skin = SKINS[type] || 'skin_hide';
