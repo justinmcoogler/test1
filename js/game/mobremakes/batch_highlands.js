@@ -186,49 +186,6 @@ export const HIGHLANDS = {
   },
 
   // --- cave_slime: translucent slime, embedded gem glints (lumberer) ---------
-  cave_slime: {
-    texW: 64, texH: 64, rig: 'lumberer',
-    paint(ctx, P) {
-      const gel = '#3a7a6a', gdk = '#255248', ghi = '#7fd6c0', gemc = '#8fe0ff', gemp = '#ff9fd0';
-      // dome face — translucent, eyes, gem glints inside
-      P.vgrad(0, 0, 20, 16, ghi, gdk, 0.05);
-      P.spots(0, 0, 20, 16, 16, '#1f463c');
-      P.eye(5, 7, '#08201a', '#eafff8'); P.eye(13, 7, '#08201a', '#eafff8');
-      P.px(9, 11, gemc); P.px(15, 4, gemp);
-      P.outline(0, 0, 20, 16, '#5aa892');
-      // dome sides
-      P.vgrad(22, 0, 18, 14, gel, gdk, 0.06);
-      P.spots(22, 0, 18, 14, 14, ghi);
-      P.px(28, 6, gemc); P.px(34, 9, '#ffe08f');
-      // base blob — internal bubbles + embedded gems
-      P.vgrad(0, 18, 28, 20, gel, '#16342c', 0.06);
-      P.spots(0, 18, 28, 20, 26, ghi);
-      P.px(8, 30, gemc); P.px(18, 26, gemp); P.px(24, 34, '#ffe08f');
-      P.outline(0, 18, 28, 20, '#5aa892');
-      // crystal spur
-      P.vgrad(42, 0, 10, 14, '#bfeff0', '#4a9a8a', 0.06); P.strokes(42, 0, 10, 14, 6, '#eafffb', 4);
-      // gem clusters
-      P.glow(42, 18, 8, 8, gemc, '#2a6a8a');
-      P.glow(52, 18, 8, 8, gemp, '#7a3a5a');
-      // drips
-      P.vgrad(42, 28, 10, 10, ghi, gdk, 0.06);
-    },
-    parts: [
-      { id: 'body', pivot: [0, 0.3125, 0], boxes: [
-        { from: [-0.375, 0, -0.3125], size: [0.6875, 0.4375, 0.625], uv: [0, 18, 28, 20] },     // base blob
-        { from: [-0.25, 0, 0.25], size: [0.125, 0.125, 0.0625], uv: [42, 28, 10, 10] },     // drips
-        { from: [0.1875, 0, 0.25], size: [0.0625, 0.125, 0.0625], uv: [42, 28, 10, 10] },
-        { from: [-0.125, 0.125, 0.125], size: [0.125, 0.125, 0.0625], uv: [42, 18, 8, 8] },    // front gem
-      ] },
-      { id: 'head', parent: 'body', pivot: [0, 0.4375, 0.125], boxes: [
-        { from: [-0.25, 0.4375, -0.25], size: [0.5, 0.3125, 0.4375], uv: { all: [22, 0, 18, 14], south: [0, 0, 20, 16] } }, // dome
-        { from: [-0.0625, 0.6875, -0.0625], size: [0.125, 0.1875, 0.125], uv: [42, 0, 10, 14] },  // crystal spur
-        { from: [0.125, 0.5, 0.125], size: [0.0625, 0.0625, 0.0625], uv: [52, 18, 8, 8] },     // embedded gems
-        { from: [-0.1875, 0.5, 0.0625], size: [0.0625, 0.0625, 0.0625], uv: [52, 18, 8, 8] },
-      ] },
-    ],
-  },
-
   // --- stone_golem: granite slab body, moss seams, faint rune glow (biped) ---
   stone_golem: {
     texW: 64, texH: 64, rig: 'biped',

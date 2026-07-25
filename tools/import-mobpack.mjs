@@ -103,9 +103,21 @@ const fallbackModel = () => [
   box(0, 0.55, 0.35, 0.42, 0.42, 0.42, [0.58, 0.55, 0.6]),
 ];
 
+// Titles that slugify to a Minecraft creature. The pack is licensed and fine to
+// ship, but three of its models are straight Minecraft mobs by name, and the
+// whole point of the de-Minecraft pass is that nothing in the library reads as
+// borrowed. They are refused at import rather than deleted afterwards, so
+// re-running this importer cannot quietly put them back.
+//
+// Matched on the SLUG, so "Zombie Bomber" → zombie_bomber is caught by the
+// prefix rule below rather than needing its own entry.
+const DENY = ['zombie', 'skeleton', 'creeper', 'enderman', 'ghast', 'slime', 'blaze', 'wither'];
+const denied = (slug) => DENY.some((d) => slug === d || slug.startsWith(`${d}_`) || slug.endsWith(`_${d}`));
+
 function readRows() {
   const catalog = parseCSV(fs.readFileSync(path.join(PACK, 'catalog.csv'), 'utf8'));
-  return catalog.filter((r) => (r.local_path || '').startsWith('models/open_standard/'));
+  return catalog.filter((r) => (r.local_path || '').startsWith('models/open_standard/'))
+    .filter((r) => !denied(slugify(r.title)));
 }
 
 (async () => {

@@ -4,15 +4,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ENEMY_TYPES } from '../../js/game/enemies.js';
+import { IMPORTED_TYPES } from '../../js/game/mobs-imported.js';
 import { BIOMES } from '../../js/world/worldgen.js';
 import { ITEMS } from '../../js/game/items.js';
 import { ABILITIES } from '../../js/game/combat.js';
 
 // The batch of fantasy mobs added to broaden the roster beyond real animals.
+// cave_slime and skeletal_archer were cut in the de-Minecraft pass; seepmass and
+// shardcaster hold their exact slots (js/game/mobremakes/batch_deepkin.js).
 const NEW_MOBS = [
   'pixie', 'bog_ooze', 'scrap_goblin',
-  'will_o_wisp', 'bone_hound', 'cave_slime',
-  'frost_elemental', 'grave_wight', 'skeletal_archer',
+  'will_o_wisp', 'bone_hound', 'seepmass',
+  'frost_elemental', 'grave_wight', 'shardcaster',
   'stone_golem', 'veil_crawler', 'gaze_orb',
 ];
 
@@ -65,3 +68,34 @@ for (const id of NEW_MOBS) {
     assert.ok(spawnedTypes.has(id), `${id} is not spawned by any biome`);
   });
 }
+
+test('no creature in the game is named after a Minecraft mob', () => {
+  // The de-Minecraft pass (task #74). This is the assertion that keeps it done:
+  // the roster, the licensed import pack and the shipped-active defaults are all
+  // checked against the list of creatures Minecraft invented or is identified
+  // with, so a future import or a copied stat block cannot quietly reintroduce
+  // one. Real animals are NOT on this list — a cow is a cow, not Minecraft's.
+  const MC = [
+    'zombie', 'skeleton', 'spider', 'creeper', 'enderman', 'ghast', 'slime',
+    'witch', 'blaze', 'wither', 'villager', 'piglin', 'drowned', 'husk', 'stray',
+    'phantom', 'vex', 'silverfish', 'endermite', 'shulker', 'guardian',
+    'pillager', 'ravager', 'vindicator', 'evoker', 'zoglin', 'hoglin', 'strider',
+    'magma_cube', 'warden', 'allay', 'axolotl', 'breeze', 'bogged',
+  ];
+  // A hit is the whole id, or the id with the MC name as a leading/trailing word,
+  // so `zombie_bomber` and `cave_spider` are caught but `stone_pecker` is not.
+  const hits = (ids) => ids.filter((id) =>
+    MC.some((m) => id === m || id.startsWith(`${m}_`) || id.endsWith(`_${m}`)));
+
+  const roster = hits(Object.keys(ENEMY_TYPES));
+  assert.deepEqual(roster, [], 'ENEMY_TYPES still carries Minecraft creatures');
+
+  const imported = hits(Object.keys(IMPORTED_TYPES));
+  assert.deepEqual(imported, [], 'the licensed import pack still carries Minecraft creatures');
+
+  // …and the replacements really are there holding the slots, so this test
+  // cannot pass by the roster simply being empty.
+  for (const id of ['slagwalker', 'ashen_penitent', 'shardcaster', 'hookleg', 'seepmass']) {
+    assert.ok(ENEMY_TYPES[id], `${id} should hold the slot of the mob it replaced`);
+  }
+});

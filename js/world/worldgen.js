@@ -96,7 +96,7 @@ export const BIOMES = {
     // Wild grain stands are where farming starts — the thin plot is the only
     // soil tier a level-1 farmer can work, and the meadow is full of it.
     nodes: [{ type: 'herb_patch', d: 0.004 }, { type: 'berry_bush', d: 0.003 }, { type: 'farm_plot', d: 0.002 }, { type: 'deposit_saltpeter', d: 0.0016 }],
-    enemies: [{ type: 'mudback_boar', d: 0.0022 }, { type: 'thicket_sprite', d: 0.0015 }, { type: 'duskwing', d: 0.0014 }, { type: 'pixie', d: 0.0016 }, { type: 'meadow_stag', d: 0.0016 }, { type: 'cow', d: 0.0022 }, { type: 'pig', d: 0.002 }, { type: 'sheep', d: 0.0022 }, { type: 'chicken', d: 0.0024, pack: [2, 3] }, { type: 'horse', d: 0.0016 }, { type: 'rabbit', d: 0.0026 }, { type: 'wolf', d: 0.0012, pack: [2, 3], ring: 1 }, { type: 'rat', d: 0.0022, pack: [1, 2], ring: 1 }, { type: 'bob', d: 0.0009 }, { type: 'goblin', d: 0.0013, pack: [1, 3], ring: 1 }, { type: 'zombie', d: 0.0016, pack: [1, 2], ring: 1 }, { type: 'spider', d: 0.0014, ring: 1 }, { type: 'skeleton', d: 0.0013, ring: 1 }],
+    enemies: [{ type: 'mudback_boar', d: 0.0022 }, { type: 'thicket_sprite', d: 0.0015 }, { type: 'duskwing', d: 0.0014 }, { type: 'pixie', d: 0.0016 }, { type: 'meadow_stag', d: 0.0016 }, { type: 'cow', d: 0.0022 }, { type: 'pig', d: 0.002 }, { type: 'sheep', d: 0.0022 }, { type: 'chicken', d: 0.0024, pack: [2, 3] }, { type: 'horse', d: 0.0016 }, { type: 'rabbit', d: 0.0026 }, { type: 'frostmaw_wolf', d: 0.0012, pack: [2, 3], ring: 1 }, { type: 'gloomrat', d: 0.0022, pack: [1, 2] }, { type: 'practice_dummy', d: 0.0009 }, { type: 'scrap_goblin', d: 0.0013, pack: [1, 3], ring: 1 }, { type: 'slagwalker', d: 0.0016, pack: [1, 2], ring: 1 }, { type: 'hookleg', d: 0.0014, ring: 1 }, { type: 'ashen_penitent', d: 0.0013, ring: 1 }],
   },
   ancient_forest: {
     label: 'Temperate Forest', ring: 0, climate: 'temperate deciduous forest',
@@ -108,7 +108,7 @@ export const BIOMES = {
     trees: grove(['birch', 0.02], ['oak', 0.018], ['ash', 0.012], ['pine', 0.008]),
     plants: [{ block: 'tall_grass', d: 0.03 }, { block: 'mushroom_cap', d: 0.01 }],
     nodes: [{ type: 'herb_patch', d: 0.006 }, { type: 'berry_bush', d: 0.004 }, { type: 'farm_plot', d: 0.0015 }],
-    enemies: [{ type: 'thicket_sprite', d: 0.003 }, { type: 'moss_lurker', d: 0.0018 }, { type: 'duskwing', d: 0.0018 }, { type: 'pixie', d: 0.0018 }, { type: 'meadow_stag', d: 0.0014 }, { type: 'cow', d: 0.0018 }, { type: 'pig', d: 0.0018 }, { type: 'sheep', d: 0.0018 }, { type: 'chicken', d: 0.002, pack: [2, 3] }, { type: 'horse', d: 0.0014 }, { type: 'rabbit', d: 0.0024 }, { type: 'wolf', d: 0.0016, pack: [2, 4], ring: 1 }, { type: 'rat', d: 0.0026, pack: [1, 3], ring: 1 }, { type: 'goblin', d: 0.0017, pack: [2, 3], ring: 1 }, { type: 'zombie', d: 0.002, pack: [1, 3], ring: 1 }, { type: 'spider', d: 0.0018, pack: [1, 2], ring: 1 }, { type: 'skeleton', d: 0.0017, pack: [1, 2], ring: 1 }],
+    enemies: [{ type: 'thicket_sprite', d: 0.003 }, { type: 'moss_lurker', d: 0.0018 }, { type: 'duskwing', d: 0.0018 }, { type: 'pixie', d: 0.0018 }, { type: 'meadow_stag', d: 0.0014 }, { type: 'cow', d: 0.0018 }, { type: 'pig', d: 0.0018 }, { type: 'sheep', d: 0.0018 }, { type: 'chicken', d: 0.002, pack: [2, 3] }, { type: 'horse', d: 0.0014 }, { type: 'rabbit', d: 0.0024 }, { type: 'frostmaw_wolf', d: 0.0016, pack: [2, 4], ring: 1 }, { type: 'gloomrat', d: 0.0026, pack: [1, 3] }, { type: 'scrap_goblin', d: 0.0017, pack: [2, 3], ring: 1 }, { type: 'slagwalker', d: 0.002, pack: [1, 3], ring: 1 }, { type: 'hookleg', d: 0.0018, pack: [1, 2], ring: 1 }, { type: 'ashen_penitent', d: 0.0017, pack: [1, 2], ring: 1 }],
   },
   marshland: {
     label: 'Marshland', ring: 0, climate: 'flooded grassland / marsh',
@@ -168,7 +168,7 @@ export const BIOMES = {
     trees: grove(['pine', 0.006], ['ash', 0.006], ['hickory', 0.004]),
     plants: [{ block: 'tall_grass', d: 0.008 }],
     nodes: [{ type: 'ore_iron', d: 0.005 }, { type: 'ore_copper', d: 0.004 }, { type: 'ore_tin', d: 0.004 }, { type: 'deposit_coal', d: 0.003 }, { type: 'dig_trench', d: 0.002 }],
-    enemies: [{ type: 'craghorn_ram', d: 0.0025 }, { type: 'stone_pecker', d: 0.002 }, { type: 'scrap_goblin', d: 0.002, ring: 1 }, { type: 'cave_slime', d: 0.0016, ring: 1 }, { type: 'skeletal_archer', d: 0.0014, ring: 2 }, { type: 'stone_golem', d: 0.0009, ring: 2 }, { type: 'crag_bat', d: 0.0018, pack: [2, 3], ring: 1 }, { type: 'goat', d: 0.0022 }],
+    enemies: [{ type: 'craghorn_ram', d: 0.0025 }, { type: 'stone_pecker', d: 0.002 }, { type: 'scrap_goblin', d: 0.002, ring: 1 }, { type: 'seepmass', d: 0.0016, ring: 1 }, { type: 'shardcaster', d: 0.0014, ring: 2 }, { type: 'stone_golem', d: 0.0009, ring: 2 }, { type: 'crag_bat', d: 0.0018, pack: [2, 3], ring: 1 }, { type: 'goat', d: 0.0022 }],
   },
   savanna: {
     label: 'Savanna', ring: 1, climate: 'tropical grassland / savanna',
@@ -216,7 +216,7 @@ export const BIOMES = {
     trees: grove(['yew', 0.004], ['ash', 0.003]),
     plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'wildflower', d: 0.025 }],
     nodes: [{ type: 'dig_trench', d: 0.0035 }, { type: 'herb_patch', d: 0.005 }, { type: 'deposit_saltpeter', d: 0.002 }, { type: 'farm_loam', d: 0.002 }],
-    enemies: [{ type: 'meadow_stag', d: 0.0022 }, { type: 'rabbit', d: 0.0024 }, { type: 'goat', d: 0.0022 }, { type: 'craghorn_ram', d: 0.0018, ring: 1 }, { type: 'stone_pecker', d: 0.0016, ring: 1 }, { type: 'scrap_goblin', d: 0.0016, ring: 1 }, { type: 'skeletal_archer', d: 0.0016, ring: 2 }, { type: 'grave_wight', d: 0.0014, ring: 2 }],
+    enemies: [{ type: 'meadow_stag', d: 0.0022 }, { type: 'rabbit', d: 0.0024 }, { type: 'goat', d: 0.0022 }, { type: 'craghorn_ram', d: 0.0018, ring: 1 }, { type: 'stone_pecker', d: 0.0016, ring: 1 }, { type: 'scrap_goblin', d: 0.0016, ring: 1 }, { type: 'shardcaster', d: 0.0016, ring: 2 }, { type: 'grave_wight', d: 0.0014, ring: 2 }],
   },
   alpine_meadow: {
     label: 'Alpine Meadow', ring: 2, climate: 'montane grassland above the treeline',
@@ -236,7 +236,7 @@ export const BIOMES = {
     trees: grove(['teak', 0.0025]),
     plants: [{ block: 'cactus_flesh', d: 0.006 }],
     nodes: [{ type: 'ore_lead', d: 0.003 }, { type: 'ore_silver', d: 0.003 }, { type: 'deposit_sulfur', d: 0.003 }, { type: 'dig_trench', d: 0.004 }, { type: 'dig_vault', d: 0.0012 }],
-    enemies: [{ type: 'dune_stalker', d: 0.003, ring: 1 }, { type: 'sunscale_serpent', d: 0.002, ring: 1 }, { type: 'skeletal_archer', d: 0.0018, ring: 2 }, { type: 'dust_scarab', d: 0.003, ring: 1 }],
+    enemies: [{ type: 'dune_stalker', d: 0.003, ring: 1 }, { type: 'sunscale_serpent', d: 0.002, ring: 1 }, { type: 'shardcaster', d: 0.0018, ring: 2 }, { type: 'dust_scarab', d: 0.003, ring: 1 }],
   },
   monsoon_forest: {
     label: 'Monsoon Forest', ring: 2, climate: 'tropical dry / seasonal forest',
@@ -258,7 +258,7 @@ export const BIOMES = {
     label: 'Crystal Caverns', ring: 2, climate: 'subterranean',
     surface: 'stone', filler: 'stone',
     trees: [], plants: [], nodes: [],
-    enemies: [{ type: 'cave_slime', d: 0.004, ring: 1 }, { type: 'gaze_orb', d: 0.0016, ring: 3 }, { type: 'crag_bat', d: 0.002, pack: [2, 4], ring: 1 }],
+    enemies: [{ type: 'seepmass', d: 0.004, ring: 1 }, { type: 'gaze_orb', d: 0.0016, ring: 3 }, { type: 'crag_bat', d: 0.002, pack: [2, 4], ring: 1 }],
   },
 
   // ---- ring 3: the far reaches --------------------------------------------
@@ -270,7 +270,7 @@ export const BIOMES = {
     trees: grove(['yew', 0.028], ['walnut', 0.012], ['maple', 0.01], ['hickory', 0.008], ['ebony', 0.004]),
     plants: [{ block: 'mushroom_cap', d: 0.035 }, { block: 'tall_grass', d: 0.02 }],
     nodes: [{ type: 'herb_patch', d: 0.01 }, { type: 'farm_rich', d: 0.0015 }, { type: 'dig_vault', d: 0.0012 }],
-    enemies: [{ type: 'moss_lurker', d: 0.003, ring: 1 }, { type: 'thicket_sprite', d: 0.002 }, { type: 'duskwing', d: 0.0016 }, { type: 'wolf', d: 0.0018, pack: [2, 4], ring: 2 }, { type: 'spider', d: 0.0018, pack: [1, 2], ring: 2 }, { type: 'grave_wight', d: 0.0016, ring: 2 }, { type: 'blight_horror', d: 0.0014, ring: 3 }, { type: 'hollow_watcher', d: 0.0012, ring: 3 }, { type: 'veil_crawler', d: 0.0014, ring: 3 }],
+    enemies: [{ type: 'moss_lurker', d: 0.003, ring: 1 }, { type: 'thicket_sprite', d: 0.002 }, { type: 'duskwing', d: 0.0016 }, { type: 'frostmaw_wolf', d: 0.0018, pack: [2, 4], ring: 2 }, { type: 'hookleg', d: 0.0018, pack: [1, 2], ring: 2 }, { type: 'grave_wight', d: 0.0016, ring: 2 }, { type: 'blight_horror', d: 0.0014, ring: 3 }, { type: 'hollow_watcher', d: 0.0012, ring: 3 }, { type: 'veil_crawler', d: 0.0014, ring: 3 }],
   },
   tropical_forest: {
     label: 'Tropical Rainforest', ring: 3, climate: 'hot humid rainforest',

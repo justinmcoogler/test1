@@ -48,10 +48,10 @@ const ORE_DEEPEST = ['ore_platinum', 'ore_meteoric'];
 // Who lives down there, by ring. Every id already spawns elsewhere in the world,
 // so adding mineshafts cannot change what the reachability audit sees.
 const MOBS = [
-  ['gloomrat', 'cave_slime', 'crag_bat'],
-  ['gloomrat', 'cave_slime', 'crag_bat', 'spider', 'skeleton'],
-  ['skeleton', 'skeletal_archer', 'scrap_goblin', 'cave_slime', 'crag_bat'],
-  ['skeletal_archer', 'gaze_orb', 'veil_crawler', 'cave_slime'],
+  ['gloomrat', 'seepmass', 'crag_bat'],
+  ['gloomrat', 'seepmass', 'crag_bat', 'hookleg', 'ashen_penitent'],
+  ['ashen_penitent', 'shardcaster', 'scrap_goblin', 'seepmass', 'crag_bat'],
+  ['shardcaster', 'gaze_orb', 'veil_crawler', 'seepmass'],
 ];
 
 // The pay chest at the end of the deepest branch, by ring.

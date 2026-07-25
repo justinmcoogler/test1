@@ -20,7 +20,7 @@ const out = await page.evaluate(async () => {
   const { evaluatePose } = await import('./js/game/mobloader.js');
   const { MOB_REMAKES } = await import('./js/game/mobremakes/index.js');
   const CASES = [['cow', 'graze', 1.4], ['sheep', 'graze', 1.4], ['horse', 'graze', 1.4],
-    ['chicken', 'peck', 0.16], ['rabbit', 'sniff', 0.2], ['wolf', 'howl', 1.4]];
+    ['chicken', 'peck', 0.16], ['rabbit', 'sniff', 0.2], ['frostmaw_wolf', 'howl', 1.4]];
   const res = [];
   for (const [type, clip, t] of CASES) {
     const m = r.modelCache.get(type);

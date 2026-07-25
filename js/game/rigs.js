@@ -9,7 +9,7 @@ const RIGS = {
   practice_dummy: 'sway',
   mudback_boar: 'quadruped', craghorn_ram: 'quadruped',
   dune_stalker: 'quadruped', frostmaw_wolf: 'quadruped', rimehowl_alpha: 'quadruped',
-  gloomrat: 'scamper', root_creeper: 'scamper', sunscale_serpent: 'slither',
+  gloomrat: 'scamper', bindweed: 'scamper', sunscale_serpent: 'slither',
   thicket_sprite: 'floater', marsh_wisp: 'floater', rime_shade: 'floater',
   hollow_watcher: 'floater', duskwing: 'floater',
   cinder_imp: 'hopper', rootling: 'hopper',

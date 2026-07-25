@@ -42,19 +42,19 @@ const BOSS_H = 6;
 const THEMES = [
   {
     key: 'crypt', wall: 'stone_brick', floor: 'mossy_cobble', trim: 'bone_block', light: 'torch_post',
-    fill: ['gloomrat', 'skeleton', 'zombie', 'rat'], mini: 'bone_hound', boss: 'grave_wight', dig: 'dig_site',
+    fill: ['gloomrat', 'ashen_penitent', 'slagwalker', 'crag_bat'], mini: 'bone_hound', boss: 'grave_wight', dig: 'dig_site',
     bossLoot: [['coin', 150], ['relic_fragment', 2], ['old_coin', 6], ['uncut_amethyst', 1]],
     keyLoot: [['coin', 40], ['torch_item', 4], ['pottery_shard', 3]],
   },
   {
     key: 'ruin', wall: 'ruin_brick', floor: 'mossy_ruin', trim: 'rootstone', light: 'torch_post',
-    fill: ['moss_lurker', 'cave_slime', 'spider', 'bone_hound'], mini: 'skeletal_archer', boss: 'stone_golem', dig: 'dig_trench',
+    fill: ['moss_lurker', 'seepmass', 'hookleg', 'bone_hound'], mini: 'shardcaster', boss: 'stone_golem', dig: 'dig_trench',
     bossLoot: [['coin', 320], ['relic_fragment', 3], ['uncut_garnet', 1], ['veilcrystal', 1], ['ironbud_charm', 1]],
     keyLoot: [['coin', 90], ['iron_bar', 2], ['bone_needle', 2]],
   },
   {
     key: 'fortress', wall: 'stone_brick', floor: 'andesite', trim: 'iron_block', light: 'sea_lantern',
-    fill: ['skeletal_archer', 'scrap_goblin', 'grave_wight', 'frost_elemental'], mini: 'hollow_watcher', boss: 'blight_horror', dig: 'dig_bog',
+    fill: ['shardcaster', 'scrap_goblin', 'grave_wight', 'frost_elemental'], mini: 'hollow_watcher', boss: 'blight_horror', dig: 'dig_bog',
     bossLoot: [['coin', 640], ['relic_fragment', 4], ['uncut_sapphire', 1], ['veilcrystal', 2], ['keen_charm', 1]],
     keyLoot: [['coin', 200], ['silver_bar', 2], ['amber_resin', 2]],
   },

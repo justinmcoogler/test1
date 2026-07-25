@@ -39,7 +39,11 @@ test('every imported type is a well-formed enemy def with real-item drops', () =
 // Ids the licensed pack ships that a hand-authored native also claims. The
 // native wins — the pack spreads first in enemies.js precisely so it cannot
 // shadow a curated creature. Add an id here when a native takes over a pack id.
-const NATIVE_OVERRIDES = new Set(['zombie', 'skeleton']);
+//
+// Empty since the de-Minecraft pass: zombie and skeleton were the only two, and
+// both are now refused at import (see the DENY list in tools/import-mobpack.mjs)
+// rather than imported and then shadowed.
+const NATIVE_OVERRIDES = new Set();
 
 test('imported types merge into ENEMY_TYPES without clobbering natives', () => {
   // every imported id is reachable through ENEMY_TYPES

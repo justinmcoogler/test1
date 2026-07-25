@@ -93,8 +93,8 @@ export const ENEMY_TYPES = {
       box(0, 0.18, -0.55, 0.08, 0.08, 0.5, [0.5, 0.4, 0.42]),
     ]),
   },
-  root_creeper: {
-    label: 'Root Creeper', behavior: 'aggressive', tier: 0,
+  bindweed: {
+    label: 'Bindweed', behavior: 'aggressive', tier: 0,
     hp: 16, atk: 5, acc: 58, evasion: 8, armor: 1, speed: 3, moveRange: 3,
     abilities: ['toxin_lash'], element: 'nature', weak: ['fire'], resist: ['nature'],
     xp: 26, respawn: 100, aggroRange: 5,
@@ -531,27 +531,6 @@ export const ENEMY_TYPES = {
       box(0.15, 0, -0.3, 0.1, 0.32, 0.1, [0.76, 0.76, 0.7]),
     ]),
   },
-  cave_slime: {
-    label: 'Cave Slime', behavior: 'aggressive', tier: 1,
-    hp: 34, atk: 6, acc: 50, evasion: 4, armor: 3, speed: 3, moveRange: 2,
-    abilities: ['toxin_lash'], element: 'nature', weak: ['fire'], resist: ['nature'],
-    xp: 48, respawn: 150, aggroRange: 4,
-    headBoxes: [1],
-    drops: [
-      { item: 'rough_gem', qty: [1, 1], chance: 0.4 },
-      { item: 'veilcrystal', qty: [1, 1], chance: 0.1 },
-    ],
-    desc: 'A glinting crystalline ooze that creeps the cavern dark, dissolving all it touches.',
-    recommend: 'Its acid lingers — carry an antidote and heavy boots.',
-    model: M([
-      box(0, 0, 0, 0.7, 0.4, 0.65, [0.4, 0.7, 0.6]),         // base
-      box(0, 0.4, 0, 0.5, 0.28, 0.45, [0.5, 0.8, 0.7]),      // dome
-      box(0, 0.6, 0, 0.12, 0.18, 0.12, [0.75, 0.95, 0.9]),   // crystal spur
-      box(-0.12, 0.45, 0.24, 0.07, 0.07, 0.05, [0.95, 1, 0.9]), // eyes
-      box(0.12, 0.45, 0.24, 0.07, 0.07, 0.05, [0.95, 1, 0.9]),
-    ]),
-  },
-
   // ---- Tier 2 ----
   frost_elemental: {
     label: 'Frost Elemental', behavior: 'aggressive', tier: 2,
@@ -597,29 +576,6 @@ export const ENEMY_TYPES = {
       box(0, 1.28, 0.1, 0.34, 0.12, 0.12, [0.6, 0.4, 0.8]),  // spectral crest above the face
     ]),
   },
-  skeletal_archer: {
-    label: 'Skeletal Archer', behavior: 'aggressive', tier: 2,
-    hp: 26, atk: 11, acc: 72, evasion: 12, armor: 2, speed: 6, moveRange: 4,
-    abilities: ['shard_spit'], ranged: true, range: 5, element: null, weak: ['fire'], resist: [],
-    xp: 90, respawn: 200, aggroRange: 7,
-    headBoxes: [1],
-    drops: [
-      { item: 'old_coin', qty: [1, 3], chance: 0.5 },
-      { item: 'bone_needle', qty: [1, 2], chance: 0.4 },
-    ],
-    desc: 'A dead marksman still keeping its endless watch, loosing splinters of bone from the dark.',
-    recommend: 'Break line of sight and rush it — it is helpless up close.',
-    model: M([
-      box(0, 0.4, 0, 0.34, 0.5, 0.2, [0.82, 0.8, 0.72]),     // ribs
-      box(0, 0.95, 0, 0.28, 0.28, 0.28, [0.88, 0.86, 0.78]), // skull
-      box(-0.32, 0.42, 0.05, 0.1, 0.46, 0.1, [0.8, 0.78, 0.7]), // arms
-      box(0.32, 0.42, 0.05, 0.1, 0.46, 0.1, [0.8, 0.78, 0.7]),
-      box(-0.11, 0, 0, 0.11, 0.4, 0.11, [0.78, 0.76, 0.68]), // legs
-      box(0.11, 0, 0, 0.11, 0.4, 0.11, [0.78, 0.76, 0.68]),
-      box(0.34, 0.45, 0.14, 0.05, 0.58, 0.06, [0.4, 0.28, 0.18]), // bow
-    ]),
-  },
-
   // ---- Tier 3 (elite / dangerous) ----
   stone_golem: {
     label: 'Stone Golem', behavior: 'aggressive', tier: 3, elite: true,
@@ -810,122 +766,6 @@ export const ENEMY_TYPES = {
       box(0, 0.7, 0.55, 0.36, 0.36, 0.4, [0.85, 0.85, 0.8]),
     ]),
   },
-  skeleton: {
-    label: 'Skeleton', behavior: 'aggressive', tier: 1, nocturnal: true,
-    hp: 26, atk: 9, acc: 68, evasion: 10, armor: 1, speed: 6, moveRange: 4,
-    abilities: ['bone_arrow'], ranged: true, range: 6,
-    element: null, weak: [], resist: [],
-    xp: 75, huntXp: 0, respawn: 165, aggroRange: 10,
-    drops: [
-      { item: 'bone_needle', qty: [1, 2], chance: 0.6 },
-      { item: 'arrow', qty: [2, 6], chance: 0.7 },
-      { item: 'old_coin', qty: [1, 2], chance: 0.2 },
-    ],
-    desc: 'It holds its distance and draws. You hear the bow creak before you see the arrow.',
-    recommend: 'It out-ranges you unarmed — break line of sight, close the gap, and finish it inside its guard.',
-    model: M([
-      box(0, 0.75, 0, 0.5, 0.75, 0.25, [0.8, 0.78, 0.7]),
-      box(0, 1.5, 0, 0.5, 0.5, 0.5, [0.85, 0.83, 0.75]),
-    ]),
-  },
-  spider: {
-    label: 'Spider', behavior: 'aggressive', tier: 1, nocturnal: true,
-    hp: 24, atk: 8, acc: 64, evasion: 20, armor: 1, speed: 9, moveRange: 6,
-    abilities: [], element: null, weak: [], resist: [],
-    xp: 55, huntXp: 30, respawn: 140, aggroRange: 8,
-    drops: [
-      { item: 'spider_silk', qty: [1, 3], chance: 0.85 },
-      { item: 'sinew', qty: [1, 2], chance: 0.4 },
-    ],
-    desc: 'Eight red eyes over a bulbous abdomen, carried on eight long bent legs. It crosses open ground in bursts.',
-    recommend: 'Faster than you and it dodges well — corner it rather than chase it.',
-    model: M([
-      box(0, 0.2, -0.35, 0.62, 0.5, 0.75, [0.18, 0.15, 0.13]),
-      box(0, 0.24, 0.35, 0.5, 0.5, 0.5, [0.2, 0.17, 0.15]),
-    ]),
-  },
-  zombie: {
-    label: 'Zombie', behavior: 'aggressive', tier: 1, nocturnal: true,
-    hp: 36, atk: 10, acc: 56, evasion: 4, armor: 2, speed: 3, moveRange: 3,
-    abilities: [], element: null, weak: ['fire'], resist: [],
-    xp: 70, huntXp: 0, respawn: 150, aggroRange: 9,
-    drops: [
-      { item: 'grave_rot', qty: [1, 2], chance: 0.9 },
-      { item: 'woven_cloth', qty: [1, 2], chance: 0.35 },
-      { item: 'old_coin', qty: [1, 3], chance: 0.25 },
-    ],
-    desc: 'It walks with its arms out in front, as if still reaching for the door it died at. Slow, and it does not stop.',
-    recommend: 'Slower than you are — back away and swing, and never let two close at once.',
-    model: M([
-      box(0, 0.75, 0, 0.5, 0.75, 0.25, [0.23, 0.37, 0.54]),
-      box(0, 1.5, 0, 0.5, 0.5, 0.5, [0.35, 0.54, 0.29]),
-    ]),
-  },
-  rat: {
-    label: 'Rat', behavior: 'defensive', tier: 0,
-    hp: 8, atk: 3, acc: 48, evasion: 22, armor: 0, speed: 9, moveRange: 4,
-    abilities: [], element: null, weak: [], resist: [],
-    xp: 10, huntXp: 8, respawn: 70, aggroRange: 0,
-    drops: [
-      { item: 'sinew', qty: [1, 1], chance: 0.4 },
-      { item: 'plant_fibre', qty: [1, 2], chance: 0.3 },
-    ],
-    desc: 'A grey scavenger with a bare rope of a tail, forever grooming its whiskers in the grain store.',
-    recommend: 'Quick and jumpy, but it folds to a single solid hit.',
-    model: M([
-      box(0, 0.2, 0, 0.26, 0.26, 0.56, [0.42, 0.38, 0.34]),
-      box(0, 0.3, 0.28, 0.26, 0.26, 0.26, [0.46, 0.42, 0.38]),
-    ]),
-  },
-  bob: {
-    label: 'Bob', behavior: 'defensive', tier: 0,
-    hp: 34, atk: 6, acc: 58, evasion: 10, armor: 3, speed: 5, moveRange: 4,
-    abilities: [], element: null, weak: [], resist: [],
-    xp: 40, huntXp: 0, respawn: 240, aggroRange: 0,
-    drops: [
-      { item: 'grainsheaf', qty: [1, 2], chance: 0.6 },
-      { item: 'plant_fibre', qty: [1, 2], chance: 0.5 },
-    ],
-    desc: 'A settler in a wide straw hat, out walking his rows. He waves at anyone who passes.',
-    recommend: 'He will not start anything. Swing at him and he will defend himself.',
-    model: M([
-      box(0, 0.75, 0, 0.5, 0.75, 0.25, [0.49, 0.6, 0.77]),
-      box(0, 1.5, 0, 0.5, 0.5, 0.5, [0.79, 0.6, 0.43]),
-    ]),
-  },
-  goblin: {
-    label: 'Goblin', behavior: 'aggressive', tier: 1,
-    hp: 26, atk: 9, acc: 60, evasion: 18, armor: 1, speed: 7, moveRange: 5,
-    abilities: [], element: null, weak: [], resist: [],
-    xp: 60, huntXp: 0, respawn: 170, aggroRange: 7,
-    drops: [
-      { item: 'coin', qty: [3, 9], chance: 0.7 },
-      { item: 'plant_fibre', qty: [1, 3], chance: 0.6 },
-      { item: 'sinew', qty: [1, 2], chance: 0.4 },
-    ],
-    desc: 'Knee-high, all head and ears, with a laugh like a kettle. It steals first and fights only if cornered.',
-    recommend: 'It circles rather than charges — put your back to something solid.',
-    model: M([
-      box(0, 0.44, 0, 0.5, 0.62, 0.25, [0.44, 0.56, 0.29]),
-      box(0, 1.06, 0, 0.5, 0.5, 0.5, [0.44, 0.56, 0.29]),
-    ]),
-  },
-  wolf: {
-    label: 'Wolf', behavior: 'aggressive', tier: 1,
-    hp: 30, atk: 8, acc: 62, evasion: 14, armor: 1, speed: 8, moveRange: 5,
-    abilities: [], element: null, weak: [], resist: [],
-    xp: 55, huntXp: 42, respawn: 160, aggroRange: 8,
-    drops: [
-      { item: 'cured_hide', qty: [1, 2], chance: 0.75 },
-      { item: 'sinew', qty: [1, 2], chance: 0.85 },
-    ],
-    desc: 'A grey hunter with a heavy shoulder mane. It howls at dusk and answers when another howls back.',
-    recommend: 'Fast and it commits — keep your back to a tree so only one reaches you.',
-    model: M([
-      box(0, 0.5, 0, 0.38, 0.38, 0.56, [0.72, 0.7, 0.66]),
-      box(0, 0.75, 0.25, 0.38, 0.38, 0.38, [0.78, 0.76, 0.72]),
-    ]),
-  },
   pig: {
     label: 'Pig', behavior: 'defensive', tier: 0,
     hp: 18, atk: 4, acc: 52, evasion: 8, armor: 1, speed: 4, moveRange: 3,
@@ -1043,6 +883,123 @@ export const ENEMY_TYPES = {
     ]),
   },
 
+  // ---- the deepkin ---------------------------------------------------------
+  // Five creatures replacing the borrowed Minecraft roster (zombie, skeleton,
+  // skeletal_archer, spider, cave_slime). Each keeps its predecessor's exact
+  // ecological slot — tier, speed, evasion, ranged-or-not, and the drop table,
+  // so nothing downstream (biome tables, mineshaft levels, dungeon fills, the
+  // reachability audit) shifts. What changes is that each is grounded in a spine
+  // this world already has: smelting, charcoal, ore chemistry, the Veil.
+  slagwalker: {
+    label: 'Slagwalker', behavior: 'aggressive', tier: 1, nocturnal: true,
+    hp: 36, atk: 10, acc: 56, evasion: 4, armor: 2, speed: 3, moveRange: 3,
+    abilities: ['boulder_swat'], element: null, weak: ['fire'], resist: [],
+    xp: 70, huntXp: 0, respawn: 150, aggroRange: 9,
+    drops: [
+      { item: 'grave_rot', qty: [1, 2], chance: 0.9 },
+      { item: 'woven_cloth', qty: [1, 2], chance: 0.35 },
+      { item: 'old_coin', qty: [1, 3], chance: 0.25 },
+    ],
+    desc: 'A smelter who went into the tap-hole. The slag cooled inside the ribs and set, and the whole grey crust of it still walks — the seam down its chest brightening whenever it swings.',
+    recommend: 'Slower than you and it never tires. Back away and swing; never let two close at once.',
+    model: M([
+      box(0, 0.75, 0, 0.5, 0.75, 0.25, [0.34, 0.33, 0.31]),
+      box(0, 0.95, 0.12, 0.12, 0.4, 0.05, [0.78, 0.34, 0.12]),   // the hot seam
+      box(0, 1.5, 0, 0.5, 0.5, 0.5, [0.3, 0.29, 0.27]),
+    ]),
+  },
+
+  ashen_penitent: {
+    label: 'Ashen Penitent', behavior: 'aggressive', tier: 1, nocturnal: true,
+    hp: 26, atk: 9, acc: 68, evasion: 10, armor: 1, speed: 6, moveRange: 4,
+    abilities: ['ember_fling'], element: 'fire', weak: [], resist: ['fire'],
+    xp: 62, huntXp: 0, respawn: 150, aggroRange: 8,
+    drops: [
+      { item: 'bone_needle', qty: [1, 2], chance: 0.5 },
+      { item: 'arrow', qty: [2, 5], chance: 0.4 },
+      { item: 'charcoal', qty: [1, 3], chance: 0.45 },
+      { item: 'old_coin', qty: [1, 2], chance: 0.2 },
+    ],
+    desc: 'Somebody sealed in a charcoal kiln and left to cure. It is still warm. Ash sheets off it as it moves, showing the scorched bone beneath, and it walks fast on light burnt limbs.',
+    recommend: 'Brittle — it dies quickly, but it hits before you are ready. Do not fight it in the dark.',
+    model: M([
+      box(0, 0.4, 0, 0.32, 0.5, 0.2, [0.44, 0.42, 0.4]),         // ribs under ash
+      box(0, 0.95, 0, 0.28, 0.28, 0.28, [0.52, 0.5, 0.47]),      // skull
+      box(-0.3, 0.42, 0.04, 0.1, 0.46, 0.1, [0.4, 0.38, 0.36]),
+      box(0.3, 0.42, 0.04, 0.1, 0.46, 0.1, [0.4, 0.38, 0.36]),
+      box(-0.11, 0, 0, 0.11, 0.4, 0.11, [0.38, 0.36, 0.34]),
+      box(0.11, 0, 0, 0.11, 0.4, 0.11, [0.38, 0.36, 0.34]),
+      box(0, 0.5, 0.1, 0.1, 0.16, 0.05, [0.85, 0.42, 0.14]),     // embers still in it
+    ]),
+  },
+
+  shardcaster: {
+    label: 'Shardcaster', behavior: 'aggressive', tier: 2,
+    hp: 26, atk: 11, acc: 72, evasion: 12, armor: 2, speed: 6, moveRange: 4,
+    abilities: ['shard_spit'], ranged: true, range: 5, element: null, weak: ['fire'], resist: [],
+    xp: 90, respawn: 200, aggroRange: 7,
+    headBoxes: [1],
+    drops: [
+      { item: 'old_coin', qty: [1, 3], chance: 0.5 },
+      { item: 'bone_needle', qty: [1, 2], chance: 0.4 },
+      { item: 'veilcrystal', qty: [1, 1], chance: 0.15 },
+    ],
+    desc: 'A hollow figure grown through with veilcrystal — it has been standing long enough that the seams have closed over. It snaps splinters off its own arm and flings them, and the arm grows back.',
+    recommend: 'It fights at range and is helpless up close. Break line of sight, then rush it.',
+    model: M([
+      box(0, 0.4, 0, 0.34, 0.5, 0.2, [0.44, 0.46, 0.52]),        // hollow torso
+      box(0, 0.95, 0, 0.28, 0.28, 0.28, [0.48, 0.5, 0.56]),      // head
+      box(-0.32, 0.42, 0.05, 0.1, 0.46, 0.1, [0.42, 0.44, 0.5]),
+      box(0.32, 0.42, 0.05, 0.1, 0.46, 0.1, [0.42, 0.44, 0.5]),
+      box(-0.11, 0, 0, 0.11, 0.4, 0.11, [0.4, 0.42, 0.48]),
+      box(0.11, 0, 0, 0.11, 0.4, 0.11, [0.4, 0.42, 0.48]),
+      box(0.3, 0.62, 0.06, 0.1, 0.26, 0.1, [0.55, 0.82, 0.86]),  // the crystal arm
+      box(0, 0.62, -0.1, 0.14, 0.3, 0.08, [0.5, 0.78, 0.84]),    // shards through the back
+    ]),
+  },
+
+  hookleg: {
+    label: 'Hookleg', behavior: 'aggressive', tier: 1, nocturnal: true,
+    hp: 24, atk: 8, acc: 64, evasion: 20, armor: 1, speed: 9, moveRange: 6,
+    abilities: ['venom_fang'], element: null, weak: [], resist: [],
+    xp: 55, huntXp: 30, respawn: 140, aggroRange: 8,
+    drops: [
+      { item: 'spider_silk', qty: [1, 3], chance: 0.85 },
+      { item: 'sinew', qty: [1, 2], chance: 0.4 },
+    ],
+    desc: 'Eyeless and flat, six hooked legs splayed wider than its body. It walks the CEILING of a drift and you hear it before you see it — a dry tapping directly overhead, getting closer.',
+    recommend: 'It drops on you from above. Watch the roof, and fight it in a low passage where it cannot.',
+    model: M([
+      box(0, 0.18, 0, 0.55, 0.22, 0.7, [0.22, 0.2, 0.17]),       // flat carapace
+      box(0, 0.16, 0.42, 0.34, 0.18, 0.24, [0.26, 0.23, 0.19]),  // head, no eyes
+      box(-0.34, 0.3, 0.16, 0.08, 0.34, 0.08, [0.18, 0.16, 0.14]),  // hooked legs
+      box(0.34, 0.3, 0.16, 0.08, 0.34, 0.08, [0.18, 0.16, 0.14]),
+      box(-0.36, 0.3, -0.16, 0.08, 0.34, 0.08, [0.18, 0.16, 0.14]),
+      box(0.36, 0.3, -0.16, 0.08, 0.34, 0.08, [0.18, 0.16, 0.14]),
+    ]),
+  },
+
+  seepmass: {
+    label: 'Seepmass', behavior: 'aggressive', tier: 1,
+    hp: 34, atk: 6, acc: 50, evasion: 4, armor: 3, speed: 3, moveRange: 2,
+    abilities: ['toxin_lash'], element: 'nature', weak: ['fire'], resist: ['nature'],
+    xp: 48, respawn: 150, aggroRange: 4,
+    headBoxes: [1],
+    drops: [
+      { item: 'rough_gem', qty: [1, 1], chance: 0.4 },
+      { item: 'veilcrystal', qty: [1, 1], chance: 0.1 },
+      { item: 'rough_stone', qty: [1, 2], chance: 0.5 },
+    ],
+    desc: 'Not a living thing so much as a mineral seep that kept accreting until it could crawl. Its shell is literal ore, picked up from whatever rock it formed in, and it grinds as it moves.',
+    recommend: 'That crust is armour and it is heavy. Hit it with something blunt, or just walk away — it cannot follow.',
+    model: M([
+      box(0, 0, 0, 0.7, 0.4, 0.65, [0.36, 0.34, 0.3]),           // wet mineral base
+      box(0, 0.4, 0, 0.5, 0.28, 0.45, [0.42, 0.4, 0.35]),        // accreted dome
+      box(-0.14, 0.5, 0.1, 0.1, 0.16, 0.1, [0.62, 0.44, 0.2]),   // ore nodules in the crust
+      box(0.16, 0.46, -0.08, 0.09, 0.13, 0.09, [0.55, 0.58, 0.62]),
+      box(0, 0.62, 0.02, 0.12, 0.14, 0.12, [0.5, 0.72, 0.62]),
+    ]),
+  },
 };
 
 // ---- Minecraft-proportioned remodel ----------------------------------------
@@ -1265,7 +1222,7 @@ const REMODELS = {
       pb(3.2, 4.5, 0, 1.5, 4, 1.5, [0.35, 0.28, 0.18]),
     ]),
   },
-  root_creeper: {
+  bindweed: {
     headBoxes: [2],
     model: M([
       pb(0, 0, 0, 12, 4, 12, [0.34, 0.27, 0.18]),
@@ -1316,6 +1273,7 @@ const REMODELS = {
       pb(6, 10.5, 0, 8, 1, 5, [0.34, 0.28, 0.42]),
     ]),
   },
+
 };
 for (const [type, r] of Object.entries(REMODELS)) {
   ENEMY_TYPES[type].model = r.model;
@@ -1327,7 +1285,7 @@ for (const [type, r] of Object.entries(REMODELS)) {
 // face tile on the head box where the creature has one.
 const SKINS = {
   practice_dummy: 'skin_straw', mudback_boar: 'skin_hide', thicket_sprite: 'skin_bark',
-  gloomrat: 'skin_fur', root_creeper: 'skin_bark', moss_lurker: 'skin_stone',
+  gloomrat: 'skin_fur', bindweed: 'skin_bark', moss_lurker: 'skin_stone',
   marsh_wisp: 'skin_glow', bog_shambler: 'skin_hide', craghorn_ram: 'skin_fur',
   stone_pecker: 'skin_fur', dune_stalker: 'skin_fur', sunscale_serpent: 'skin_scales',
   frostmaw_wolf: 'skin_fur', rime_shade: 'skin_glow', cinder_imp: 'skin_scales',
@@ -1336,8 +1294,11 @@ const SKINS = {
   duskwing: 'skin_hide', rimehowl_alpha: 'skin_fur',
   // fantasy roster
   pixie: 'skin_glow', bog_ooze: 'skin_scales', scrap_goblin: 'skin_hide',
-  will_o_wisp: 'skin_glow', bone_hound: 'skin_stone', cave_slime: 'skin_glow',
-  frost_elemental: 'skin_glow', grave_wight: 'skin_hide', skeletal_archer: 'skin_stone',
+  will_o_wisp: 'skin_glow', bone_hound: 'skin_stone',
+  frost_elemental: 'skin_glow', grave_wight: 'skin_hide',
+  // the deepkin
+  slagwalker: 'skin_stone', ashen_penitent: 'skin_stone', shardcaster: 'skin_glow',
+  hookleg: 'skin_scales', seepmass: 'skin_stone',
   stone_golem: 'skin_stone', veil_crawler: 'skin_scales', gaze_orb: 'skin_glow',
 };
 // face-tile box index per creature (matches the remodeled box order)
@@ -1347,10 +1308,12 @@ const HEAD_BOX = {
   gloomrat: 1, dune_stalker: 2, stone_pecker: 1, sunscale_serpent: 3,
   shell_snapper: 3, moss_lurker: 2, bog_shambler: 3, magma_hulk: 4,
   blight_horror: 3, rootbound_golem: 4, cinder_imp: 3, thicket_sprite: 1,
-  root_creeper: 2, rootling: 1, marsh_wisp: 0, rime_shade: 1, duskwing: 1,
+  bindweed: 2, rootling: 1, marsh_wisp: 0, rime_shade: 1, duskwing: 1,
   // fantasy roster (eyeless orbs — will_o_wisp / gaze_orb — get no face tile)
-  pixie: 1, bog_ooze: 1, scrap_goblin: 1, bone_hound: 1, cave_slime: 1,
-  frost_elemental: 1, grave_wight: 1, skeletal_archer: 1, stone_golem: 1, veil_crawler: 1,
+  pixie: 1, bog_ooze: 1, scrap_goblin: 1, bone_hound: 1,
+  frost_elemental: 1, grave_wight: 1, stone_golem: 1, veil_crawler: 1,
+  // the deepkin — slagwalker's head is box 2 (torso, seam, head)
+  slagwalker: 2, ashen_penitent: 1, shardcaster: 1, hookleg: 1, seepmass: 1,
 };
 for (const [type, def] of Object.entries(ENEMY_TYPES)) {
   def.skin = SKINS[type] || 'skin_hide';

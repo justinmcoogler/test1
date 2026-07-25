@@ -24,10 +24,16 @@ test('allMobTypes lists every registered mob, sorted', () => {
 });
 
 test('the shipped roster is active; everything else defaults OFF', () => {
-  // The starter set is deliberately small — the farm animals plus the wolf
-  // (docs/MOB_BRIEF.md). The rest stay in the library but out of new worlds.
-  const ROSTER = ['cow', 'pig', 'sheep', 'chicken', 'duck', 'goat', 'horse', 'rabbit', 'wolf',
-    'rat', 'bob', 'goblin', 'zombie', 'spider', 'skeleton'];
+  // The starter set is deliberately small — the farm animals, plus the handful of
+  // low-tier hostiles a new world should meet (docs/MOB_BRIEF.md). The rest stay
+  // in the library but out of new worlds.
+  //
+  // The de-Minecraft pass cut rat/bob/goblin/wolf as duplicates of gloomrat/
+  // practice_dummy/scrap_goblin/frostmaw_wolf, and replaced zombie/spider/
+  // skeleton with slagwalker/hookleg/ashen_penitent.
+  const ROSTER = ['cow', 'pig', 'sheep', 'chicken', 'duck', 'goat', 'horse', 'rabbit',
+    'frostmaw_wolf', 'gloomrat', 'practice_dummy', 'scrap_goblin',
+    'slagwalker', 'hookleg', 'ashen_penitent'];
   for (const t of ROSTER) {
     assert.ok(ENEMY_TYPES[t], `${t} should exist in the registry`);
     assert.equal(mc.mobActive(t), true, `${t} should ship active`);

@@ -209,8 +209,8 @@ export const EMBER = {
     ],
   },
 
-  // ---- root_creeper: root-spider with a knotted wood body -------------------
-  root_creeper: {
+  // ---- bindweed: root-spider with a knotted wood body -------------------
+  bindweed: {
     texW: 64, texH: 64, rig: 'scamper',
     paint(ctx, P) {
       const wood = '#5a4326', dwood = '#392b18', light = '#77592f', sap = '#b7e36a', leaf = '#4c7a30';

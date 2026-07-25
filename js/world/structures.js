@@ -259,7 +259,7 @@ export function buildStarterStructures() {
   for (let y = 13; y <= 15; y++) for (let x = 23; x <= 25; x++) set(x, y, -60, B.air); // entry mouth
   spawns.push({ id: 'rat_d1', type: 'gloomrat', x: 22, y: 13, z: -63, fixed: true });
   spawns.push({ id: 'rat_d2', type: 'gloomrat', x: 26, y: 13, z: -65, fixed: true });
-  spawns.push({ id: 'creeper_d1', type: 'root_creeper', x: 24, y: 13, z: -67, fixed: true });
+  spawns.push({ id: 'creeper_d1', type: 'bindweed', x: 24, y: 13, z: -67, fixed: true });
   nodes.push({ type: 'dig_site', x: 21, y: 13, z: -67 });
   nodes.push({ type: 'dig_bog', x: 27, y: 13, z: -62 }); // waterlogged floor, so organics survive
   set(20, 13, -61, B.torch_post); set(28, 13, -67, B.torch_post);
