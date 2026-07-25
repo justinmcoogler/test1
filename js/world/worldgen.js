@@ -55,7 +55,7 @@ export const BIOMES = {
     trees: [{ type: 'tree_pine', density: 0.01 }, { type: 'tree_birch', density: 0.005 }],
     plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'wildflower', d: 0.012 }],
     nodes: [{ type: 'herb_patch', d: 0.004 }, { type: 'berry_bush', d: 0.003 }, { type: 'deposit_saltpeter', d: 0.0016 }],
-    enemies: [{ type: 'mudback_boar', d: 0.0022 }, { type: 'thicket_sprite', d: 0.0015 }, { type: 'duskwing', d: 0.0014 }, { type: 'pixie', d: 0.0016 }, { type: 'meadow_stag', d: 0.0016 }, { type: 'cow', d: 0.0022 }, { type: 'pig', d: 0.002 }, { type: 'sheep', d: 0.0022 }, { type: 'chicken', d: 0.0024, pack: [2, 3] }, { type: 'horse', d: 0.0016 }, { type: 'rabbit', d: 0.0026 }, { type: 'wolf', d: 0.0012, pack: [2, 3] }],
+    enemies: [{ type: 'mudback_boar', d: 0.0022 }, { type: 'thicket_sprite', d: 0.0015 }, { type: 'duskwing', d: 0.0014 }, { type: 'pixie', d: 0.0016 }, { type: 'meadow_stag', d: 0.0016 }, { type: 'cow', d: 0.0022 }, { type: 'pig', d: 0.002 }, { type: 'sheep', d: 0.0022 }, { type: 'chicken', d: 0.0024, pack: [2, 3] }, { type: 'horse', d: 0.0016 }, { type: 'rabbit', d: 0.0026 }, { type: 'wolf', d: 0.0012, pack: [2, 3] }, { type: 'rat', d: 0.0022, pack: [1, 2] }, { type: 'bob', d: 0.0009 }, { type: 'goblin', d: 0.0013, pack: [1, 3] }],
   },
   ancient_forest: {
     label: 'Temperate Forest', tier: 0, climate: 'temperate deciduous forest',
@@ -68,7 +68,7 @@ export const BIOMES = {
     ],
     plants: [{ block: 'tall_grass', d: 0.03 }, { block: 'mushroom_cap', d: 0.01 }],
     nodes: [{ type: 'herb_patch', d: 0.006 }, { type: 'berry_bush', d: 0.004 }],
-    enemies: [{ type: 'thicket_sprite', d: 0.003 }, { type: 'moss_lurker', d: 0.0018 }, { type: 'duskwing', d: 0.0018 }, { type: 'pixie', d: 0.0018 }, { type: 'meadow_stag', d: 0.0014 }, { type: 'cow', d: 0.0018 }, { type: 'pig', d: 0.0018 }, { type: 'sheep', d: 0.0018 }, { type: 'chicken', d: 0.002, pack: [2, 3] }, { type: 'horse', d: 0.0014 }, { type: 'rabbit', d: 0.0024 }, { type: 'wolf', d: 0.0016, pack: [2, 4] }],
+    enemies: [{ type: 'thicket_sprite', d: 0.003 }, { type: 'moss_lurker', d: 0.0018 }, { type: 'duskwing', d: 0.0018 }, { type: 'pixie', d: 0.0018 }, { type: 'meadow_stag', d: 0.0014 }, { type: 'cow', d: 0.0018 }, { type: 'pig', d: 0.0018 }, { type: 'sheep', d: 0.0018 }, { type: 'chicken', d: 0.002, pack: [2, 3] }, { type: 'horse', d: 0.0014 }, { type: 'rabbit', d: 0.0024 }, { type: 'wolf', d: 0.0016, pack: [2, 4] }, { type: 'rat', d: 0.0026, pack: [1, 3] }, { type: 'goblin', d: 0.0017, pack: [2, 3] }],
   },
   temperate_rainforest: {
     label: 'Temperate Rainforest', tier: 1, climate: 'mild, very wet coniferous rainforest',

@@ -805,6 +805,55 @@ export const ENEMY_TYPES = {
       box(0, 0.7, 0.55, 0.36, 0.36, 0.4, [0.85, 0.85, 0.8]),
     ]),
   },
+  rat: {
+    label: 'Rat', behavior: 'defensive', tier: 0,
+    hp: 8, atk: 3, acc: 48, evasion: 22, armor: 0, speed: 9, moveRange: 4,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 10, huntXp: 8, respawn: 70, aggroRange: 0,
+    drops: [
+      { item: 'sinew', qty: [1, 1], chance: 0.4 },
+      { item: 'plant_fibre', qty: [1, 2], chance: 0.3 },
+    ],
+    desc: 'A grey scavenger with a bare rope of a tail, forever grooming its whiskers in the grain store.',
+    recommend: 'Quick and jumpy, but it folds to a single solid hit.',
+    model: M([
+      box(0, 0.2, 0, 0.26, 0.26, 0.56, [0.42, 0.38, 0.34]),
+      box(0, 0.3, 0.28, 0.26, 0.26, 0.26, [0.46, 0.42, 0.38]),
+    ]),
+  },
+  bob: {
+    label: 'Bob', behavior: 'defensive', tier: 0,
+    hp: 34, atk: 6, acc: 58, evasion: 10, armor: 3, speed: 5, moveRange: 4,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 40, huntXp: 0, respawn: 240, aggroRange: 0,
+    drops: [
+      { item: 'grainsheaf', qty: [1, 2], chance: 0.6 },
+      { item: 'plant_fibre', qty: [1, 2], chance: 0.5 },
+    ],
+    desc: 'A settler in a wide straw hat, out walking his rows. He waves at anyone who passes.',
+    recommend: 'He will not start anything. Swing at him and he will defend himself.',
+    model: M([
+      box(0, 0.75, 0, 0.5, 0.75, 0.25, [0.49, 0.6, 0.77]),
+      box(0, 1.5, 0, 0.5, 0.5, 0.5, [0.79, 0.6, 0.43]),
+    ]),
+  },
+  goblin: {
+    label: 'Goblin', behavior: 'aggressive', tier: 1,
+    hp: 26, atk: 9, acc: 60, evasion: 18, armor: 1, speed: 7, moveRange: 5,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 60, huntXp: 0, respawn: 170, aggroRange: 7,
+    drops: [
+      { item: 'coin', qty: [3, 9], chance: 0.7 },
+      { item: 'plant_fibre', qty: [1, 3], chance: 0.6 },
+      { item: 'sinew', qty: [1, 2], chance: 0.4 },
+    ],
+    desc: 'Knee-high, all head and ears, with a laugh like a kettle. It steals first and fights only if cornered.',
+    recommend: 'It circles rather than charges — put your back to something solid.',
+    model: M([
+      box(0, 0.44, 0, 0.5, 0.62, 0.25, [0.44, 0.56, 0.29]),
+      box(0, 1.06, 0, 0.5, 0.5, 0.5, [0.44, 0.56, 0.29]),
+    ]),
+  },
   wolf: {
     label: 'Wolf', behavior: 'aggressive', tier: 1,
     hp: 30, atk: 8, acc: 62, evasion: 14, armor: 1, speed: 8, moveRange: 5,

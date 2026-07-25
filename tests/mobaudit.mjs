@@ -20,7 +20,8 @@ await page.waitForTimeout(1500);
 const result = await page.evaluate(async () => {
   const g = window.__game, r = g.renderer;
   const { evaluatePose } = await import('./js/game/mobloader.js');
-  const ROSTER = ['cow', 'pig', 'sheep', 'goat', 'horse', 'chicken', 'duck', 'rabbit', 'wolf'];
+  const ROSTER = ['cow', 'pig', 'sheep', 'goat', 'horse', 'chicken', 'duck', 'rabbit', 'wolf',
+    'rat', 'bob', 'goblin'];
   const CELL = 150, PAD = 20;
   const cols = 3;                                   // idle | walk | ambient
   const sheet = document.createElement('canvas');
