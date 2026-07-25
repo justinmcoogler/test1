@@ -3,6 +3,7 @@
 import { B, BLOCKS, isSolid, SHAPE_COLLISION } from './blocks.js';
 import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, LEARN_MEADOW, BIOMES, WorldGen, newBlend, ringAt, undergroundNodeCandidates } from './worldgen.js';
 import { buildStarterStructures, indexEditsByChunk } from './structures.js';
+import { carveRoads } from './roads.js';
 import { NODE_TYPES, PROP_NODE_TYPES, nodeBlocks, nodeCells } from '../game/nodes.js';
 import { ENEMY_TYPES } from '../game/enemies.js';
 import { mobActive, mobRate, mobBiomes, allMobTypes } from '../game/mobconfig.js';
@@ -262,6 +263,12 @@ export class World {
         }
       }
     }
+
+    // Endless arterial roads + waystones (js/world/roads.js). They regrade whole
+    // columns, so they run after the terrain and scatter passes whose output
+    // they cut through, and before the hand-built settlement, whose edits are
+    // replayed later and always outrank them.
+    bumpTop(carveRoads(gen, chunk, blocks, cx, cz));
 
     // Underground ore nodes on cave walls
     for (const cand of undergroundNodeCandidates(gen, cx, cz)) {

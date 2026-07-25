@@ -4,6 +4,8 @@
 import { B } from './blocks.js';
 import { buildTown } from './town.js';
 import { LEARN_MEADOW } from './worldgen.js';
+import { stampMineshafts, mineshaftClaims } from './mineshaft.js';
+import { stampDungeons, dungeonClaims } from './dungeon.js';
 
 const key = (x, y, z) => `${x},${y},${z}`;
 
@@ -442,6 +444,35 @@ export function buildStarterStructures() {
   markers.learnMat = learnMat;
 
   return { edits, nodes, spawns, npcs, chests, facings, markers };
+}
+
+// ---- Procedural sites (mineshafts & dungeons) -------------------------------
+// Everything above is hand-authored and finite: it is built once and indexed by
+// chunk. Mineshafts and dungeons are the opposite — endless, so they cannot be
+// pre-built into a map, and they must be producible for one chunk with no
+// neighbour loaded. They are therefore stamped ON DEMAND, per chunk, straight
+// into the chunk being generated. See js/world/sites.js for how that stays
+// deterministic.
+//
+// `sink` is what the caller uses to receive the site:
+//   block(x, y, z, id)  world-space block write (already clipped to the chunk)
+//   node(n)             a resource node ({type, x, y, z}) to register
+//   spawn(s)            an enemy spawn point ({id, type, x, y, z, boss?})
+//   chest(c)            chest metadata ({id, x, y, z, loot})
+// Call it from chunk generation AFTER the terrain columns are written and the
+// hand-built structure edits are applied, so a site carves through raw terrain
+// but never through Brookhollow (which `nearHandBuilt` keeps it away from anyway).
+export function stampChunkStructures(gen, cx, cz, sink) {
+  stampMineshafts(gen, cx, cz, sink);
+  stampDungeons(gen, cx, cz, sink);
+}
+
+// Surface columns a site's entrance owns. Worldgen's vegetation/node/mob scatter
+// should skip these, or a tree grows through the winding gear. Deliberately the
+// ENTRANCE footprint only, not the whole site: a mineshaft's workings are 60
+// blocks across and blanking that much surface would leave a bald square.
+export function structureClaims(gen, x, z) {
+  return mineshaftClaims(gen, x, z) || dungeonClaims(gen, x, z);
 }
 
 // Index structure edits by chunk for fast application during generation.

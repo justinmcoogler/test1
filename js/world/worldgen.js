@@ -3,6 +3,7 @@
 // biomes control surface materials, vegetation, nodes and enemy spawns,
 // and get harsher with distance from the spawn settlement.
 import { B } from './blocks.js';
+import { grove } from './trees.js';
 import { fbm2, ridge2, warped2, valueNoise3 } from '../core/noise.js';
 import { hash2, hash3 } from '../core/rng.js';
 import { clamp, lerp, smoothstep } from '../core/math.js';
@@ -64,193 +65,246 @@ function skipPathColumn(x, z) {
 // Keys greenwood_plains / ancient_forest / misty_wetlands / coastal_shores are
 // load-bearing (mob spawn files reference them) — do not rename them.
 //
-// An enemy entry may carry `ring`: the lowest difficulty ring (see ringAt) the
-// creature is allowed to spawn in, defaulting to 0. This is what keeps the
-// starting bowl safe — the tame animals a new player meets have no ring, while
-// anything that hunts back is held out past 512 blocks. It gates WHERE a mob
-// appears, never WHETHER: every gated mob's biomes also occur far out, so the
-// reachability audit stays green.
+// Every biome is a complete content bundle — surface/filler pair, trees, plants,
+// nodes and creatures — so a biome is somewhere to go rather than a recolour.
+//
+// `ring` is the difficulty ring (see ringAt) a biome's CONTENT is pitched at,
+// and it is the one number to read a biome by: ring 0 biomes are the starting
+// bowl (quick-fell woods, tier-1 gathering, tame animals), ring 3 the far
+// reaches (tall branched timber, the deep dig and fishing tiers, elites). It is
+// documentation, not a gate — what actually enforces distance is the `tier >= n`
+// tests in _classify (where a biome may form) and the per-enemy `ring` below.
+//
+// An enemy entry may carry `ring`: the lowest difficulty ring the creature is
+// allowed to spawn in, defaulting to 0. This is what keeps the starting bowl
+// safe — the tame animals a new player meets have no ring, while anything that
+// hunts back is held out past 512 blocks. Note a mob's ring is per BIOME, not
+// global: a frostmaw wolf is a ring-1 sight on the open tundra and a ring-2 one
+// under the boreal canopy, because the tundra is the harsher place to meet it.
+// It gates WHERE a mob appears, never WHETHER: every gated mob's biomes also
+// occur far out, so the reachability audit stays green.
+//
+// Tree sets come through `grove` (js/world/trees.js), which is the roster of
+// species and their shapes; a biome can only plant a species that exists there.
 export const BIOMES = {
+  // ---- ring 0: the starting bowl ------------------------------------------
   greenwood_plains: {
-    label: 'Grassland', tier: 0, climate: 'temperate grassland / prairie',
+    label: 'Grassland', ring: 0, climate: 'temperate grassland / prairie',
     surface: 'grass', filler: 'dirt',
-    trees: [{ type: 'tree_pine', density: 0.01 }, { type: 'tree_birch', density: 0.005 }],
+    trees: grove(['birch', 0.006], ['pine', 0.006]),
     plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'wildflower', d: 0.012 }],
-    nodes: [{ type: 'herb_patch', d: 0.004 }, { type: 'berry_bush', d: 0.003 }, { type: 'deposit_saltpeter', d: 0.0016 }],
+    // Wild grain stands are where farming starts — the thin plot is the only
+    // soil tier a level-1 farmer can work, and the meadow is full of it.
+    nodes: [{ type: 'herb_patch', d: 0.004 }, { type: 'berry_bush', d: 0.003 }, { type: 'farm_plot', d: 0.002 }, { type: 'deposit_saltpeter', d: 0.0016 }],
     enemies: [{ type: 'mudback_boar', d: 0.0022 }, { type: 'thicket_sprite', d: 0.0015 }, { type: 'duskwing', d: 0.0014 }, { type: 'pixie', d: 0.0016 }, { type: 'meadow_stag', d: 0.0016 }, { type: 'cow', d: 0.0022 }, { type: 'pig', d: 0.002 }, { type: 'sheep', d: 0.0022 }, { type: 'chicken', d: 0.0024, pack: [2, 3] }, { type: 'horse', d: 0.0016 }, { type: 'rabbit', d: 0.0026 }, { type: 'wolf', d: 0.0012, pack: [2, 3], ring: 1 }, { type: 'rat', d: 0.0022, pack: [1, 2], ring: 1 }, { type: 'bob', d: 0.0009 }, { type: 'goblin', d: 0.0013, pack: [1, 3], ring: 1 }, { type: 'zombie', d: 0.0016, pack: [1, 2], ring: 1 }, { type: 'spider', d: 0.0014, ring: 1 }, { type: 'skeleton', d: 0.0013, ring: 1 }],
   },
   ancient_forest: {
-    label: 'Temperate Forest', tier: 0, climate: 'temperate deciduous forest',
+    label: 'Temperate Forest', ring: 0, climate: 'temperate deciduous forest',
+    // The birchwood: the light, open wood a new player learns to fell in. Only
+    // the quick ring-0/1 species grow here — the hard hickory/maple/walnut of
+    // the same climate wait in the dense rainforest and the deep wood, so the
+    // woodcutting ladder is a walk outward rather than a lucky roll next door.
     surface: 'grass', filler: 'dirt',
-    trees: [
-      { type: 'tree_oak', density: 0.02 }, { type: 'tree_birch', density: 0.012 },
-      { type: 'tree_ash', density: 0.01 }, { type: 'tree_hickory', density: 0.008 },
-      { type: 'tree_maple', density: 0.006 }, { type: 'tree_pine', density: 0.006 },
-      { type: 'tree_walnut', density: 0.003 },
-    ],
+    trees: grove(['birch', 0.02], ['oak', 0.018], ['ash', 0.012], ['pine', 0.008]),
     plants: [{ block: 'tall_grass', d: 0.03 }, { block: 'mushroom_cap', d: 0.01 }],
-    nodes: [{ type: 'herb_patch', d: 0.006 }, { type: 'berry_bush', d: 0.004 }],
+    nodes: [{ type: 'herb_patch', d: 0.006 }, { type: 'berry_bush', d: 0.004 }, { type: 'farm_plot', d: 0.0015 }],
     enemies: [{ type: 'thicket_sprite', d: 0.003 }, { type: 'moss_lurker', d: 0.0018 }, { type: 'duskwing', d: 0.0018 }, { type: 'pixie', d: 0.0018 }, { type: 'meadow_stag', d: 0.0014 }, { type: 'cow', d: 0.0018 }, { type: 'pig', d: 0.0018 }, { type: 'sheep', d: 0.0018 }, { type: 'chicken', d: 0.002, pack: [2, 3] }, { type: 'horse', d: 0.0014 }, { type: 'rabbit', d: 0.0024 }, { type: 'wolf', d: 0.0016, pack: [2, 4], ring: 1 }, { type: 'rat', d: 0.0026, pack: [1, 3], ring: 1 }, { type: 'goblin', d: 0.0017, pack: [2, 3], ring: 1 }, { type: 'zombie', d: 0.002, pack: [1, 3], ring: 1 }, { type: 'spider', d: 0.0018, pack: [1, 2], ring: 1 }, { type: 'skeleton', d: 0.0017, pack: [1, 2], ring: 1 }],
   },
-  temperate_rainforest: {
-    label: 'Temperate Rainforest', tier: 1, climate: 'mild, very wet coniferous rainforest',
-    surface: 'grass', filler: 'dirt',
-    trees: [
-      { type: 'tree_cedar', density: 0.04 }, { type: 'tree_pine', density: 0.02 },
-      { type: 'tree_hickory', density: 0.01 }, { type: 'tree_maple', density: 0.008 },
-      { type: 'tree_walnut', density: 0.004 },
-    ],
-    plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'mushroom_cap', d: 0.03 }, { block: 'reed', d: 0.01 }],
-    nodes: [{ type: 'herb_patch', d: 0.01 }, { type: 'berry_bush', d: 0.005 }],
-    enemies: [{ type: 'moss_lurker', d: 0.003 }, { type: 'thicket_sprite', d: 0.002 }, { type: 'duskwing', d: 0.0016 }],
-  },
-  savanna: {
-    label: 'Savanna', tier: 1, climate: 'tropical grassland / savanna',
-    surface: 'grass', filler: 'dirt',
-    trees: [{ type: 'tree_teak', density: 0.004 }],
-    plants: [{ block: 'tall_grass', d: 0.06 }, { block: 'wildflower', d: 0.006 }],
-    nodes: [{ type: 'herb_patch', d: 0.004 }, { type: 'deposit_saltpeter', d: 0.002 }, { type: 'dig_site', d: 0.0015 }],
-    enemies: [{ type: 'dune_stalker', d: 0.0025 }, { type: 'sunscale_serpent', d: 0.0016 }, { type: 'mudback_boar', d: 0.0015 }, { type: 'dust_scarab', d: 0.0022 }],
-  },
-  sunbaked_badlands: {
-    label: 'Desert', tier: 2, climate: 'hot desert',
-    surface: 'sand', filler: 'sand',
-    trees: [{ type: 'tree_teak', density: 0.0025 }],
-    plants: [{ block: 'cactus_flesh', d: 0.006 }],
-    nodes: [{ type: 'ore_lead', d: 0.003 }, { type: 'ore_silver', d: 0.003 }, { type: 'deposit_sulfur', d: 0.003 }, { type: 'dig_site', d: 0.004 }],
-    enemies: [{ type: 'dune_stalker', d: 0.003 }, { type: 'sunscale_serpent', d: 0.002 }, { type: 'skeletal_archer', d: 0.0018 }, { type: 'dust_scarab', d: 0.003 }],
-  },
-  tropical_forest: {
-    label: 'Tropical Rainforest', tier: 3, climate: 'hot humid rainforest',
-    surface: 'grass', filler: 'dirt',
-    trees: [
-      { type: 'tree_teak', density: 0.03 }, { type: 'tree_ebony', density: 0.014 },
-      { type: 'tree_lignum_vitae', density: 0.004 },
-    ],
-    plants: [{ block: 'tall_grass', d: 0.04 }, { block: 'mushroom_cap', d: 0.02 }],
-    nodes: [{ type: 'herb_patch', d: 0.008 }, { type: 'berry_bush', d: 0.004 }],
-    enemies: [{ type: 'moss_lurker', d: 0.003 }, { type: 'thicket_sprite', d: 0.002 }, { type: 'sunscale_serpent', d: 0.0016 }],
-  },
-  boreal_forest: {
-    label: 'Boreal Forest', tier: 2, climate: 'cold coniferous taiga',
-    surface: 'grass', filler: 'dirt',
-    trees: [
-      { type: 'tree_pine', density: 0.045 }, { type: 'tree_cedar', density: 0.018 },
-      { type: 'tree_yew', density: 0.004 },
-    ],
-    plants: [{ block: 'mushroom_cap', d: 0.012 }, { block: 'tall_grass', d: 0.01 }],
-    nodes: [{ type: 'herb_patch', d: 0.005 }, { type: 'deposit_coal', d: 0.003 }],
-    enemies: [{ type: 'frostmaw_wolf', d: 0.0022, pack: [2, 3] }, { type: 'rime_shade', d: 0.0014 }, { type: 'bone_hound', d: 0.0018, pack: [2, 3] }, { type: 'snow_hare', d: 0.0022 }],
-  },
-  frostbound_tundra: {
-    label: 'Tundra', tier: 2, climate: 'cold dry tundra',
-    surface: 'snow_grass', filler: 'dirt',
-    trees: [{ type: 'tree_yew', density: 0.003 }],
-    plants: [],
-    nodes: [{ type: 'ore_iron', d: 0.004 }, { type: 'ore_silver', d: 0.002 }, { type: 'deposit_coal', d: 0.002 }],
-    enemies: [{ type: 'frostmaw_wolf', d: 0.003, pack: [2, 3] }, { type: 'rime_shade', d: 0.0015 }, { type: 'bone_hound', d: 0.0018, pack: [2, 3] }, { type: 'frost_elemental', d: 0.0014 }, { type: 'snow_hare', d: 0.003, pack: [2, 3] }],
-  },
-  misty_wetlands: {
-    label: 'Swamp', tier: 1, climate: 'wetland / swamp',
-    surface: 'grass', filler: 'clay_block',
-    trees: [{ type: 'tree_cedar', density: 0.02 }],
-    plants: [{ block: 'reed', d: 0.05 }, { block: 'mushroom_cap', d: 0.02 }],
-    nodes: [{ type: 'herb_patch', d: 0.01 }, { type: 'clay_deposit', d: 0.006 }, { type: 'fishing_spot', d: 0.004 }],
-    enemies: [{ type: 'bog_shambler', d: 0.003 }, { type: 'marsh_wisp', d: 0.002 }, { type: 'blight_horror', d: 0.0012 }, { type: 'bog_ooze', d: 0.0022 }, { type: 'will_o_wisp', d: 0.0018 }, { type: 'grave_wight', d: 0.0012 }, { type: 'mire_toad', d: 0.0018 }, { type: 'duck', d: 0.0024, pack: [2, 3] }],
-  },
-  rocky_highlands: {
-    label: 'Mountains', tier: 1, climate: 'montane / alpine rock',
-    surface: 'stone', filler: 'stone',
-    trees: [{ type: 'tree_ash', density: 0.006 }, { type: 'tree_hickory', density: 0.004 }],
-    plants: [{ block: 'tall_grass', d: 0.008 }],
-    nodes: [{ type: 'ore_iron', d: 0.005 }, { type: 'ore_copper', d: 0.004 }, { type: 'ore_tin', d: 0.004 }, { type: 'deposit_coal', d: 0.003 }, { type: 'dig_site', d: 0.0015 }],
-    enemies: [{ type: 'craghorn_ram', d: 0.0025 }, { type: 'stone_pecker', d: 0.002 }, { type: 'scrap_goblin', d: 0.002 }, { type: 'cave_slime', d: 0.0016 }, { type: 'skeletal_archer', d: 0.0014 }, { type: 'stone_golem', d: 0.0009 }, { type: 'crag_bat', d: 0.0018, pack: [2, 3] }, { type: 'goat', d: 0.0022 }],
-  },
-  snowy_peaks: {
-    label: 'Snowy Mountains', tier: 2, climate: 'alpine snow / glacier',
-    surface: 'snow', filler: 'stone',
-    trees: [],
-    plants: [],
-    nodes: [{ type: 'ore_silver', d: 0.003 }, { type: 'ore_gold', d: 0.0016 }, { type: 'deposit_coal', d: 0.002 }],
-    enemies: [{ type: 'rime_shade', d: 0.0022 }, { type: 'craghorn_ram', d: 0.002 }, { type: 'hollow_watcher', d: 0.0012 }, { type: 'frost_elemental', d: 0.0016 }, { type: 'stone_golem', d: 0.0009 }, { type: 'gaze_orb', d: 0.0012 }],
-  },
-  volcanic_wastes: {
-    label: 'Volcanic Fields', tier: 3, climate: 'active volcanic',
-    surface: 'ashen_soil', filler: 'basalt',
-    trees: [],
-    plants: [],
-    nodes: [{ type: 'ore_gold', d: 0.003 }, { type: 'ore_meteoric', d: 0.002 }, { type: 'deposit_sulfur', d: 0.004 }],
-    enemies: [{ type: 'cinder_imp', d: 0.004 }, { type: 'magma_hulk', d: 0.0015 }, { type: 'veil_crawler', d: 0.0016 }, { type: 'gaze_orb', d: 0.0014 }, { type: 'ash_salamander', d: 0.0026 }],
-  },
-  monsoon_forest: {
-    label: 'Monsoon Forest', tier: 2, climate: 'tropical dry / seasonal forest',
-    surface: 'grass', filler: 'dirt',
-    trees: [{ type: 'tree_teak', density: 0.035 }, { type: 'tree_ebony', density: 0.008 }],
-    plants: [{ block: 'tall_grass', d: 0.04 }, { block: 'mushroom_cap', d: 0.008 }],
-    nodes: [{ type: 'herb_patch', d: 0.006 }, { type: 'berry_bush', d: 0.003 }],
-    enemies: [{ type: 'sunscale_serpent', d: 0.0022 }, { type: 'moss_lurker', d: 0.0016 }, { type: 'dune_stalker', d: 0.0014 }],
-  },
-  shrubland: {
-    label: 'Mediterranean Shrubland', tier: 1, climate: 'warm, dry-summer chaparral',
-    surface: 'grass', filler: 'dirt',
-    trees: [{ type: 'tree_oak', density: 0.005 }, { type: 'tree_pine', density: 0.004 }],
-    plants: [{ block: 'tall_grass', d: 0.04 }, { block: 'wildflower', d: 0.02 }],
-    nodes: [{ type: 'herb_patch', d: 0.006 }, { type: 'berry_bush', d: 0.003 }, { type: 'deposit_saltpeter', d: 0.0016 }],
-    enemies: [{ type: 'dune_stalker', d: 0.002 }, { type: 'sunscale_serpent', d: 0.0016 }, { type: 'thicket_sprite', d: 0.0016 }, { type: 'scrap_goblin', d: 0.0018 }, { type: 'rabbit', d: 0.0024 }],
-  },
-  cold_desert: {
-    label: 'Cold Desert', tier: 2, climate: 'cold semi-arid steppe',
-    surface: 'gravel', filler: 'dirt',
-    trees: [],
-    plants: [{ block: 'tall_grass', d: 0.012 }],
-    nodes: [{ type: 'ore_lead', d: 0.003 }, { type: 'ore_zinc', d: 0.0024 }, { type: 'dig_site', d: 0.003 }],
-    enemies: [{ type: 'dune_stalker', d: 0.0022 }, { type: 'rime_shade', d: 0.0016 }, { type: 'craghorn_ram', d: 0.0016 }, { type: 'grave_wight', d: 0.0014 }],
-  },
   marshland: {
-    label: 'Marshland', tier: 1, climate: 'flooded grassland / marsh',
+    label: 'Marshland', ring: 0, climate: 'flooded grassland / marsh',
+    // The reed pond: still water an easy walk from home, where fishing starts.
     surface: 'grass', filler: 'clay_block',
     trees: [],
     plants: [{ block: 'reed', d: 0.08 }, { block: 'tall_grass', d: 0.03 }],
-    nodes: [{ type: 'herb_patch', d: 0.008 }, { type: 'clay_deposit', d: 0.006 }, { type: 'fishing_spot', d: 0.005 }],
-    enemies: [{ type: 'bog_shambler', d: 0.0025 }, { type: 'marsh_wisp', d: 0.0022 }, { type: 'duskwing', d: 0.0016 }, { type: 'bog_ooze', d: 0.002 }, { type: 'will_o_wisp', d: 0.0018 }, { type: 'mire_toad', d: 0.0016 }, { type: 'duck', d: 0.0024, pack: [2, 3] }],
-  },
-  mangrove: {
-    label: 'Mangrove Coast', tier: 2, climate: 'tropical coastal wetland',
-    surface: 'grass', filler: 'clay_block',
-    trees: [{ type: 'tree_teak', density: 0.02 }, { type: 'tree_cedar', density: 0.012 }],
-    plants: [{ block: 'reed', d: 0.06 }, { block: 'mushroom_cap', d: 0.015 }],
-    nodes: [{ type: 'fishing_spot', d: 0.006 }, { type: 'clay_deposit', d: 0.005 }, { type: 'herb_patch', d: 0.006 }],
-    enemies: [{ type: 'bog_shambler', d: 0.0022 }, { type: 'marsh_wisp', d: 0.0018 }, { type: 'sunscale_serpent', d: 0.0016 }],
-  },
-  alpine_meadow: {
-    label: 'Alpine Meadow', tier: 2, climate: 'montane grassland above the treeline',
-    surface: 'grass', filler: 'stone',
-    trees: [],
-    plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'wildflower', d: 0.02 }],
-    nodes: [{ type: 'ore_copper', d: 0.003 }, { type: 'ore_tin', d: 0.003 }, { type: 'herb_patch', d: 0.006 }, { type: 'deposit_coal', d: 0.002 }],
-    enemies: [{ type: 'craghorn_ram', d: 0.0026 }, { type: 'stone_pecker', d: 0.0018 }, { type: 'rime_shade', d: 0.0012 }, { type: 'stone_golem', d: 0.001 }, { type: 'goat', d: 0.0024 }],
-  },
-  ice_sheet: {
-    label: 'Polar Ice Cap', tier: 3, climate: 'polar ice / permanent frost',
-    surface: 'snow', filler: 'ice',
-    trees: [],
-    plants: [],
-    nodes: [{ type: 'ore_meteoric', d: 0.0016 }, { type: 'deposit_coal', d: 0.0015 }],
-    enemies: [{ type: 'rime_shade', d: 0.0024 }, { type: 'frostmaw_wolf', d: 0.0018, pack: [2, 3] }, { type: 'frost_elemental', d: 0.0018 }],
+    nodes: [{ type: 'herb_patch', d: 0.008 }, { type: 'clay_deposit', d: 0.006 }, { type: 'fishing_spot', d: 0.005 }, { type: 'fishing_river', d: 0.003 }],
+    enemies: [{ type: 'bog_shambler', d: 0.0025, ring: 1 }, { type: 'marsh_wisp', d: 0.0022, ring: 1 }, { type: 'duskwing', d: 0.0016 }, { type: 'bog_ooze', d: 0.002, ring: 1 }, { type: 'will_o_wisp', d: 0.0018, ring: 1 }, { type: 'mire_toad', d: 0.0016 }, { type: 'duck', d: 0.0024, pack: [2, 3] }],
   },
   coastal_shores: {
-    label: 'Coast', tier: 1, climate: 'coastal beach',
+    label: 'Coast', ring: 0, climate: 'coastal beach',
+    // Every fishing tier meets the sea somewhere along a shoreline, so the shelf
+    // and the deep water are here too — thinner, and useless until level 30/50.
     surface: 'sand', filler: 'sand',
     trees: [],
     plants: [{ block: 'reed', d: 0.02 }],
-    nodes: [{ type: 'fishing_spot', d: 0.006 }, { type: 'clay_deposit', d: 0.004 }, { type: 'deposit_saltpeter', d: 0.002 }],
+    nodes: [{ type: 'fishing_spot', d: 0.005 }, { type: 'fishing_coastal', d: 0.0035 }, { type: 'fishing_deep', d: 0.002 }, { type: 'clay_deposit', d: 0.004 }, { type: 'deposit_saltpeter', d: 0.002 }],
     enemies: [{ type: 'shell_snapper', d: 0.0025 }, { type: 'duck', d: 0.0022, pack: [2, 3] }],
   },
+
+  // ---- ring 1: the first walk out -----------------------------------------
+  temperate_rainforest: {
+    label: 'Temperate Rainforest', ring: 1, climate: 'mild, very wet coniferous rainforest',
+    // The oakwood tier: a dense, dark, standing-timber forest. The hardwoods a
+    // level-45+ woodcutter needs live here rather than in the starting bowl.
+    surface: 'grass', filler: 'dirt',
+    trees: grove(['cedar', 0.035], ['hickory', 0.014], ['pine', 0.012], ['maple', 0.01], ['walnut', 0.005]),
+    plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'mushroom_cap', d: 0.03 }, { block: 'reed', d: 0.01 }],
+    nodes: [{ type: 'herb_patch', d: 0.01 }, { type: 'berry_bush', d: 0.005 }, { type: 'farm_loam', d: 0.0015 }],
+    enemies: [{ type: 'moss_lurker', d: 0.003, ring: 1 }, { type: 'thicket_sprite', d: 0.002 }, { type: 'duskwing', d: 0.0016 }],
+  },
+  misty_wetlands: {
+    label: 'Swamp', ring: 1, climate: 'wetland / swamp',
+    // The marsh proper: running channels for the river tier, and the richest of
+    // the waterlogged ground that preserves organics for a bog deposit (the
+    // taiga peat and the highland moor hold thinner versions of the same).
+    surface: 'grass', filler: 'clay_block',
+    trees: grove(['cedar', 0.02]),
+    plants: [{ block: 'reed', d: 0.05 }, { block: 'mushroom_cap', d: 0.02 }],
+    nodes: [{ type: 'herb_patch', d: 0.01 }, { type: 'clay_deposit', d: 0.006 }, { type: 'fishing_river', d: 0.004 }, { type: 'dig_bog', d: 0.002 }],
+    enemies: [{ type: 'bog_shambler', d: 0.003, ring: 1 }, { type: 'marsh_wisp', d: 0.002, ring: 1 }, { type: 'blight_horror', d: 0.0012, ring: 3 }, { type: 'bog_ooze', d: 0.0022, ring: 1 }, { type: 'will_o_wisp', d: 0.0018, ring: 1 }, { type: 'grave_wight', d: 0.0012, ring: 2 }, { type: 'mire_toad', d: 0.0018 }, { type: 'duck', d: 0.0024, pack: [2, 3] }],
+  },
+  shrubland: {
+    label: 'Mediterranean Shrubland', ring: 1, climate: 'warm, dry-summer chaparral',
+    // The heath: thin scrub over dry ground, worth walking for the worked loam.
+    surface: 'grass', filler: 'dirt',
+    trees: grove(['oak', 0.005], ['pine', 0.004]),
+    plants: [{ block: 'tall_grass', d: 0.04 }, { block: 'wildflower', d: 0.02 }],
+    nodes: [{ type: 'herb_patch', d: 0.006 }, { type: 'berry_bush', d: 0.003 }, { type: 'deposit_saltpeter', d: 0.0016 }, { type: 'farm_loam', d: 0.0015 }],
+    enemies: [{ type: 'dune_stalker', d: 0.002, ring: 1 }, { type: 'sunscale_serpent', d: 0.0016, ring: 1 }, { type: 'thicket_sprite', d: 0.0016 }, { type: 'scrap_goblin', d: 0.0018, ring: 1 }, { type: 'rabbit', d: 0.0024 }],
+  },
+  rocky_highlands: {
+    label: 'Mountains', ring: 1, climate: 'montane / alpine rock',
+    // The pine hills: the first real mining ground, and the first cut trenches.
+    surface: 'stone', filler: 'stone',
+    trees: grove(['pine', 0.006], ['ash', 0.006], ['hickory', 0.004]),
+    plants: [{ block: 'tall_grass', d: 0.008 }],
+    nodes: [{ type: 'ore_iron', d: 0.005 }, { type: 'ore_copper', d: 0.004 }, { type: 'ore_tin', d: 0.004 }, { type: 'deposit_coal', d: 0.003 }, { type: 'dig_trench', d: 0.002 }],
+    enemies: [{ type: 'craghorn_ram', d: 0.0025 }, { type: 'stone_pecker', d: 0.002 }, { type: 'scrap_goblin', d: 0.002, ring: 1 }, { type: 'cave_slime', d: 0.0016, ring: 1 }, { type: 'skeletal_archer', d: 0.0014, ring: 2 }, { type: 'stone_golem', d: 0.0009, ring: 2 }, { type: 'crag_bat', d: 0.0018, pack: [2, 3], ring: 1 }, { type: 'goat', d: 0.0022 }],
+  },
+  savanna: {
+    label: 'Savanna', ring: 1, climate: 'tropical grassland / savanna',
+    surface: 'grass', filler: 'dirt',
+    trees: grove(['teak', 0.004]),
+    plants: [{ block: 'tall_grass', d: 0.06 }, { block: 'wildflower', d: 0.006 }],
+    nodes: [{ type: 'herb_patch', d: 0.004 }, { type: 'deposit_saltpeter', d: 0.002 }, { type: 'dig_site', d: 0.0015 }, { type: 'farm_loam', d: 0.0015 }],
+    enemies: [{ type: 'dune_stalker', d: 0.0025, ring: 1 }, { type: 'sunscale_serpent', d: 0.0016, ring: 1 }, { type: 'mudback_boar', d: 0.0015 }, { type: 'dust_scarab', d: 0.0022, ring: 1 }],
+  },
+
+  // ---- ring 2: the harsh middle -------------------------------------------
+  boreal_forest: {
+    label: 'Boreal Forest', ring: 2, climate: 'cold coniferous taiga',
+    surface: 'grass', filler: 'dirt',
+    trees: grove(['pine', 0.045], ['cedar', 0.018], ['yew', 0.005]),
+    plants: [{ block: 'mushroom_cap', d: 0.012 }, { block: 'tall_grass', d: 0.01 }],
+    nodes: [{ type: 'herb_patch', d: 0.005 }, { type: 'deposit_coal', d: 0.003 }, { type: 'dig_bog', d: 0.0012 }],
+    enemies: [{ type: 'frostmaw_wolf', d: 0.0022, pack: [2, 3], ring: 2 }, { type: 'rime_shade', d: 0.0014, ring: 2 }, { type: 'bone_hound', d: 0.0018, pack: [2, 3], ring: 2 }, { type: 'snow_hare', d: 0.0022 }],
+  },
+  frostbound_tundra: {
+    label: 'Tundra', ring: 2, climate: 'cold dry tundra',
+    // Pinned around the Frostwatch frontier camp (ring 1), so its creatures are
+    // gated a ring lower than the same beasts under the boreal canopy — the camp
+    // has to be worth garrisoning the moment a player can reach it.
+    surface: 'snow_grass', filler: 'dirt',
+    trees: grove(['yew', 0.003]),
+    plants: [],
+    nodes: [{ type: 'ore_iron', d: 0.004 }, { type: 'ore_silver', d: 0.002 }, { type: 'deposit_coal', d: 0.002 }, { type: 'dig_trench', d: 0.0016 }],
+    enemies: [{ type: 'frostmaw_wolf', d: 0.003, pack: [2, 3], ring: 1 }, { type: 'rime_shade', d: 0.0015, ring: 1 }, { type: 'bone_hound', d: 0.0018, pack: [2, 3], ring: 1 }, { type: 'frost_elemental', d: 0.0014, ring: 2 }, { type: 'snow_hare', d: 0.003, pack: [2, 3] }],
+  },
+  cold_desert: {
+    label: 'Cold Desert', ring: 2, climate: 'cold semi-arid steppe',
+    surface: 'gravel', filler: 'dirt',
+    trees: [],
+    plants: [{ block: 'tall_grass', d: 0.012 }],
+    nodes: [{ type: 'ore_lead', d: 0.003 }, { type: 'ore_zinc', d: 0.0024 }, { type: 'dig_site', d: 0.003 }, { type: 'dig_trench', d: 0.002 }],
+    enemies: [{ type: 'dune_stalker', d: 0.0022, ring: 1 }, { type: 'rime_shade', d: 0.0016, ring: 1 }, { type: 'craghorn_ram', d: 0.0016 }, { type: 'grave_wight', d: 0.0014, ring: 2 }],
+  },
+  chalk_downs: {
+    label: 'Chalk Downs', ring: 2, climate: 'dry limestone downland',
+    // Thin sheep-turf over chalk rubble: open, rolling, and the best ground in
+    // the world to cut a trench through — every layer is still where it settled.
+    // Yew is a downland tree in life as well as here.
+    surface: 'grass', filler: 'gravel',
+    trees: grove(['yew', 0.004], ['ash', 0.003]),
+    plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'wildflower', d: 0.025 }],
+    nodes: [{ type: 'dig_trench', d: 0.0035 }, { type: 'herb_patch', d: 0.005 }, { type: 'deposit_saltpeter', d: 0.002 }, { type: 'farm_loam', d: 0.002 }],
+    enemies: [{ type: 'meadow_stag', d: 0.0022 }, { type: 'rabbit', d: 0.0024 }, { type: 'goat', d: 0.0022 }, { type: 'craghorn_ram', d: 0.0018, ring: 1 }, { type: 'stone_pecker', d: 0.0016, ring: 1 }, { type: 'scrap_goblin', d: 0.0016, ring: 1 }, { type: 'skeletal_archer', d: 0.0016, ring: 2 }, { type: 'grave_wight', d: 0.0014, ring: 2 }],
+  },
+  alpine_meadow: {
+    label: 'Alpine Meadow', ring: 2, climate: 'montane grassland above the treeline',
+    // The highland moor: peat over rock, so the bog deposits of the lowland
+    // marsh turn up here too — just colder, higher and better guarded.
+    surface: 'grass', filler: 'stone',
+    trees: [],
+    plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'wildflower', d: 0.02 }],
+    nodes: [{ type: 'ore_copper', d: 0.003 }, { type: 'ore_tin', d: 0.003 }, { type: 'herb_patch', d: 0.006 }, { type: 'deposit_coal', d: 0.002 }, { type: 'dig_bog', d: 0.0016 }],
+    enemies: [{ type: 'craghorn_ram', d: 0.0026 }, { type: 'stone_pecker', d: 0.0018 }, { type: 'rime_shade', d: 0.0012, ring: 1 }, { type: 'stone_golem', d: 0.001, ring: 2 }, { type: 'goat', d: 0.0024 }],
+  },
+  sunbaked_badlands: {
+    label: 'Desert', ring: 2, climate: 'hot desert',
+    // The badlands: bare stratified ground, cut trenches everywhere, and the
+    // odd sealed assemblage under a buried ruin for a level-60 archaeologist.
+    surface: 'sand', filler: 'sand',
+    trees: grove(['teak', 0.0025]),
+    plants: [{ block: 'cactus_flesh', d: 0.006 }],
+    nodes: [{ type: 'ore_lead', d: 0.003 }, { type: 'ore_silver', d: 0.003 }, { type: 'deposit_sulfur', d: 0.003 }, { type: 'dig_trench', d: 0.004 }, { type: 'dig_vault', d: 0.0012 }],
+    enemies: [{ type: 'dune_stalker', d: 0.003, ring: 1 }, { type: 'sunscale_serpent', d: 0.002, ring: 1 }, { type: 'skeletal_archer', d: 0.0018, ring: 2 }, { type: 'dust_scarab', d: 0.003, ring: 1 }],
+  },
+  monsoon_forest: {
+    label: 'Monsoon Forest', ring: 2, climate: 'tropical dry / seasonal forest',
+    surface: 'grass', filler: 'dirt',
+    trees: grove(['teak', 0.035], ['ebony', 0.008]),
+    plants: [{ block: 'tall_grass', d: 0.04 }, { block: 'mushroom_cap', d: 0.008 }],
+    nodes: [{ type: 'herb_patch', d: 0.006 }, { type: 'berry_bush', d: 0.003 }, { type: 'farm_rich', d: 0.0015 }],
+    enemies: [{ type: 'sunscale_serpent', d: 0.0022, ring: 1 }, { type: 'moss_lurker', d: 0.0016, ring: 1 }, { type: 'dune_stalker', d: 0.0014, ring: 1 }],
+  },
+  mangrove: {
+    label: 'Mangrove Coast', ring: 2, climate: 'tropical coastal wetland',
+    surface: 'grass', filler: 'clay_block',
+    trees: grove(['teak', 0.02], ['cedar', 0.012]),
+    plants: [{ block: 'reed', d: 0.06 }, { block: 'mushroom_cap', d: 0.015 }],
+    nodes: [{ type: 'fishing_spot', d: 0.005 }, { type: 'fishing_coastal', d: 0.004 }, { type: 'clay_deposit', d: 0.005 }, { type: 'herb_patch', d: 0.006 }],
+    enemies: [{ type: 'bog_shambler', d: 0.0022, ring: 1 }, { type: 'marsh_wisp', d: 0.0018, ring: 1 }, { type: 'sunscale_serpent', d: 0.0016, ring: 1 }],
+  },
   crystal_caverns: {
-    label: 'Crystal Caverns', tier: 2, climate: 'subterranean',
+    label: 'Crystal Caverns', ring: 2, climate: 'subterranean',
     surface: 'stone', filler: 'stone',
     trees: [], plants: [], nodes: [],
-    enemies: [{ type: 'cave_slime', d: 0.004 }, { type: 'gaze_orb', d: 0.0016 }, { type: 'crag_bat', d: 0.002, pack: [2, 4] }],
+    enemies: [{ type: 'cave_slime', d: 0.004, ring: 1 }, { type: 'gaze_orb', d: 0.0016, ring: 3 }, { type: 'crag_bat', d: 0.002, pack: [2, 4], ring: 1 }],
+  },
+
+  // ---- ring 3: the far reaches --------------------------------------------
+  deep_wood: {
+    label: 'Deep Wood', ring: 3, climate: 'old-growth primeval forest',
+    // Standing timber nobody has ever cut: the tall, leaning, heavy-limbed
+    // species, ground rich enough for a manured bed, and things that live in it.
+    surface: 'grass', filler: 'dirt',
+    trees: grove(['yew', 0.028], ['walnut', 0.012], ['maple', 0.01], ['hickory', 0.008], ['ebony', 0.004]),
+    plants: [{ block: 'mushroom_cap', d: 0.035 }, { block: 'tall_grass', d: 0.02 }],
+    nodes: [{ type: 'herb_patch', d: 0.01 }, { type: 'farm_rich', d: 0.0015 }, { type: 'dig_vault', d: 0.0012 }],
+    enemies: [{ type: 'moss_lurker', d: 0.003, ring: 1 }, { type: 'thicket_sprite', d: 0.002 }, { type: 'duskwing', d: 0.0016 }, { type: 'wolf', d: 0.0018, pack: [2, 4], ring: 2 }, { type: 'spider', d: 0.0018, pack: [1, 2], ring: 2 }, { type: 'grave_wight', d: 0.0016, ring: 2 }, { type: 'blight_horror', d: 0.0014, ring: 3 }, { type: 'hollow_watcher', d: 0.0012, ring: 3 }, { type: 'veil_crawler', d: 0.0014, ring: 3 }],
+  },
+  tropical_forest: {
+    label: 'Tropical Rainforest', ring: 3, climate: 'hot humid rainforest',
+    surface: 'grass', filler: 'dirt',
+    trees: grove(['teak', 0.03], ['ebony', 0.014], ['lignum_vitae', 0.004]),
+    plants: [{ block: 'tall_grass', d: 0.04 }, { block: 'mushroom_cap', d: 0.02 }],
+    nodes: [{ type: 'herb_patch', d: 0.008 }, { type: 'berry_bush', d: 0.004 }, { type: 'farm_rich', d: 0.0012 }],
+    enemies: [{ type: 'moss_lurker', d: 0.003, ring: 1 }, { type: 'thicket_sprite', d: 0.002 }, { type: 'sunscale_serpent', d: 0.0016, ring: 1 }, { type: 'veil_crawler', d: 0.0012, ring: 3 }],
+  },
+  snowy_peaks: {
+    label: 'Snowy Mountains', ring: 3, climate: 'alpine snow / glacier',
+    // The frost peaks: nothing grows, the metals are precious, and what walks
+    // the ridgelines past ring 3 is the hardest thing in the open world.
+    surface: 'snow', filler: 'stone',
+    trees: [],
+    plants: [],
+    nodes: [{ type: 'ore_silver', d: 0.003 }, { type: 'ore_gold', d: 0.0016 }, { type: 'deposit_coal', d: 0.002 }, { type: 'dig_vault', d: 0.001 }],
+    enemies: [{ type: 'rime_shade', d: 0.0022, ring: 1 }, { type: 'craghorn_ram', d: 0.002 }, { type: 'hollow_watcher', d: 0.0012, ring: 3 }, { type: 'frost_elemental', d: 0.0016, ring: 2 }, { type: 'stone_golem', d: 0.0009, ring: 2 }, { type: 'gaze_orb', d: 0.0012, ring: 3 }],
+  },
+  volcanic_wastes: {
+    label: 'Volcanic Fields', ring: 3, climate: 'active volcanic',
+    surface: 'ashen_soil', filler: 'basalt',
+    trees: [],
+    plants: [],
+    nodes: [{ type: 'ore_gold', d: 0.003 }, { type: 'ore_meteoric', d: 0.002 }, { type: 'deposit_sulfur', d: 0.004 }, { type: 'dig_vault', d: 0.0015 }],
+    enemies: [{ type: 'cinder_imp', d: 0.004, ring: 3 }, { type: 'magma_hulk', d: 0.0015, ring: 3 }, { type: 'veil_crawler', d: 0.0016, ring: 3 }, { type: 'gaze_orb', d: 0.0014, ring: 3 }, { type: 'ash_salamander', d: 0.0026, ring: 2 }],
+  },
+  ice_sheet: {
+    label: 'Polar Ice Cap', ring: 3, climate: 'polar ice / permanent frost',
+    surface: 'snow', filler: 'ice',
+    trees: [],
+    plants: [],
+    nodes: [{ type: 'ore_meteoric', d: 0.0016 }, { type: 'deposit_coal', d: 0.0015 }, { type: 'dig_vault', d: 0.0008 }],
+    enemies: [{ type: 'rime_shade', d: 0.0024, ring: 2 }, { type: 'frostmaw_wolf', d: 0.0018, pack: [2, 3], ring: 2 }, { type: 'frost_elemental', d: 0.0018, ring: 3 }],
   },
 };
 
@@ -408,14 +462,21 @@ export class WorldGen {
     if (t < 0.16) return B.ice_sheet;
     if (t < 0.34) return m > 0.5 ? B.boreal_forest : B.frostbound_tundra;
     if (t < 0.50) {                                            // cool
-      if (m > 0.55) return B.boreal_forest;
+      if (m > 0.55) return tier >= 3 && m > 0.82 ? B.deep_wood : B.boreal_forest;
       if (m < 0.26 && tier >= 1) return B.cold_desert;
       return B.greenwood_plains;
     }
     if (t < 0.66) {                                            // temperate
-      if (m > 0.76) return B.temperate_rainforest;
+      // The deep wood is the same wet temperate climate as the rainforest, just
+      // wetter and far enough out that nobody has ever cut it. Ring 3 is doing
+      // the work here, not the climate — which is the point: the far reaches are
+      // where the tall timber is, whatever the weather.
+      if (m > 0.76) return tier >= 3 && m > 0.82 ? B.deep_wood : B.temperate_rainforest;
       if (m > 0.44) return B.ancient_forest;
       if (m < 0.24 && tier >= 1) return B.cold_desert;
+      // Dry temperate upland → thin turf over chalk. Needs the height, or every
+      // dry meadow in the world would turn to downland.
+      if (tier >= 2 && h > SEA + 14) return B.chalk_downs;
       return B.greenwood_plains;
     }
     if (t < 0.76) {                                            // warm
@@ -491,9 +552,13 @@ export class WorldGen {
     return bl.b[bl.n - 1];
   }
 
-  isCave(x, y, z) {
+  // `onPath` is the column's road flag. It is a parameter because the caller
+  // walking a column already knows it: looked up here it would cost one string
+  // key per BLOCK rather than per column, and a column is up to a hundred blocks
+  // deep — that lookup was most of what a chunk spent on caves.
+  isCave(x, y, z, onPath = this.pathSet ? this.pathSet.has(x + ',' + z) : false) {
     if (y < 4 || y > WORLD_H - 12) return false;
-    if (this.pathSet && this.pathSet.has(x + ',' + z)) return false; // never carve a hole under the road
+    if (onPath) return false; // never carve a hole under the road
     const d = Math.hypot(x, z);
     if (d < 46) return false; // keep the settlement's underground intact for the hand-built mine
     if (Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z) < 30) return false; // solid ground under the camp
@@ -520,7 +585,7 @@ export class WorldGen {
       let id = B.air;
       if (y === 0) id = B.bedrock;
       else if (y <= h) {
-        if (this.isCave(wx, y, wz)) {
+        if (this.isCave(wx, y, wz, onPath)) {
           id = B.air;
         } else if (y === h) {
           // beaches near water line — but the gravel road always wins, even where
