@@ -28,12 +28,14 @@ import { BLOCKS, B } from '../../js/world/blocks.js';
 import { buildStarterStructures, stampChunkStructures, structureClaims } from '../../js/world/structures.js';
 import { roadsFor } from '../../js/world/roads.js';
 import { nearHandBuilt } from '../../js/world/sites.js';
+import { mineshaftAt } from '../../js/world/mineshaft.js';
+import { dungeonAt } from '../../js/world/dungeon.js';
 import { NODE_TYPES } from '../../js/game/nodes.js';
 import { ITEMS } from '../../js/game/items.js';
-import { QUESTS } from '../../js/game/quests.js';
+import { QUESTS, QuestLog } from '../../js/game/quests.js';
 import { NPC_DEFS, DIALOGUES } from '../../js/game/npcs.js';
 import {
-  allSettlements, settlementAt, siteAt, settlementClaims, findSettlement,
+  allSettlements, settlementAt, siteAt, settlementClaims, findSettlement, settlementNear,
   TOWN_SPACING, REJECTS,
 } from '../../js/world/settlements.js';
 
@@ -296,18 +298,31 @@ test('every doorway is a real hole with headroom and a doorstep', () => {
   assert.deepEqual(bad, []);
 });
 
-test('every door is two blocks tall, both leaves matching', () => {
+test('every door is two blocks tall, and the top leaf is the TOP art', () => {
+  // `drops` is not enough to tell the leaves apart: oak_door and oak_door_top
+  // both drop oak_door, by design, so that breaking either gives you one door
+  // back. A door built as two LOWER leaves therefore satisfies "both leaves
+  // agree" while rendering as two bottom halves stacked — handle twice, no head.
+  // The invariant that actually holds is the naming pair, so that is what is
+  // asserted: the block above a `<wood>_door` must be `<wood>_door_top`.
+  const NAME_OF = new Map(Object.entries(B).map(([n, i]) => [i, n]));
   const { world, town } = loadTown(SEEDS[0], 2);
   const short = [], mismatched = [];
+  let leaves = 0;
   for (const d of town.doors) {
-    const lower = BLOCKS[world.getBlock(d.x, d.y, d.z)];
-    const upper = BLOCKS[world.getBlock(d.x, d.y + 1, d.z)];
+    const loId = world.getBlock(d.x, d.y, d.z), upId = world.getBlock(d.x, d.y + 1, d.z);
+    const lower = BLOCKS[loId], upper = BLOCKS[upId];
     if (lower?.shape !== 'door') continue;              // a forge bay has no leaf
+    leaves++;
     if (upper?.shape !== 'door') { short.push(`${d.name} at ${d.x},${d.y},${d.z} has no upper leaf`); continue; }
-    if (lower.drops !== upper.drops) mismatched.push(`${d.name} leaves drop ${lower.drops} / ${upper.drops}`);
+    const want = `${NAME_OF.get(loId)}_top`;
+    if (NAME_OF.get(upId) !== want) {
+      mismatched.push(`${d.name}: ${NAME_OF.get(loId)} under ${NAME_OF.get(upId)}, wanted ${want}`);
+    }
   }
+  assert.ok(leaves >= 5, `the town has doors with leaves to check (${leaves})`);
   assert.deepEqual(short, [], 'doors must be two blocks tall');
-  assert.deepEqual(mismatched, [], 'the two leaves must agree');
+  assert.deepEqual(mismatched, [], 'the upper leaf must be the top half of that same door');
 });
 
 test('upper storeys are reachable, so the stairs actually go somewhere', () => {
@@ -341,13 +356,16 @@ test('the lane from the road can be WALKED, not jumped', () => {
     const roads = roadsFor(loaded.world.gen);
     const c = roads.column(loaded.world.gen, town.d, town.site.s, 0);
     const { reached } = survey(loaded, { jump: false, from: { x: c[0], z: c[1] } });
+    // The paved lane only — the graded shoulders either side of it are earthwork
+    // that makes the cutting read as a cutting, not surface you have to walk.
+    const paved = town.lane.filter((c) => !c.lift);
     let got = 0, missed = null;
-    for (const c of town.lane) {
+    for (const c of paved) {
       if (reached(c.x, c.y + 1, c.z)) got++;
       else if (!missed) missed = c;
     }
-    assert.ok(got / town.lane.length > 0.8,
-      `seed ${seed} (${town.name}): only ${got}/${town.lane.length} lane cells walkable (e.g. ${JSON.stringify(missed)})`);
+    assert.ok(got / paved.length > 0.8,
+      `seed ${seed} (${town.name}): only ${got}/${paved.length} lane cells walkable (e.g. ${JSON.stringify(missed)})`);
     // and the market square itself is walkable from the road without a jump
     assert.ok(reached(town.tx, town.floor, town.tz)
       || [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0]].some(([a, b]) => reached(town.tx + a, town.floor, town.tz + b)),
@@ -476,4 +494,76 @@ test('the delivery quest points at a town that exists', () => {
         'a delivery should be a journey');
     }
   }
+});
+
+test('no town is built on top of a mineshaft head or a dungeon stair', () => {
+  // Towns stamp LAST (js/world/structures.js `stampChunkStructures`) so that they
+  // get the final say on the surface. That is right for terrain and wrong for
+  // anything with a way IN: a shaft head paved over by a market square leaves the
+  // ladder, the drifts and the pay chest all generated and permanently sealed.
+  // Measured at 4 of 208 towns across six seeds before mineshaft.js and
+  // dungeon.js learned to check `settlementNear` when siting.
+  //
+  // The check runs from the site modules' own siting function, so it catches the
+  // guard being removed rather than re-deriving where a town is.
+  const R = 8;
+  const capped = [];
+  for (const seed of [20260725, 777, 31337, 5150]) {
+    const gen = new WorldGen(seed);
+    for (let rx = -R; rx <= R; rx++) {
+      for (let rz = -R; rz <= R; rz++) {
+        const ms = mineshaftAt(gen, rx, rz);
+        if (ms && settlementNear(gen, ms.x, ms.z, 0)) {
+          capped.push(`seed ${seed}: mineshaft head ${ms.x},${ms.z} under a town`);
+        }
+        const dg = dungeonAt(gen, rx, rz);
+        if (dg && settlementNear(gen, dg.x, dg.z, 0)) {
+          capped.push(`seed ${seed}: dungeon entry ${dg.x},${dg.z} under a town`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(capped, [], 'a town must not seal the only way into a site');
+});
+
+test('a generated quest points the compass at its own town, not at Brookhollow', () => {
+  // js/game/quests.js `trackedMarker` picks the arrow's target. Under a stage it
+  // does not recognise it fell back to a hand-built landmark — a `talk` stage
+  // landed on `markers.stall`, the Brookhollow market — so every generated quest
+  // in the world sent the player home. Stages now carry their own marker key and
+  // the resolver honours it, or gives NO arrow if that place has not generated
+  // yet. Never a wrong arrow. Driven through the real QuestLog rather than a
+  // reimplementation of it, because the fallback chain is the thing under test.
+  const gen = new WorldGen(20260725);
+  const towns = allSettlements(gen, 2);
+  assert.ok(towns.length >= 2, `towns to check (${towns.length})`);
+
+  // Every hand-built landmark the fallback chain can reach, all parked at the
+  // origin, so a fallback shows up as a WRONG answer rather than as a null.
+  const HOME = [0, 64, 0];
+  const markers = {};
+  for (const k of ['cottage', 'frostwatch', 'stall', 'bossHall', 'dungeonAntechamber',
+    'meadow', 'wolfDen', 'mineChamber', 'grove', 'pond', 'farm', 'workshop']) markers[k] = HOME.slice();
+  for (const t of towns) markers[`town_${t.d}_${t.n}`] = t.marker.slice();
+
+  const log = new QuestLog();
+  let checked = 0, wrong = [];
+  for (const t of towns) {
+    for (const q of t.quests) {
+      if (!QUESTS.some((r) => r.id === q.id)) continue;   // not registered: not reachable in play
+      for (let k = 0; k < q.stages.length; k++) {
+        const st = q.stages[k];
+        assert.ok(st.marker, `${q.id} stage ${k} (${st.type}) names a marker`);
+        log.state = { [q.id]: { status: 'active', stage: k, progress: 0 } };
+        const tracked = log.trackedMarker(markers);
+        if (!tracked) continue;                     // an unvisited town: no arrow, which is honest
+        checked++;
+        if (Math.hypot(tracked.pos[0] - HOME[0], tracked.pos[2] - HOME[2]) <= 200) {
+          wrong.push(`${q.id} stage ${k} (${st.type}) points at the starter world`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(wrong, [], 'generated quests must not point the compass home');
+  assert.ok(checked >= 4, `a real sample of resolved stages (${checked})`);
 });

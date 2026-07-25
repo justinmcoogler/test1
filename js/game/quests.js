@@ -332,7 +332,18 @@ export class QuestLog {
     const q = act[0];
     const stage = this.currentStage(q);
     if (!stage) return null;
-    if (stage.type === 'reach' && markers[stage.marker]) return { pos: markers[stage.marker], label: q.name };
+    // A stage may name its own marker, whatever its type. Everything below this
+    // line is a hand-built Brookhollow or Frostwatch landmark chosen by matching
+    // on an npc id, an enemy type or an item — fine for the starter chain, wrong
+    // for anything generated, and wrong SILENTLY: a `talk` stage for a villager
+    // three thousand blocks up the road fell through to `markers.stall` and
+    // pointed the compass back at the Brookhollow market. Procedural towns
+    // publish `town_<d>_<n>` and tag their stages with it.
+    // A stage that names a marker is answered by that marker ALONE. If the place
+    // has not been published yet — a delivery to a town up the road you have not
+    // walked to, whose marker appears when it generates — the honest answer is no
+    // arrow, so `return` rather than fall through.
+    if (stage.marker) return markers[stage.marker] ? { pos: markers[stage.marker], label: q.name } : null;
     if (stage.type === 'talk') {
       const npcPos = stage.npc === 'maren' ? markers.cottage : stage.npc === 'sylla' ? markers.frostwatch : markers.stall;
       return { pos: npcPos, label: q.name };

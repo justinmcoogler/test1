@@ -8,6 +8,7 @@
 // chunk or any mutable state; a layout is a pure function of (seed, region) and
 // each chunk rasterises only its own slice of it.
 import { B } from './blocks.js';
+import { settlementNear } from './settlements.js';
 import { CHUNK, SEA, ringAt } from './worldgen.js';
 import { mulberry32 } from '../core/rng.js';
 import {
@@ -109,6 +110,12 @@ function buildMineshaft(gen, rx, rz) {
   if (!anchorIn(gen.seed, SALT, MS_REGION, MS_MARGIN, MS_CHANCE, rx, rz)) return null;
   const ax = ANCHOR.x, az = ANCHOR.z;
   if (nearHandBuilt(ax, az)) return null;
+  // …and clear of a procedural town. Towns stamp AFTER this module (see
+  // stampChunkStructures) so they get the last write on the surface, which means
+  // a shaft head sited under a market square is simply paved over — the ladder
+  // and the whole level below it are still generated, and there is no longer any
+  // way down to them. Measured at ~2% of towns before this guard.
+  if (settlementNear(gen, ax, az, PAD + 1)) return null;
   if (onRoad(gen, ax, az, PAD + 1)) return null;
   const surfaceY = padHeight(gen, ax, az, PAD, 4);
   if (surfaceY < 0) return null;

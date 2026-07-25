@@ -321,8 +321,12 @@ export class World {
     // write them itself; without this a road's every one-block rise was a plain
     // cobble cube, and since only stairs and slabs are walkable steps that meant
     // jumping once every 14 blocks of road.
+    // The chest sink is the same story for loot: a wayside croft's kist is a
+    // block roads.js can place, but its CONTENTS live in world.chestMeta, which
+    // the block array cannot reach. Without this the kists all opened empty.
     bumpTop(carveRoads(gen, chunk, blocks, cx, cz,
-      (x, y, z, f) => { if (f) this.blockFacing.set(cellKey(x, y, z), f & 15); }));
+      (x, y, z, f) => { if (f) this.blockFacing.set(cellKey(x, y, z), f & 15); },
+      (c) => this.chestMeta.set(c.id, c)));
 
     // Underground ore nodes on cave walls
     for (const cand of undergroundNodeCandidates(gen, cx, cz)) {

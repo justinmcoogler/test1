@@ -23,20 +23,15 @@
 // type-keyed flag would unseal every crypt hoard in the world the first time a
 // player cut down a wandering wight. dungeon.js flags this in its own comments;
 // this file is the other side of that contract.
-import { dungeonAt, DG_REGION, DG_HALF } from '../world/dungeon.js';
+import { dungeonAt, DG_REGION, DG_HALF, KEY_ITEM } from '../world/dungeon.js';
 import { ENEMY_TYPES } from './enemies.js';
 import { ITEMS } from './items.js';
 
-// The key. NOT `relic_fragment`, which is what dungeon.js nominates because it
-// is forbidden from inventing an item: a relic fragment is a generic enchanting
-// material with about eight other sources (every mineshaft chest tier, both
-// hand-built boss chests, three mob drop tables, opening a waterlogged cache,
-// and it is a root in tools/audit.mjs), so a player reaches their first dungeon
-// already holding a stack. A grate that opens to an item you cannot avoid owning
-// is not a lock, and the key holder standing between you and it would be pure
-// decoration. `warden_key` exists only for this, so meeting the warden is the
-// only way through.
-export const KEY_ITEM = 'warden_key';
+// The key is defined by the generator (js/world/dungeon.js), which stamps it onto
+// every door it builds; this file re-exports it so the runtime and the layout are
+// reading one constant rather than two that have to be kept in step. See the note
+// there for why it is a bespoke item and not `relic_fragment`.
+export { KEY_ITEM };
 
 // ---- identity --------------------------------------------------------------
 // A dungeon's region anchor. Unique per world (one dungeon per region, and the

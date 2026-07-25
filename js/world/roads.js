@@ -165,18 +165,33 @@ const WS_OFFSET = 2.7;      // the signpost and bench sit on the verge, off the 
 // base course never intrudes on the paved core you actually walk (coreEdge tops
 // out near 2.1, and the base reaches one block inboard of WS_STONE).
 const WS_STONE = 4.2;
-// The stone's own column, course by course from the road surface upward: the
-// centre of the broad base course, then the shaft. ONE block square against a
-// three-block base, so the taper reads from the road at a glance, and banded
-// mossy/clean rather than a smooth run — an unbroken pillar reads as scenery,
-// alternating courses read as a stone somebody dressed. The lantern sits under
-// the capstone near the top so the glow spills sideways and you can find the
-// thing at night.
+// The stone's own CENTRE column, course by course from the road surface upward:
+// the middle of the broad base, then the body, then the crown. Banded mossy/clean
+// rather than a smooth run — an unbroken pillar reads as scenery, alternating
+// courses read as a stone somebody dressed. The lantern sits under the capstone
+// so the glow spills sideways and you can find the thing at night.
+//
+// This is the column js/game/waystones.js matches on to decide "that is a
+// waystone", so it is the stone's identity and must not drift. The WIDTH of each
+// course is a separate matter — see WS_WING.
 export const WAYSTONE_COURSES = [
   B.cobble, B.stone_brick, B.mossy_stone_brick, B.stone_brick,
   B.mossy_stone_brick, B.stone_brick, B.sea_lantern, B.stone_brick_slab,
 ];
 const WS_SHAFT = WAYSTONE_COURSES;
+// A menhir is a SLAB, not a post. The first cut of this stone was one block
+// square for its whole height, and at a 1:6 aspect it read from the road as a
+// chimney — the silhouette of a lamp-post, not a standing stone. Real standing
+// stones are broad across one axis and roughly a hand thick through the other,
+// which is also the shape that reads best here: the road brings you at the flat
+// of it, so you meet a face rather than an edge.
+//
+// So the body courses get wings, WS_WING blocks either side, along the road's
+// ACROSS axis only. The centre column is untouched, which is what keeps the
+// identity above intact; the crown (lantern and capstone) stays one wide so the
+// stone still tapers to a point against the sky.
+const WS_WING = 1;
+const WS_BODY0 = 3, WS_BODY1 = 6;   // course range that gets wings, road-surface relative
 const WS_TOP = WS_SHAFT.length + 1;       // courses above the road surface
 const WS_FOOT = 8;          // deepest the base course will reach for solid ground
 const WS_YARD = 3;          // columns round the stone kept clear of trees
@@ -863,7 +878,7 @@ export class Roads {
   // SITE_SPAN wide and the wobble puts it a couple of blocks off the straight
   // bearing, so a chunk holding only the destination still has to see the ORIGIN
   // station that produced it.
-  _trailRange(sChunk, d, out) {
+  _trailRange(sChunk, out) {
     const reach = TRAIL_MAX + CHUNK_R + SITE_SPAN + 6;
     out[0] = Math.ceil((sChunk - reach) / TRAIL_SPACING);
     out[1] = Math.floor((sChunk + reach) / TRAIL_SPACING);
@@ -887,7 +902,7 @@ export class Roads {
   }
 
   _trailEnds(gen, blocks, cx, cz, d, sChunk) {
-    const rg = this._trailRange(sChunk, d, this._krange);
+    const rg = this._trailRange(sChunk, this._krange);
     let top = -1;
     const half = SITE_SPAN + 2, x0 = cx * CHUNK, z0 = cz * CHUNK;
     for (let k = rg[0]; k <= rg[1]; k++) {
@@ -903,7 +918,7 @@ export class Roads {
   }
 
   _trails(gen, chunk, blocks, cx, cz, d, sChunk) {
-    const rg = this._trailRange(sChunk, d, this._krange);
+    const rg = this._trailRange(sChunk, this._krange);
     for (let k = rg[0]; k <= rg[1]; k++) {
       const sOrigin = k * TRAIL_SPACING;
       if (sOrigin < TRAIL_START + RC_START[d]) continue;
@@ -1323,13 +1338,17 @@ export class Roads {
     return top;
   }
 
-  // The standing stone itself — a menhir, not a bollard. What makes one legible
-  // from the road is the SILHOUETTE, so it is built out of that: a rough base
-  // course three blocks across, a kerb of wall-posts and slabs stepping in off
-  // it, and a shaft one block square rising six more courses out of the middle.
-  // Base three wide against a shaft one wide is a taper you read at a glance;
-  // the shaft's alternating mossy courses are what stop it reading as a smooth
-  // pillar; and the lantern set under its capstone is how you find it at night.
+  // The standing stone itself — a menhir, not a bollard and not a chimney. What
+  // makes one legible from the road is the SILHOUETTE, so it is built out of
+  // that: a rough base course three blocks across, a kerb of wall-posts and slabs
+  // stepping in off it, then a body three blocks wide but only one thick rising
+  // out of the middle, tapering to a one-block crown of lantern and capstone.
+  //
+  // The body's width is the whole point and it is easy to lose — see WS_WING. A
+  // shaft one block square gave a 1:6 stick that read as a lamp-post from any
+  // distance you would actually first see the thing from. The alternating mossy
+  // courses are what stop it reading as a smooth pillar, and the lantern set
+  // under the capstone is how you find it at night.
   //
   // Chunk-local, and levelled: all nine columns sit at the road's own graded
   // height at `s`, which is `gradeAt(s)` — a pure function of (seed, road, s),
@@ -1340,6 +1359,14 @@ export class Roads {
   _menhir(gen, blocks, cx, cz, d, s, side) {
     const c = this.column(gen, d, s, WS_STONE * side, this._col);
     const ax = c[0], az = c[1];
+    // Which world axis the stone's broad face is widened along: the road's ACROSS
+    // axis, sampled by stepping one block further out and seeing which way the
+    // column moved. On a diagonal arterial that step is diagonal, so take the
+    // dominant component — a slab wants one flat face, not a staircase of
+    // corners. Sampled here, before `window`, because `column` moves the frame.
+    const c2 = this.column(gen, d, s, WS_STONE * side + 1, this._col);
+    const wdx = Math.abs(c2[0] - ax) >= Math.abs(c2[1] - az) ? 1 : 0;
+    const wdz = 1 - wdx;
     // Cheap out for every chunk the stone cannot reach, before the profile
     // window — which is the only expensive thing in here.
     const lx = ax - cx * CHUNK, lz = az - cz * CHUNK;
@@ -1399,6 +1426,17 @@ export class Roads {
     // The shaft. WS_SHAFT[0] is the base course's own centre, already laid above
     // and repeated here so the exported course list reads as one column.
     for (let i = 0; i < WS_SHAFT.length; i++) put(ax, y + 1 + i, az, WS_SHAFT[i]);
+    // The wings that make it a slab rather than a post — see WS_WING. They run
+    // along the road's ACROSS axis, so the flat of the stone faces a traveller
+    // coming up the lane. They reach no further than the base course already
+    // does (the plinth is 3x3 and these are ±1 of the same centre), so nothing
+    // here can newly intrude on the paved lane.
+    for (let i = WS_BODY0; i <= WS_BODY1; i++) {
+      for (let k = -WS_WING; k <= WS_WING; k++) {
+        if (k === 0) continue;
+        put(ax + wdx * k, y + i, az + wdz * k, WS_SHAFT[i - 1]);
+      }
+    }
     return top;
   }
 

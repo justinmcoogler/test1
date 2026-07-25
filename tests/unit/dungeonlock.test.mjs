@@ -42,7 +42,7 @@ function dungeonWorld(seed) {
 }
 
 // ---- the key item ----------------------------------------------------------
-test('the key is an item of its own, not the relic fragment dungeon.js nominates', () => {
+test('the key is an item of its own, and the door the generator built wants that same key', () => {
   assert.ok(ITEMS[KEY_ITEM], `${KEY_ITEM} is a real item`);
   assert.notEqual(KEY_ITEM, 'relic_fragment');
   // The reason, asserted rather than left in a comment: relic fragments arrive
@@ -51,6 +51,12 @@ test('the key is an item of its own, not the relic fragment dungeon.js nominates
   assert.ok(dg);
   assert.ok(dg.theme.bossLoot.some(([i]) => i === 'relic_fragment'),
     'a dungeon pays OUT relic fragments — so they cannot also be what unlocks it');
+  // The generator stamps `keyItem` onto every door it builds and the runtime
+  // spends KEY_ITEM to open it. Those were two separate constants once, and they
+  // drifted: doors went out asking for relic fragments while the lock consumed
+  // warden keys. One definition now, and this is the assertion that says so.
+  assert.equal(dg.door.keyItem, KEY_ITEM,
+    'the layout and the lock name the same key');
 });
 
 // ---- geometry --------------------------------------------------------------

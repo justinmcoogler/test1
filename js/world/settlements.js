@@ -1,7 +1,9 @@
 // Procedural towns on the arterial roads (docs/WORLD_PLAN.md, phase 6).
 //
-// One town roughly every TOWN_SPACING blocks along each of the eight arterials,
-// sized and themed by the difficulty ring it stands in. The building vocabulary
+// One town roughly every TOWN_SPACING blocks along each of the eight arterials —
+// a station is a place to LOOK, and a handful of placements are tried around it
+// before the ground is given up on — sized and themed by the difficulty ring it
+// stands in. The building vocabulary
 // is Brookhollow's (js/world/town.js): burgage plots at right angles to a high
 // street, houses hard on the frontage line with party walls between them, timber
 // framing over a stone plinth, jettied upper storeys, deep eaves, a funnel market
@@ -336,13 +338,16 @@ const AMP_MAX = 70;             // roads.js caps an arterial's wander at this
 // and how the natural ground rolls under it. It is what the per-column claims
 // test and the "which town do I deliver to" lookup need, and it deliberately
 // builds no streets, buildings, people or quests.
-const SITE_COL = new Int32Array(2);
+const SITE_COL = new Int32Array(2);      // the town's own centre column
+const ROAD_COL = new Int32Array(2);      // the centre-line column it is measured from
 const RIVAL_COL = new Int32Array(2);
 
 // Why sites get refused, counted. A station that offers a town and cannot have
 // one is normal — the world is full of lakes and crags — but the RATE matters: if
 // most stations refuse, the roads run empty, and the only way to know which rule
-// is doing it is to count. The settlement test asserts on this.
+// is doing it is to count. `offered`/`built` are per STATION; the reasons are per
+// attempted placement, so they add up to more. The settlement test asserts on the
+// ratio.
 export const REJECTS = { offered: 0, built: 0, handBuilt: 0, wet: 0, relief: 0, low: 0, onRoad: 0, trunk: 0, rival: 0 };
 
 // A station is a place to LOOK for a town, not a fixed plot: real settlements sat
@@ -382,8 +387,11 @@ function trySite(gen, st, d, n, side, s) {
   // town whose streets are not quite parallel to the lane.
   const streetAlongX = Math.abs(alongOf(d, 1, 0)) >= Math.abs(alongOf(d, 0, 1));
 
-  const cl = roads.column(gen, d, s, 0, SITE_COL);
-  const ring = ringAt(cl[0], cl[1]);
+  // The town is themed by the ring of its STATION, not of its centre: how big it
+  // is decides how far off the road it stands, so the ring has to be read before
+  // the centre exists.
+  const rc = roads.column(gen, d, s, 0, ROAD_COL);
+  const ring = ringAt(rc[0], rc[1]);
   const plan = RING_PLAN[ring];
   const halfU = halfUOf(plan), halfV = halfVOf(plan);
 
@@ -403,7 +411,6 @@ function trySite(gen, st, d, n, side, s) {
   const z0 = tz - (streetAlongX ? halfV : halfU), z1 = tz + (streetAlongX ? halfV : halfU);
   // Which way the road lies from the town centre, and therefore which way is
   // "away from the road" in the town's own frame.
-  const rc = roads.column(gen, d, s, 0, SITE_COL);
   const roadSign = (streetAlongX ? Math.sign(rc[1] - tz) : Math.sign(rc[0] - tx)) || 1;
   const vs = -roadSign;
   // Where the lane meets the town, decided here rather than in the layout so the
@@ -415,8 +422,8 @@ function trySite(gen, st, d, n, side, s) {
   const gz = streetAlongX ? tz + gateV * vs : tz + gateU;
 
   const gr0x = x0 - SKIRT, gr1x = x1 + SKIRT, gr0z = z0 - SKIRT, gr1z = z1 + SKIRT;
-  const minX = Math.min(gr0x, gx - 2, rc[0] - 2), maxX = Math.max(gr1x, gx + 2, rc[0] + 2);
-  const minZ = Math.min(gr0z, gz - 2, rc[1] - 2), maxZ = Math.max(gr1z, gz + 2, rc[1] + 2);
+  const minX = Math.min(gr0x, gx - 4, rc[0] - 4), maxX = Math.max(gr1x, gx + 4, rc[0] + 4);
+  const minZ = Math.min(gr0z, gz - 4, rc[1] - 4), maxZ = Math.max(gr1z, gz + 4, rc[1] + 4);
 
   // Nine columns first. Most refused sites are refused for relief, and the spread
   // of a subset can only ever be SMALLER than the spread of the whole platform —
@@ -668,6 +675,12 @@ function buildTownLayout(gen, d, n) {
   const mix = HOUSE_MIX[ring];
   let houses = 0;
   for (const plots of rows) {
+    // Decide what gets built BEFORE building any of it. A roof oversails its walls
+    // by an eave or two, and an eave that reaches into the next house lands INSIDE
+    // that house's upper room — a block of tile hanging in the bedroom, and one
+    // more free floor cell the enterability test will not find. Knowing which
+    // neighbours exist, and how far off they are, is what lets each roof clip its
+    // own overhang to the gap it actually has.
     for (let i = 0; i < plots.length; i++) {
       const p = plots[i];
       if (rand() < plan.skip) continue;                       // a yard, not a house
@@ -675,17 +688,26 @@ function buildTownLayout(gen, d, n) {
       let theme = pick(mix);
       if (wide >= 8 && houses > 1 && rand() < 0.3) theme = 'tavern';
       if (THEMES[theme].storeys > plan.storeys) theme = 'cottage';
-      // A terrace: this plot shares its lower wall with the one before it.
       const prev = plots[i - 1];
-      const party = !!prev && prev.u1 === p.u0 && prev.stepBack === p.stepBack && rand() < 0.55;
+      // A terrace: this plot shares its lower wall with the one before it.
+      p.party = !!prev && prev.built && prev.u1 === p.u0 && prev.stepBack === p.stepBack && rand() < 0.55;
+      p.theme = theme;
+      p.built = true;
+      houses++;
+    }
+    for (let i = 0; i < plots.length; i++) {
+      const p = plots[i];
+      if (!p.built) continue;
+      let gapLo = 99, gapHi = 99;
+      for (let k = i - 1; k >= 0; k--) if (plots[k].built) { gapLo = p.u0 - plots[k].u1; break; }
+      for (let k = i + 1; k < plots.length; k++) if (plots[k].built) { gapHi = plots[k].u0 - p.u1; break; }
       const fv = FRONT + p.stepBack;
       addBuilding(town, {
         name: `${site.name} ${p.rowSign < 0 ? 'south' : 'north'} ${i + 1}`,
-        theme, rand, pick, plan,
+        theme: p.theme, rand, pick, plan, gapLo, gapHi,
         u0: p.u0, u1: p.u1, v0: p.rowSign * fv, v1: p.rowSign * (fv + plan.depth),
-        rowSign: p.rowSign, partyLo: party, WX, WZ, uAxisX, base: padY,
+        rowSign: p.rowSign, partyLo: p.party, WX, WZ, uAxisX, base: padY,
       });
-      houses++;
       // The toft behind: a fenced strip with a dug bed or two and the midden.
       const t0 = fv + plan.depth + 1, t1 = backV - 1;
       if (t1 > t0) {
@@ -756,13 +778,24 @@ function buildTownLayout(gen, d, n) {
   }
 
   // ---- market furniture ---------------------------------------------------
-  town.props.push({ kind: 'well', x: WX(marketU - 3, mv + 1), z: WZ(marketU - 3, mv + 1) });
-  town.props.push({ kind: 'cross', x: WX(marketU + 3, mv + 1), z: WZ(marketU + 3, mv + 1) });
-  town.props.push({ kind: 'stall', x: WX(marketU, mv + 2), z: WZ(marketU, mv + 2), alongX: uAxisX });
+  // Everything here keeps OFF the frontage line: the market stepped the far row
+  // back, and the block in front of a door is that house's doorstep. A well-head
+  // post standing in it seals the house as thoroughly as a missing doorway — and
+  // it did, until the enterability sweep caught it.
+  const prop = (kind, u, v, r, extra) => {
+    const x = WX(u, v), z = WZ(u, v);
+    for (const b of town.buildings) {
+      if (x + r >= b.x0 - 1 && x - r <= b.x1 + 1 && z + r >= b.z0 - 1 && z - r <= b.z1 + 1) return;
+    }
+    town.props.push({ kind, x, z, ...extra });
+  };
+  prop('well', marketU - 3, mv, 1);
+  prop('cross', marketU + 3, mv - 1, 2);
+  prop('stall', marketU, mv + 1, 2, { alongX: uAxisX });
   for (const [lu, lv] of [
-    [marketU - MARKET_HALF + 1, mv], [marketU + MARKET_HALF - 1, mv],
+    [marketU - MARKET_HALF + 1, mv - 1], [marketU + MARKET_HALF - 1, mv - 1],
     [gateU + 2, -STREET_HW - 1], [-halfL, STREET_HW + 1], [halfL, -STREET_HW - 1],
-  ]) town.props.push({ kind: 'lamp', x: WX(lu, lv), z: WZ(lu, lv) });
+  ]) prop('lamp', lu, lv, 0);
 
   // ---- defences -----------------------------------------------------------
   // A bank-and-palisade town at ring 1, a walled one from ring 2 — both with the
@@ -835,6 +868,10 @@ function addBuilding(town, o) {
     fdx, fdz, ridgeAxis, bay: T.bay ?? 0, sign: !!T.sign,
     slits: !!T.slits, noWindows: !!T.noWindows, battlement: !!o.battlement,
     partyLo: !!o.partyLo, uAxisX,
+    // How much clear ground there is to the neighbouring house on each side, ALONG
+    // THE STREET. The roof clips its overhang to it, so no eave ever oversails
+    // into the room next door.
+    gapLo: o.gapLo ?? 99, gapHi: o.gapHi ?? 99,
   };
   // The doorway, centred on the front wall and nudged off centre on a wide
   // frontage so a terrace does not come out with every door in line.
@@ -892,20 +929,30 @@ function buildLane(gen, town, d, site, WX, WZ) {
     const t = i / steps;
     const tt = t > 1 - hold ? 1 : t / (1 - hold);
     const y = Math.round(town.padY + (site.roadY - town.padY) * tt);
-    for (let a = -1; a <= 1; a++) {
+    // Three paved columns, then two courses of graded shoulder either side. The
+    // shoulder is what makes this a CUTTING rather than a slot: driving a
+    // three-wide lane through a hillside and clearing three blocks over it leaves
+    // a tunnel mouth with vertical earth walls, which reads as a mine adit, not as
+    // the way into a town.
+    for (let a = -3; a <= 3; a++) {
       const x = Math.round(gx + dx * t + px * a), z = Math.round(gz + dz * t + pz * a);
-      cells.set(x + ',' + z, { x, z, y, edge: a !== 0, nat: gen.heightAt(x, z) });
+      const lift = Math.max(0, Math.abs(a) - 1);
+      const prev = cells.get(x + ',' + z);
+      if (prev && prev.lift <= lift) continue;      // paving wins over shoulder
+      cells.set(x + ',' + z, { x, z, y, lift, edge: Math.abs(a) === 1, nat: gen.heightAt(x, z) });
     }
   }
   // A riser is any cell whose 4-neighbour along the lane is a block lower: that
   // cell has to be a slab, or you cannot walk up onto it.
   for (const cell of cells.values()) {
     let riser = false;
-    for (const [ox, oz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nb = cells.get((cell.x + ox) + ',' + (cell.z + oz));
-      if (nb && nb.y === cell.y - 1) riser = true;
+    if (!cell.lift) {
+      for (const [ox, oz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nb = cells.get((cell.x + ox) + ',' + (cell.z + oz));
+        if (nb && !nb.lift && nb.y === cell.y - 1) riser = true;
+      }
     }
-    town.lane.push({ x: cell.x, z: cell.z, y: cell.y, riser, edge: cell.edge, nat: cell.nat });
+    town.lane.push({ x: cell.x, z: cell.z, y: cell.y, riser, edge: cell.edge, nat: cell.nat, lift: cell.lift });
   }
   town.gate = { x: gx, z: gz };
 }
@@ -937,7 +984,16 @@ function placePeople(gen, town, rand, WX, WZ, geo) {
   }
   for (const npc of town.npcs) {
     const q = makeQuest(gen, town, npc, biome, rand);
-    if (q) town.quests.push(q);
+    if (!q) continue;
+    // Every stage that does not already name a place points at THIS town. The
+    // quest compass (js/game/quests.js `trackedMarker`) matches unmarked stages
+    // against the hand-built landmarks by npc id, enemy type or item, and a
+    // generated stage matches none of them — a `talk` stage fell through to the
+    // Brookhollow market stall, so the arrow sent you home. Done here rather than
+    // on each stage so a new quest shape cannot forget it.
+    const here = `town_${town.d}_${town.n}`;   // the key registerTown publishes
+    for (const st of q.stages) if (!st.marker) st.marker = here;
+    town.quests.push(q);
   }
 }
 
@@ -1163,9 +1219,17 @@ function stampTown(town, cx, cz) {
   // ---- the lane out to the road ------------------------------------------
   for (const c of town.lane) {
     if (c.x < x0 || c.x > x1 || c.z < z0 || c.z > z1) continue;
-    box(c.x, (c.nat < c.y ? c.nat : c.y) - 3, c.z, c.x, c.y - 1, c.z, B.dirt);
-    put(c.x, c.y, c.z, c.riser ? STONE_STEP : c.edge ? B.gravel : B.cobble);
-    box(c.x, c.y + 1, c.z, c.x, c.y + 3, c.z, B.air);
+    // A shoulder follows the ground it cuts, up to `lift` above the lane: level
+    // where the lane is embanked, stepped back where it is in a cutting.
+    const y = c.lift === 0 ? c.y
+      : c.nat < c.y ? c.y : c.nat > c.y + c.lift ? c.y + c.lift : c.nat;
+    box(c.x, (c.nat < y ? c.nat : y) - 3, c.z, c.x, y - 1, c.z, B.dirt);
+    put(c.x, y, c.z, c.lift ? B.grass : c.riser ? STONE_STEP : c.edge ? B.gravel : B.cobble);
+    // Clear to whichever is higher: headroom over the lane, or the ground it is
+    // cutting through. Clearing a fixed four blocks leaves the hillside ARCHING
+    // OVER the cutting further in, which reads as a tunnel mouth — the one thing
+    // the shoulders above are there to stop.
+    box(c.x, y + 1, c.z, c.x, (c.y + 4 > c.nat + 2 ? c.y + 4 : c.nat + 2), c.z, B.air);
   }
 
   // ---- fences, palisades, walls ------------------------------------------
@@ -1255,12 +1319,19 @@ function drawBuilding(b) {
     // would bury its walls under the hat.
     const span = b.ridgeAxis === 'x' ? top.z1 - top.z0 : top.x1 - top.x0;
     const e = span >= 8 ? 2 : 1;
-    // No eave over a party wall: the neighbour's roof is there.
-    const loOver = b.partyLo && ((b.ridgeAxis === 'x') !== b.uAxisX) ? 0 : e;
-    const ridge = drawRoof(top.x0, top.z0, top.x1, top.z1, yRoof, R.mat, R.cap, b.ridgeAxis, loOver, e, 1, b.infill);
+    // Which of the roof's overhangs point ALONG the street — the direction the
+    // neighbours are in. On a burgage house (gable to the street) that is the two
+    // slopes; on an eaves-on building it is the two gable ends.
+    const uIsSlope = (b.ridgeAxis === 'x') !== b.uAxisX;
+    const clipLo = b.partyLo ? 0 : b.gapLo, clipHi = b.gapHi;
+    const loOver = uIsSlope ? Math.min(e, clipLo) : e;
+    const hiOver = uIsSlope ? Math.min(e, clipHi) : e;
+    const gableOver = uIsSlope ? 1 : Math.min(1, clipLo, clipHi);
+    const ridge = drawRoof(top.x0, top.z0, top.x1, top.z1, yRoof, R.mat, R.cap, b.ridgeAxis,
+      loOver, hiOver, gableOver, b.infill);
     // Close the wall head up to the roof underside, so the loft is sealed and the
     // only ways in are the door and the windows.
-    sealWallHead(b, top, yRoof, loOver, e);
+    sealWallHead(b, top, yRoof, loOver, hiOver);
     // The stack rides IN the wall line so it never eats floor, and the fire sits
     // on the room side of it. A chimney that lands on nothing is a pipe.
     if (b.fit !== 'barn' && b.fit !== 'forge') {

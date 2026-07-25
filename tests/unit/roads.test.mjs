@@ -16,6 +16,7 @@ import {
   roadsFor, ARTERIALS, PRIMARIES, ROAD_START, WAYSTONE_SPACING, WAYSTONE_COURSES, alongOf,
 } from '../../js/world/roads.js';
 import { B, BLOCKS } from '../../js/world/blocks.js';
+import { ITEMS } from '../../js/game/items.js';
 
 // What the running surface can be made of. Deliberately excludes the shoulder's
 // bare subsoil, the bridge parapets and the waystone furniture — those are not
@@ -280,17 +281,39 @@ test('a waystone READS as a waystone: broad base, narrow shaft, banded, lit', ()
       }
       assert.equal(base, 9, `waystone ${d}/${n} has a broad base course (${base}/9 cells)`);
 
-      // …and by the time you are two courses up, only the shaft is left. Counted
-      // as "how much of the 3x3 ring survives", which is the taper.
-      let ring = 0;
+      // …and the body above it is a SLAB: broad one way, one block thick the
+      // other. This is the assertion the first cut of the stone failed — it was
+      // one block square all the way up, which passes every other check here
+      // (tall, banded, lit, clear of the lane) and still read from the road as a
+      // chimney. Nothing but width tells those two apart, so width is measured.
+      assert.notEqual(w.getBlock(x, y + 3, z), B.air, `waystone ${d}/${n} body continues above the base`);
+      const solid = (bx, by, bz) => w.getBlock(bx, by, bz) !== B.air;
+      let wide = 0, thick = 0;
+      for (let k = -1; k <= 1; k++) {
+        if (solid(x + k, y + 3, z)) wide++;
+        if (solid(x, y + 3, z + k)) thick++;
+      }
+      // One axis three across, the other one — in whichever order the road's
+      // bearing put them.
+      const [broad, edge] = wide >= thick ? [wide, thick] : [thick, wide];
+      assert.equal(broad, 3, `waystone ${d}/${n} body has a broad face (${broad} across)`);
+      assert.equal(edge, 1, `waystone ${d}/${n} body is one block thick through (${edge})`);
+      // The corners stay empty, so it is a slab and not a 3x3 block of masonry.
+      let corners = 0;
+      for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        if (solid(x + dx, y + 3, z + dz)) corners++;
+      }
+      assert.equal(corners, 0, `waystone ${d}/${n} is a slab, not a tower (${corners} corners filled)`);
+      // And it tapers to a point: the crown is one block square again, so the
+      // stone narrows against the sky instead of ending in a flat wall.
+      let crown = 0;
       for (let dx = -1; dx <= 1; dx++) {
         for (let dz = -1; dz <= 1; dz++) {
           if (dx === 0 && dz === 0) continue;
-          if (w.getBlock(x + dx, y + 3, z + dz) !== B.air) ring++;
+          if (solid(x + dx, y + WAYSTONE_COURSES.length, z + dz)) crown++;
         }
       }
-      assert.equal(ring, 0, `waystone ${d}/${n} tapers to a one-block shaft (${ring} cells still 3 wide)`);
-      assert.notEqual(w.getBlock(x, y + 3, z), B.air, `waystone ${d}/${n} shaft continues above the base`);
+      assert.equal(crown, 0, `waystone ${d}/${n} tapers to a one-block crown (${crown} cells still wide)`);
 
       // Carved, not cast: the shaft is banded rather than one material.
       const shaft = new Set();
@@ -753,6 +776,47 @@ test('every wayside croft can be walked into, and its kist reached', () => {
     assert.deepEqual(sealed, [], `seed ${seed}: you cannot get in`);
     assert.deepEqual(shut, [], `seed ${seed}: you cannot get at the loot`);
     assert.ok(standing >= 4, `seed ${seed}: most crofts survive the later passes (${standing} of 6)`);
+  }
+});
+
+test('a wayside kist actually holds something, loaded the way the game loads it', () => {
+  // Reaching the chest is half the promise; the other half is that opening it
+  // gives you something. Those are separate mechanisms: roads.js can PLACE the
+  // chest block into the chunk's block array on its own, but the contents live in
+  // `world.chestMeta`, which a block array cannot reach. carveRoads therefore
+  // takes an optional `chestSink`, and js/world/world.js has to pass one.
+  //
+  // It did not, and every kist on every road in the world opened empty — a
+  // furnished cottage with a prop chest in it. The test that only checked you
+  // could stand next to the chest passed throughout. So this goes through the
+  // real path: ensureChunk, getChestAt on the block, openChest on the id.
+  const w = new World(20260725);
+  const roads = roadsFor(w.gen);
+  const seen = [];
+  for (let d = 0; d < ARTERIALS && seen.length < 8; d++) {
+    for (let n = 2; n <= 20 && seen.length < 8; n++) {
+      const p = roads.croftPlan(w.gen, d, n);
+      if (!p) continue;
+      // Load the cottage's whole neighbourhood — whichever chunk owns the chest
+      // column is the one that registers the loot.
+      for (let a = -1; a <= 1; a++) {
+        for (let b = -1; b <= 1; b++) w.ensureChunk((p.chestX >> 4) + a, (p.chestZ >> 4) + b);
+      }
+      if (w.getBlock(p.chestX, p.chestY, p.chestZ) !== B.chest_block) continue;  // levelled by a later pass
+      seen.push({ d, n, p });
+    }
+  }
+  assert.ok(seen.length >= 4, `found kists to open (${seen.length})`);
+  for (const { d, n, p } of seen) {
+    const where = `croft ${d}/${n} kist at ${p.chestX},${p.chestY},${p.chestZ}`;
+    const hit = w.getChestAt(p.chestX, p.chestY, p.chestZ);
+    assert.ok(hit, `${where} is registered in chestMeta — is world.js still passing a chestSink?`);
+    const loot = w.openChest(hit.id);
+    assert.ok(loot.length > 0, `${where} pays out something`);
+    for (const l of loot) {
+      assert.ok(ITEMS[l.item], `${where} holds a real item, not '${l.item}'`);
+      assert.ok(l.qty > 0, `${where}: ${l.item} has a positive quantity`);
+    }
   }
 });
 

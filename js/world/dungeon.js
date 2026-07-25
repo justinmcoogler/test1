@@ -6,6 +6,7 @@
 // Same chunk-local contract as the mineshaft (js/world/sites.js): a layout is a
 // pure function of (seed, region), and a chunk rasterises only its own slice.
 import { B } from './blocks.js';
+import { settlementNear } from './settlements.js';
 import { CHUNK, SEA, ringAt } from './worldgen.js';
 import { mulberry32 } from '../core/rng.js';
 import {
@@ -65,10 +66,23 @@ const THEMES = [
   },
 ];
 
-// What the mini-boss is carrying. An existing item id on purpose — the world has
-// no bespoke key item and this module does not get to invent one. See the note
-// in js/world/structures.js about the runtime half of the lock.
-const KEY_ITEM = 'relic_fragment';
+// What the mini-boss is carrying, and the only thing that opens the grate below.
+// It lives here, in the generator, because the generator is the lower layer:
+// js/game/dungeonlock.js (the runtime half of the lock) imports it and re-exports
+// it, so the two halves cannot disagree about what the key is. They did once —
+// this constant said `relic_fragment` while the runtime spent `warden_key`, and
+// every door in the world went out stamped with the wrong key id.
+//
+// It is deliberately NOT `relic_fragment`, which is what this module used to
+// nominate on the rule that worldgen may not invent items. A relic fragment has
+// about eight other sources (every mineshaft chest tier, both hand-built boss
+// chests, three mob drop tables, waterlogged caches) and every theme's `bossLoot`
+// pays them out, so a player arrives at their first grate already holding a
+// stack. A lock that opens to an item you cannot avoid owning is not a lock, and
+// the key holder standing between you and it is decoration. `warden_key` exists
+// for this and nothing else. It is consumed on use — one warden, one grate — and
+// because the warden respawns, losing it can never soft-lock a dungeon.
+export const KEY_ITEM = 'warden_key';
 
 const DIRS = [1, 0, -1, 0, 0, 1, 0, -1];
 // Hoisted: stampOne runs per chunk per site and must not allocate to do it.
@@ -83,6 +97,10 @@ function buildDungeon(gen, rx, rz) {
   if (!anchorIn(gen.seed, SALT, DG_REGION, DG_MARGIN, DG_CHANCE, rx, rz)) return null;
   const ax = ANCHOR.x, az = ANCHOR.z;
   if (nearHandBuilt(ax, az)) return null;
+  // …and clear of a procedural town, for the same reason mineshaft.js is: towns
+  // stamp last, so a stair down capped by a market square leaves a whole dungeon
+  // — grate, warden, boss and hoard — sealed under the paving with no entrance.
+  if (settlementNear(gen, ax, az, PAD + 1)) return null;
   if (onRoad(gen, ax, az, PAD + 1)) return null;
   const surfaceY = padHeight(gen, ax, az, PAD, 5);
   if (surfaceY < 0) return null;
