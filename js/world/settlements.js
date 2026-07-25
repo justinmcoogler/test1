@@ -78,6 +78,10 @@ const STATION_JITTER = 120;      // so towns never sit on round numbers
 // through it, and its length is what lets the lane absorb the height difference
 // between road and town at no more than a block a step.
 const LANE_RUN = 14;
+// Clear ground between the town's graded bank and the arterial's centre line: the
+// lane runs through it, and it has to hold the road's own corridor (3.7 blocks
+// each side of the centre) with room to spare.
+const ROAD_GAP = 9;
 const PROBE = 4;                 // natural-height probe grid pitch
 const SKIRT = 9;                 // graded bank around the platform
 const MAX_RELIEF = 18;           // reject a site whose ground rolls more than this
@@ -296,7 +300,10 @@ const BY_GEN = new WeakMap();
 function stateFor(gen) {
   let st = BY_GEN.get(gen);
   if (!st) {
-    st = { sites: new Map(), towns: new Map(), phase: new Float64Array(PRIMARIES), trunk: null };
+    st = {
+      sites: new Map(), towns: new Map(), phase: new Float64Array(PRIMARIES), trunk: null,
+      claimCx: NaN, claimCz: NaN, claimHits: [],     // per-chunk memo for settlementClaims
+    };
     for (let d = 0; d < PRIMARIES; d++) st.phase[d] = PHASE_LO + hash2(gen.seed + SALT, d, 7) * PHASE_SPAN;
     BY_GEN.set(gen, st);
   }
@@ -380,7 +387,15 @@ function trySite(gen, st, d, n, side, s) {
   const plan = RING_PLAN[ring];
   const halfU = halfUOf(plan), halfV = halfVOf(plan);
 
-  const c = roads.column(gen, d, s, (LANE_RUN + halfV + 4) * side, SITE_COL);
+  // How far off the centre line the town has to sit for its GRADED rectangle to
+  // clear the road. The rectangle is world-aligned and the road is not, so on a
+  // diagonal arterial a plain `halfV + gap` offset leaves a corner of the bank
+  // lying across the paving — the support function is what makes the clearance
+  // true on every bearing, at the cost of a longer approach lane out there.
+  const hx = (streetAlongX ? halfU : halfV) + SKIRT;
+  const hz = (streetAlongX ? halfV : halfU) + SKIRT;
+  const support = hx * Math.abs(alongOf(d, 0, 1)) + hz * Math.abs(alongOf(d, 1, 0));
+  const c = roads.column(gen, d, s, (support + ROAD_GAP) * side, SITE_COL);
   const tx = c[0], tz = c[1];
   if (nearHandBuilt(tx, tz)) { REJECTS.handBuilt++; return null; }
 
@@ -403,14 +418,33 @@ function trySite(gen, st, d, n, side, s) {
   const minX = Math.min(gr0x, gx - 2, rc[0] - 2), maxX = Math.max(gr1x, gx + 2, rc[0] + 2);
   const minZ = Math.min(gr0z, gz - 2, rc[1] - 2), maxZ = Math.max(gr1z, gz + 2, rc[1] + 2);
 
-  // Natural ground under the site, on a PROBE-block grid over the whole
-  // footprint. This is the town's ONE reading of the terrain: the platform level,
+  // Nine columns first. Most refused sites are refused for relief, and the spread
+  // of a subset can only ever be SMALLER than the spread of the whole platform —
+  // so a nine-sample reading over MAX_RELIEF is a sound rejection at a fiftieth of
+  // the cost. Siting is the expensive half of a town and most stations try several
+  // placements, so this is worth its lines.
+  {
+    let clo = 1e9, chi = -1e9;
+    for (let j = -1; j <= 1; j++) {
+      for (let i = -1; i <= 1; i++) {
+        const h = gen.heightAt(tx + i * (halfU >> 1), tz + j * (halfV >> 1));
+        if (h < clo) clo = h;
+        if (h > chi) chi = h;
+      }
+    }
+    if (chi - clo > MAX_RELIEF) { REJECTS.relief++; return null; }
+  }
+
+  // Natural ground under the site, on a PROBE-block grid over the GRADED
+  // rectangle. This is the town's ONE reading of the terrain: the platform level,
   // how deep it has to found itself and the bank that lets it down to the country
   // all come from here, so every chunk agrees about them without sampling
-  // anything itself.
-  const px0 = minX - PROBE, pz0 = minZ - PROBE;
-  const pnx = Math.ceil((maxX + PROBE - px0) / PROBE) + 1;
-  const pnz = Math.ceil((maxZ + PROBE - pz0) / PROBE) + 1;
+  // anything itself. The lane is not in the grid — it reaches much further out on
+  // a diagonal road, and quadrupling the grid to cover a three-wide path is a poor
+  // trade; buildLane samples its own cells instead.
+  const px0 = gr0x - PROBE, pz0 = gr0z - PROBE;
+  const pnx = Math.ceil((gr1x + PROBE - px0) / PROBE) + 1;
+  const pnz = Math.ceil((gr1z + PROBE - pz0) / PROBE) + 1;
   const probe = new Int16Array(pnx * pnz);
   let lo = 1e9, hi = -1e9, sum = 0, cnt = 0, gridHi = -1e9, wet = 0;
   for (let j = 0; j < pnz; j++) {
@@ -444,8 +478,19 @@ function trySite(gen, st, d, n, side, s) {
   // Nothing may already own this ground: another arterial or fork wandering
   // across the plot, the hand-built lane out to the Frostwatch, or a town from a
   // neighbouring road.
-  for (let z = z0; z <= z1; z += 4) {
-    for (let x = x0; x <= x1; x += 4) if (roads.arterialAt(gen, x, z) >= 0) { REJECTS.onRoad++; return null; }
+  //
+  // The scan covers the GRADED rectangle, not just the platform. The bank is
+  // still earthwork — it lays its own surface — so a road clipping the corner of
+  // it comes out as a stripe of grass across the paving. That is not theoretical:
+  // the town is offset square to its own road and the rectangle is world-aligned,
+  // so on the four diagonal arterials a corner of the bank reaches back across
+  // the lane it came from. A 4-block scan cannot miss a road corridor, which is
+  // over 7 wide.
+  for (let z = gr0z; z <= gr1z + 3; z += 4) {
+    const zz = z > gr1z ? gr1z : z;
+    for (let x = gr0x; x <= gr1x + 3; x += 4) {
+      if (roads.arterialAt(gen, x > gr1x ? gr1x : x, zz) >= 0) { REJECTS.onRoad++; return null; }
+    }
   }
   if (trunkNear(gen, st, gr0x, gr0z, gr1x, gr1z)) { REJECTS.trunk++; return null; }
   if (!winsSite(gen, st, d, n, tx, tz)) { REJECTS.rival++; return null; }
@@ -849,7 +894,7 @@ function buildLane(gen, town, d, site, WX, WZ) {
     const y = Math.round(town.padY + (site.roadY - town.padY) * tt);
     for (let a = -1; a <= 1; a++) {
       const x = Math.round(gx + dx * t + px * a), z = Math.round(gz + dz * t + pz * a);
-      cells.set(x + ',' + z, { x, z, y, edge: a !== 0 });
+      cells.set(x + ',' + z, { x, z, y, edge: a !== 0, nat: gen.heightAt(x, z) });
     }
   }
   // A riser is any cell whose 4-neighbour along the lane is a block lower: that
@@ -860,7 +905,7 @@ function buildLane(gen, town, d, site, WX, WZ) {
       const nb = cells.get((cell.x + ox) + ',' + (cell.z + oz));
       if (nb && nb.y === cell.y - 1) riser = true;
     }
-    town.lane.push({ x: cell.x, z: cell.z, y: cell.y, riser, edge: cell.edge });
+    town.lane.push({ x: cell.x, z: cell.z, y: cell.y, riser, edge: cell.edge, nat: cell.nat });
   }
   town.gate = { x: gx, z: gz };
 }
@@ -1118,8 +1163,7 @@ function stampTown(town, cx, cz) {
   // ---- the lane out to the road ------------------------------------------
   for (const c of town.lane) {
     if (c.x < x0 || c.x > x1 || c.z < z0 || c.z > z1) continue;
-    const nat = natAt(site, c.x, c.z);
-    box(c.x, (nat < c.y ? nat : c.y) - 3, c.z, c.x, c.y - 1, c.z, B.dirt);
+    box(c.x, (c.nat < c.y ? c.nat : c.y) - 3, c.z, c.x, c.y - 1, c.z, B.dirt);
     put(c.x, c.y, c.z, c.riser ? STONE_STEP : c.edge ? B.gravel : B.cobble);
     box(c.x, c.y + 1, c.z, c.x, c.y + 3, c.z, B.air);
   }
@@ -1526,18 +1570,33 @@ const ORTHO = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 // and a numeric-keyed cache lookup — no strings, no allocation.
 export function settlementClaims(gen, x, z) {
   const st = stateFor(gen);
-  for (let d = 0; d < PRIMARIES; d++) {
-    const s = alongOf(d, x, z);
-    if (s < MIN_STATION_S - MAX_REACH - MAX_NUDGE) continue;
-    const n = Math.round((s - st.phase[d]) / TOWN_SPACING);
-    if (n < 0) continue;
-    if (Math.abs(stationS(gen, st, d, n) - s) > MAX_REACH + MAX_NUDGE) continue;
-    const t = acrossOf(d, x, z);
-    if ((t < 0 ? -t : t) > AMP_MAX + MAX_REACH) continue;
-    const site = siteAt(gen, d, n);
-    if (!site) continue;
-    if (x < site.minX || x > site.maxX || z < site.minZ || z > site.maxZ) continue;
-    return true;
+  // The scatter pass walks a chunk column by column, so work out ONCE per chunk
+  // which towns could possibly reach it and then answer each column with a
+  // bounding-box test. Nearly every chunk in the world ends up with an empty
+  // candidate list, which is the case that has to be free.
+  const cx = x >> 4, cz = z >> 4;
+  if (cx !== st.claimCx || cz !== st.claimCz) {
+    st.claimCx = cx; st.claimCz = cz;
+    st.claimHits.length = 0;
+    const wx = cx * CHUNK + 7.5, wz = cz * CHUNK + 7.5;
+    for (let d = 0; d < PRIMARIES; d++) {
+      const s = alongOf(d, wx, wz);
+      if (s < MIN_STATION_S - MAX_REACH - MAX_NUDGE) continue;
+      const t = acrossOf(d, wx, wz);
+      if ((t < 0 ? -t : t) > AMP_MAX + MAX_REACH + CHUNK) continue;
+      const n = Math.round((s - st.phase[d]) / TOWN_SPACING);
+      if (n < 0) continue;
+      if (Math.abs(stationS(gen, st, d, n) - s) > MAX_REACH + MAX_NUDGE + CHUNK) continue;
+      const site = siteAt(gen, d, n);
+      if (!site) continue;
+      if (site.maxX < cx * CHUNK || site.minX > cx * CHUNK + CHUNK - 1) continue;
+      if (site.maxZ < cz * CHUNK || site.minZ > cz * CHUNK + CHUNK - 1) continue;
+      st.claimHits.push(site);
+    }
+  }
+  for (let i = 0; i < st.claimHits.length; i++) {
+    const site = st.claimHits[i];
+    if (x >= site.minX && x <= site.maxX && z >= site.minZ && z <= site.maxZ) return true;
   }
   return false;
 }

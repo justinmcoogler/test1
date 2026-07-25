@@ -67,8 +67,9 @@ function loadTown(seed, wantRing = null) {
 }
 
 // The player's own movement rules, as a flood fill.
-function survey(loaded, { jump = true } = {}) {
-  const { world, town, start, box } = loaded;
+function survey(loaded, { jump = true, from = null } = {}) {
+  const { world, town, box } = loaded;
+  const start = from || loaded.start;
   const X0 = box.x0, X1 = box.x1, Z0 = box.z0, Z1 = box.z1;
   const Y0 = town.padY - 14, Y1 = town.padY + 34;
 
@@ -92,8 +93,8 @@ function survey(loaded, { jump = true } = {}) {
     seen[idx(x, y, z)] = 1; queue.push(x, y, z);
   };
 
-  // Start ON THE ROAD, thirty blocks up the arterial from the junction: the walk
-  // in is the walk a player makes.
+  // Start ON THE ROAD, thirty blocks up the arterial from the junction (or wherever
+  // the caller says): the walk in is the walk a player makes.
   let starts = 0;
   for (let y = Y1 - 1; y > Y0; y--) if (stand(start.x, y, start.z)) { push(start.x, y, start.z); starts++; break; }
   assert.ok(starts, 'the arterial outside the town must be standable');
@@ -134,8 +135,8 @@ function digest(gen, cx, cz) {
 
 // ---- siting ----------------------------------------------------------------
 test('towns stand on the arterials, in every ring, clear of the hand-built world', () => {
-  const all = [];
   for (const seed of SEEDS) {
+    const all = [];
     const gen = new WorldGen(seed);
     const towns = allSettlements(gen, 3);
     assert.ok(towns.length >= 6, `seed ${seed}: the roads should be settled (${towns.length} towns)`);
@@ -146,7 +147,12 @@ test('towns stand on the arterials, in every ring, clear of the hand-built world
       const off = Math.hypot(c[0] - t.tx, c[1] - t.tz);
       assert.ok(off < 90, `${t.name} sits ${off.toFixed(0)} blocks off its road`);
       assert.ok(!nearHandBuilt(t.tx, t.tz), `${t.name} lands on hand-built ground`);
-      assert.equal(t.ring, ringAt(t.tx, t.tz), `${t.name} is themed for the wrong ring`);
+      // A town is themed by the ring of its STATION on the road, not of its
+      // centre: how big the town is decides how far off the road it sits, so the
+      // ring has to be read before the centre exists. Those two can straddle a
+      // ring boundary, and never by more than one ring.
+      assert.ok(Math.abs(t.ring - ringAt(t.tx, t.tz)) <= 1, `${t.name} is themed for the wrong ring`);
+      assert.equal(t.ring, ringAt(c[0], c[1]), `${t.name} should be themed by its station`);
       assert.equal(t.plan, t.site.plan);
       // Sized and staffed by ring.
       assert.ok(t.buildings.length >= 5 && t.buildings.length <= 20,
@@ -158,16 +164,14 @@ test('towns stand on the arterials, in every ring, clear of the hand-built world
     // content rather than theory.
     const rings = new Set(towns.map((t) => t.ring));
     assert.ok(rings.size >= 3, `seed ${seed}: towns should span rings, saw ${[...rings]}`);
-  }
-  // Towns never overwrite each other.
-  for (let i = 0; i < all.length; i++) {
-    for (let j = i + 1; j < all.length; j++) {
-      const a = all[i], b = all[j];
-      if (a !== b && a.site.probe === b.site.probe) continue;
-      const apart = Math.max(Math.abs(a.tx - b.tx), Math.abs(a.tz - b.tz));
-      if (apart > 400) continue;
-      const overlap = a.minX <= b.maxX && b.minX <= a.maxX && a.minZ <= b.maxZ && b.minZ <= a.maxZ;
-      assert.ok(!overlap, `${a.name} and ${b.name} overlap`);
+    // Two towns that overlap would stamp their platforms through each other's
+    // streets, so exactly one of any colliding pair has to stand down.
+    for (let i = 0; i < all.length; i++) {
+      for (let j = i + 1; j < all.length; j++) {
+        const a = all[i], b = all[j];
+        const overlap = a.minX <= b.maxX && b.minX <= a.maxX && a.minZ <= b.maxZ && b.minZ <= a.maxZ;
+        assert.ok(!overlap, `seed ${seed}: ${a.name} (d${a.d} n${a.n}) and ${b.name} (d${b.d} n${b.n}) overlap`);
+      }
     }
   }
 });
@@ -326,10 +330,17 @@ test('upper storeys are reachable, so the stairs actually go somewhere', () => {
 test('the lane from the road can be WALKED, not jumped', () => {
   // Only stairs and slabs are walkable steps, so a lane that rises by a plain
   // block is a lane you have to jump up — which is not a road connection.
+  //
+  // The walk starts where the lane MEETS the arterial rather than further up it:
+  // whether the arterial itself is jump-free over any given 30 blocks is roads.js's
+  // promise to keep, and borrowing it here would make this test fail for someone
+  // else's reason.
   for (const seed of SEEDS) {
     const loaded = loadTown(seed, 1);
     const { town } = loaded;
-    const { reached } = survey(loaded, { jump: false });
+    const roads = roadsFor(loaded.world.gen);
+    const c = roads.column(loaded.world.gen, town.d, town.site.s, 0);
+    const { reached } = survey(loaded, { jump: false, from: { x: c[0], z: c[1] } });
     let got = 0, missed = null;
     for (const c of town.lane) {
       if (reached(c.x, c.y + 1, c.z)) got++;

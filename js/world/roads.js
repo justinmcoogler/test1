@@ -17,6 +17,26 @@
 // slope MAX_SLOPE < 1. No two neighbouring road columns can therefore be more
 // than one block apart — lengthways OR laterally, on any seed, in any load
 // order. See tests/unit/roads.test.mjs.
+//
+// Everything BESIDE the road obeys the same contract, and it is the one thing to
+// keep in mind when adding to this file. A waystone, a wayside croft and the site
+// at the end of a trail are each a pure function of (seed, road, station index):
+// where they stand, what level their floor is, and every block in them. No chunk
+// ever asks a neighbour anything, so each writes its own slice and the union is
+// one coherent building however the chunks load. `_croft` is the worked example —
+// note that its floor comes from `gen.heightAt` at its anchor and never from
+// what one chunk happens to have generated.
+//
+// TWO limits worth knowing about, because they are not this module's to fix:
+//
+//   * NPCs. A croft's obvious occupant is a person, but villagers only exist in
+//     the hand-built `world.structure.npcs` list (js/main.js reads that and
+//     nothing else), and the per-chunk sink this pass is handed carries blocks,
+//     nodes and spawns. So a croft gets livestock in the yard instead.
+//   * CHEST LOOT. Same shape of problem: chest contents live in `world.chestMeta`,
+//     which no sink here reaches. `carve` takes an OPTIONAL `chestSink` for it —
+//     hand it the same {id,x,y,z,loot} sink stampChunkStructures already gets and
+//     the kists fill themselves; without it they are ordinary empty chests.
 import { B, isSolid } from './blocks.js';
 import { CHUNK, WORLD_H, SEA, MANOR_PAD, LEARN_MEADOW, FROST_CAMP } from './worldgen.js';
 import { valueNoise2 } from '../core/noise.js';
