@@ -18,7 +18,7 @@
 // than one block apart — lengthways OR laterally, on any seed, in any load
 // order. See tests/unit/roads.test.mjs.
 import { B, isSolid } from './blocks.js';
-import { CHUNK, SEA, MANOR_PAD, LEARN_MEADOW, FROST_CAMP } from './worldgen.js';
+import { CHUNK, WORLD_H, SEA, MANOR_PAD, LEARN_MEADOW, FROST_CAMP } from './worldgen.js';
 import { valueNoise2 } from '../core/noise.js';
 import { hash2 } from '../core/rng.js';
 
@@ -43,8 +43,17 @@ export const ROAD_START = 76;
 // up with distance — capped, and always a small fraction of `s` — so the eight
 // arterials leave spawn on their true bearings and can never swing far enough
 // to tangle with the neighbour 45° away.
-const AMP_MAX = 30, AMP_GROW = 0.11;
-const WANDER_L1 = 340, WANDER_L2 = 125, WANDER_MIX = 0.72;
+// How far the centre line is allowed to wander off the compass bearing, and how
+// fast that freedom grows with distance from spawn. These are bounded by a
+// geometric constraint, not taste: the paved corridor is defined as the band
+// |t - wander(s)| <= GRADE_HW measured PERPENDICULAR to the compass axis, so if
+// the centre line turns faster than about 0.6 blocks of lateral per block of
+// travel, that band stops approximating the road and the pavement pinches and
+// breaks up. Measured over eight arterials and 3000 blocks, these values bend at
+// most 0.50 and drift up to 49 blocks off the bearing — the road visibly winds
+// instead of arrowing at the horizon, and the surface stays continuous.
+const AMP_MAX = 70, AMP_GROW = 0.30;
+const WANDER_L1 = 300, WANDER_L2 = 110, WANDER_MIX = 0.70;
 
 // ---- The height profile ----------------------------------------------------
 // Anchors every ANCHOR_K blocks along the centre line hold the natural ground
@@ -85,10 +94,17 @@ const WS_BENCH = [B.planks_slab];
 
 const CHUNK_R = 11.4;       // half-diagonal of a chunk, for the coarse reject
 const BED_MAX = 40;         // deepest a causeway will reach for solid ground
+const BRIDGE_BENT = 4;      // blocks between the piles carrying a bridge deck
 
 // Salts. Each road gets its own noise streams so two arterials never wander in
 // step, and the paving/edge rolls stay independent of the route.
 const S_WANDER1 = 5101, S_WANDER2 = 5209, S_EDGE_CORE = 5303, S_EDGE_VERGE = 5387;
+// Wayside crofts: how often a site is OFFERED, how rarely it is taken, how far
+// back from the lane it sits, and how far out from the road a chunk has to look
+// to find one that reaches it. Rare on purpose — see _crofts.
+const CROFT_SPACING = 190, CROFT_CHANCE = 0.28, CROFT_START = 260;
+const CROFT_OFFSET = 11, CROFT_REACH = 20;
+const S_CROFT = 6101, S_CROFT_SIDE = 6203, S_CROFT_ART = 6301;
 const S_PAVE = 5407, S_RAGGED = 5501, S_WAYSIDE = 5701;
 const DIR_SALT = 131;
 
@@ -113,6 +129,7 @@ export class Roads {
     this._roadY = new Int16Array(CHUNK * CHUNK);  // its graded surface
     this._dirs = new Int32Array(ARTERIALS);       // arterials in play this chunk
     this._col = new Int32Array(2);       // column-coordinate out-param
+    this._col2 = new Int32Array(2);      // second out-param, for a croft's door bearing
     // Profile sampling gets its OWN column scratch: building a window walks the
     // centre line, and doing that through _col would quietly clobber the caller's
     // column between `roads.column(...)` and `roads.surfaceY(...)`.
@@ -280,8 +297,105 @@ export class Roads {
       if (y > top) top = y;
       const w = this._waystones(gen, blocks, cx, cz, d, s0 - CHUNK_R - 8, s0 + CHUNK_R + 8);
       if (w > top) top = w;
+      const c = this._crofts(gen, chunk, blocks, cx, cz, d, s0 - CHUNK_R - CROFT_REACH, s0 + CHUNK_R + CROFT_REACH);
+      if (c > top) top = c;
     }
     if (top >= 0) this._evict(chunk, cx, cz);
+    return top;
+  }
+
+  // ---- Wayside crofts ------------------------------------------------------
+  // A lone cottage set back from the verge, at rare intervals. Rare is the
+  // point: a house every time you blink turns an arterial into a ribbon
+  // development, and the road should read as running THROUGH country that is
+  // mostly empty. So sites are offered every CROFT_SPACING and most are refused.
+  //
+  // Chunk-local by construction. The site, its floor level and every block are
+  // pure functions of (seed, dir, n) — the floor comes from `gen.heightAt` at the
+  // hearth column, never from anything this chunk happens to know — so each chunk
+  // writes its own slice and the union is one coherent building however the
+  // chunks load.
+  _crofts(gen, chunk, blocks, cx, cz, d, sLo, sHi) {
+    let top = -1;
+    const first = Math.ceil(sLo / CROFT_SPACING), last = Math.floor(sHi / CROFT_SPACING);
+    for (let n = first; n <= last; n++) {
+      const s = n * CROFT_SPACING;
+      if (s < CROFT_START) continue;
+      if (hash2(gen.seed + S_CROFT, n, d) > CROFT_CHANCE) continue;   // most sites stay empty
+      if (this._blocked(gen, ...this.column(gen, d, s, 0, this._col), 15)) continue;
+      const side = hash2(gen.seed + S_CROFT_SIDE, n, d) < 0.5 ? 1 : -1;
+      const y = this._croft(gen, chunk, blocks, cx, cz, d, s, side, n);
+      if (y > top) top = y;
+    }
+    return top;
+  }
+
+  _croft(gen, chunk, blocks, cx, cz, d, s, side, n) {
+    // Anchor: the hearth corner, set back from the lane so the verge stays clear.
+    const a = this.column(gen, d, s, CROFT_OFFSET * side, this._col);
+    const ax = a[0], az = a[1];
+    const fy = gen.heightAt(ax, az);
+    if (fy <= SEA + 1 || fy > H_HI - 8) return -1;                    // not on a beach or a crag
+    const r = (v) => hash2(gen.seed + S_CROFT_ART, n * 31 + v, d);
+    const W = 3 + ((r(1) * 2) | 0), D = 3 + ((r(2) * 2) | 0);         // 3-4 half-extents
+    const wallH = 4;
+    const timber = r(3) < 0.5 ? B.oak_log : B.cedar_log;
+    const infill = r(4) < 0.5 ? B.stone_brick : B.timber_wall;
+    const roofId = r(5) < 0.6 ? B.thatch : B.planks;
+    const doorId = r(6) < 0.5 ? B.oak_door : B.birch_door;
+    const doorTop = doorId === B.oak_door ? B.oak_door_top : B.birch_door_top;
+    // The door faces the road, so the lane it serves is the way you go in.
+    const inX = Math.sign(this.column(gen, d, s, 0, this._col2)[0] - ax);
+    const inZ = Math.sign(this._col2[1] - az);
+
+    const step = CHUNK * CHUNK;
+    let top = -1;
+    const put = (x, y, z, id) => {
+      const lx = x - cx * CHUNK, lz = z - cz * CHUNK;
+      if (lx < 0 || lx >= CHUNK || lz < 0 || lz >= CHUNK || y < 1 || y >= WORLD_H) return;
+      blocks[(y * CHUNK + lz) * CHUNK + lx] = id;
+      if (id !== B.air && y > top) top = y;
+    };
+
+    for (let x = ax - W; x <= ax + W; x++) {
+      for (let z = az - D; z <= az + D; z++) {
+        const edge = x === ax - W || x === ax + W || z === az - D || z === az + D;
+        // A pad: fill under it so it never stands on air, clear over it so it is
+        // never buried, both only as far as the site actually needs.
+        for (let y = fy - 3; y < fy; y++) put(x, y, z, B.dirt);
+        put(x, fy - 1, z, B.cobble);
+        for (let y = fy; y <= fy + wallH + Math.max(W, D) + 1; y++) put(x, y, z, B.air);
+        put(x, fy, z, edge ? B.cobble : B.planks);                    // plinth course / floor
+        if (!edge) continue;
+        const corner = (x === ax - W || x === ax + W) && (z === az - D || z === az + D);
+        for (let y = fy + 1; y <= fy + wallH; y++) put(x, y, z, corner ? timber : infill);
+        if (!corner && ((x + z) & 1) === 0) put(x, fy + 2, z, B.glasspane);   // a window or two
+      }
+    }
+    // Gable roof, ridge along the long axis, with an eave a block proud.
+    const along = W >= D;
+    const half = along ? D : W;
+    for (let k = 0; k <= half + 1; k++) {
+      const y = fy + wallH + 1 + k;
+      for (let x = ax - W - 1; x <= ax + W + 1; x++) {
+        for (let z = az - D - 1; z <= az + D + 1; z++) {
+          const off = along ? Math.abs(z - az) : Math.abs(x - ax);
+          if (off !== half + 1 - k) continue;
+          put(x, y, z, roofId);
+        }
+      }
+    }
+    for (let x = ax - (along ? W : 0); x <= ax + (along ? W : 0); x++) {
+      for (let z = az - (along ? 0 : D); z <= az + (along ? 0 : D); z++) put(x, fy + wallH + 2 + half, z, roofId);
+    }
+    // The way in: a two-block door in the wall that faces the lane.
+    const dxc = inX !== 0 ? ax + inX * W : ax;
+    const dzc = inZ !== 0 ? az + inZ * D : az;
+    put(dxc, fy + 1, dzc, doorId);
+    put(dxc, fy + 2, dzc, doorTop);
+    // A hearth inside and a lantern at the door, so it reads as lived in.
+    put(ax, fy + 1, az, B.campfire);
+    put(dxc - inX, fy + 3, dzc - inZ, B.sea_lantern);
     return top;
   }
 
@@ -362,18 +476,29 @@ export class Roads {
       surf = isSolid(blocks[base + y * step]) ? 0 : B.dirt;
     } else if (a <= coreEdge) {
       const r = hash2(seed + S_PAVE, wx, wz);
-      surf = bridge ? B.stone_brick : r < 0.09 ? B.gravel : r < 0.18 ? B.mossy_cobble : r < 0.24 ? B.stone : B.cobble;
+      surf = bridge ? B.planks : r < 0.09 ? B.gravel : r < 0.18 ? B.mossy_cobble : r < 0.24 ? B.stone : B.cobble;
     } else {
       const r = hash2(seed + S_PAVE, wx, wz);
-      surf = r < 0.12 ? B.cobble : r < 0.17 ? B.dirt : B.gravel;
+      surf = bridge ? B.planks : r < 0.12 ? B.cobble : r < 0.17 ? B.dirt : B.gravel;
     }
     if (surf) blocks[base + y * step] = surf;
 
-    // A parapet where the road runs out over water, so a bridge looks like one
-    // and you cannot walk off it in the dark.
-    if (bridge && paved && a > vergeEdge - 1) {
-      blocks[base + (y + 1) * step] = B.cobble_wall;
-      return y + 1;
+    if (bridge && paved) {
+      // A timber trestle, not a stone causeway: plank deck, fenced handrails
+      // down both edges so you cannot walk off it in the dark, and piles driven
+      // to the bed every few blocks so the span is visibly carried rather than
+      // floating on the water.
+      if (a > vergeEdge - 1) {
+        blocks[base + (y + 1) * step] = B.planks_fence;
+        return y + 1;
+      }
+      // Piles under the outer deck, on a regular bent spacing along the span.
+      if (a > coreEdge && (((s % BRIDGE_BENT) + BRIDGE_BENT) % BRIDGE_BENT) === 0) {
+        for (let yy = y - 1; yy > hNat && yy > y - BED_MAX; yy--) {
+          const i = base + yy * step;
+          if (!isSolid(blocks[i]) || blocks[i] === B.water) blocks[i] = B.oak_log;
+        }
+      }
     }
     return y;
   }

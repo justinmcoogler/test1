@@ -79,17 +79,33 @@ test('the player walks over carpet instead of bumping its edge', () => {
   assert.ok(p.y >= y + 1 - 0.02 && p.y <= y + 1 + SHAPE_COLLISION.carpet + 0.02, `stayed grounded on the carpet, not fallen (y=${p.y.toFixed(3)})`);
 });
 
-test('a full block stops a horizontal move (you jump up steps, not auto-step)', () => {
+test('a one-block step is walked up, a two-block wall is not', () => {
+  // This reverses an earlier deliberate choice. The collider used to refuse any
+  // rise at all, so you had to jump every step — but the pathfinder routes over
+  // one-block rises, the roads grade to a one-block maximum, and every stair in
+  // the town is one-block risers, so walking anywhere built stopped you dead.
+  // A one-block rise is now walkable; two is still a wall. See STEP_H in
+  // js/player/player.js and tests/unit/physics.test.mjs.
   const w = new World(4242);
   w.ensureChunk(0, 0);
   const y = 66;
   for (let x = 2; x <= 5; x++) w.setBlock(x, y, 2, B.stone, true); // floor, top y+1
-  w.setBlock(6, y + 1, 2, B.stone, true); // a single one-block step at x=6
+  for (let x = 6; x <= 12; x++) w.setBlock(x, y + 1, 2, B.stone, true); // step, then upper floor
   const p = new Player();
   p.x = 2.5; p.z = 2.5; p.y = y + 1; p.onGround = true;
   for (let i = 0; i < 60; i++) { p.moveAxis(w, 0.12, 0, 0); p.moveAxis(w, 0, -0.05, 0); }
-  assert.ok(p.x < 5.8, `blocked at the step — no auto-step, you jump it (x=${p.x.toFixed(2)})`);
-  assert.ok(p.y < y + 1.5, `did not climb the step by walking (y=${p.y.toFixed(2)})`);
+  assert.ok(p.x > 6.2, `walked up onto the step (x=${p.x.toFixed(2)})`);
+  assert.ok(Math.abs(p.y - (y + 2)) < 0.05, `standing on top of it (y=${p.y.toFixed(2)})`);
+
+  // …and the same approach against a two-block wall still stops.
+  const w2 = new World(4242);
+  w2.ensureChunk(0, 0);
+  for (let x = 2; x <= 5; x++) w2.setBlock(x, y, 2, B.stone, true);
+  for (let x = 6; x <= 12; x++) { w2.setBlock(x, y + 1, 2, B.stone, true); w2.setBlock(x, y + 2, 2, B.stone, true); }
+  const q = new Player();
+  q.x = 2.5; q.z = 2.5; q.y = y + 1; q.onGround = true;
+  for (let i = 0; i < 60; i++) { q.moveAxis(w2, 0.12, 0, 0); q.moveAxis(w2, 0, -0.05, 0); }
+  assert.ok(q.x < 5.8, `two blocks is still a wall (x=${q.x.toFixed(2)})`);
 });
 
 test('player facing edits are recorded and survive a save round-trip', () => {

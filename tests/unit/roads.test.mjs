@@ -16,7 +16,9 @@ import { B } from '../../js/world/blocks.js';
 // What the running surface can be made of. Deliberately excludes the shoulder's
 // bare subsoil, the bridge parapets and the waystone furniture — those are not
 // lane, and a test that walked them would be measuring the wrong thing.
-const PAVING = new Set([B.cobble, B.mossy_cobble, B.gravel, B.stone, B.stone_brick]);
+// B.planks is here because a water crossing is a TIMBER bridge: plank deck,
+// fenced handrails, piles driven to the bed. It used to be a stone causeway.
+const PAVING = new Set([B.cobble, B.mossy_cobble, B.gravel, B.stone, B.stone_brick, B.planks]);
 
 // Everything js/world/roads.js is capable of writing — paving, bed, shoulder
 // face, bridge parapet, waystone furniture, and the air a cutting leaves behind.
@@ -339,4 +341,27 @@ test('the arterials leave Brookhollow alone', () => {
     }
   }
   assert.ok(open > tiles * 0.8, `the spawn plaza is still open ground (${open} of ${tiles} tiles walkable)`);
+});
+
+test('the arterials actually wind — they are not straight lines with a wobble', () => {
+  // The roads used to leave spawn essentially straight: 22 blocks of lateral
+  // drift over 3000 travelled, which reads as an arrow to the horizon. The
+  // ceiling on this is geometric, not cosmetic — the paved corridor is a band
+  // measured perpendicular to the compass axis, so a centre line that turns
+  // faster than ~0.6 lateral per block travelled makes the pavement pinch.
+  const gen = new WorldGen(20260725);
+  const roads = roadsFor(gen);
+  let maxLat = 0, maxBend = 0;
+  for (let dir = 0; dir < 8; dir++) {
+    let prev = null;
+    for (let s = ROAD_START; s <= 3000; s += 4) {
+      const v = roads.wander(gen.seed, dir, s);
+      maxLat = Math.max(maxLat, Math.abs(v));
+      if (prev !== null) maxBend = Math.max(maxBend, Math.abs(v - prev) / 4);
+      prev = v;
+    }
+  }
+  assert.ok(maxLat > 35, `roads should wander well off the bearing (max ${maxLat.toFixed(0)} blocks)`);
+  assert.ok(maxBend > 0.25, `and bend noticeably while doing it (steepest ${maxBend.toFixed(2)})`);
+  assert.ok(maxBend < 0.6, `but not so fast the paved corridor pinches (steepest ${maxBend.toFixed(2)})`);
 });

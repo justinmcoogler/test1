@@ -1495,6 +1495,15 @@ class Game {
 
   breakBlock(x, y, z, def) {
     this.world.setBlock(x, y, z, B.air, true);
+    // A door is two leaves and one object: take the other half with it, or the
+    // remaining leaf hangs in the doorway with nothing holding it up. The drop
+    // is the lower leaf's, which both halves declare, so you get one door back.
+    if (def.shape === 'door') {
+      for (const dy of [-1, 1]) {
+        const od = BLOCKS[this.world.getBlock(x, y + dy, z)];
+        if (od?.shape === 'door') { this.world.setBlock(x, y + dy, z, B.air, true); break; }
+      }
+    }
     this.renderer.spawnParticles(x + 0.5, y + 0.5, z + 0.5, [0.5, 0.45, 0.4], 10, 3, 0.6);
     SFX.breakBlock();
     if (def.drops) this.inventory.add(def.drops, 1);
@@ -1650,6 +1659,17 @@ class Game {
     if (def.shape === 'panel' || def.shape === 'door') { // trapdoor / door — swing it
       const f = this.world.facingAt(hit.x, hit.y, hit.z);
       this.world.setFacing(hit.x, hit.y, hit.z, f ^ 8); // flip the open bit (3)
+      // A door is two leaves. Swing whichever half you clicked and its partner
+      // together, or you open the bottom of a doorway and leave the top shut.
+      if (def.shape === 'door') {
+        for (const dy of [-1, 1]) {
+          const od = BLOCKS[this.world.getBlock(hit.x, hit.y + dy, hit.z)];
+          if (od?.shape !== 'door') continue;
+          const of = this.world.facingAt(hit.x, hit.y + dy, hit.z);
+          if ((of & 3) !== (f & 3)) continue;           // a different door, not our other half
+          this.world.setFacing(hit.x, hit.y + dy, hit.z, of ^ 8);
+        }
+      }
       SFX.place();
       return true;
     }

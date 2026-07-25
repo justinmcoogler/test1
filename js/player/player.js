@@ -14,6 +14,16 @@ const W = 0.6, H = 1.8;
 // but never block a horizontal step — you walk over them instead of the edge
 // stopping you dead.
 const WALKOVER = 0.2;
+// How high a ledge you walk straight up instead of having to jump. A full block
+// plus a hair, because a one-block riser is the unit this world is built in:
+// js/game/pathfind.js routes over anything `ny - cur.y <= 1`, the roads grade to
+// a maximum one-block step, and every stair flight in js/world/town.js is
+// one-block risers. Before this existed the pathfinder and the physics disagreed
+// — click-to-move would route you up a stair and hop it, while walking into the
+// same stair on WASD stopped you dead against what is, to the collider, a full
+// cube (SHAPE_COLLISION.stairs is 1). Steps and staircases were unwalkable by
+// hand. Stepping is strictly a grounded move; in the air you still have to jump.
+const STEP_H = 1.05;
 
 export class Player {
   constructor() {
@@ -172,6 +182,26 @@ export class Player {
     this.mana = Math.min(this.maxMana, this.mana + 0.4 * dt);
   }
 
+  // Is the player's box clear of the world at this position? Used by the step-up
+  // to check a candidate stance before committing to it, so we never step into a
+  // low doorway head or a shelf and end up inside geometry.
+  fits(world, x, y, z) {
+    const x0 = Math.floor(x - W / 2), x1 = Math.floor(x + W / 2 - 1e-7);
+    const y0 = Math.max(0, Math.floor(y + 1e-4)), y1 = Math.floor(y + H - 1e-7);
+    const z0 = Math.floor(z - W / 2), z1 = Math.floor(z + W / 2 - 1e-7);
+    for (let bx = x0; bx <= x1; bx++) {
+      for (let by = y0; by <= y1; by++) {
+        for (let bz = z0; bz <= z1; bz++) {
+          const ch = world.collisionHeight(bx, by, bz);
+          if (ch <= 0) continue;
+          if (by + ch <= y + 1e-4) continue;   // entirely below the feet: it's floor, not an obstruction
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   moveAxis(world, ax, ay, az) {
     this.x += ax; this.y += ay; this.z += az;
     if (ay < 0) this.onGround = false;
@@ -181,7 +211,7 @@ export class Player {
       const x0 = Math.floor(minX), x1 = Math.floor(maxX - 1e-7);
       const y0 = Math.max(0, Math.floor(minY)), y1 = Math.floor(maxY - 1e-7);
       const z0 = Math.floor(minZ), z1 = Math.floor(maxZ - 1e-7);
-      let hit = false;
+      let hit = false, stepped = false;
       for (let bx = x0; bx <= x1 && !hit; bx++) {
         for (let by = y0; by <= y1 && !hit; by++) {
           for (let bz = z0; bz <= z1 && !hit; bz++) {
@@ -192,6 +222,21 @@ export class Player {
             if (minX >= bx + 1 || maxX <= bx || minZ >= bz + 1 || maxZ <= bz) continue;
             if (minY >= blockTop || maxY <= by) continue;
             hit = true;
+            // Before treating it as a wall: can we just step up onto it? Only
+            // from the ground, only up to STEP_H, and only if the whole body
+            // fits at the new height where we already are. Keeping the
+            // horizontal position means the step costs no speed, which is what
+            // makes a staircase feel like a ramp rather than a series of hops.
+            if ((ax !== 0 || az !== 0) && this.onGround && this.vy <= 0) {
+              const rise = blockTop - this.y;
+              if (rise > 0 && rise <= STEP_H && this.fits(world, this.x, blockTop + 1e-4, this.z)) {
+                this.y = blockTop + 1e-4;
+                this.vy = 0;
+                this.onGround = true;
+                stepped = true;
+                break;                 // the box just moved; rescan from the new stance
+              }
+            }
             if (ax > 0) { this.x = bx - W / 2 - 1e-4; this.vx = 0; }
             else if (ax < 0) { this.x = bx + 1 + W / 2 + 1e-4; this.vx = 0; }
             else if (az > 0) { this.z = bz - W / 2 - 1e-4; this.vz = 0; }
@@ -201,6 +246,7 @@ export class Player {
           }
         }
       }
+      if (stepped) continue;   // re-resolve against a freshly computed box
       if (!hit) break;
     }
   }

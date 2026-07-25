@@ -121,9 +121,17 @@ for (const w of WOODS) {
   });
   def(`${w.id}_leaves`, { label: `${w.label} Leaves`, opaque: false, hardness: 0.4, drops: null, tiles: { all: `${w.id}_leaves` } });
   // A hinged door: records a facing (dir + open bit 3); right-click swings it.
+  // A door is TWO blocks tall — a one-block door is a hatch. The upper leaf is
+  // its own block id purely so it can carry its own tile (panel and vision slot
+  // rather than the handle); it is not separately obtainable and drops the one
+  // door item, and js/main.js keeps the two leaves swinging and breaking as one.
   def(`${w.id}_door`, {
     label: `${w.label} Door`, shape: 'door', hardness: 2.4, tool: 'axe',
     directional: true, drops: `${w.id}_door`, tiles: { all: `${w.id}_door` },
+  });
+  def(`${w.id}_door_top`, {
+    label: `${w.label} Door`, shape: 'door', hardness: 2.4, tool: 'axe',
+    directional: true, drops: `${w.id}_door`, tiles: { all: `${w.id}_door_top` },
   });
 }
 // Ore blocks for every mineable metal the legacy set doesn't already define

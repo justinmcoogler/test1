@@ -175,3 +175,22 @@ test('the town keeps the ids quests and saves depend on', () => {
   assert.ok(near(s.markers.cottage, s.npcs.find((n) => n.id === 'maren'), 4), 'maren stands where the compass sends you');
   assert.ok(near(s.markers.stall, s.npcs.find((n) => n.id === 'tam'), 4), 'tam stands where the compass sends you');
 });
+
+test('every door is two blocks tall, both leaves matching', () => {
+  // A one-block leaf under an open head is a hatch, not a door. Both leaves must
+  // be door-shaped, share a hinge direction so they swing together, and agree on
+  // what they drop so breaking one does not duplicate the item.
+  const { world } = survey(SEEDS[0]);
+  const short = [], mismatched = [];
+  for (const d of TOWN_PLAN.doors) {
+    const lower = BLOCKS[world.getBlock(d.x, d.y, d.z)];
+    const upper = BLOCKS[world.getBlock(d.x, d.y + 1, d.z)];
+    if (lower?.shape !== 'door') continue;              // arcades and cart bays have no leaf
+    if (upper?.shape !== 'door') { short.push(`${d.name} at ${d.x},${d.y},${d.z} has no upper leaf`); continue; }
+    if (lower.drops !== upper.drops) mismatched.push(`${d.name} leaves drop ${lower.drops} / ${upper.drops}`);
+    const lf = world.facingAt(d.x, d.y, d.z) & 3, uf = world.facingAt(d.x, d.y + 1, d.z) & 3;
+    if (lf !== uf) mismatched.push(`${d.name} leaves hinge ${lf} / ${uf}`);
+  }
+  assert.deepEqual(short, [], 'doors must be two blocks tall');
+  assert.deepEqual(mismatched, [], 'the two leaves must agree');
+});

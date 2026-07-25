@@ -498,7 +498,10 @@ const ORE_TEX = {
 };
 // A panelled plank door: a board field with a frame and two sunken panels plus
 // a round handle, tinted to the wood's bark tone so each species reads distinct.
-function doorTile(ctx, x0, y0, rand, base, groove) {
+// A door is TWO blocks tall, so its art is two tiles rather than one squeezed
+// door. `half` is 'lower' or 'upper'; between them they read as a single leaf
+// with one pair of panels, one handle and one meeting rail where they join.
+function doorTile(ctx, x0, y0, rand, base, groove, half) {
   noisyFill(ctx, x0, y0, rand, base, 0.05);
   for (let lx = 0; lx < LP; lx += 8) for (let ly = 0; ly < LP; ly++) px(ctx, x0, y0, lx, ly, shade(groove, (rand() - 0.5) * 0.1));
   const light = shade(base, 0.13), dark = shade(base, -0.17);
@@ -508,16 +511,30 @@ function doorTile(ctx, x0, y0, rand, base, groove) {
       px(ctx, x0, y0, lx, ly, c);
     }
   };
-  panel(6, 3, 25, 13);   // upper light
-  panel(6, 17, 25, 28);  // lower light
-  px(ctx, x0, y0, 27, 15, '#2f271e'); px(ctx, x0, y0, 27, 16, '#4a3d30'); px(ctx, x0, y0, 28, 16, '#5c4c3a'); // handle
+  const rail = (ly) => { for (let lx = 0; lx < LP; lx++) { px(ctx, x0, y0, lx, ly, dark); px(ctx, x0, y0, lx, ly + 1, light); } };
+  if (half === 'upper') {
+    panel(6, 6, 25, 21);                 // the tall upper light
+    rail(2);                             // head rail under the lintel
+    rail(28);                            // meeting rail, continued on the lower leaf
+    // a barred vision slot near the top, which is what makes it read as a door
+    // at a glance rather than a plank wall
+    for (let lx = 10; lx <= 21; lx += 4) for (let ly = 8; ly <= 13; ly++) px(ctx, x0, y0, lx, ly, shade(groove, -0.2));
+  } else {
+    panel(6, 8, 25, 25);                 // the tall lower light
+    rail(1);                             // meeting rail, other side of the joint
+    rail(29);                            // threshold rail
+    // the handle sits just below the joint — hand height on a two-block door
+    px(ctx, x0, y0, 27, 5, '#2f271e'); px(ctx, x0, y0, 27, 6, '#4a3d30');
+    px(ctx, x0, y0, 28, 6, '#5c4c3a'); px(ctx, x0, y0, 27, 7, '#2f271e');
+  }
 }
 for (const w of WOODS) {
   const t = WOOD_TEX[w.id]; if (!t) continue;
   PAINTERS[`${w.id}_bark`] ??= (c, x, y, r) => bark(c, x, y, r, t.bark[0], t.bark[1]);
   PAINTERS[`${w.id}_ring`] ??= (c, x, y, r) => rings(c, x, y, r, t.ring[0], t.ring[1]);
   PAINTERS[`${w.id}_leaves`] ??= (c, x, y, r) => leaves(c, x, y, r, t.leaf[0], t.leaf[1], t.needle ? 0.03 : 0.08);
-  PAINTERS[`${w.id}_door`] ??= (c, x, y, r) => doorTile(c, x, y, r, t.bark[0], t.bark[1]);
+  PAINTERS[`${w.id}_door`] ??= (c, x, y, r) => doorTile(c, x, y, r, t.bark[0], t.bark[1], 'lower');
+  PAINTERS[`${w.id}_door_top`] ??= (c, x, y, r) => doorTile(c, x, y, r, t.bark[0], t.bark[1], 'upper');
 }
 for (const m of METALS.filter((x) => (x.smelt || []).some((s) => s.endsWith('_ore')))) {
   const t = ORE_TEX[m.id]; if (!t) continue;

@@ -132,6 +132,11 @@ export function buildTown(api) {
   const WOODS = [B.fernwood_log, B.emberpine_log, B.oak_log];
   const INFILL = [B.white_terracotta, B.white_concrete, B.light_gray_terracotta ?? B.white_terracotta];
   const DOORS = [B.oak_door, B.birch_door, B.pine_door, B.cedar_door, B.ash_door, B.walnut_door];
+  // Lower leaf id → upper leaf id, so a door is placed as the pair it is.
+  const DOOR_TOP = {
+    [B.oak_door]: B.oak_door_top, [B.birch_door]: B.birch_door_top, [B.pine_door]: B.pine_door_top,
+    [B.cedar_door]: B.cedar_door_top, [B.ash_door]: B.ash_door_top, [B.walnut_door]: B.walnut_door_top,
+  };
   // Plinths and rubble walls stay in the grey family. Granite renders pink here,
   // which turns a stone footing into a patio.
   const STONES = [B.cobble, B.stone_brick, B.andesite ?? B.cobble, B.mossy_cobble ?? B.cobble];
@@ -357,8 +362,10 @@ export function buildTown(api) {
         set(bx, FL + h, bz, timber);
       }
     } else if (!opts.arcade) {
-      set(dx0, FL + 1, dz0, B.air);                  // the head of the doorway
-      setF(dx0, FL, dz0, doorId, dirBits);           // the leaf, which swings open
+      // Both leaves of a two-block door, sharing one facing so they swing
+      // together. A one-block leaf under an empty head reads as a hatch.
+      setF(dx0, FL, dz0, doorId, dirBits);
+      setF(dx0, FL + 1, dz0, DOOR_TOP[doorId] ?? doorId, dirBits);
     }                                                // an arcade IS the way in
     TOWN_PLAN.doors.push({ name, x: dx0, y: FL, z: dz0 });
 
@@ -458,26 +465,89 @@ export function buildTown(api) {
     set(cx, storeyY(storeys - 1) + wallH - 1, cz, B.sea_lantern);
 
     // --- vertical circulation ---------------------------------------------
-    // A quarter-turn flight in a corner: wallH one-block risers a walker steps
-    // up, and a hole cut through the deck over the top of the run so the climb
-    // keeps its headroom the whole way. An upper storey you cannot reach is
-    // worse than no upper storey, so this goes in AFTER the fit-out and clears
-    // whatever the furniture put in its way — function outranks decoration.
-    // Flight 0 takes the far corner, away from the hearth in the near one, and
-    // flights alternate so a riser never drops through the well below it.
+    // A STRAIGHT flight against a wall: wallH one-block risers in a line, a hole
+    // cut through the deck over the whole run so the climb keeps its headroom,
+    // and a landing at the top. This used to be a quarter-turn in a corner,
+    // which is a worse stair than it sounds: a walker climbed the straight part,
+    // met a wall, and had to stop and turn on a one-block tread halfway up. You
+    // could get there, but only by fighting it. A straight run you can hold one
+    // key and walk up is the whole point.
+    //
+    // It goes in AFTER the fit-out and clears whatever the furniture put in its
+    // way — function outranks decoration. Flights alternate ends so a riser
+    // never drops through the stairwell of the storey below it.
     for (let s = 0; s + 1 < storeys; s++) {
       const f = foot[s], ys = storeyY(s), deck = ys + wallH;
-      const far = s % 2 === 0;
-      const ax = far ? f.x1 - 1 : f.x0 + 1, az = far ? f.z1 - 1 : f.z0 + 1;
-      const dx = far ? -1 : 1, dz = far ? -1 : 1;
-      const path = [[ax, az], [ax + dx, az], [ax + dx * 2, az], [ax + dx * 2, az + dz]];
-      for (const [px, pz] of [...path, [ax + dx * 2, az + dz * 2]]) box(px, ys, pz, px, ys + wallH - 1, pz, B.air);
-      for (let i = 0; i < wallH; i++) {
-        const p = path[Math.min(i, path.length - 1)];
-        setF(p[0], ys + i, p[1], STAIRW, dx > 0 ? 1 : 3);
+      // Run along whichever interior axis is longer, so the flight and its
+      // landing fit without eating the room's width.
+      const wide = (f.x1 - f.x0) >= (f.z1 - f.z0);
+      const need = wallH + 1;                       // risers plus the landing tread
+      const far = s % 2 === 1;                      // alternate ends storey to storey
+      // Hug a wall, one cell in, and start far enough from the end that the run
+      // and its landing both fit inside the room.
+      const lo = (wide ? f.x0 : f.z0) + 1, hi = (wide ? f.x1 : f.z1) - 1;
+      const dir = far ? -1 : 1;
+      const start = far ? Math.min(hi, lo + need - 1) : Math.max(lo, hi - need + 1);
+      // All the flights share ONE stair bay against a single wall, in adjacent
+      // rows, alternating row and direction storey by storey. Two constraints
+      // forced this:
+      //  · They cannot share a column, or the upper flight's bottom riser lands
+      //    on the lower flight's landing and caps it.
+      //  · They cannot simply take opposite walls either, because the wall a
+      //    house shares with its neighbour has that neighbour's roof EAVE
+      //    oversailing it — a flight under one climbs into a tiled ceiling.
+      // Keeping the bay off the party wall dodges the eave, and keeping every
+      // flight in the same bay leaves the middle of the room as floor to walk on
+      // rather than scattering stairwells through it.
+      const party = opts.party || '';
+      const loSide = wide ? !party.includes('N') : !party.includes('W');
+      const wall = loSide ? (wide ? f.z0 : f.x0) + 1 : (wide ? f.z1 : f.x1) - 1;
+      const inward = loSide ? 1 : -1;
+      const side = wall + (far ? inward : 0);       // adjacent rows, same bay
+
+      // A straight run needs `need` cells of clear length. A tower room is only
+      // four across and physically cannot hold one, so it gets what a real tower
+      // gets: a newel stair winding round a 2x2 well. Same one-block risers, same
+      // walk-up, a quarter of the floor.
+      const straight = (hi - lo + 1) >= need;
+      const SPIN = [[0, 0], [1, 0], [1, 1], [0, 1]];
+      const ax = (wide ? start : side), az = (wide ? side : start);
+      const cell = straight
+        ? (i) => (wide ? [start + dir * i, side] : [side, start + dir * i])
+        : (i) => {
+          const [ox2, oz2] = SPIN[i & 3];
+          return [Math.min(ax, hi - 1) + ox2 * dir + (dir < 0 ? 1 : 0), Math.min(az, (wide ? f.z1 : f.z1) - 2) + oz2];
+        };
+      const spiralCells = straight ? null
+        : SPIN.map(([ox2, oz2]) => [Math.min(ax, hi - 1) + ox2, Math.min(az, (wide ? f.z1 - 2 : f.z1 - 2)) + oz2]);
+
+      // Clear the whole shaft first — furniture, and the deck above it.
+      const shaft = straight
+        ? Array.from({ length: wallH + 1 }, (_, i) => cell(i))
+        : spiralCells;
+      for (const [px, pz] of shaft) box(px, ys, pz, px, deck, pz, B.air);
+
+      if (straight) {
+        // The risers, each facing the way you walk.
+        const facing = wide ? (dir > 0 ? 1 : 3) : (dir > 0 ? 0 : 2);
+        for (let i = 0; i < wallH; i++) {
+          const [px, pz] = cell(i);
+          setF(px, ys + i, pz, STAIRW, facing);
+        }
+        const [lx, lz] = cell(wallH);
+        set(lx, deck, lz, floorMat);                    // the landing you step out onto
+        box(lx, deck + 1, lz, lx, deck + wallH, lz, B.air);
+      } else {
+        // Newel stair: one riser per quarter turn, climbing round the well.
+        const FACE = [1, 0, 3, 2];
+        for (let i = 0; i < wallH; i++) {
+          const [px, pz] = spiralCells[i & 3];
+          setF(px, ys + i, pz, STAIRW, FACE[i & 3]);
+        }
+        const [lx, lz] = spiralCells[wallH & 3];
+        set(lx, deck, lz, floorMat);
+        box(lx, deck + 1, lz, lx, deck + wallH, lz, B.air);
       }
-      for (const [px, pz] of path) set(px, deck, pz, B.air);
-      set(ax + dx * 2, deck, az + dz * 2, floorMat);   // the landing you step out onto
     }
 
     // Sweep the threshold clear, LAST. A fit-out laid out from the interior

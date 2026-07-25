@@ -62,15 +62,15 @@ try {
 
   // yaw 0 = north (-z). The town runs from the kirk/moot at z=-27 down to the
   // wide market mouth at z=+10; x spans -30..25.
-  await shot('town-plan',     -2, 108, -10, 0,             -1.45); // near-vertical: the whole plan
-  await shot('town-obl-s',    -2,  88,  30, 0,             -0.52); // oblique from the south, up the funnel
-  await shot('town-obl-e',    42,  86, -10, Math.PI * 1.5, -0.50); // oblique from the east across the rows
-  await shot('town-funnel',   -2,  68,   6, 0,             -0.05); // stand in the market, look up to the kirk
-  await shot('town-highst',   -3,  70, -14, 0,             -0.06); // high street, kirk end
-  await shot('town-mooth',    -2,  69, -20, 0,              0.06); // moot hall + market cross
-  await shot('town-shambles',  9,  68,  -6, 0,             -0.03); // the narrow lane east of Middle Row
-  await shot('town-terrace', -16,  69,  -4, Math.PI * 0.5, -0.04); // along the burgage terrace frontage
-  await shot('town-backlane',-24,  69, -10, 0,             -0.05); // back lane behind the tofts
+  await shot('town-plan',     -2, 108, -10, 0,             -1.45);
+  await shot('town-funnel',   -2,  68,   6, 0,             -0.05);
+  await shot('door-close',   -11,  67,  -8, Math.PI * 1.5,  0.02); // a two-block door up close
+  // Out on the arterials: a timber bridge and a wayside croft.
+  await shot('bridge',          4,  70, 1444, 0,            -0.18);
+  await shot('bridge-far',      4,  78, 1462, 0,            -0.35);
+  await shot('croft',        -566,  72,  -12, Math.PI * 1.5, -0.15);
+  await shot('croft-wide',   -560,  80,   -4, Math.PI * 1.3, -0.32);
+  await shot('road-wind',       0, 104,  520, 0,            -0.62); // the road winding away
   if (errors.length) { console.log('PAGE ERRORS:'); errors.forEach((e) => console.log(' •', e)); }
 } finally {
   await browser.close();
