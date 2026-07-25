@@ -2,18 +2,13 @@
 // and the Rootgrave dungeon beneath it. Produces explicit block edits +
 // node/NPC/enemy placements that worldgen applies on top of terrain.
 import { B } from './blocks.js';
-import { MANOR } from './starter-manor.js';
+import { buildTown } from './town.js';
 import { LEARN_MEADOW } from './worldgen.js';
 
 const key = (x, y, z) => `${x},${y},${z}`;
 
 // Starter loot for the manor's built-in chests (in cell-iteration order). Any
 // chest past this list is left empty — free home storage.
-const MANOR_CHEST_LOOT = [
-  [{ item: 'travel_biscuit', qty: 3 }, { item: 'torch_item', qty: 6 }],
-  [{ item: 'plant_fibre', qty: 6 }, { item: 'rough_stone', qty: 6 }],
-  [{ item: 'coin', qty: 40 }],
-];
 
 // The whole settlement, mine, dungeon, pond and Frostwatch camp are authored
 // at the legacy 64-tall vertical scale (ground≈30) and lifted uniformly into
@@ -96,51 +91,8 @@ export function buildStarterStructures() {
     return { x0, x1, z0, z1, cx, cz };
   };
 
-  // ---- Paths -------------------------------------------------------------
-  for (let x = -30; x <= 30; x++) for (let z = 0; z <= 1; z++) set(x, GROUND, z, B.gravel);
-  for (let z = -30; z <= 30; z++) for (let x = 0; x <= 1; x++) set(x, GROUND, z, B.gravel);
-  for (let i = -24; i <= 24; i += 12) {
-    set(i, F, 2, B.torch_post);
-    set(2, F, i, B.torch_post);
-  }
-
-  // ---- The village of Brookhollow: timber cottages around a plaza ---------
-  // Elder Maren's cottage (NW) — home of the first quest-giver.
-  house(-12, -11, 4, 3, { roof: 'brick', door: 'S' });
-  set(-15, F, -13, B.chest_block);
-  chests.push({ id: 'maren_chest', x: -15, y: F, z: -13, loot: [{ item: 'travel_biscuit', qty: 3 }] });
-  npcs.push({ id: 'maren', x: -12, y: F, z: -6 });
-
-  // Village smithy & workshop (NE) — every crafting station under one roof.
-  house(12, -11, 4, 3, { roof: 'stone_brick', door: 'S', wall: B.planks });
-  set(9, F, -13, B.workbench);
-  set(11, F, -13, B.furnace);
-  set(13, F, -13, B.anvil_block);
-  set(15, F, -13, B.construction_bench);
-  set(9, F, -9, B.loom_block);
-  set(11, F, -9, B.alchemy_table);
-  set(15, F, -9, B.chest_block);
-  chests.push({ id: 'workshop_chest', x: 15, y: F, z: -9, loot: [{ item: 'rough_stone', qty: 4 }, { item: 'plant_fibre', qty: 4 }] });
-  set(7, F, -6, B.campfire);                    // forge fire out front
-
-  // Tam's general store (W) — doorway opening onto the plaza.
-  house(-13, 8, 3, 3, { roof: 'mossy_cobble', door: 'E' });
-  set(-14, F, 6, B.chest_block);
-  chests.push({ id: 'tam_chest', x: -14, y: F, z: 6, loot: [] });
-  npcs.push({ id: 'tam', x: -13, y: F, z: 8 });
-
-  // ---- Plaza well + lamp posts -------------------------------------------
-  {
-    const wx = 6, wz = -6;                       // a cobble well just off the crossing
-    for (const [dx, dz] of [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) set(wx + dx, F, wz + dz, B.cobble);
-    set(wx, GROUND, wz, B.cobble); set(wx, F, wz, B.water);   // walled water, contained by the rim
-    for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) box(wx + dx, F + 1, wz + dz, wx + dx, F + 2, wz + dz, B.fernwood_log);
-    box(wx - 1, F + 3, wz - 1, wx + 1, F + 3, wz + 1, B.thatch);
-  }
-  // lamp posts around the plaza (fence post topped with a lantern)
-  for (const [lx, lz] of [[-4, -4], [4, -4], [-4, 4], [4, 4]]) {
-    set(lx, F, lz, B.planks_fence); set(lx, F + 1, lz, B.planks_fence); set(lx, F + 2, lz, B.sea_lantern);
-  }
+  // ---- Brookhollow: streets, market square, moot hall (js/world/town.js) ---
+  buildTown({ B, set, setF, box, F, GROUND, chests, npcs, nodes, spawns });
 
   // ---- Pond (fishing) ----------------------------------------------------
   // A sunken basin ringed by a step-down sand ledge: step off the plateau onto
@@ -359,33 +311,8 @@ export function buildStarterStructures() {
     nodes.push({ type: 'tree_yew', x: CX + 10, y: F2, z: CZ - 4, meta: { h: 6 } });
   }
 
-  // ---- Ashford Manor: the grand starter house west of town ---------------
-  // Converted from a Minecraft schematic (assets/schematics/z7_recolored) and
-  // baked to a (0,0,0)-cornered cell list by tools/bake-manor.mjs. Placed so the
-  // build's terrace (its layer y=4) lands on the plateau surface: the foundation
-  // (y<4) buries and you walk in at ground level. Worldgen pins MANOR_PAD flat
-  // and keeps procedural trees/mobs off it. Its built-in chests become storage.
-  {
-    // origin: normalized y=0 → authored 26 → real 60 (set() adds LIFT); terrace
-    // y=4 → real 64. Footprint 36×28 centered on the pad at world (-60, 0).
-    const OX = -78, OZ = -14, OY = 26;
-    const pal = MANOR.palette.map((n) => B[n]);
-    const cells = MANOR.cells;
-    const stride = MANOR.stride || 4;
-    let mc = 0;
-    for (let i = 0; i < cells.length; i += stride) {
-      const x = OX + cells[i], y = OY + cells[i + 1], z = OZ + cells[i + 2], id = pal[cells[i + 3]];
-      const facing = stride >= 5 ? cells[i + 4] : 255;
-      set(x, y, z, id);
-      if (facing !== 255) facings.push([x, y + LIFT, z, facing]); // real y (set() lifted the block)
-      if (id === B.chest_block) {
-        chests.push({ id: `manor_chest_${mc}`, x, y, z, loot: MANOR_CHEST_LOOT[mc] || [] });
-        mc++;
-      }
-    }
-    // gravel lane linking the town's west path to the manor terrace
-    for (let x = -42; x <= -31; x++) for (let z = 0; z <= 1; z++) set(x, GROUND, z, B.gravel);
-  }
+  // The imported schematic manor was removed — the town is hand-built now
+  // (js/world/town.js). Its plateau west of town is left open ground.
 
   // ---- Numbers Meadow: the kids' Learning Mode classroom pad ----------------
   // A quiet, combat-free grass yard far east of town. Worldgen pins LEARN_MEADOW
