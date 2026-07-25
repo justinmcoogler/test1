@@ -228,16 +228,17 @@ try {
   check('air recovers on the surface', surfaced.air > 2, `air ${surfaced.air.toFixed(1)}`);
   await g(() => { const p = window.__game.player; p.hp = p.maxHp; });
 
-  // ---- 10. QoL: town storage + xp toggle ----
+  // ---- 10. QoL: the camp footlocker + xp toggle ----
   const qol = await g(() => {
     const game = window.__game;
-    const chest = game.world.getChestAt(4, 65, 4);
+    // The camp's one chest — the only storage in the world you did not build.
+    const chest = game.world.getChestAt(7, 65, 1);
     return {
-      townStorage: chest?.id === 'town_storage',
+      townStorage: chest?.id === 'camp_stash',
       xpToastsDefault: game.settings.xpToasts === true,
     };
   });
-  check('town storage chest at Brookhollow', qol.townStorage);
+  check('the camp footlocker is where the camp put it', qol.townStorage);
   check('xp toast toggle defaults on', qol.xpToastsDefault);
 
   await page.screenshot({ path: 'tests/screenshots/features.png' });

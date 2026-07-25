@@ -19,7 +19,7 @@ export const QUESTS = [
     intro: `Every pair of hands here earns its bread. Ours grow from the grove east of the square — take what the pines offer and put a workbench together. Wood remembers kindness; so do I.`,
     outro: `A workbench of your own! You're no stranger now. Here — coin for honest work.`,
     stages: [
-      { type: 'reach', marker: 'grove', radius: 8, text: 'Visit the grove east of Brookhollow square' },
+      { type: 'reach', marker: 'grove', radius: 8, text: 'Visit the grove east of camp' },
       { type: 'collect', item: 'pine_log', count: 5, text: 'Chop 5 Pine Logs (hold left click / action on a tree)' },
       { type: 'craft', item: 'workbench', count: 1, text: 'Craft a Workbench (open Crafting — no station needed)' },
       { type: 'talk', npc: 'maren', text: 'Return to Elder Maren' },
@@ -32,7 +32,7 @@ export const QUESTS = [
     outro: `Warm copper in your hand — that's the valley taking to you. Add tin and you'll have bronze; the anvil at the workshop shapes it into whatever you need.`,
     stages: [
       { type: 'craft', item: 'crude_pickaxe', count: 1, text: 'Craft a Crude Pickaxe at the Workbench' },
-      { type: 'reach', marker: 'mineChamber', radius: 8, text: 'Descend into the Brookhollow mine (stairs at the stone arch)' },
+      { type: 'reach', marker: 'mineChamber', radius: 8, text: 'Descend into the old mine (stairs at the stone arch)' },
       { type: 'collect', item: 'copper_ore', count: 4, text: 'Mine 4 Copper Ore' },
       { type: 'craft', item: 'copper_bar', count: 2, text: 'Smelt 2 Copper Bars at the workshop Furnace' },
       { type: 'talk', npc: 'maren', text: 'Show Maren your copper' },
@@ -66,7 +66,7 @@ export const QUESTS = [
   {
     id: 'q_rootgrave', giver: 'maren', name: 'Whispers Below', requires: 'q_mettle',
     intro: `Now the hard truth. Under our mine lies the Rootgrave — a ruin older than any map — and something has moved into it. The miners hear drums down there, and a big voice over the top of them. Gorrak, they're calling it. Descend past the ore chamber, clear the vermin, and face what's holding court in the deep hall. Put it down… and whatever the old ones left is yours.`,
-    outro: `No drums under the floor for the first time in months. You've done Brookhollow a service it won't forget, deep-delver. Wear this charm with pride.`,
+    outro: `No drums under the floor for the first time in months. I can sleep through a night again, deep-delver. Wear this charm with pride.`,
     stages: [
       { type: 'reach', marker: 'dungeonAntechamber', radius: 10, text: 'Descend below the mine into the Rootgrave' },
       { type: 'defeat', enemy: 'rat', count: 2, marker: 'dungeonAntechamber', text: 'Clear 2 rats from the Rootgrave antechamber' },
@@ -77,37 +77,37 @@ export const QUESTS = [
     rewards: { coins: 200, items: [{ item: 'veilcharm', qty: 1 }], xp: [['hunting', 150], ['archaeology', 100]] },
   },
   {
-    id: 'q_stall', giver: 'tam', name: 'Stocking the Stall',
-    intro: `Stock's thin. Bring me 5 tartberries and 2 silverfin and I'll make it worth the walk. Berries grow on the low bushes; the pond's right there.`,
-    outro: `Plump and fresh! You've a forager's eye. Here's your cut.`,
+    id: 'q_stall', giver: 'maren', name: 'Stocking the Larder',
+    intro: `We are down to biscuit and river water. Bring me 5 tartberries and 2 silverfin and there is coin in it. Berries grow on the low bushes; the pond is right there.`,
+    outro: `Plump and fresh. You have a forager's eye — that is not nothing out here. Here is your cut.`,
     stages: [
       { type: 'collect', item: 'tartberries', count: 5, text: 'Gather 5 Tartberries' },
       { type: 'collect', item: 'silverfin', count: 2, text: 'Catch 2 Silverfin' },
-      { type: 'talk', npc: 'tam', text: 'Deliver the goods to Tam' },
+      { type: 'talk', npc: 'maren', text: 'Bring the food back to camp' },
     ],
     turnInCost: [{ item: 'tartberries', qty: 5 }, { item: 'silverfin', qty: 2 }],
     rewards: { coins: 35, xp: [['foraging', 40], ['fishing', 40]] },
   },
   {
-    id: 'q_clay', giver: 'tam', name: 'Clay for the Kiln', requires: 'q_stall',
-    intro: `A potter upvalley pays silly money for good clay. Four lumps — check the pond margins and wet ground. Shovel helps.`,
-    outro: `Heavy and damp, just how potters like it. Pleasure doing business.`,
+    id: 'q_clay', giver: 'maren', name: 'Clay for the Kiln', requires: 'q_stall',
+    intro: `If we are wintering here we want pots, and pots want clay. Four lumps — check the pond margins and the wet ground. A shovel helps.`,
+    outro: `Heavy and damp, just how it should be. That is a kiln's worth.`,
     stages: [
       { type: 'collect', item: 'clay_lump', count: 4, text: 'Dig 4 Clay Lumps' },
-      { type: 'talk', npc: 'tam', text: 'Deliver the clay to Tam' },
+      { type: 'talk', npc: 'maren', text: 'Bring the clay back to camp' },
     ],
     turnInCost: [{ item: 'clay_lump', qty: 4 }],
     rewards: { coins: 30, xp: [['mining', 30]] },
   },
   {
-    id: 'q_sowing', giver: 'tam', name: 'Seed Money', requires: 'q_clay',
-    intro: `Grain sells, friend — steady as sunrise. Get yourself a hoe, rake open a patch of ground, put three seeds in it, and bring me the sheaves when they ripen. I even stock seeds, if the grass gives you none.`,
-    outro: `Golden and heavy — that's the good stuff. Here: a proper bronze hoe, so you'll plant twice as fine.`,
+    id: 'q_sowing', giver: 'maren', name: 'Something to Winter On', requires: 'q_clay',
+    intro: `A camp that does not sow is a camp that leaves. Get yourself a hoe, rake open a patch of ground, put three seeds in it, and bring me the sheaves when they ripen. Beat the tall grass if it gives you no seed.`,
+    outro: `Golden and heavy. That is the difference between staying and moving on. Here — a proper bronze hoe, so you plant twice as fine.`,
     stages: [
       { type: 'craft', item: 'crude_hoe', count: 1, text: 'Craft a Crude Hoe at the Workbench' },
       { type: 'plant', count: 3, text: 'Till soil (right-click with the hoe) and plant 3 Grain Seeds' },
       { type: 'collect', item: 'grainsheaf', count: 3, text: 'Harvest 3 Grainsheaves once the crops ripen' },
-      { type: 'talk', npc: 'tam', text: 'Deliver the grain to Tam' },
+      { type: 'talk', npc: 'maren', text: 'Bring the grain back to camp' },
     ],
     turnInCost: [{ item: 'grainsheaf', qty: 3 }],
     rewards: { coins: 45, items: [{ item: 'bronze_hoe', qty: 1 }], xp: [['farming', 120]] },
@@ -333,11 +333,11 @@ export class QuestLog {
     const stage = this.currentStage(q);
     if (!stage) return null;
     // A stage may name its own marker, whatever its type. Everything below this
-    // line is a hand-built Brookhollow or Frostwatch landmark chosen by matching
+    // line is a hand-built camp or Frostwatch landmark chosen by matching
     // on an npc id, an enemy type or an item — fine for the starter chain, wrong
     // for anything generated, and wrong SILENTLY: a `talk` stage for a villager
     // three thousand blocks up the road fell through to `markers.stall` and
-    // pointed the compass back at the Brookhollow market. Procedural towns
+    // pointed the compass back at the camp. Procedural towns
     // publish `town_<d>_<n>` and tag their stages with it.
     // A stage that names a marker is answered by that marker ALONE. If the place
     // has not been published yet — a delivery to a town up the road you have not

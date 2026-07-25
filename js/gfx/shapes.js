@@ -65,6 +65,28 @@ export function emitShape(target, def, wx, y, wz, light, facing, sides) {
       box(target, def, wx, y, wz, 0, 0, 0, 1, 1 / 16, 1, light, 0);
       break;
 
+    // A bed: a mattress slab on four stub legs, with a headboard on the pillow
+    // end only. `facing` points from the foot toward the head, so both halves
+    // carry the same value and the headboard lands on the outer face of the
+    // head cell — the one direction the sleeper is NOT lying along.
+    case 'bed': {
+      const dir = facing & 3;
+      const [hx, hz] = FRONT_N[dir];
+      box(target, def, wx, y, wz, 0, 3 / 16, 0, 1, 9 / 16, 1, light, dir);   // mattress
+      for (const [lx, lz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {             // stub legs
+        const x0 = lx ? 13 / 16 : 0, z0 = lz ? 13 / 16 : 0;
+        box(target, def, wx, y, wz, x0, 0, z0, x0 + 3 / 16, 3 / 16, z0 + 3 / 16, light, dir);
+      }
+      if (def.name === 'bed_head') {
+        const t = 3 / 16, y0 = 9 / 16, y1 = 15 / 16;
+        if (hx === 1) box(target, def, wx, y, wz, 1 - t, y0, 0, 1, y1, 1, light, dir);
+        else if (hx === -1) box(target, def, wx, y, wz, 0, y0, 0, t, y1, 1, light, dir);
+        else if (hz === 1) box(target, def, wx, y, wz, 0, y0, 1 - t, 1, y1, 1, light, dir);
+        else box(target, def, wx, y, wz, 0, y0, 0, 1, y1, t, light, dir);
+      }
+      break;
+    }
+
     case 'stairs': {
       const dir = facing & 3, top = (facing >> 2) & 1;
       // full slab — bottom half, or top half when upside-down (half=top)

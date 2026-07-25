@@ -269,10 +269,22 @@ test('every enemy is fully defined', () => {
 
 test('starter structures: chests/npcs/nodes/spawns are valid', () => {
   const s = buildStarterStructures();
-  assert.ok(s.edits.size > 500, 'settlement should be substantial');
-  assert.equal(s.npcs.length, 4); // Maren, Tam, Warden Sylla, and Pip (Numbers Meadow guide)
+  assert.ok(s.edits.size > 500, 'the hand-built content should be substantial');
+  // Three, and that is the whole hand-built population of the world: Maren at
+  // the camp, Warden Sylla at the Frostwatch, Pip at the Numbers Meadow. There
+  // is no town any more and so no townsfolk — everyone else you meet is grown
+  // by js/world/settlements.js out on the roads.
+  assert.equal(s.npcs.length, 3);
+  assert.ok(s.npcs.some((n) => n.id === 'maren'));
   assert.ok(s.npcs.some((n) => n.id === 'sylla'));
   assert.ok(s.npcs.some((n) => n.id === 'pip'));
+  // The camp: one bedroll, one fire, one footlocker. If any of these stops being
+  // placed the opening stops working — you cannot sleep, cook or stash anything.
+  const at = (bx, by, bz) => s.edits.get(`${bx},${by},${bz}`);
+  assert.ok([...s.edits.values()].includes(B.bed), 'the camp has a bedroll');
+  assert.ok([...s.edits.values()].includes(B.bed_head), 'and it is a whole bed, not half of one');
+  assert.ok([...s.edits.values()].includes(B.campfire), 'the camp has a fire');
+  assert.ok(s.chests.some((c) => c.id === 'camp_stash'), 'and somewhere to put things');
   // The two hand-built bosses, asserted by SPAWN ID rather than by type: both
   // are goblin chiefs, and a warchief is also the boss of any ring-2 procedural
   // dungeon, so the id is the only thing that identifies *these* two.

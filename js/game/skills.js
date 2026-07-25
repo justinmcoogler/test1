@@ -1,9 +1,12 @@
-// 22 independent skills, levels 1–99, XP through use, milestone unlock tables.
+// 24 independent skills, levels 1–99, XP through use, milestone unlock tables.
 import { emit } from '../core/events.js';
 
-// The real-world skill roster (21 live skills). Internal keys are kept stable so
+// The real-world skill roster (22 live skills). Internal keys are kept stable so
 // recipes/nodes/combat and old saves keep working; the real-craft names live in
-// `label`. Magic & Enchanting are anachronistic — flagged `frontier` and hidden
+// `label`, which is why several of them differ — `alchemy` is an Apothecary,
+// `crafting` is Jewelcraft, `vitality` is Constitution. The key is the
+// identifier and must never be renamed; the label is what the world calls it.
+// Magic & Enchanting are anachronistic — flagged `frontier` and hidden
 // unless the optional Fantasy Frontier is enabled. (Tactics was dissolved into
 // Hunting's tracking + Constitution's veterancy.)
 export const SKILL_DEFS = {
@@ -22,7 +25,8 @@ export const SKILL_DEFS = {
   tailoring:    { label: 'Tailoring', group: 'Processing', desc: 'Tan hides and weave cloth into clothing and armor.' },
   alchemy:      { label: 'Apothecary', group: 'Processing', desc: 'Compound herbs and minerals — remedies, reagents, gunpowder chemistry.' },
   construction: { label: 'Construction', group: 'Processing', desc: 'Build with timber, fired brick and lime mortar — arches to grand halls.' },
-  crafting:     { label: 'Jewelcraft', group: 'Processing', desc: 'Cut gems, set jewelry, and assemble firearms.' },
+  crafting:     { label: 'Jewelcraft', group: 'Processing', desc: 'Cut gems and set jewelry — the lapidary\'s wheel and the setter\'s bench.' },
+  gunsmithing:  { label: 'Gunsmithing', group: 'Processing', desc: 'Black-powder chemistry, barrel-boring and lock work — hand cannon to blunderbuss.' },
   // Survival — the body and the realism layer
   vitality: { label: 'Constitution', group: 'Survival', desc: 'Endurance and carrying power — warmth, hydration, nutrition and acclimatization.' },
   healing:  { label: 'Medicine', group: 'Survival', desc: 'Real first aid — wounds, bleeding, fractures, infection and field surgery.' },
@@ -97,8 +101,15 @@ export const SKILL_UNLOCKS = {
   ],
   crafting: [
     [1, 'Polish rock crystal & amethyst; bone & shell'], [10, 'Silver & pewter; cut garnet (Mohs gate begins)'],
-    [25, 'Brass & topaz; assemble the hand cannon'], [35, 'Flintlock & matchlock firearms'],
-    [45, 'Gold & electrum; emerald & sapphire'], [60, 'Ruby'], [75, 'Diamond — the master cut; the blunderbuss'],
+    [25, 'Brass & topaz'], [45, 'Gold & electrum; emerald & sapphire'], [60, 'Ruby'],
+    [75, 'Diamond — the master cut'],
+  ],
+  gunsmithing: [
+    [1, 'Read a barrel: proof marks, bore and windage'],
+    [35, 'Corned black powder; cast ball & shot'], [40, 'The hand cannon — a pipe, a touch-hole and nerve'],
+    [50, 'Matchlock: a serpentine, a slow match and both hands free'],
+    [60, 'Flintlock — frizzen, pan and a spark you can trust in the wet'],
+    [75, 'The blunderbuss'], [90, 'Rifled bores and a gunsmith\'s proof'],
   ],
   cooking: [
     [1, 'Roast & sun-dry / salt-cure'], [10, 'Smoking & clay-pot boiling'], [20, 'Fermentation — cheese, pickles, ale'],

@@ -177,6 +177,11 @@ function impBlock(id, label, blockName, tile) {
 }
 blockItem('cobble', 'Cobblestone', 'cobble', 'cobble');
 blockItem('planks', 'Planks', 'planks', 'planks');
+// The bed is two blocks and one item — placing spends this and writes both
+// cells, breaking either cell gives it back. Named explicitly because the
+// auto-generator at the foot of this file only recognises shape suffixes
+// (_slab/_stairs/_wall/...), and `bed` is not one.
+blockItem('bed', 'Bed', 'bed', 'bed_head_top');
 blockItem('timber_wall', 'Timber Wall', 'timber_wall', 'timber_wall');
 blockItem('thatch', 'Thatch', 'thatch', 'thatch');
 blockItem('stone_brick', 'Stone Brick', 'stone_brick', 'stone_brick');

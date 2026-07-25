@@ -13,7 +13,7 @@ import { World } from '../../js/world/world.js';
 import { B } from '../../js/world/blocks.js';
 import { initSlabSet } from '../../js/world/world.js';
 import { buildStarterStructures } from '../../js/world/structures.js';
-import { TOWN_PLAN } from '../../js/world/town.js';
+import { allSettlements } from '../../js/world/settlements.js';
 
 // A world made of whatever `solidAt` says, so a case reads as its own shape.
 // `stepAt` says which of those cells are STAIRS OR SLABS — the only shapes you
@@ -116,27 +116,40 @@ test('a full block is NOT walked up — you jump those', () => {
   assert.ok(Math.abs(p.y - 64) < 0.01, `and you do not rise (y=${p.y.toFixed(3)})`);
 });
 
-test('a real Brookhollow staircase is climbed by walking at it', () => {
+test('a real staircase is climbed by walking at it', () => {
   // Not a stub and not a rule re-implementation: put a real Player on the ground
   // floor of a real house and push it at the stair, then check it ends up on the
   // upper storey. This is the case the user reported.
+  //
+  // It used to test Brookhollow's houses. Brookhollow is gone — you start at a
+  // camp now — so it tests the houses the world actually builds: a procedural
+  // town out on the roads (js/world/settlements.js), which is where every
+  // multi-storey building in the game comes from. Same collider, same question.
   initSlabSet();
-  const struct = buildStarterStructures();
-  const lift = struct.npcs.find((n) => n.id === 'maren').y - TOWN_PLAN.marenAuthoredY;
   const world = new World(20260725);
-  for (let cx = -3; cx <= 2; cx++) for (let cz = -3; cz <= 2; cz++) world.ensureChunk(cx, cz);
+  // Several towns, not one: a small settlement only has two multi-storey houses
+  // in it, which is too thin a sample to prove anything about a stair builder.
+  const towns = allSettlements(world.gen, 3).slice(0, 4);
+  assert.ok(towns.length >= 2, `towns within reach to test (${towns.length})`);
 
   const byName = new Map();
-  for (const r of TOWN_PLAN.rooms) {
-    if (!byName.has(r.name)) byName.set(r.name, []);
-    byName.get(r.name).push(r);
+  for (const town of towns) {
+    // Load the chunks the town stands in, plus a ring, so no wall is missing.
+    const c0x = (town.minX - 8) >> 4, c1x = (town.maxX + 8) >> 4;
+    const c0z = (town.minZ - 8) >> 4, c1z = (town.maxZ + 8) >> 4;
+    for (let cx = c0x; cx <= c1x; cx++) for (let cz = c0z; cz <= c1z; cz++) world.ensureChunk(cx, cz);
+    for (const r of town.rooms) {
+      const id = `${town.name}/${r.name}`;   // house names repeat between towns
+      if (!byName.has(id)) byName.set(id, []);
+      byName.get(id).push(r);
+    }
   }
 
   const climbed = [], failed = [];
   for (const [name, rooms] of byName) {
     const g = rooms.find((r) => r.storey === 0), u = rooms.find((r) => r.storey === 1);
     if (!g || !u) continue;
-    const floorY = g.y + lift, upperY = u.y + lift;
+    const floorY = g.y, upperY = u.y;   // procedural rooms are already real-world y
 
     // Explore the house the way a player does: from each stance try walking a
     // short burst in each of the four directions using the REAL collider, and
@@ -145,9 +158,15 @@ test('a real Brookhollow staircase is climbed by walking at it', () => {
     // "can the body physically get up there", which is the actual complaint.
     const key = (p) => `${Math.floor(p.x)},${Math.round(p.y)},${Math.floor(p.z)}`;
     const seen = new Set();
-    const queue = [[g.x0 + 0.5, floorY, g.z0 + 0.5]];
+    // Seed from EVERY cell of the ground-floor room, not one corner of it. A
+    // corner can be a wall, a hearth or the wrong wing of an L-shaped house, and
+    // then the walk fails for want of a starting place rather than for want of a
+    // stair — which is exactly what it looked like when this was pointed at
+    // procedural towns instead of the old hand-built ones.
+    const queue = [];
+    for (let x = g.x0; x <= g.x1; x++) for (let z = g.z0; z <= g.z1; z++) queue.push([x + 0.5, floorY, z + 0.5]);
     let best = floorY;
-    while (queue.length && seen.size < 4000) {
+    while (queue.length && seen.size < 12000) {
       const [qx, qy, qz] = queue.shift();
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const p = new Player();
@@ -167,6 +186,7 @@ test('a real Brookhollow staircase is climbed by walking at it', () => {
     (best >= upperY - 0.51 ? climbed : failed).push(`${name} reached ${best.toFixed(1)} of ${upperY}`);
   }
 
-  assert.ok(climbed.length + failed.length >= 6, 'should have found multi-storey houses to test');
+  assert.ok(climbed.length + failed.length >= 5,
+    `should have found multi-storey houses to test (${climbed.length + failed.length})`);
   assert.deepEqual(failed, [], `${failed.length} staircases could not be walked up`);
 });

@@ -156,7 +156,7 @@ def('meteor_crater', { label: 'Meteor Crater', hardness: 5.5, tool: 'pickaxe', m
 // draws the geometry; world.collisionHeight reads SHAPE_COLLISION for physics.
 // Directional shapes (stairs, gate) record a placement facing; glass panes are
 // transparent (cutout pass). Naming is `<base>_<shape>`.
-export const SHAPE_COLLISION = { slab: 0.5, carpet: 1 / 16, stairs: 1, wall: 1, fence: 1, gate: 1, pane: 1, panel: 2 / 16, door: 1, sign: 0, button: 0, pot: 0, marker: 0 };
+export const SHAPE_COLLISION = { slab: 0.5, carpet: 1 / 16, stairs: 1, wall: 1, fence: 1, gate: 1, pane: 1, panel: 2 / 16, door: 1, sign: 0, button: 0, pot: 0, marker: 0, bed: 9 / 16 };
 const DIRECTIONAL_SHAPES = new Set(['stairs', 'gate']);
 const SHAPE_LABEL = { slab: 'Slab', stairs: 'Stairs', wall: 'Wall', fence: 'Fence', gate: 'Gate', pane: 'Pane', carpet: 'Carpet' };
 
@@ -318,6 +318,31 @@ def('redstone_ore', { label: 'Redstone Ore', hardness: 3.5, tool: 'pickaxe', min
 def('pumpkin', { label: 'Pumpkin', hardness: 1.0, tool: 'axe', tiles: { top: 'pumpkin_top', side: 'pumpkin_side', bottom: 'pumpkin_top' } });
 def('carved_pumpkin', { label: 'Carved Pumpkin', hardness: 1.0, tool: 'axe', directional: true, tiles: { top: 'pumpkin_top', side: 'pumpkin_side', front: 'carved_pumpkin' } });
 def('melon', { label: 'Melon', hardness: 1.0, tool: 'axe', tiles: { top: 'melon_top', side: 'melon_side', bottom: 'melon_top' } });
+
+// ---- beds -------------------------------------------------------------------
+// A bed is two cells and one object, exactly like a door: `bed` is the foot and
+// `bed_head` the pillow end. Which half you are looking at is carried by the
+// BLOCK ID, not by a facing bit — facing is masked to 4 bits (js/world/world.js)
+// and all four are already spoken for (0-1 direction, 2 top-half, 3 open), so
+// there is no bit left to say "this is the head". Both halves store the same
+// direction in bits 0-1, which is how they find each other when one is broken.
+//
+// Only `bed` has an item, and `bed_head` drops one too, so breaking either end
+// gives you back exactly one bed. js/main.js keeps the pair placed, broken and
+// slept in as a unit.
+//
+// These are defined at the very END of the registry deliberately. Block ids are
+// assigned in file order and are written raw into every save's edited-block
+// table, so inserting a def anywhere above this line renumbers every block after
+// it and corrupts every existing world.
+def('bed', {
+  label: 'Bed', shape: 'bed', hardness: 0.6, tool: 'axe', directional: true,
+  tiles: { top: 'bed_foot_top', side: 'bed_side', bottom: 'planks' },
+});
+def('bed_head', {
+  label: 'Bed', shape: 'bed', hardness: 0.6, tool: 'axe', directional: true,
+  drops: 'bed', tiles: { top: 'bed_head_top', side: 'bed_side', bottom: 'planks' },
+});
 
 export function blockByName(name) { return BLOCKS[B[name]]; }
 export function isSolid(id) { return BLOCKS[id]?.solid === true; }

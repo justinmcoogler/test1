@@ -12,7 +12,7 @@ const CROSS_NO_SUPPORT = new Set(['glow_lichen', 'cobweb', 'warped_roots', 'sea_
 
 // Non-cube shapes routed through js/gfx/shapes.js (slab stays on the fast cube
 // path below). Panes/glass render in the cutout pass; the rest are solid.
-const CUSTOM_SHAPES = new Set(['slab', 'stairs', 'wall', 'fence', 'gate', 'pane', 'carpet', 'panel', 'door', 'sign', 'button', 'pot']);
+const CUSTOM_SHAPES = new Set(['slab', 'stairs', 'wall', 'fence', 'gate', 'pane', 'carpet', 'panel', 'door', 'sign', 'button', 'pot', 'bed']);
 
 // face: [nx,ny,nz, corners(4× [x,y,z] in block space), brightness]
 const FACES = [

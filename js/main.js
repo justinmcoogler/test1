@@ -1,7 +1,7 @@
 // Sproutlands — main orchestration: boot, game loop, interactions, camera, save.
 import { buildAtlas } from './gfx/textures.js';
 import { Renderer } from './gfx/renderer.js';
-import { World, initSlabSet } from './world/world.js';
+import { World, initSlabSet, DAY_LEN } from './world/world.js';
 import { Weather } from './world/weather.js';
 import { CHUNK, WORLD_H, SEA } from './world/worldgen.js';
 import { B, BLOCKS } from './world/blocks.js';
@@ -87,6 +87,7 @@ class Game {
     this.stable = new Stable();
     this.nearMount = null;       // a tameable creature within reach, if any
     this.petEntity = null;       // the pet that is out, as a world entity
+    this.bedSpawn = null;        // [x, y, z] of the last bed slept in, or null
     this.waystonesInSight = [];  // stones close enough to label in the world
     this.flags = {};
     this.playtime = 0;
@@ -1748,6 +1749,10 @@ class Game {
         if (od?.shape === 'door') { this.world.setBlock(x, y + dy, z, B.air, true); break; }
       }
     }
+    // A bed is the same idea laid on its side: two cells, one object. Its halves
+    // sit along the facing axis rather than stacked, and BOTH declare the same
+    // `drops: 'bed'`, so taking the pair still returns exactly one bed.
+    if (def.shape === 'bed') this.clearBedPartner(x, y, z, def);
     this.renderer.spawnParticles(x + 0.5, y + 0.5, z + 0.5, [0.5, 0.45, 0.4], 10, 3, 0.6);
     SFX.breakBlock();
     if (def.drops) this.inventory.add(def.drops, 1);
@@ -1864,6 +1869,15 @@ class Game {
         facing = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 0 : 2);
       }
       this.world.setFacing(px, py, pz, facing);
+    }
+    // A bed needs a second free cell for its head. Placing writes both and the
+    // facing points foot→head, so the geometry and the sleeper agree about which
+    // way the pillow is. If the head has nowhere to go, nothing is placed at all
+    // — a half a bed is not a bed.
+    if (def.block === 'bed' && !this.placeBedHead(px, py, pz)) {
+      this.world.setBlock(px, py, pz, B.air, true);
+      this.warnGather(`bed${px}${pz}`, 'A bed needs two clear blocks of floor.');
+      return;
     }
     this.inventory.removeSlot(this.inventory.selected, 1);
     if (def.block === 'chest_block') this.world.registerPlayerChest(px, py, pz);
@@ -2041,6 +2055,7 @@ class Game {
     }
     // a locked dungeon grate: turn the warden's key in it
     if (def.name === 'iron_bars' && this.tryDungeonGate(hit.x, hit.y, hit.z)) return true;
+    if (def.shape === 'bed') { this.trySleep(hit.x, hit.y, hit.z); return true; }
     if (def.shape === 'panel' || def.shape === 'door') { // trapdoor / door — swing it
       const f = this.world.facingAt(hit.x, hit.y, hit.z);
       this.world.setFacing(hit.x, hit.y, hit.z, f ^ 8); // flip the open bit (3)
@@ -2362,9 +2377,91 @@ class Game {
     $('death-screen').classList.remove('hidden');
   }
 
+  // ---------------------------------------------------------------- beds
+  // A bed is two cells that must stay in lockstep. The FOOT is what you place
+  // and what the item is; the HEAD is written beside it, one step along the
+  // facing. Both cells carry the same facing, which is the only thing that
+  // tells two beds pushed together apart.
+
+  // Write the head cell beside a just-placed foot. Returns false if there is
+  // nowhere for it to go, and the caller then unwinds the whole placement.
+  placeBedHead(fx, fy, fz) {
+    const facing = this.world.facingAt(fx, fy, fz) & 3;
+    const [dx, dz] = BED_DIR[facing];
+    const hx = fx + dx, hz = fz + dz;
+    const at = this.world.getBlock(hx, fy, hz);
+    if (at !== B.air && BLOCKS[at]?.solid) return false;
+    if (this.world.nodeAt(hx, fy, hz)) return false;
+    // …and it has to have a floor, or the head end hangs off a ledge.
+    if (!BLOCKS[this.world.getBlock(hx, fy - 1, hz)]?.solid) return false;
+    this.world.setBlock(hx, fy, hz, B.bed_head, true);
+    this.world.setFacing(hx, fy, hz, facing);
+    return true;
+  }
+
+  // Find and clear the other half of the bed at (x,y,z). Looks along the facing
+  // in BOTH directions because either end can be the one you broke, and matches
+  // on the facing so two beds side by side never take each other's halves.
+  clearBedPartner(x, y, z, def) {
+    const facing = this.world.facingAt(x, y, z) & 3;
+    const [dx, dz] = BED_DIR[facing];
+    const want = def.name === 'bed_head' ? B.bed : B.bed_head;
+    const step = def.name === 'bed_head' ? -1 : 1;
+    const px = x + dx * step, pz = z + dz * step;
+    if (this.world.getBlock(px, y, pz) !== want) return;
+    if ((this.world.facingAt(px, y, pz) & 3) !== facing) return;
+    this.world.setBlock(px, y, pz, B.air, true);
+  }
+
+  // Sleep. Sets your respawn point unconditionally — that is the half of a bed
+  // that always works — and skips to dawn only when it is actually night, so
+  // clicking a bed at noon does not silently burn a day.
+  trySleep(x, y, z) {
+    this.bedSpawn = [x + 0.5, y, z + 0.5];
+    // Time until the day phase next equals DAWN — never a fixed jump, which
+    // would wake you at a different hour every night and eventually stop being
+    // dawn at all.
+    const skip = ((DAWN - this.world.dayPhase() + 1) % 1) * DAY_LEN;
+    // Two ways sleeping is a no-op, and both have to say so out loud rather than
+    // announce a night that did not pass: it is broad daylight, or dawn is
+    // already breaking (skip rounds to nothing, so the clock would not move).
+    if (!this.world.isNight() || skip < 1) {
+      this.ui.toast(this.world.isNight()
+        ? 'It is nearly light already. You will wake here.'
+        : 'You set your things down. You will wake here.', 'gold');
+      this.saveGame();
+      return;
+    }
+    this.world.time += skip;
+    // Everything that schedules against world.time (node respawns, crop ripening,
+    // mob respawn timers) is stored as an ABSOLUTE deadline, so a jump forward
+    // simply makes those deadlines due — which is what a night passing should do.
+    // The one thing that must be told explicitly is the creature set: nocturnal
+    // spawns are culled on refresh, and without this they stand around in
+    // daylight until the next 0.4s tick.
+    this.enemyMgr.refresh();
+    this.player.hp = Math.min(this.player.maxHp, this.player.hp + Math.ceil(this.player.maxHp * 0.4));
+    this.player.energy = 100;
+    this.ui.toast('You sleep until dawn.', 'gold');
+    SFX.questDone();
+    this.saveGame();
+  }
+
   respawn() {
     $('death-screen').classList.add('hidden');
-    const [sx, sy, sz] = this.world.markers.spawn;
+    // Your bed if you have slept in one, the world spawn if you have not.
+    const [sx, sy, sz] = this.bedSpawn || this.world.markers.spawn;
+    if (this.bedSpawn) {
+      this.player.respawnAt(sx, this.world.surfaceAt(Math.floor(sx), Math.floor(sz)) + 1, sz);
+      this.ui.toast('You wake at your bed.', 'gold');
+      this.cancelClassicActions();
+      this.travelDest = null;
+      this.controls.worldMove = null;
+      this.controls.enabled = true;
+      this.touch?.show();
+      this.saveGame();
+      return;
+    }
     this.player.respawnAt(sx + 0.5, this.world.surfaceAt(sx, sz) + 1, sz + 0.5);
     // clear stale movement so you don't auto-walk away from the spawn point
     this.cancelClassicActions();
@@ -2663,6 +2760,9 @@ class Game {
       quests: this.quests.serialize(),
       enemies: this.enemyMgr.serialize(),
       stable: this.stable.serialize(),
+      // Where you wake up. Null until you have slept somewhere, which is what
+      // makes the world spawn the fallback rather than a special case.
+      bedSpawn: this.bedSpawn,
       education: this.education.serialize(),
       lessons: this.lessons.serialize(),
       flags: this.flags,
@@ -2685,6 +2785,10 @@ class Game {
     this.enemyMgr.deserialize(d.enemies);
     // An old save has no `stable` at all; deserialize(undefined) is an empty one.
     this.stable.deserialize(d.stable);
+    // A save from before beds existed simply has no bedSpawn, and a corrupt one
+    // must not strand you inside terrain — three finite numbers or nothing.
+    this.bedSpawn = Array.isArray(d.bedSpawn) && d.bedSpawn.length === 3
+      && d.bedSpawn.every(Number.isFinite) ? d.bedSpawn : null;
     this.player.mountDef = mountDef(this.stable.riding());
     this.education.deserialize(d.education);
     this.lessons.deserialize(d.lessons);
@@ -2706,6 +2810,15 @@ const TOOL_NAMES = { axe: 'an axe', pickaxe: 'a pickaxe', shovel: 'a shovel', ro
 // the snap is never something you watch happen, short enough that a pet is
 // never a dot on the horizon you have to wait for.
 const PET_LEASH = 14;
+
+// Facing → the step from a bed's FOOT to its HEAD. Same order as the renderer's
+// FRONT_N (js/gfx/shapes.js): 0=+Z 1=+X 2=-Z 3=-X. If these two ever disagree
+// the headboard is drawn on the wrong end of the bed.
+const BED_DIR = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+
+// The day phase the sun comes up at, matching world.daylight()'s curve. Sleeping
+// advances to the next occurrence of this, so you always wake at the same hour.
+const DAWN = 0.05;
 
 // World-state consequences of the two HAND-BUILT boss kills.
 //

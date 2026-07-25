@@ -235,7 +235,7 @@ try {
       const g = window.__game;
       return !g.player.dead && g.player.hp === g.player.maxHp && Math.hypot(g.player.x, g.player.z) < 20;
     });
-    check('respawn at Brookhollow', respawned);
+    check('respawn at the camp', respawned);
   } else {
     check('defeat flow (rats aggroed)', false, 'no combat started');
   }

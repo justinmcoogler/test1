@@ -916,6 +916,45 @@ PAINTERS.scaffolding = (c, x, y, r) => {
   });
 }
 
+// ---- beds -------------------------------------------------------------------
+// Three tiles, appended rather than slotted in beside the planks: PAINTERS order
+// only sets the atlas slot index and every UV is recomputed together, so adding
+// at the tail is free. A tile with NO painter does not fail loudly — faceUV
+// silently falls back to stone — which is why these are written out in full
+// rather than left to a generator.
+Object.assign(PAINTERS, {
+  // The blanket, seen from above: dyed wool with a fold shadow across the foot.
+  bed_foot_top: (c, x, y, r) => {
+    noisyFill(c, x, y, r, '#8c3a3a', 0.05);
+    for (let ly = 0; ly < LP; ly++) for (const lx of [0, LP - 1]) px(c, x, y, lx, ly, shade('#6d2b2b', 0.02));
+    for (let lx = 0; lx < LP; lx++) { px(c, x, y, lx, 6, '#a04a4a'); px(c, x, y, lx, 7, '#752f2f'); }
+    for (let i = 0; i < 22; i++) px(c, x, y, Math.floor(r() * LP), Math.floor(r() * LP), shade('#8c3a3a', 0.07));
+  },
+  // The pillow end: the same blanket pulled back off a band of undyed linen.
+  bed_head_top: (c, x, y, r) => {
+    noisyFill(c, x, y, r, '#8c3a3a', 0.05);
+    for (let ly = 0; ly < LP; ly++) for (const lx of [0, LP - 1]) px(c, x, y, lx, ly, shade('#6d2b2b', 0.02));
+    for (let ly = 0; ly < 13; ly++) {
+      for (let lx = 2; lx < LP - 2; lx++) px(c, x, y, lx, ly, shade('#ddd6c4', (r() - 0.5) * 0.05));
+    }
+    for (let lx = 2; lx < LP - 2; lx++) { px(c, x, y, lx, 13, '#b6ae9c'); px(c, x, y, lx, 0, '#c8c0ae'); }
+    for (let i = 0; i < 14; i++) px(c, x, y, 2 + Math.floor(r() * (LP - 4)), Math.floor(r() * 12), '#efe8d8');
+  },
+  // The side rail: mattress ticking above, bed frame below, split at the 7px
+  // line where the geometry's mattress slab meets the legs.
+  bed_side: (c, x, y, r) => {
+    noisyFill(c, x, y, r, '#8a6a3f', 0.05);
+    for (let ly = 0; ly < 11; ly++) {
+      for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, ly, shade('#8c3a3a', (r() - 0.5) * 0.08));
+    }
+    for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, 11, '#5e2424');       // blanket hem
+    for (let ly = 12; ly < 18; ly++) {
+      for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, ly, shade('#ddd6c4', (r() - 0.5) * 0.05));  // ticking
+    }
+    for (let lx = 0; lx < LP; lx += 4) for (let ly = 18; ly < LP; ly++) px(c, x, y, lx, ly, '#6b4f2c');
+  },
+});
+
 // Reserve atlas slots for any pack-only tiles (new station faces) so they get a
 // UV; the real art is blitted over the placeholder by applyTexturePack().
 for (const name of Object.keys(TEXPACK_TILES)) {

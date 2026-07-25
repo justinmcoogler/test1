@@ -44,6 +44,10 @@ export const RECIPES = [
   r('furnace', 1, 'workbench', 'construction', 2, 18, [['rough_stone', 8], ['clay_lump', 2]]),
   r('construction_bench', 1, 'workbench', 'construction', 5, 20, [['planks', 6], ['rough_stone', 2]]),
   r('loom_block', 1, 'workbench', 'construction', 3, 18, [['planks', 5], ['cord', 2]]),
+  // A bed is the first thing worth building after a roof: three fleeces and
+  // three planks, at a level a first night is reachable by. It is what makes
+  // a shelter somewhere you come back to rather than somewhere you stood.
+  r('bed', 1, 'workbench', 'construction', 3, 20, [['white_wool', 3], ['planks', 3]]),
   r('alchemy_table', 1, 'workbench', 'construction', 3, 18, [['planks', 4], ['glasspane', 1]]),
   r('anvil_block', 1, 'workbench', 'construction', 5, 22, [['iron_bar', 1], ['rough_stone', 4]]),
 
@@ -175,13 +179,13 @@ for (const wid of ['ash', 'hickory', 'yew', 'oak', 'lignum_vitae']) {
   push(`${wid}_longbow`, 1, 'workbench', 'woodworking', Math.min(99, w.woodLevel + 5), Math.round(30 + w.tier * 5), [[`${wid}_plank`, 3], ['cord', 3]]);
 }
 
-// black-powder line (Crafting) — every recipe flagged educationLocked so the UI
+// black-powder line (Gunsmithing) — every recipe flagged educationLocked so the UI
 // can hide the whole chain when firearms are disabled for schools.
 const GUN_LEVEL = { 1: 35, 2: 55, 3: 55, 4: 75 };
-lockedGun(FIREARMS.powder.id, 4, 'workbench', 'crafting', 35, 30, [['saltpeter', 2], ['charcoal', 1], ['sulfur', 1]]);
-lockedGun('lead_ball', 8, 'furnace', 'crafting', 35, 12, [['lead_bar', 1]]);
-lockedGun('lead_shot', 12, 'furnace', 'crafting', 35, 14, [['lead_bar', 1]]);
-for (const g of FIREARMS.guns) lockedGun(g.id, 1, 'workbench', 'crafting', GUN_LEVEL[g.tier], Math.round(60 + g.tier * 20), [[`${g.barrel}_bar`, 3], [`${g.stock}_plank`, 2], [FIREARMS.powder.id, 1]]);
+lockedGun(FIREARMS.powder.id, 4, 'workbench', 'gunsmithing', 35, 30, [['saltpeter', 2], ['charcoal', 1], ['sulfur', 1]]);
+lockedGun('lead_ball', 8, 'furnace', 'gunsmithing', 35, 12, [['lead_bar', 1]]);
+lockedGun('lead_shot', 12, 'furnace', 'gunsmithing', 35, 14, [['lead_bar', 1]]);
+for (const g of FIREARMS.guns) lockedGun(g.id, 1, 'workbench', 'gunsmithing', GUN_LEVEL[g.tier], Math.round(60 + g.tier * 20), [[`${g.barrel}_bar`, 3], [`${g.stock}_plank`, 2], [FIREARMS.powder.id, 1]]);
 
 // jewelry per jewelry metal (Crafting); amulet takes a cut gem as a socket
 for (const m of jewelryMetals()) {

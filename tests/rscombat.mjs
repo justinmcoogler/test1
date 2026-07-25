@@ -60,8 +60,15 @@ try {
   check('attack style buttons present', styleBtns >= 3, `${styleBtns}`);
 
   // ---- 2. Auto-exchange kills the dummy, hitsplats appear, xp flows ----
+  //
+  // The iteration counts in this file are WALL-CLOCK budgets, not assertions.
+  // Combat resolves on real time, and headless Chromium runs this world on
+  // swiftshader at eight to ten frames a second — so a budget tuned on a machine
+  // with a GPU leaves a twelve-hit dummy sitting on one hit point when the loop
+  // ends. Every check below still demands the same outcome; they are just given
+  // long enough for a software renderer to get there.
   let sawSplat = false;
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 70; i++) {
     const st = await gState(() => ({
       over: !window.__game.combatRS.active,
       splats: window.__game.hitsplats.length,
@@ -246,8 +253,9 @@ try {
   // Mop-up. Killing the chief does not end the fight — it called two scrappers in
   // at half health and they are still swinging, which is ordinary play and not a
   // failure. Given its own budget rather than sharing the boss fight's, so a long
-  // boss fight can never eat the time the clean-up needs.
-  for (let i = 0; i < 80; i++) {
+  // boss fight can never eat the time the clean-up needs — and sized for
+  // swiftshader's frame rate, like every other budget in this file.
+  for (let i = 0; i < 140; i++) {
     const st = await gState(() => {
       const g = window.__game;
       if (!g.combatRS.active) return { over: true };

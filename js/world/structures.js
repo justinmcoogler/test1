@@ -1,8 +1,18 @@
-// Hand-authored starter content: the settlement of Brookhollow, its mine,
-// and the Rootgrave dungeon beneath it. Produces explicit block edits +
-// node/NPC/enemy placements that worldgen applies on top of terrain.
+// Hand-authored starter content: a campsite, the mine beside it, and the
+// Rootgrave dungeon beneath that. Produces explicit block edits + node/NPC/enemy
+// placements that worldgen applies on top of terrain.
+//
+// THERE IS NO TOWN. There used to be one — Brookhollow, a full market square,
+// moot hall, workshop, ten houses and a free storage chest, all inside thirty
+// blocks of where you woke up. It made the opening hour a stroll: every station
+// you needed was already built, every tool was already buyable, and the wilds
+// started somewhere you had to deliberately walk to.
+//
+// What is here instead is a camp. A tent, a fire, a bedroll, and one person who
+// got here before you. Everything else in the world is out there and procedural
+// — js/world/settlements.js grows real towns along the roads — so the first
+// settlement you stand in is one you found rather than one you spawned in.
 import { B } from './blocks.js';
-import { buildTown } from './town.js';
 import { LEARN_MEADOW } from './worldgen.js';
 import { stampMineshafts, mineshaftClaims } from './mineshaft.js';
 import { stampSky } from './sky.js';
@@ -96,8 +106,83 @@ export function buildStarterStructures() {
     return { x0, x1, z0, z1, cx, cz };
   };
 
-  // ---- Brookhollow: streets, market square, moot hall (js/world/town.js) ---
-  buildTown({ B, set, setF, box, F, GROUND, chests, npcs, nodes, spawns });
+  // ---- The camp ----------------------------------------------------------
+  // Sited on the plateau worldgen already pins flat around the origin, which is
+  // why this needs none of the pad plumbing a new site would (height lerp, road
+  // exclusion, scatter guard, nearHandBuilt disc): the ground the town stood on
+  // is still graded, still ring 0, still walkable. Only what was built on it is
+  // gone.
+  //
+  // Deliberately small and deliberately unfinished-looking. You should be able
+  // to see the whole of it from the fire.
+  const CX = 4, CZ = 4;                      // the fire, and the middle of everything
+
+  // A trodden dirt clearing, with the grass giving way as you get closer in.
+  for (let x = CX - 7; x <= CX + 7; x++) {
+    for (let z = CZ - 7; z <= CZ + 7; z++) {
+      const d = Math.hypot(x - CX, z - CZ);
+      if (d <= 4.5) set(x, GROUND, z, B.dirt);
+      else if (d <= 6.5 && (x * 7 + z * 13) % 3 === 0) set(x, GROUND, z, B.dirt);
+    }
+  }
+
+  // The fire itself, ringed in stone, with two log seats pulled up to it.
+  set(CX, F, CZ, B.campfire);
+  for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1], [-1, 1], [1, -1]]) {
+    set(CX + dx, GROUND, CZ + dz, B.cobble);
+  }
+  set(CX - 2, F, CZ - 1, B.fernwood_log);
+  set(CX - 2, F, CZ, B.fernwood_log);
+  set(CX + 2, F, CZ + 1, B.fernwood_log);
+
+  // The tent: a canvas A-frame on a timber frame, open to the south so you can
+  // see the fire from the bedroll. Wool for the canvas because wool is the one
+  // cloth this world has, and it is also what a bed is made of — the tent and
+  // the bed are the same lesson.
+  const TX = CX - 5, TZ = CZ + 3;            // tent centre
+  for (let x = TX - 2; x <= TX + 2; x++) {
+    for (let z = TZ - 2; z <= TZ + 2; z++) set(x, GROUND, z, B.planks);
+  }
+  for (let z = TZ - 2; z <= TZ + 2; z++) {
+    // ridge pole and the two canvas slopes
+    set(TX, F + 2, z, B.fernwood_log);
+    setF(TX - 1, F + 1, z, B.white_wool, 1);
+    setF(TX + 1, F + 1, z, B.white_wool, 3);
+    set(TX - 2, F, z, B.white_wool);
+    set(TX + 2, F, z, B.white_wool);
+  }
+  // the closed north end, and the guy-ropes as fence posts at the corners
+  for (let x = TX - 2; x <= TX + 2; x++) set(x, F, TZ - 2, B.white_wool);
+  for (let x = TX - 1; x <= TX + 1; x++) set(x, F + 1, TZ - 2, B.white_wool);
+  set(TX - 3, F, TZ - 3, B.planks_fence);
+  set(TX + 3, F, TZ - 3, B.planks_fence);
+  set(TX - 3, F, TZ + 3, B.planks_fence);
+  set(TX + 3, F, TZ + 3, B.planks_fence);
+  set(TX + 3, F, TZ, B.torch_post);
+
+  // The bedroll. Two cells like every bed, laid along +Z so its head is at the
+  // closed end of the tent and you look out at the fire — the facing is the
+  // same value both halves carry, and it is what the renderer puts the
+  // headboard on (js/gfx/shapes.js).
+  setF(TX, F, TZ - 1, B.bed_head, 2);
+  setF(TX, F, TZ, B.bed, 2);
+
+  // One footlocker, and it is the only storage in the world you did not build.
+  set(CX + 3, F, CZ - 3, B.chest_block);
+  chests.push({ id: 'camp_stash', x: CX + 3, y: F, z: CZ - 3, loot: [] });
+
+  // A workbench under a lean-to. No furnace, no anvil, no loom — those you build.
+  set(CX + 4, F, CZ + 2, B.workbench);
+  setF(CX + 4, F + 2, CZ + 2, B.planks_stairs, 1);
+  set(CX + 5, F, CZ + 2, B.torch_post);
+
+  // The straw dummy, lashed to a post at the edge of the firelight. The quest
+  // chain's first swing is at this, so it comes with you out of the old town.
+  spawns.push({ id: 'dummy1', type: 'practice_dummy', x: CX + 6, y: F, z: CZ + 5, fixed: true });
+
+  // Maren. She is the whole of the camp's population and the whole of its
+  // institutions — there is no elder's cottage to sit in any more.
+  npcs.push({ id: 'maren', x: CX - 2, y: F, z: CZ + 2 });
 
   // ---- Pond (fishing) ----------------------------------------------------
   // A sunken basin ringed by a step-down sand ledge: step off the plateau onto
@@ -182,15 +267,6 @@ export function buildStarterStructures() {
   for (const [type, x, z] of groveTrees) {
     nodes.push({ type, x, y: F, z, meta: { h: 5 } });
   }
-
-  // ---- Town storage (shared stash by the spawn square) -------------------
-  set(4, F, 4, B.chest_block);
-  chests.push({ id: 'town_storage', x: 4, y: F, z: 4, loot: [] });
-
-  // ---- Training yard -----------------------------------------------------
-  for (let x = 8; x <= 16; x++) for (let z = 8; z <= 16; z++) set(x, GROUND, z, B.gravel);
-  spawns.push({ id: 'dummy1', type: 'practice_dummy', x: 12, y: F, z: 12, fixed: true });
-  set(8, F, 8, B.torch_post); set(16, F, 16, B.torch_post);
 
   // ---- West meadow scrap camp (for the first fight of the chain) ----------
   // Four scrappers and nothing else. This is the first real fight in the game,
@@ -427,13 +503,16 @@ export function buildStarterStructures() {
     spawn: [6, F, 6],
     frostwatch: [556, 34, -119],
     ironring: [560, 34, -136],
-    cottage: [-12, F, -7],
-    workshop: [12, F, -12],
-    stall: [-13, F, 9],
+    // The camp is now every "somewhere in the settlement" a quest can point at:
+    // there is no cottage, workshop or market stall left to distinguish.
+    camp: [4, F, 4],
+    cottage: [4, F, 4],
+    workshop: [4, F, 4],
+    stall: [4, F, 4],
+    trainingYard: [10, F, 9],
     pond: [0, GROUND, 18],
     farm: [-14, F, 19],
     grove: [24, F, 0],
-    trainingYard: [12, F, 12],
     meadow: [-24, F, 24],
     mineEntrance: [24, F, -23],
     mineChamber: [24, 19, -49],
