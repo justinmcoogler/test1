@@ -16,8 +16,12 @@ import { buildStarterStructures } from '../../js/world/structures.js';
 import { TOWN_PLAN } from '../../js/world/town.js';
 
 // A world made of whatever `solidAt` says, so a case reads as its own shape.
-const stub = (solidAt) => ({
+// `stepAt` says which of those cells are STAIRS OR SLABS — the only shapes you
+// walk up. Default: nothing is, so a case must opt in, which keeps the "a full
+// block is a wall" cases honest.
+const stub = (solidAt, stepAt = () => false) => ({
   collisionHeight: (x, y, z) => solidAt(x, y, z),
+  isStep: (x, y, z) => solidAt(x, y, z) > 0 && stepAt(x, y, z),
   isWater: () => false,
   getBlock: () => B.air,
 });
@@ -30,9 +34,10 @@ const walk = (p, world, dx, dz, steps = 40) => {
   }
 };
 
-test('a one-block step is walked up, not bumped into', () => {
-  // floor at y=63 (top 64); a step one block higher from x>=10
-  const world = stub((x, y) => (y <= 63 || (x >= 10 && y === 64) ? 1 : 0));
+test('a one-block stair is walked up, not bumped into', () => {
+  // floor at y=63 (top 64); a STAIR one block higher from x>=10
+  const world = stub((x, y) => (y <= 63 || (x >= 10 && y === 64) ? 1 : 0),
+                     (x, y) => x >= 10 && y === 64);
   const p = new Player();
   p.x = 8.5; p.y = 64; p.z = 0.5; p.onGround = true; p.vy = -0.01;
 
@@ -48,7 +53,7 @@ test('a full staircase is walked up without jumping', () => {
     if (y <= 63) return 1;
     if (x < 10) return 0;
     return y <= 63 + Math.min(x - 9, 5) ? 1 : 0;
-  });
+  }, (x, y) => x >= 10 && y > 63);
   const p = new Player();
   p.x = 8.5; p.y = 64; p.z = 0.5; p.onGround = true; p.vy = -0.01;
 
@@ -59,7 +64,8 @@ test('a full staircase is walked up without jumping', () => {
 });
 
 test('a two-block wall is still a wall — step-up is not climbing', () => {
-  const world = stub((x, y) => (y <= 63 || (x >= 10 && y <= 65) ? 1 : 0));
+  const world = stub((x, y) => (y <= 63 || (x >= 10 && y <= 65) ? 1 : 0),
+                     () => true);      // even declared steppable, two blocks is too tall
   const p = new Player();
   p.x = 8.5; p.y = 64; p.z = 0.5; p.onGround = true; p.vy = -0.01;
 
@@ -70,7 +76,8 @@ test('a two-block wall is still a wall — step-up is not climbing', () => {
 });
 
 test('you cannot step up in mid-air — only off the ground', () => {
-  const world = stub((x, y) => (y <= 63 || (x >= 10 && y === 64) ? 1 : 0));
+  const world = stub((x, y) => (y <= 63 || (x >= 10 && y === 64) ? 1 : 0),
+                     (x, y) => x >= 10 && y === 64);
   const p = new Player();
   p.x = 8.5; p.y = 64.5; p.z = 0.5; p.onGround = false; p.vy = -2;
 
@@ -86,7 +93,7 @@ test('a step into a space with no headroom is refused, not clipped into', () => 
     if (x >= 10 && y === 64) return 1;
     if (x >= 10 && y === 65) return 1;   // ceiling directly on the tread
     return 0;
-  });
+  }, (x, y) => x >= 10 && y === 64);
   const p = new Player();
   p.x = 8.5; p.y = 64; p.z = 0.5; p.onGround = true; p.vy = -0.01;
 
@@ -94,6 +101,19 @@ test('a step into a space with no headroom is refused, not clipped into', () => 
 
   assert.ok(p.x < 10, `refused the step it could not stand on (x=${p.x.toFixed(2)})`);
   assert.ok(Math.abs(p.y - 64) < 0.01, `stayed put (y=${p.y.toFixed(3)})`);
+});
+
+test('a full block is NOT walked up — you jump those', () => {
+  // The whole point of restricting the step-up. A kerb, a ledge, a one-block
+  // terrain rise: all walls you jump. Only a stair or a slab is a step.
+  const world = stub((x, y) => (y <= 63 || (x >= 10 && y === 64) ? 1 : 0));  // nothing steppable
+  const p = new Player();
+  p.x = 8.5; p.y = 64; p.z = 0.5; p.onGround = true; p.vy = -0.01;
+
+  walk(p, world, 0.08, 0);
+
+  assert.ok(p.x < 10, `a plain block stops you (x=${p.x.toFixed(2)})`);
+  assert.ok(Math.abs(p.y - 64) < 0.01, `and you do not rise (y=${p.y.toFixed(3)})`);
 });
 
 test('a real Brookhollow staircase is climbed by walking at it', () => {

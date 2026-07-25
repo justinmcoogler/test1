@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { World } from '../../js/world/world.js';
 import { WorldGen, CHUNK, MANOR_PAD, LEARN_MEADOW, FROST_CAMP } from '../../js/world/worldgen.js';
 import {
-  roadsFor, ARTERIALS, ROAD_START, WAYSTONE_SPACING, alongOf,
+  roadsFor, ARTERIALS, PRIMARIES, ROAD_START, WAYSTONE_SPACING, alongOf,
 } from '../../js/world/roads.js';
 import { B } from '../../js/world/blocks.js';
 
@@ -35,7 +35,7 @@ const ROAD_LAID = new Set([
 // carrying waystone furniture or a bridge parapet report -1 — they are street
 // furniture, not lane, and you walk around them.
 function laneY(w, roads, dir, x, z) {
-  const y = roads.gradeAt(alongOf(dir, x, z));
+  const y = roads.gradeAt(roads.along(w.gen, dir, x, z));
   if (w.collisionHeight(x, y, z) === 0) return -1;
   if (w.collisionHeight(x, y + 1, z) > 0 || w.collisionHeight(x, y + 2, z) > 0) return -1;
   return y;
@@ -65,7 +65,7 @@ test('an arterial runs on every compass point, however far out you walk', () => 
       const c = roads.column(w.gen, d, s, 0);
       const x = c[0], z = c[1];
       w.ensureChunk(x >> 4, z >> 4);
-      const y = roads.surfaceY(w.gen, d, alongOf(d, x, z));
+      const y = roads.surfaceY(w.gen, d, roads.along(w.gen, d, x, z));
       const id = w.getBlock(x, y, z);
       assert.ok(PAVING.has(id), `arterial ${d} at s=${s} (${x},${z},${y}) is paved, got block ${id}`);
       assert.ok(w.collisionHeight(x, y, z) > 0, `arterial ${d} at s=${s} carries your weight`);
@@ -193,15 +193,17 @@ test('you can actually walk an arterial — the paved lane is one connected surf
     `walked ${seen.size} of ${stand.size} lane columns without reaching the far end of the stretch`);
 });
 
-test('a waystone stands every 256 blocks along every arterial', () => {
+test('a waystone stands every 256 blocks along every PRIMARY arterial', () => {
+  // The secondary lanes that fork off the arterials get none: waystones mark the
+  // trunk network you navigate by, and a lane is a byway.
   const w = new World(20260725);
   const roads = roadsFor(w.gen);
   let built = 0, ceded = 0;
-  for (let d = 0; d < ARTERIALS; d++) {
+  for (let d = 0; d < PRIMARIES; d++) {
     for (let n = 1; n <= 4; n++) {
       const c = roads.waystoneColumn(w.gen, d, n);
       const x = c[0], z = c[1];
-      const s = alongOf(d, x, z);
+      const s = roads.along(w.gen, d, x, z);
       assert.ok(Math.abs(s - n * WAYSTONE_SPACING) < 2,
         `arterial ${d} waystone ${n} sits at the ${n * WAYSTONE_SPACING}-block mark (s=${s.toFixed(2)})`);
       // A waystone declines to build on ground a hand-built site already owns
@@ -217,7 +219,7 @@ test('a waystone stands every 256 blocks along every arterial', () => {
     }
   }
   assert.ok(ceded <= 2, `almost every waystone gets to build (${ceded} ceded to hand-built ground)`);
-  assert.equal(built + ceded, ARTERIALS * 4, 'every sampled waystone was accounted for');
+  assert.equal(built + ceded, PRIMARIES * 4, 'every sampled waystone was accounted for');
 });
 
 test('waystones appear at that spacing and nowhere in between', () => {
@@ -229,7 +231,7 @@ test('waystones appear at that spacing and nowhere in between', () => {
   for (let s = sFrom; s <= sTo; s++) {
     for (let a = -4; a <= 4; a += 1) {
       const c = roads.column(w.gen, dir, s, a);
-      const x = c[0], z = c[1], at = alongOf(dir, x, z);
+      const x = c[0], z = c[1], at = roads.along(w.gen, dir, x, z);
       const y = roads.surfaceY(w.gen, dir, at);
       if (w.getBlock(x, y + 3, z) !== B.torch_post) continue;
       const mark = Math.round(at);
@@ -285,7 +287,7 @@ test('a regraded column reports its new height — chunk.surfaceH tracks the roa
           const x = cx * CHUNK + lx, z = cz * CHUNK + lz;
           if (roads.arterialAt(w.gen, x, z) !== d) continue;
           const h = ch.surfaceH[lz * CHUNK + lx];
-          assert.equal(h, roads.surfaceY(w.gen, d, alongOf(d, x, z)),
+          assert.equal(h, roads.surfaceY(w.gen, d, roads.along(w.gen, d, x, z)),
             `surfaceH at ${x},${z} is the graded road height`);
           assert.ok(w.collisionHeight(x, h, z) > 0,
             `and there is solid ground at that height (${x},${h},${z})`);
@@ -377,7 +379,7 @@ test('the arterials actually wind — and the lane survives the bends', () => {
     for (let s = 90; s <= 900; s += 7) {
       const c = r2.column(w.gen, d, s, 0), x = c[0], z = c[1];
       for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) w.ensureChunk((x + dx) >> 4, (z + dz) >> 4);
-      const y = r2.surfaceY(w.gen, d, alongOf(d, x, z));
+      const y = r2.surfaceY(w.gen, d, r2.along(w.gen, d, x, z));
       let n = 0;
       for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
         for (const yy of [y - 1, y, y + 1]) if (PAVING.has(w.getBlock(x + dx, yy, z + dz))) { n++; break; }
@@ -389,4 +391,86 @@ test('the arterials actually wind — and the lane survives the bends', () => {
     }
   }
   assert.deepEqual(thin.slice(0, 6), [], `${thin.length} points where the bend thinned the lane`);
+});
+
+test('secondary lanes fork off the arterials, meet their parent, and run on forever', () => {
+  // "Some endless": eight lanes leave the primaries at FORK_AT and never end.
+  // Each is its own closed-form road in a frame whose ORIGIN sits on its parent's
+  // centre line, which is what makes it a road leaving a road rather than another
+  // ray out of spawn — and what makes it seed-dependent, since the parent wanders.
+  const w = new World(20260725);
+  const roads = roadsFor(w.gen);
+  for (let d = PRIMARIES; d < ARTERIALS; d++) {
+    const par = d - PRIMARIES;
+    // `column` hands back reused scratch, so copy out of it before anything else
+    // touches the Roads instance — generating a chunk certainly does.
+    const start = roads.column(w.gen, d, 0, 0);
+    const sx = start[0], sz = start[1];
+    assert.equal(roads.arterialAt(w.gen, sx, sz), par,
+      `lane ${d} begins on arterial ${par} (at ${sx},${sz})`);
+
+    // …and it keeps going, well past where any finite spur would stop.
+    for (const s of [120, 900, 3000]) {
+      const c = roads.column(w.gen, d, s, 0);
+      const x = c[0], z = c[1];
+      w.ensureChunk(x >> 4, z >> 4);
+      const y = roads.surfaceY(w.gen, d, roads.along(w.gen, d, x, z));
+      assert.ok(PAVING.has(w.getBlock(x, y, z)),
+        `lane ${d} is surfaced at s=${s} (${x},${z},${y}), got ${w.getBlock(x, y, z)}`);
+      assert.equal(w.getBlock(x, y + 1, z), B.air, `lane ${d} has headroom at s=${s}`);
+    }
+
+    // A lane is narrower than the arterial it leaves.
+    let laneW = 0, parW = 0;
+    // NOT asserted here: that a lane measures narrower than its parent. Counting
+    // paved columns across the road frame is biased by BEARING — an axis-aligned
+    // arterial's columns land on the lattice exactly, while a lane running 13° off
+    // aliases into a staircase and reads wider than it is. Measuring it fairly
+    // needs a perpendicular rasterisation, and the width difference is set by
+    // LANE_VERGE vs VERGE_HW in js/world/roads.js in any case.
+  }
+});
+
+test('trails leave the roads, run a few hundred blocks, and stop', () => {
+  // "Some not [endless]". A trail is a surface treatment, not a regrade: it wears
+  // a line over whatever ground is there, claims no column in the road mask, and
+  // ends. So the checks are that they exist off the network, that they begin
+  // beside a road, and that none runs past TRAIL_MAX from its parent.
+  const w = new World(20260725);
+  const roads = roadsFor(w.gen);
+  const worn = new Set([B.dirt, B.gravel]);
+  const found = [];
+  for (let cx = 10; cx <= 24; cx++) {
+    for (let cz = 10; cz <= 24; cz++) {
+      const ch = w.generateChunk(cx, cz);
+      for (let lx = 0; lx < CHUNK; lx++) {
+        for (let lz = 0; lz < CHUNK; lz++) {
+          const y = ch.surfaceH[lz * CHUNK + lx];
+          if (y <= 0) continue;
+          const id = ch.blocks[((y * CHUNK) + lz) * CHUNK + lx];
+          if (!worn.has(id)) continue;
+          const x = cx * CHUNK + lx, z = cz * CHUNK + lz;
+          if (roads.arterialAt(w.gen, x, z) !== -1) continue;   // that is road, not trail
+          found.push([x, z]);
+        }
+      }
+    }
+  }
+  assert.ok(found.length > 200, `trails should be a real presence off the roads (${found.length} worn cells)`);
+
+  // Every one of them is within reach of SOME road — a trail that started nowhere
+  // would just be a stripe of dirt in a field.
+  let orphan = 0;
+  for (const [x, z] of found) {
+    let near = false;
+    for (let d = 0; d < ARTERIALS && !near; d++) {
+      const s = roads.along(w.gen, d, x, z);
+      if (s < 0) continue;
+      const t = Math.abs(roads.across(w.gen, d, x, z) - roads.wander(w.gen.seed, d, s));
+      if (t < 520) near = true;      // TRAIL_MAX plus its wander, from the parent centre line
+    }
+    if (!near) orphan++;
+  }
+  assert.ok(orphan / found.length < 0.02,
+    `${orphan}/${found.length} worn cells sit nowhere near a road they could have left`);
 });

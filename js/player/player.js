@@ -223,11 +223,14 @@ export class Player {
             if (minY >= blockTop || maxY <= by) continue;
             hit = true;
             // Before treating it as a wall: can we just step up onto it? Only
-            // from the ground, only up to STEP_H, and only if the whole body
-            // fits at the new height where we already are. Keeping the
-            // horizontal position means the step costs no speed, which is what
-            // makes a staircase feel like a ramp rather than a series of hops.
-            if ((ax !== 0 || az !== 0) && this.onGround && this.vy <= 0) {
+            // from the ground, only up to STEP_H, only if the whole body fits at
+            // the new height, and only onto a STAIR OR SLAB. A full block is a
+            // wall you jump — auto-stepping those made every kerb, ledge and
+            // one-block terrain rise climbable by walking into it, which is not
+            // what a step is. Keeping the horizontal position means the step
+            // costs no speed, so a staircase feels like a ramp, not a hop.
+            if ((ax !== 0 || az !== 0) && this.onGround && this.vy <= 0
+                && world.isStep(bx, by, bz)) {
               const rise = blockTop - this.y;
               if (rise > 0 && rise <= STEP_H && this.fits(world, this.x, blockTop + 1e-4, this.z)) {
                 this.y = blockTop + 1e-4;

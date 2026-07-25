@@ -62,11 +62,10 @@ try {
 
   // yaw 0 = north (-z). The town runs from the kirk/moot at z=-27 down to the
   // wide market mouth at z=+10; x spans -30..25.
-  // dir 6 runs north and swings from x=+18 to x=-12 over 200 blocks. Overhead at
-  // an altitude the harness actually meshes.
-  await shot('road-bend-a',   6, 104, -170, 0, -1.5);
-  await shot('road-bend-b',  -2, 104, -250, 0, -1.5);
-  await shot('road-bend-obl', 6,  92, -140, 0, -0.62);
+  await shot('bridge2',        4,  70, 1442, 0,            -0.14);  // deck, continuous rails, no dirt
+  await shot('bridge2-obl',   14,  78, 1462, Math.PI * 1.7, -0.30);
+  await shot('fork',          -2,  96, -430, 0,            -0.55);  // a lane forking off an arterial
+  await shot('trail',        320,  74,  -14, Math.PI * 1.5, -0.16);  // a worn trail off the road
   if (errors.length) { console.log('PAGE ERRORS:'); errors.forEach((e) => console.log(' •', e)); }
 } finally {
   await browser.close();

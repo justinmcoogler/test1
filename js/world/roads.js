@@ -23,15 +23,31 @@ import { valueNoise2 } from '../core/noise.js';
 import { hash2 } from '../core/rng.js';
 
 // ---- Geometry --------------------------------------------------------------
-export const ARTERIALS = 8;
+// 8 primary arterials radiate from Brookhollow; 8 secondary LANES fork off them
+// further out and also run forever. A fork is not a ray from spawn — its frame's
+// origin sits on its parent arterial — so it reads as a road leaving a road.
+export const ARTERIALS = 16;
+export const PRIMARIES = 8;
 // Along-axis unit vectors for the eight compass points, written out rather than
 // derived from cos/sin so the axis-aligned roads get exact 0s and 1s (a 6e-17
 // leak would make `s` differ in the last bits between two ways of reaching the
 // same column).
 const R2 = Math.SQRT1_2;
-const U = new Float64Array([
-  1, 0, R2, R2, 0, 1, -R2, R2, -1, 0, -R2, -R2, 0, -1, R2, -R2,
-]);
+const U = new Float64Array(ARTERIALS * 2);
+for (let d = 0; d < PRIMARIES; d++) {
+  // Exact 0s and 1s on the axis-aligned bearings: a 6e-17 leak would make `s`
+  // differ in the last bits between two ways of reaching the same column.
+  const AX = [[1, 0], [R2, R2], [0, 1], [-R2, R2], [-1, 0], [-R2, -R2], [0, -1], [R2, -R2]];
+  U[d * 2] = AX[d][0]; U[d * 2 + 1] = AX[d][1];
+}
+// Each fork leaves its parent at FORK_TURN, alternating side so the network
+// spreads instead of curling one way.
+const FORK_TURN = 0.55;   // radians, ~31 degrees
+for (let d = PRIMARIES; d < ARTERIALS; d++) {
+  const par = d - PRIMARIES;
+  const th = Math.atan2(U[par * 2 + 1], U[par * 2]) + (par % 2 ? -FORK_TURN : FORK_TURN);
+  U[d * 2] = Math.cos(th); U[d * 2 + 1] = Math.sin(th);
+}
 
 // Paving starts clear of everything Brookhollow builds on the surface (its
 // outermost surface edit is 55 blocks out) with room to spare. The starter
@@ -89,6 +105,26 @@ const WINDOW_MAX_J = 60;   // anchors one profile window can span (see `window`)
 // A cobble core, gravel verges, and a graded but unpaved shoulder beyond them
 // so the earthworks read as a cut rather than a painted stripe.
 const CORE_HW = 1.6, VERGE_HW = 2.95, GRADE_HW = 3.7;
+// A secondary lane is a humbler road: narrower, gravel rather than laid cobble,
+// wandering less (its neighbours are only ~22 degrees away once the forks are in,
+// so it has less room to swing), and no waystones — those mark the trunk network.
+const LANE_CORE = 1.0, LANE_VERGE = 1.85, LANE_GRADE = 2.5, LANE_AMP = 42;
+export const FORK_AT = 430;        // how far along its parent a fork leaves
+// Per-direction road class, so every loop below can stay a single pass over
+// `d` instead of branching on primary-vs-lane at each use.
+const RC_START = new Float64Array(ARTERIALS);
+const RC_CORE = new Float64Array(ARTERIALS);
+const RC_VERGE = new Float64Array(ARTERIALS);
+const RC_GRADE = new Float64Array(ARTERIALS);
+const RC_AMP = new Float64Array(ARTERIALS);
+for (let d = 0; d < ARTERIALS; d++) {
+  const lane = d >= PRIMARIES;
+  RC_START[d] = lane ? 0 : ROAD_START;   // a fork starts at its own origin
+  RC_CORE[d] = lane ? LANE_CORE : CORE_HW;
+  RC_VERGE[d] = lane ? LANE_VERGE : VERGE_HW;
+  RC_GRADE[d] = lane ? LANE_GRADE : GRADE_HW;
+  RC_AMP[d] = lane ? LANE_AMP : AMP_MAX;
+}
 const EDGE_WOBBLE = 1.05;   // how far the paving edges breathe, in blocks
 const EDGE_RAGGED = 0.4;    // chance an outermost paving cell is left unpaved
 
@@ -103,6 +139,19 @@ const WS_BENCH = [B.planks_slab];
 const CHUNK_R = 11.4;       // half-diagonal of a chunk, for the coarse reject
 const BED_MAX = 40;         // deepest a causeway will reach for solid ground
 const BRIDGE_BENT = 4;      // blocks between the piles carrying a bridge deck
+// Half-width of a bridge deck, fixed. The outermost column each side carries the
+// handrail, so the walkable deck is BRIDGE_HW*2 - 1 wide.
+const BRIDGE_HW = 3;
+// Paving material → the stair variant used where the road climbs a block, so a
+// grade is a flight you walk rather than a kerb you jump. Anything without an
+// entry (gravel, dirt) just stays flat — the shoulder is not lane.
+const STEP_OF = {
+  [B.cobble]: B.cobble_stairs, [B.mossy_cobble]: B.mossy_cobble_stairs ?? B.cobble_stairs,
+  [B.stone]: B.stone_stairs, [B.stone_brick]: B.stone_brick_stairs,
+};
+// Facing (0=+Z 1=+X 2=-Z 3=-X) that points UP the grade for each arterial. The
+// diagonals take their dominant axis; a stair only has four orientations.
+const UPHILL_FACE = [1, 1, 0, 0, 3, 3, 2, 2];
 
 // Salts. Each road gets its own noise streams so two arterials never wander in
 // step, and the paving/edge rolls stay independent of the route.
@@ -113,6 +162,15 @@ const S_WANDER1 = 5101, S_WANDER2 = 5209, S_WANDER3 = 5417, S_EDGE_CORE = 5303, 
 const CROFT_SPACING = 190, CROFT_CHANCE = 0.28, CROFT_START = 260;
 const CROFT_OFFSET = 11, CROFT_REACH = 20;
 const S_CROFT = 6101, S_CROFT_SIDE = 6203, S_CROFT_ART = 6301;
+// Finite TRAILS. Unlike a road, a trail does no earthworks: it is a worn line
+// over whatever ground is already there, so it needs no height profile, makes no
+// ≤1-step promise of its own beyond the terrain's, and never claims a column in
+// the road mask. That is also what a trail IS — a footpath, not a lane — and it
+// keeps them cheap enough to be common.
+const TRAIL_SPACING = 120, TRAIL_CHANCE = 0.55, TRAIL_START = 150;
+const TRAIL_MIN = 90, TRAIL_MAX = 460;    // how far a trail runs before it peters out
+const TRAIL_HW = 1.15;                    // half-width of the worn line
+const S_TRAIL = 7101, S_TRAIL_LEN = 7207, S_TRAIL_TURN = 7309, S_TRAIL_W = 7411;
 const S_PAVE = 5407, S_RAGGED = 5501, S_WAYSIDE = 5701;
 const DIR_SALT = 131;
 
@@ -138,6 +196,14 @@ export class Roads {
     this._dirs = new Int32Array(ARTERIALS);       // arterials in play this chunk
     this._col = new Int32Array(2);       // column-coordinate out-param
     this._col2 = new Int32Array(2);      // second out-param, for a croft's door bearing
+    // Frame origin of each road, expressed as (along, across) in that road's own
+    // rotated axes. Zero for a primary, which starts at spawn. For a fork it is
+    // the point on its PARENT's centre line where it leaves, so the two roads
+    // actually meet — which is why it is seed-dependent and lives here rather
+    // than in a module constant.
+    this._s0 = new Float64Array(ARTERIALS);
+    this._t0 = new Float64Array(ARTERIALS);
+    this._framed = false;
     // Profile sampling gets its OWN column scratch: building a window walks the
     // centre line, and doing that through _col would quietly clobber the caller's
     // column between `roads.column(...)` and `roads.surfaceY(...)`.
@@ -150,9 +216,29 @@ export class Roads {
   // Lateral offset of the centre line at `s`. Two octaves: a long sweep plus a
   // shorter kink, so the road reads as surveyed terrain-following rather than a
   // sine wave.
+  // Where each fork leaves its parent. Computed once per generator: the parent's
+  // centre-line column at FORK_AT, converted into the fork's own axes.
+  _frame(gen) {
+    if (this._framed) return;
+    this._framed = true;
+    for (let d = PRIMARIES; d < ARTERIALS; d++) {
+      const par = d - PRIMARIES;
+      const w = this.wander(gen.seed, par, FORK_AT);
+      const ux = U[par * 2], uz = U[par * 2 + 1];
+      const ox = ux * FORK_AT - uz * w, oz = uz * FORK_AT + ux * w;
+      this._s0[d] = alongOf(d, ox, oz);
+      this._t0[d] = acrossOf(d, ox, oz);
+    }
+  }
+
+  // Distance along / across a road, measured from ITS OWN origin.
+  along(gen, d, x, z) { this._frame(gen); return alongOf(d, x, z) - this._s0[d]; }
+  across(gen, d, x, z) { this._frame(gen); return acrossOf(d, x, z) - this._t0[d]; }
+
   wander(seed, dir, s) {
+    const cap = RC_AMP[dir];
     let amp = s * AMP_GROW;
-    if (amp > AMP_MAX) amp = AMP_MAX;
+    if (amp > cap) amp = cap;
     const n1 = valueNoise2(seed + S_WANDER1 + dir * DIR_SALT, s / WANDER_L1, 0.5);
     const n2 = valueNoise2(seed + S_WANDER2 + dir * DIR_SALT, s / WANDER_L2, 3.5);
     const n3 = valueNoise2(seed + S_WANDER3 + dir * DIR_SALT, s / WANDER_L3, 7.5);
@@ -162,10 +248,11 @@ export class Roads {
   // The lattice column `across` blocks to the side of the centre line at `s`.
   // out is a reused Int32Array — callers must consume it before the next call.
   column(gen, dir, s, across, out = this._col) {
+    this._frame(gen);
     const ux = U[dir * 2], uz = U[dir * 2 + 1];
-    const w = this.wander(gen.seed, dir, s) + across;
-    out[0] = Math.round(ux * s - uz * w);
-    out[1] = Math.round(uz * s + ux * w);
+    const S = s + this._s0[dir], T = this.wander(gen.seed, dir, s) + across + this._t0[dir];
+    out[0] = Math.round(ux * S - uz * T);
+    out[1] = Math.round(uz * S + ux * T);
     return out;
   }
 
@@ -268,20 +355,21 @@ export class Roads {
   // Regrades, paves and furnishes every arterial column in one chunk, and drops
   // the scatter pass's trees/nodes/spawns that fell on them. Returns the highest
   // block written, or -1 if no arterial touches this chunk.
-  carve(gen, chunk, blocks, cx, cz) {
+  carve(gen, chunk, blocks, cx, cz, setFacing) {
     const ccx = cx * CHUNK + 7.5, ccz = cz * CHUNK + 7.5;
     // Coarse reject first: eight scalar tests decide whether this chunk can hold
     // any arterial at all. Nearly every chunk in the world leaves here.
+    this._frame(gen);
     const dirs = this._dirs;
     let nd = 0;
     for (let d = 0; d < ARTERIALS; d++) {
       const ux = U[d * 2], uz = U[d * 2 + 1];
-      const s0 = ccx * ux + ccz * uz;
-      if (s0 + CHUNK_R < ROAD_START) continue;
-      const t0 = ccx * -uz + ccz * ux;
+      const s0 = ccx * ux + ccz * uz - this._s0[d];
+      if (s0 + CHUNK_R < RC_START[d]) continue;
+      const t0 = ccx * -uz + ccz * ux - this._t0[d];
       let amp = (s0 + CHUNK_R) * AMP_GROW;
-      if (amp > AMP_MAX) amp = AMP_MAX;
-      if ((t0 < 0 ? -t0 : t0) > amp + GRADE_HW + CHUNK_R) continue;
+      if (amp > RC_AMP[d]) amp = RC_AMP[d];
+      if ((t0 < 0 ? -t0 : t0) > amp + RC_GRADE[d] + CHUNK_R) continue;
       dirs[nd++] = d;
     }
     if (nd === 0) return -1;
@@ -299,15 +387,18 @@ export class Roads {
     for (let i = 0; i < nd; i++) {
       const d = dirs[i];
       const ux = U[d * 2], uz = U[d * 2 + 1];
-      const s0 = ccx * ux + ccz * uz;
+      const s0 = ccx * ux + ccz * uz - this._s0[d];
       // Widened by the waystone reach so one window serves both passes.
-      this.window(gen, d, Math.max(ROAD_START - 1, s0 - CHUNK_R - 8), s0 + CHUNK_R + 8);
-      const y = this._carveDir(gen, chunk, blocks, cx, cz, d);
+      this.window(gen, d, Math.max(RC_START[d] - 1, s0 - CHUNK_R - 8), s0 + CHUNK_R + 8);
+      const y = this._carveDir(gen, chunk, blocks, cx, cz, d, setFacing);
       if (y > top) top = y;
-      const w = this._waystones(gen, blocks, cx, cz, d, s0 - CHUNK_R - 8, s0 + CHUNK_R + 8);
-      if (w > top) top = w;
+      if (d < PRIMARIES) {   // waystones mark the trunk network, not the lanes
+        const w = this._waystones(gen, blocks, cx, cz, d, s0 - CHUNK_R - 8, s0 + CHUNK_R + 8);
+        if (w > top) top = w;
+      }
       const c = this._crofts(gen, chunk, blocks, cx, cz, d, s0 - CHUNK_R - CROFT_REACH, s0 + CHUNK_R + CROFT_REACH);
       if (c > top) top = c;
+      this._trails(gen, chunk, blocks, cx, cz, d, s0);
     }
     if (top >= 0) this._evict(chunk, cx, cz);
     return top;
@@ -408,41 +499,116 @@ export class Roads {
     return top;
   }
 
+  // ---- Trails ---------------------------------------------------------------
+  // "Some endless, some not": the forks run forever, these do not. A trail leaves
+  // a road, wanders a few hundred blocks and stops — it goes somewhere in the
+  // sense that walking it takes you off the network and into country.
+  //
+  // Chunk-local the same way the crofts are: a bounded window of candidate
+  // origins along the parent road, each a pure function of (seed, parent, k), and
+  // each chunk paints only the slice of the route that falls inside it. Because a
+  // trail is a surface treatment and not a regrade, two chunks painting the same
+  // trail cannot disagree about its height — there is no height to agree on.
+  _trails(gen, chunk, blocks, cx, cz, d, sChunk) {
+    const reach = TRAIL_MAX + CHUNK_R;
+    const first = Math.ceil((sChunk - reach) / TRAIL_SPACING);
+    const last = Math.floor((sChunk + reach) / TRAIL_SPACING);
+    for (let k = first; k <= last; k++) {
+      const sOrigin = k * TRAIL_SPACING;
+      if (sOrigin < TRAIL_START + RC_START[d]) continue;
+      if (hash2(gen.seed + S_TRAIL, k, d) > TRAIL_CHANCE) continue;
+      this._trail(gen, chunk, blocks, cx, cz, d, k, sOrigin);
+    }
+  }
+
+  _trail(gen, chunk, blocks, cx, cz, d, k, sOrigin) {
+    // Frame: origin on the parent's centre line, bearing turned well off it so a
+    // trail reads as leaving rather than paralleling.
+    const o = this.column(gen, d, sOrigin, 0, this._col);
+    const ox = o[0], oz = o[1];
+    const side = hash2(gen.seed + S_TRAIL_W, k, d) < 0.5 ? 1 : -1;
+    const turn = 0.9 + hash2(gen.seed + S_TRAIL_TURN, k, d) * 0.7;      // 51-92 degrees
+    const th = Math.atan2(U[d * 2 + 1], U[d * 2]) + side * turn;
+    const vx = Math.cos(th), vz = Math.sin(th);
+    const len = TRAIL_MIN + hash2(gen.seed + S_TRAIL_LEN, k, d) * (TRAIL_MAX - TRAIL_MIN);
+
+    // Clip to the s-range this chunk can possibly hold, so a long trail costs the
+    // same per chunk as a short one.
+    const ccx = cx * CHUNK + 7.5, ccz = cz * CHUNK + 7.5;
+    const sMid = (ccx - ox) * vx + (ccz - oz) * vz;
+    let sA = sMid - CHUNK_R - TRAIL_HW - 1, sB = sMid + CHUNK_R + TRAIL_HW + 1;
+    if (sA < 0) sA = 0;
+    if (sB > len) sB = len;
+    if (sA > sB) return;
+
+    const step = CHUNK * CHUNK;
+    for (let sv = sA; sv <= sB; sv += 0.5) {
+      // The trail wanders too, on its own stream, and fades out at its far end.
+      const wob = (valueNoise2(gen.seed + S_TRAIL + k, sv / 26, 2.5) - 0.5) * 5;
+      const fade = sv > len - 24 ? (len - sv) / 24 : 1;                 // it peters out
+      const px = ox + vx * sv - vz * wob, pz = oz + vz * sv + vx * wob;
+      for (let a = -1; a <= 1; a++) {
+        const qx = Math.round(px - vz * a * TRAIL_HW), qz = Math.round(pz + vx * a * TRAIL_HW);
+        const lx = qx - cx * CHUNK, lz = qz - cz * CHUNK;
+        if (lx < 0 || lx >= CHUNK || lz < 0 || lz >= CHUNK) continue;
+        const li = lz * CHUNK + lx;
+        if (this._mask[li]) continue;                                   // a road already owns it
+        if (this._blocked(gen, qx, qz, this._near)) continue;
+        if (hash2(gen.seed + S_TRAIL_W + k, qx, qz) > fade * 0.9) continue;  // ragged, thinning
+        const y = chunk.surfaceH[li];
+        if (y <= SEA) continue;                                         // no trails across water
+        const i = li + y * step;
+        const cur = blocks[i];
+        if (cur === B.water || !isSolid(cur)) continue;
+        blocks[i] = hash2(gen.seed + S_PAVE, qx, qz) < 0.25 ? B.gravel : B.dirt;
+        blocks[i + step] = B.air;                                       // scuff the grass off it
+      }
+    }
+  }
+
   _boxNear(x0, z0, px, pz, r) {
     const dx = px < x0 ? x0 - px : px > x0 + CHUNK ? px - x0 - CHUNK : 0;
     const dz = pz < z0 ? z0 - pz : pz > z0 + CHUNK ? pz - z0 - CHUNK : 0;
     return dx * dx + dz * dz < r * r;
   }
 
-  _carveDir(gen, chunk, blocks, cx, cz, d) {
+  _carveDir(gen, chunk, blocks, cx, cz, d, setFacing) {
     const ux = U[d * 2], uz = U[d * 2 + 1];
     const seed = gen.seed;
+    const s0f = this._s0[d], t0f = this._t0[d];
+    const ampCap = RC_AMP[d], gradeHW = RC_GRADE[d];
     const mask = this._mask, roadY = this._roadY;
     let top = -1;
     for (let lz = 0; lz < CHUNK; lz++) {
       const wz = cz * CHUNK + lz;
       for (let lx = 0; lx < CHUNK; lx++) {
         const wx = cx * CHUNK + lx;
-        const s = wx * ux + wz * uz;
-        if (s < ROAD_START) continue;
-        const t = wx * -uz + wz * ux;
+        const s = wx * ux + wz * uz - s0f;
+        if (s < RC_START[d]) continue;
+        const t = wx * -uz + wz * ux - t0f;
         // Cheap bound before touching noise: |wander| can never exceed amp(s).
         let amp = s * AMP_GROW;
-        if (amp > AMP_MAX) amp = AMP_MAX;
+        if (amp > ampCap) amp = ampCap;
         const ta = t < 0 ? -t : t;
-        if (ta > amp + GRADE_HW) continue;
+        if (ta > amp + gradeHW) continue;
         const off = t - this.wander(seed, d, s);
         const a = off < 0 ? -off : off;
-        if (a > GRADE_HW) continue;
+        if (a > gradeHW) continue;
         const li = lz * CHUNK + lx;
         if (mask[li]) continue;              // another arterial already owns it
         if (this._blocked(gen, wx, wz, this._near)) continue;
 
+        const hNat = chunk.surfaceH[li];
+        // A bridge is exactly as wide as its deck. It has no graded shoulder, so
+        // it must not CLAIM the columns either side either — a claimed column
+        // records a road surface in chunk.surfaceH, and out over water there is
+        // no surface there to record.
+        if (hNat < SEA && a > BRIDGE_HW) continue;
+
         const y = this.gradeAt(s);
         mask[li] = 1; roadY[li] = y;
-        const hNat = chunk.surfaceH[li];
         chunk.surfaceH[li] = y;
-        const t2 = this._paveColumn(blocks, seed, d, s, wx, wz, lx, lz, a, y, hNat);
+        const t2 = this._paveColumn(blocks, seed, d, s, wx, wz, lx, lz, a, y, hNat, setFacing);
         if (t2 > top) top = t2;
       }
     }
@@ -450,7 +616,7 @@ export class Roads {
   }
 
   // One column: cut or fill to the graded height, then dress the surface.
-  _paveColumn(blocks, seed, d, s, wx, wz, lx, lz, a, y, hNat) {
+  _paveColumn(blocks, seed, d, s, wx, wz, lx, lz, a, y, hNat, setFacing) {
     const base = lz * CHUNK + lx, step = CHUNK * CHUNK;
     // Everything the road cuts through goes, including whatever the scatter
     // pass had already rooted on the old surface.
@@ -471,10 +637,18 @@ export class Roads {
     // route, and the outermost paving cell is dropped at random, so the road
     // reads as laid stone rather than a stencil.
     const bridge = hNat < SEA;
-    const coreEdge = CORE_HW + (valueNoise2(seed + S_EDGE_CORE + d * DIR_SALT, s / 11, 1.5) - 0.5) * EDGE_WOBBLE;
-    const vergeEdge = VERGE_HW + (valueNoise2(seed + S_EDGE_VERGE + d * DIR_SALT, s / 17, 6.5) - 0.5) * EDGE_WOBBLE;
+    // A bridge is CARPENTRY, not earthwork, so it gets none of the road's
+    // irregularity: a fixed deck width and no ragged edge. The wobble and the
+    // dropped outer cells are what make a laid stone lane look laid, but on a
+    // span they broke the deck's outline into a wavy edge and left the handrail
+    // as a scatter of disconnected posts instead of one run of fence.
+    const wob = d < PRIMARIES ? EDGE_WOBBLE : EDGE_WOBBLE * 0.5;   // a lane is a thinner thing
+    const coreEdge = bridge ? BRIDGE_HW - 1
+      : RC_CORE[d] + (valueNoise2(seed + S_EDGE_CORE + d * DIR_SALT, s / 11, 1.5) - 0.5) * wob;
+    const vergeEdge = bridge ? BRIDGE_HW
+      : RC_VERGE[d] + (valueNoise2(seed + S_EDGE_VERGE + d * DIR_SALT, s / 17, 6.5) - 0.5) * wob;
     let paved = a <= vergeEdge;
-    if (paved && a > vergeEdge - 0.55 && hash2(seed + S_RAGGED, wx, wz) < EDGE_RAGGED) paved = false;
+    if (paved && !bridge && a > vergeEdge - 0.55 && hash2(seed + S_RAGGED, wx, wz) < EDGE_RAGGED) paved = false;
 
     let surf;
     if (!paved) {
@@ -482,13 +656,31 @@ export class Roads {
       // own subsoil, which is exactly what a fresh cutting exposes — so it only
       // needs a face where there is nothing to expose: fresh fill, or a cave
       // mouth the grade happened to open right beside the lane.
-      surf = isSolid(blocks[base + y * step]) ? 0 : B.dirt;
+      // A bridge has no shoulder at all: there is nothing out there to grade, and
+      // laying the usual dirt face hung soil in the air beside the deck.
+      surf = bridge || isSolid(blocks[base + y * step]) ? 0 : B.dirt;
     } else if (a <= coreEdge) {
       const r = hash2(seed + S_PAVE, wx, wz);
-      surf = bridge ? B.planks : r < 0.09 ? B.gravel : r < 0.18 ? B.mossy_cobble : r < 0.24 ? B.stone : B.cobble;
+      surf = bridge ? B.planks
+        : d >= PRIMARIES ? (r < 0.22 ? B.cobble : r < 0.30 ? B.mossy_cobble : B.gravel)   // a gravel byway
+          : r < 0.09 ? B.gravel : r < 0.18 ? B.mossy_cobble : r < 0.24 ? B.stone : B.cobble;
     } else {
       const r = hash2(seed + S_PAVE, wx, wz);
       surf = bridge ? B.planks : r < 0.12 ? B.cobble : r < 0.17 ? B.dirt : B.gravel;
+    }
+    // Where the road climbs, build the riser AS A STEP. The grade rises a block
+    // roughly every 14 blocks walked, and only stairs and slabs are walkable
+    // steps (World.isStep) — as plain cobble cubes those rises meant jumping the
+    // whole way along a road. `facing` points uphill because a stair's raised
+    // half sits on its facing side, so you meet the low half first.
+    // Only the CORE gets risers — that is the width you actually walk — and a
+    // riser is always a stair even where the paving roll picked gravel, which has
+    // no stair variant. Leaving those flat left roughly one unjumpable kerb in
+    // ten on the lane, which defeats the point.
+    if (surf && !bridge && setFacing && a <= coreEdge && y > this.gradeAt(s - 1)) {
+      blocks[base + y * step] = STEP_OF[surf] ?? B.cobble_stairs;
+      setFacing(wx, y, wz, UPHILL_FACE[d]);
+      return y;
     }
     if (surf) blocks[base + y * step] = surf;
 
@@ -497,7 +689,10 @@ export class Roads {
       // down both edges so you cannot walk off it in the dark, and piles driven
       // to the bed every few blocks so the span is visibly carried rather than
       // floating on the water.
-      if (a > vergeEdge - 1) {
+      // The handrail is the OUTERMOST deck column on each side, every column of
+      // the span, so it comes out as one continuous run of fence rather than
+      // posts wherever the edge happened to fall.
+      if (a > BRIDGE_HW - 1) {
         blocks[base + (y + 1) * step] = B.planks_fence;
         return y + 1;
       }
@@ -522,7 +717,7 @@ export class Roads {
     const first = Math.ceil(sLo / WAYSTONE_SPACING), last = Math.floor(sHi / WAYSTONE_SPACING);
     for (let n = first; n <= last; n++) {
       const s = n * WAYSTONE_SPACING;
-      if (s < ROAD_START) continue;
+      if (s < RC_START[d]) continue;
       const side = waysideOf(gen.seed, d, n);
       let y = this._prop(gen, blocks, cx, cz, d, s, WS_OFFSET * side, WS_MARKER);
       if (y > top) top = y;
@@ -580,15 +775,23 @@ export class Roads {
   // same corridor test the carve uses, so "is this column road?" has exactly
   // one answer no matter who asks.
   arterialAt(gen, x, z, sOut = null) {
+    this._frame(gen);
     for (let d = 0; d < ARTERIALS; d++) {
-      const s = alongOf(d, x, z);
-      if (s < ROAD_START) continue;
-      const t = acrossOf(d, x, z);
+      const s = alongOf(d, x, z) - this._s0[d];
+      if (s < RC_START[d]) continue;
+      const t = acrossOf(d, x, z) - this._t0[d];
       let amp = s * AMP_GROW;
-      if (amp > AMP_MAX) amp = AMP_MAX;
-      if ((t < 0 ? -t : t) > amp + GRADE_HW) continue;
+      if (amp > RC_AMP[d]) amp = RC_AMP[d];
+      if ((t < 0 ? -t : t) > amp + RC_GRADE[d]) continue;
       const off = t - this.wander(gen.seed, d, s);
-      if ((off < 0 ? -off : off) > GRADE_HW) continue;
+      const a = off < 0 ? -off : off;
+      if (a > RC_GRADE[d]) continue;
+      // Over water the road is a bridge, and a bridge is only its deck — no
+      // graded shoulder. This has to agree with the carve (see `_carveDir`) or
+      // callers get told a column is road when nothing was built on it: a
+      // waystone would try to stand on open water, and surfaceH would be asked
+      // to report a road height for a column the span never touched.
+      if (a > BRIDGE_HW && gen.heightAt(x, z) < SEA) continue;
       if (this._blocked(gen, x, z, 15)) continue;
       if (sOut) { sOut[0] = s; sOut[1] = t; }
       return d;
@@ -612,6 +815,6 @@ export function alongOf(dir, x, z) { return x * U[dir * 2] + z * U[dir * 2 + 1];
 export function acrossOf(dir, x, z) { return x * -U[dir * 2 + 1] + z * U[dir * 2]; }
 
 // The one entry point world.js calls during chunk generation.
-export function carveRoads(gen, chunk, blocks, cx, cz) {
-  return roadsFor(gen).carve(gen, chunk, blocks, cx, cz);
+export function carveRoads(gen, chunk, blocks, cx, cz, setFacing) {
+  return roadsFor(gen).carve(gen, chunk, blocks, cx, cz, setFacing);
 }

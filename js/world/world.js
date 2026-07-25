@@ -316,7 +316,13 @@ export class World {
     // columns, so they run after the terrain and scatter passes whose output
     // they cut through, and before the hand-built settlement, whose edits are
     // replayed later and always outrank them.
-    bumpTop(carveRoads(gen, chunk, blocks, cx, cz));
+    // The facing sink lets the road lay ORIENTED stair risers where it climbs.
+    // Facings live in this map rather than in the block array, so roads.js cannot
+    // write them itself; without this a road's every one-block rise was a plain
+    // cobble cube, and since only stairs and slabs are walkable steps that meant
+    // jumping once every 14 blocks of road.
+    bumpTop(carveRoads(gen, chunk, blocks, cx, cz,
+      (x, y, z, f) => { if (f) this.blockFacing.set(cellKey(x, y, z), f & 15); }));
 
     // Underground ore nodes on cave walls
     for (const cand of undergroundNodeCandidates(gen, cx, cz)) {
@@ -772,6 +778,19 @@ export class World {
     if (shape === 'door') return ((this.facingAt(x, y, z) >> 3) & 1) ? 0 : 1;
     if (shape && SHAPE_COLLISION[shape] !== undefined) return SHAPE_COLLISION[shape];
     return SLAB_BLOCKS.has(id) ? 0.6 : 1;
+  }
+
+  // Can you walk straight up onto this block, or must you jump? Only stairs and
+  // slabs — the shapes that read as a step — are walkable; a full block is a wall
+  // you jump. Stairs collide as a full cube here (SHAPE_COLLISION.stairs is 1)
+  // rather than as two boxes, so a stair's steppability cannot be inferred from
+  // its collision height and has to be asked for by shape.
+  isStep(x, y, z) {
+    const id = this.getBlock(x, y, z);
+    if (!isSolid(id)) return false;
+    const shape = BLOCKS[id]?.shape;
+    if (shape === 'stairs' || shape === 'slab') return true;
+    return SLAB_BLOCKS.has(id);
   }
 
   isWater(x, y, z) { return this.getBlock(x, y, z) === B.water; }

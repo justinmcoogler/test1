@@ -79,29 +79,37 @@ test('the player walks over carpet instead of bumping its edge', () => {
   assert.ok(p.y >= y + 1 - 0.02 && p.y <= y + 1 + SHAPE_COLLISION.carpet + 0.02, `stayed grounded on the carpet, not fallen (y=${p.y.toFixed(3)})`);
 });
 
-test('a one-block step is walked up, a two-block wall is not', () => {
-  // This reverses an earlier deliberate choice. The collider used to refuse any
-  // rise at all, so you had to jump every step — but the pathfinder routes over
-  // one-block rises, the roads grade to a one-block maximum, and every stair in
-  // the town is one-block risers, so walking anywhere built stopped you dead.
-  // A one-block rise is now walkable; two is still a wall. See STEP_H in
-  // js/player/player.js and tests/unit/physics.test.mjs.
+test('a one-block STAIR is walked up; a plain block and a two-block wall are not', () => {
+  // Only stairs and slabs are steps. A stair rise of one block is walked up; a
+  // plain full block of the same height is a wall you jump, and two blocks is a
+  // wall whatever its shape. See STEP_H and World.isStep, plus
+  // tests/unit/physics.test.mjs.
   const w = new World(4242);
   w.ensureChunk(0, 0);
   const y = 66;
   for (let x = 2; x <= 5; x++) w.setBlock(x, y, 2, B.stone, true); // floor, top y+1
-  for (let x = 6; x <= 12; x++) w.setBlock(x, y + 1, 2, B.stone, true); // step, then upper floor
+  for (let x = 6; x <= 12; x++) w.setBlock(x, y + 1, 2, B.cobble_stairs, true); // stair, then treads
   const p = new Player();
   p.x = 2.5; p.z = 2.5; p.y = y + 1; p.onGround = true;
   for (let i = 0; i < 60; i++) { p.moveAxis(w, 0.12, 0, 0); p.moveAxis(w, 0, -0.05, 0); }
-  assert.ok(p.x > 6.2, `walked up onto the step (x=${p.x.toFixed(2)})`);
+  assert.ok(p.x > 6.2, `walked up onto the stair (x=${p.x.toFixed(2)})`);
   assert.ok(Math.abs(p.y - (y + 2)) < 0.05, `standing on top of it (y=${p.y.toFixed(2)})`);
+
+  // The same rise as a PLAIN BLOCK stops you — that is the whole distinction.
+  const w3 = new World(4242);
+  w3.ensureChunk(0, 0);
+  for (let x = 2; x <= 5; x++) w3.setBlock(x, y, 2, B.stone, true);
+  for (let x = 6; x <= 12; x++) w3.setBlock(x, y + 1, 2, B.stone, true);
+  const s3 = new Player();
+  s3.x = 2.5; s3.z = 2.5; s3.y = y + 1; s3.onGround = true;
+  for (let i = 0; i < 60; i++) { s3.moveAxis(w3, 0.12, 0, 0); s3.moveAxis(w3, 0, -0.05, 0); }
+  assert.ok(s3.x < 5.8, `a plain block is a wall you jump (x=${s3.x.toFixed(2)})`);
 
   // …and the same approach against a two-block wall still stops.
   const w2 = new World(4242);
   w2.ensureChunk(0, 0);
   for (let x = 2; x <= 5; x++) w2.setBlock(x, y, 2, B.stone, true);
-  for (let x = 6; x <= 12; x++) { w2.setBlock(x, y + 1, 2, B.stone, true); w2.setBlock(x, y + 2, 2, B.stone, true); }
+  for (let x = 6; x <= 12; x++) { w2.setBlock(x, y + 1, 2, B.cobble_stairs, true); w2.setBlock(x, y + 2, 2, B.cobble_stairs, true); }
   const q = new Player();
   q.x = 2.5; q.z = 2.5; q.y = y + 1; q.onGround = true;
   for (let i = 0; i < 60; i++) { q.moveAxis(w2, 0.12, 0, 0); q.moveAxis(w2, 0, -0.05, 0); }

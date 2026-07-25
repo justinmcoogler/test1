@@ -527,26 +527,27 @@ export function buildTown(api) {
         : spiralCells;
       for (const [px, pz] of shaft) box(px, ys, pz, px, deck, pz, B.air);
 
+      // The flight runs all the way UP TO the storey above — the top tread sits at
+      // deck level, so standing on it puts you exactly on the upper floor and you
+      // step off sideways onto the deck beside you. It used to stop one riser
+      // short and finish with a plain floor block as a landing, which only worked
+      // while the collider would walk up anything; now that a step-up needs a
+      // stair or a slab (js/player/player.js), a full-block landing is a wall and
+      // every staircase in the town dead-ended one block below the storey it
+      // served. Ending flush needs no final step at all.
       if (straight) {
-        // The risers, each facing the way you walk.
         const facing = wide ? (dir > 0 ? 1 : 3) : (dir > 0 ? 0 : 2);
-        for (let i = 0; i < wallH; i++) {
+        for (let i = 0; i <= wallH; i++) {
           const [px, pz] = cell(i);
           setF(px, ys + i, pz, STAIRW, facing);
         }
-        const [lx, lz] = cell(wallH);
-        set(lx, deck, lz, floorMat);                    // the landing you step out onto
-        box(lx, deck + 1, lz, lx, deck + wallH, lz, B.air);
       } else {
         // Newel stair: one riser per quarter turn, climbing round the well.
         const FACE = [1, 0, 3, 2];
-        for (let i = 0; i < wallH; i++) {
+        for (let i = 0; i <= wallH; i++) {
           const [px, pz] = spiralCells[i & 3];
           setF(px, ys + i, pz, STAIRW, FACE[i & 3]);
         }
-        const [lx, lz] = spiralCells[wallH & 3];
-        set(lx, deck, lz, floorMat);
-        box(lx, deck + 1, lz, lx, deck + wallH, lz, B.air);
       }
     }
 
