@@ -56,25 +56,25 @@ try {
     const game = window.__game;
     const p = game.player;
     const chunk = game.world.getChunk(Math.floor(p.x / 16), Math.floor(p.z / 16));
-    chunk.spawns.push({ id: 'test_duskwing', type: 'duskwing', x: Math.floor(p.x) + 3, y: Math.floor(p.y), z: Math.floor(p.z) });
+    chunk.spawns.push({ id: 'test_noct', type: 'cave_goblin', x: Math.floor(p.x) + 3, y: Math.floor(p.y), z: Math.floor(p.z) });
     game.enemyMgr.refresh();
-    const atNight = game.enemyMgr.entities.has('test_duskwing');
+    const atNight = game.enemyMgr.entities.has('test_noct');
     const t = game.world.time % 480;
     game.world.time += (480 - t) % 480; // warp to dawn/day
     game.enemyMgr.refresh();
-    const atDay = game.enemyMgr.entities.has('test_duskwing');
+    const atDay = game.enemyMgr.entities.has('test_noct');
     return { atNight, atDay };
   });
-  check('duskwing spawns at night, fades at dawn', noct.atNight && !noct.atDay, JSON.stringify(noct));
+  check('a nocturnal goblin spawns at night, fades at dawn', noct.atNight && !noct.atDay, JSON.stringify(noct));
 
   // ---- 3. Shiny variants ----
   const shiny = await g(() => {
     const game = window.__game;
-    const def = window.__enemies.ENEMY_TYPES.mudback_boar;
+    const def = window.__enemies.ENEMY_TYPES.scrap_goblin;
     const old = def.shinyChance;
     def.shinyChance = 1;
     const chunk = game.world.getChunk(Math.floor(game.player.x / 16), Math.floor(game.player.z / 16));
-    chunk.spawns.push({ id: 'test_shiny', type: 'mudback_boar', x: Math.floor(game.player.x) - 3, y: Math.floor(game.player.y), z: Math.floor(game.player.z) });
+    chunk.spawns.push({ id: 'test_shiny', type: 'scrap_goblin', x: Math.floor(game.player.x) - 3, y: Math.floor(game.player.y), z: Math.floor(game.player.z) });
     game.enemyMgr.refresh();
     const e = game.enemyMgr.entities.get('test_shiny');
     def.shinyChance = old;
@@ -143,15 +143,15 @@ try {
     game.enemyMgr.refresh();
     const biome = game.world.gen.biomeAt(560, -120).label;
     const sylla = game.world.structure.npcs.some((n) => n.id === 'sylla');
-    const bossSpawn = [...game.enemyMgr.entities.values()].some((e) => e.type === 'rimehowl_alpha');
+    const bossSpawn = [...game.enemyMgr.entities.values()].some((e) => e.type === 'goblin_warlord');
     const chest = game.world.getChestAt(557, 68, -142);
-    const warded = chest?.meta.requiresBossDead === 'boss_rimehowl';
+    const warded = chest?.meta.requiresBossDead === 'boss_vashk';
     const forge = game.world.getBlock(564, 68, -117); // furnace at CX+4
     return { biome, sylla, bossSpawn, warded, forgeIsFurnace: forge === window.__blocks.B.furnace };
   });
   check('camp sits in forced tundra', frost.biome === 'Tundra', frost.biome);
   check('Warden Sylla exists', frost.sylla);
-  check('Rimehowl Alpha spawns at the den', frost.bossSpawn);
+  check('Vashk the Warlord spawns at the Ironring', frost.bossSpawn);
   check('den chest warded on the new boss', frost.warded, JSON.stringify(frost));
   check('field forge placed', frost.forgeIsFurnace);
 
@@ -183,7 +183,7 @@ try {
   const boss = await g(() => {
     const game = window.__game;
     game.player.maxHp = 5000; game.player.hp = 5000;
-    const alpha = [...game.enemyMgr.entities.values()].find((e) => e.type === 'rimehowl_alpha');
+    const alpha = [...game.enemyMgr.entities.values()].find((e) => e.type === 'goblin_warlord');
     if (!alpha) return { error: 'no alpha' };
     game.disableAggro = false;
     game.combatRS.engage(alpha, true);
@@ -193,15 +193,15 @@ try {
   await page.waitForTimeout(1500);
   const phase = await g(() => {
     const game = window.__game;
-    const summons = [...game.enemyMgr.entities.values()].filter((e) => e.transient && e.type === 'frostmaw_wolf');
-    const alpha = [...game.enemyMgr.entities.values()].find((e) => e.type === 'rimehowl_alpha');
+    const summons = [...game.enemyMgr.entities.values()].filter((e) => e.transient);
+    const alpha = [...game.enemyMgr.entities.values()].find((e) => e.type === 'goblin_warlord');
     const enraged = !!alpha?.enraged;
     game.combatRS.disengageAll();
     game.disableAggro = true;
     game.player.maxHp = 40; game.player.hp = 40;
     return { summonCount: summons.length, enraged };
   });
-  check('alpha phase summons pack wolves', phase.summonCount >= 2 && phase.enraged, JSON.stringify(phase));
+  check('the warlord phase calls the Ironring in', phase.summonCount >= 2 && phase.enraged, JSON.stringify(phase));
 
   // ---- 9.5 Water: breath drains underwater, drowning hurts, recovery ----
   const water = await g(() => {

@@ -543,7 +543,7 @@ test('a generated quest points the compass at its own town, not at Brookhollow',
   const HOME = [0, 64, 0];
   const markers = {};
   for (const k of ['cottage', 'frostwatch', 'stall', 'bossHall', 'dungeonAntechamber',
-    'meadow', 'wolfDen', 'mineChamber', 'grove', 'pond', 'farm', 'workshop']) markers[k] = HOME.slice();
+    'meadow', 'ironring', 'mineChamber', 'grove', 'pond', 'farm', 'workshop']) markers[k] = HOME.slice();
   for (const t of towns) markers[`town_${t.d}_${t.n}`] = t.marker.slice();
 
   const log = new QuestLog();

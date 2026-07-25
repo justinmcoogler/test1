@@ -403,19 +403,21 @@ test('every island carries creatures, banded by ring', () => {
     }
     assert.equal(bare, 0, `seed ${seed}: no island is lifeless (${bare} of ${total})`);
 
-    // The gate that matters: the Anvilhead browses the meteoric seams, so it must
-    // exist ONLY where the meteoric ore does. Meeting one on the low shelf would
-    // mean the payoff is reachable on the first mount.
+    // The gate that matters: the goblins holding the top band sit on the
+    // meteoric seams, so their liveries must exist ONLY where the meteoric ore
+    // does. Meeting a frost goblin on the low shelf would mean the payoff is
+    // guarded by something reachable on the first mount.
     for (const [ring, kinds] of byRing) {
-      if (ring < 3) assert.ok(!kinds.has('anvilhead'), `seed ${seed}: an Anvilhead on ring ${ring}`);
-      if (ring < 3) assert.ok(!kinds.has('skyveil_warden'), `seed ${seed}: a Warden on ring ${ring}`);
+      if (ring < 3) assert.ok(!kinds.has('frost_goblin'), `seed ${seed}: a frost goblin on ring ${ring}`);
+      if (ring < 3) assert.ok(!kinds.has('cave_goblin'), `seed ${seed}: a cave goblin on ring ${ring}`);
     }
-    assert.ok(byRing.get(3)?.has('anvilhead'), `seed ${seed}: the top band has Anvilheads on it`);
+    assert.ok(byRing.get(3)?.has('frost_goblin'), `seed ${seed}: the top band is held by frost goblins`);
 
     // …and something worth flying up FOR, on every band. An archipelago of
-    // nothing but predators is an obstacle course.
+    // nothing but things that hunt you is an obstacle course. The livestock up
+    // here went feral generations ago and is the reason to make the trip.
     for (const [ring, kinds] of byRing) {
-      assert.ok(kinds.has('mistgrazer') || kinds.has('tetherling'),
+      assert.ok(kinds.has('goat') || kinds.has('rabbit'),
         `seed ${seed}: ring ${ring} has life that is not hunting you`);
     }
   }

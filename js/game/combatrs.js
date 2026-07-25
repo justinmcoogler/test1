@@ -391,7 +391,7 @@ export class CombatRS {
     }
     if (entity.transient) enemyMgr.entities.delete(entity.id);
     else enemyMgr.markKilled(entity);
-    emit('combatEnd', { result: 'won', types: [entity.type], rs: true, loot, coins });
+    emit('combatEnd', { result: 'won', types: [entity.type], ids: [entity.id], rs: true, loot, coins });
     if (!this.active) emit('rsCombatOver');
     emit('rsUpdate');
   }

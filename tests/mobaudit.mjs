@@ -20,16 +20,11 @@ await page.waitForTimeout(1500);
 const result = await page.evaluate(async () => {
   const g = window.__game, r = g.renderer;
   const { evaluatePose } = await import('./js/game/mobloader.js');
+  // The whole roster — eighteen creatures, all shipped active (js/game/enemies.js).
   const ROSTER = ['cow', 'pig', 'sheep', 'goat', 'horse', 'chicken', 'duck', 'rabbit',
-    'frostmaw_wolf', 'gloomrat', 'practice_dummy', 'scrap_goblin',
-    'slagwalker', 'hookleg', 'ashen_penitent',
-    // The mounts ship active on purpose: they are the only way up to the sky
-    // archipelago, so a default world with them switched off has a whole
-    // vertical axis in it that nothing can reach.
-    'ridgewing', 'stormjack', 'riftwing',
-    // …and the sky fauna, for the same reason: an archipelago you can reach but
-    // which has nothing living on it is scenery.
-    'mistgrazer', 'lancewing', 'tetherling', 'anvilhead', 'skyveil_warden'];
+    'practice_dummy', 'rat',
+    'scrap_goblin', 'bog_goblin', 'cave_goblin', 'ash_goblin',
+    'frost_goblin', 'goblin_slinger', 'goblin_warchief', 'goblin_warlord'];
   const CELL = 150, PAD = 20;
   const cols = 3;                                   // idle | walk | ambient
   const sheet = document.createElement('canvas');

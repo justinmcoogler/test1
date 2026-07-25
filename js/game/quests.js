@@ -52,26 +52,26 @@ export const QUESTS = [
   },
   {
     id: 'q_mettle', giver: 'maren', name: 'Prove Your Mettle', requires: 'q_roof',
-    intro: `Strength you don't practice is strength you don't have. Arm yourself, batter the old training dummy, then — if your nerve holds — drive off one of the mudback boars in the west meadow. Mind their charge.`,
-    outro: `You move like someone the wilds should worry about. Take this jerkin — boarhide, fittingly.`,
+    intro: `Strength you don't practice is strength you don't have. Arm yourself, batter the old training dummy, then — if your nerve holds — go and break up that scrap-goblin camp in the west meadow. They've been at the fences a fortnight.`,
+    outro: `You move like someone the wilds should worry about. Take this jerkin — boarhide, and better on you than on a goblin.`,
     stages: [
       { type: 'craft', item: 'wooden_cudgel', count: 1, text: 'Craft a weapon (Wooden Cudgel at the Workbench)' },
       { type: 'equip', text: 'Equip your weapon (Inventory > click it > Equip)' },
-      { type: 'defeat', enemy: 'practice_dummy', count: 1, text: 'Defeat the training dummy (click it to start combat)' },
-      { type: 'defeat', enemy: 'mudback_boar', count: 1, text: 'Defeat a Mudback Boar in the west meadow' },
+      { type: 'defeat', enemy: 'practice_dummy', count: 1, marker: 'trainingYard', text: 'Defeat the training dummy (click it to start combat)' },
+      { type: 'defeat', enemy: 'scrap_goblin', count: 1, marker: 'meadow', text: 'Break up the scrap-goblin camp in the west meadow' },
       { type: 'talk', npc: 'maren', text: 'Report to Elder Maren' },
     ],
     rewards: { coins: 50, items: [{ item: 'hide_jerkin', qty: 1 }], xp: [['hunting', 60], ['vitality', 40]] },
   },
   {
     id: 'q_rootgrave', giver: 'maren', name: 'Whispers Below', requires: 'q_mettle',
-    intro: `Now the hard truth. Under our mine lies the Rootgrave — a ruin older than any map — and its guardian has begun to stir. The miners hear roots grinding stone at night. Descend past the ore chamber, clear what vermin you find, and face what waits in the deep hall. End its unrest… and whatever treasure the old ones left is yours.`,
-    outro: `The ground is quiet for the first time in months. You've done Brookhollow a service it won't forget, deep-delver. Wear this charm with pride.`,
+    intro: `Now the hard truth. Under our mine lies the Rootgrave — a ruin older than any map — and something has moved into it. The miners hear drums down there, and a big voice over the top of them. Gorrak, they're calling it. Descend past the ore chamber, clear the vermin, and face what's holding court in the deep hall. Put it down… and whatever the old ones left is yours.`,
+    outro: `No drums under the floor for the first time in months. You've done Brookhollow a service it won't forget, deep-delver. Wear this charm with pride.`,
     stages: [
       { type: 'reach', marker: 'dungeonAntechamber', radius: 10, text: 'Descend below the mine into the Rootgrave' },
-      { type: 'defeat', enemy: 'gloomrat', count: 2, text: 'Clear 2 Gloomrats from the Rootgrave' },
-      { type: 'defeat', enemy: 'rootbound_golem', count: 1, text: 'Defeat the Rootbound Golem' },
-      { type: 'chest', id: 'rootgrave_chest', text: 'Claim the Rootgrave treasure' },
+      { type: 'defeat', enemy: 'rat', count: 2, marker: 'dungeonAntechamber', text: 'Clear 2 rats from the Rootgrave antechamber' },
+      { type: 'defeat', enemy: 'goblin_warchief', count: 1, marker: 'bossHall', text: 'Defeat Gorrak the Warchief in the deep hall' },
+      { type: 'chest', id: 'rootgrave_chest', marker: 'bossHall', text: 'Claim the Rootgrave treasure' },
       { type: 'talk', npc: 'maren', text: 'Bring word (and proof) to Elder Maren' },
     ],
     rewards: { coins: 200, items: [{ item: 'veilcharm', qty: 1 }], xp: [['hunting', 150], ['archaeology', 100]] },
@@ -116,7 +116,7 @@ export const QUESTS = [
   {
     id: 'q_frontier', giver: 'maren', name: 'The Long Road North',
     requires: 'q_rootgrave',
-    intro: `With the Rootgrave quiet, I can finally answer Warden Sylla's letters. She keeps the Frostwatch — a camp far to the east, where the snow starts and the wolves grow bold. Follow the rising sun past the highlands until the grass goes white, and report to her. Pack food. Pack torches. Come back to us.`,
+    intro: `With the Rootgrave quiet, I can finally answer Warden Sylla's letters. She keeps the Frostwatch — a camp far to the east, where the snow starts and the goblins come down out of it. Follow the rising sun past the highlands until the grass goes white, and report to her. Pack food. Pack torches. Come back to us.`,
     outro: `Maren's seal, is it? Then you're the capable pair of hands she promised. Good — I'll use them.`,
     stages: [
       { type: 'reach', marker: 'frostwatch', radius: 14, text: 'Travel far east to the Frostwatch camp (follow the trail dots)' },
@@ -125,24 +125,24 @@ export const QUESTS = [
     rewards: { coins: 60, items: [{ item: 'travel_biscuit', qty: 3 }], xp: [['hunting', 120]] },
   },
   {
-    id: 'q_wolfcull', giver: 'sylla', name: 'Thin the Pack',
+    id: 'q_wolfcull', giver: 'sylla', name: 'Thin the Warband',
     requires: 'q_frontier',
-    intro: `The alpha in the old ruin breeds them faster than winter can starve them. Cull three frostmaw wolves — the den lies just north of camp, but you'll find them roaming the whole tundra. Watch for the pack: where you see one, two more are watching you.`,
-    outro: `Three pelts' worth of quiet. You fight well for a lowlander. Rest by the fire — then we talk about the alpha itself.`,
+    intro: `The one holding the Ironring feeds them faster than winter can starve them. Cull three frost goblins — the ring lies just north of camp, but you'll find them roaming the whole tundra. Watch the flanks: where you see one, two more are watching you.`,
+    outro: `Three fewer, and quieter for it. You fight well for a lowlander. Rest by the fire — then we talk about the one giving the orders.`,
     stages: [
-      { type: 'defeat', enemy: 'frostmaw_wolf', count: 3, text: 'Defeat 3 Frostmaw Wolves near the Frostwatch' },
+      { type: 'defeat', enemy: 'frost_goblin', count: 3, marker: 'ironring', text: 'Defeat 3 Frost Goblins near the Frostwatch' },
       { type: 'talk', npc: 'sylla', text: 'Report back to Warden Sylla' },
     ],
     rewards: { coins: 90, items: [{ item: 'cured_hide', qty: 2 }], xp: [['defense', 150], ['hunting', 100]] },
   },
   {
-    id: 'q_rimehowl', giver: 'sylla', name: 'The Rimehowl Alpha',
+    id: 'q_rimehowl', giver: 'sylla', name: 'Vashk the Warlord',
     requires: 'q_wolfcull',
-    intro: `Now the hard part. The alpha is old, huge, and clever — it took the ruin ring north of camp for a den and it does not share. Kill it, take whatever the den hoards, and the frontier sleeps easier for a season. When it howls, the pack comes: drop the adds fast or they'll bury you.`,
-    outro: `I heard the howl cut short from here. The Frostwatch owes you, deep-delver — wear that blade with pride, and tell Maren her faith was well spent.`,
+    intro: `Now the hard part. Vashk is old, enormous and unhurried — it took the broken stone ring north of camp for a warcamp and it does not share. Kill it, take whatever the ring hoards, and the frontier sleeps easier for a season. When it bellows, the rest come running: drop them fast or they'll bury you.`,
+    outro: `I heard the bellow cut short from here. The Frostwatch owes you, deep-delver — wear that blade with pride, and tell Maren her faith was well spent.`,
     stages: [
-      { type: 'defeat', enemy: 'rimehowl_alpha', count: 1, text: 'Slay the Rimehowl Alpha in the den north of camp' },
-      { type: 'chest', id: 'rimehowl_chest', text: 'Claim the den hoard' },
+      { type: 'defeat', enemy: 'goblin_warlord', count: 1, marker: 'ironring', text: 'Slay Vashk the Warlord at the Ironring north of camp' },
+      { type: 'chest', id: 'ironring_chest', marker: 'ironring', text: 'Claim the warcamp hoard' },
       { type: 'talk', npc: 'sylla', text: 'Report to Warden Sylla' },
     ],
     rewards: { coins: 250, xp: [['strength', 220], ['vitality', 160], ['hunting', 120]] },
@@ -348,13 +348,11 @@ export class QuestLog {
       const npcPos = stage.npc === 'maren' ? markers.cottage : stage.npc === 'sylla' ? markers.frostwatch : markers.stall;
       return { pos: npcPos, label: q.name };
     }
-    if (stage.type === 'defeat' && stage.enemy === 'rootbound_golem') return { pos: markers.bossHall, label: q.name };
-    if (stage.type === 'defeat' && stage.enemy === 'gloomrat') return { pos: markers.dungeonAntechamber, label: q.name };
-    if (stage.type === 'defeat' && stage.enemy === 'mudback_boar') return { pos: markers.meadow, label: q.name };
-    if (stage.type === 'defeat' && (stage.enemy === 'frostmaw_wolf' || stage.enemy === 'rimehowl_alpha')) {
-      return { pos: markers.wolfDen, label: q.name };
-    }
-    if (stage.type === 'chest' && stage.id === 'rimehowl_chest') return { pos: markers.wolfDen, label: q.name };
+    // `defeat` stages no longer infer a place from the mob TYPE. They cannot: the
+    // roster is eight goblin liveries reused the whole world over, so a
+    // scrap_goblin stage could point at the west meadow, the Rootgrave or a
+    // warren three rings out. Every hand-built defeat/chest stage names its own
+    // marker above, which is both unambiguous and one branch instead of six.
     if (stage.type === 'chest') return { pos: markers.bossHall, label: q.name };
     if (stage.type === 'collect' && ['copper_ore', 'tin_ore'].includes(stage.item)) return { pos: markers.mineChamber, label: q.name };
     if (stage.type === 'collect' && stage.item === 'pine_log') return { pos: markers.grove, label: q.name };

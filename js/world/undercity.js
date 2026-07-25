@@ -94,10 +94,10 @@ const FOLK = ['hold_warden', 'hold_miner', 'hold_smith', 'hold_brewer'];
 // Who is down here. Deliberately not a dungeon roster — a city has vermin and
 // the odd thing that got in, not a garrison.
 const FILL = [
-  ['gloomrat', 'crag_bat'],
-  ['gloomrat', 'crag_bat', 'seepmass'],
-  ['seepmass', 'hookleg', 'scrap_goblin'],
-  ['veil_crawler', 'gaze_orb', 'seepmass'],
+  ['rat'],
+  ['rat', 'cave_goblin'],
+  ['rat', 'cave_goblin', 'scrap_goblin'],
+  ['cave_goblin', 'goblin_slinger'],
 ];
 
 const CACHE = new Map();

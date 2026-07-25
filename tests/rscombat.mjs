@@ -86,7 +86,7 @@ try {
   // ---- 3. Aggressive style routes XP to Strength only, vs a real boar ----
   const boar = await gState(() => {
     const g = window.__game;
-    const e = [...g.enemyMgr.entities.values()].find((en) => en.type === 'mudback_boar');
+    const e = [...g.enemyMgr.entities.values()].find((en) => en.type === 'scrap_goblin');
     if (!e) return null;
     g._xpBefore = { str: g.skills.xp.strength, def: g.skills.xp.defense };
     g.player.x = e.x - 1.5; g.player.y = e.y + 0.02; g.player.z = e.z;
@@ -96,7 +96,7 @@ try {
     g.startCombat(e);
     return e.type;
   });
-  check('boar engagement', boar === 'mudback_boar');
+  check('goblin engagement', boar === 'scrap_goblin');
   let ateFood = false;
   for (let i = 0; i < 110; i++) {
     const st = await gState(() => {
@@ -126,14 +126,14 @@ try {
   check('boar defeated in aggressive style', afterBoar.over && afterBoar.alive, JSON.stringify(afterBoar));
   check('aggressive XP → Strength (not Defense)', afterBoar.strGain > 0 && afterBoar.defGain < afterBoar.strGain * 0.6,
     `str+${Math.round(afterBoar.strGain)} def+${Math.round(afterBoar.defGain)}`);
-  check('hunting XP + boar drops', afterBoar.huntXp > 0 && afterBoar.haunch >= 1);
+  check('hunting XP + goblin drops', afterBoar.huntXp > 0 && afterBoar.haunch >= 1);
 
   // ---- 4. Special attack ----
   await gState(() => {
     const g = window.__game;
     g.skills.xp.strength = Math.max(g.skills.xp.strength, 2500); // ensure Power Strike unlocked (lvl 5 ≈ 2000xp)
     const e = [...g.enemyMgr.entities.values()]
-      .find((en) => en.type === 'thicket_sprite' || en.type === 'mudback_boar');
+      .find((en) => en.type === 'rat' || en.type === 'scrap_goblin');
     g.player.x = e.x - 1.4; g.player.y = e.y + 0.02; g.player.z = e.z;
     g.player.energy = 100;
     g.startCombat(e);
@@ -182,7 +182,7 @@ try {
     for (let cx = 0; cx <= 2; cx++) for (let cz = -6; cz <= -3; cz++) g.world.ensureChunk(cx, cz);
     // clear the antechamber (as the quest intends) so only the golem answers
     for (const e of [...g.enemyMgr.entities.values()]) {
-      if (e.type !== 'rootbound_golem' && e.z < -55 && e.y < 25) g.enemyMgr.markKilled(e);
+      if (e.type !== 'goblin_warchief' && e.z < -55 && e.y < 25) g.enemyMgr.markKilled(e);
     }
     // keep them down for the whole test — a respawned rat joining the boss pull is flaky
     for (const [id, t] of g.enemyMgr.killed) g.enemyMgr.killed.set(id, g.world.time + 3600);
@@ -193,7 +193,7 @@ try {
   await page.waitForTimeout(2500);
   const bossStart = await gState(() => ({
     active: window.__game.combatRS.active,
-    boss: [...window.__game.combatRS.engaged.values()].some((s) => s.entity.type === 'rootbound_golem'),
+    boss: [...window.__game.combatRS.engaged.values()].some((s) => s.entity.type === 'goblin_warchief'),
   }));
   check('boss aggro in classic mode', bossStart.active && bossStart.boss, JSON.stringify(bossStart));
 
@@ -209,7 +209,7 @@ try {
         }
         const tiles = g.combatRS.telegraphTiles();
         const inDanger = tiles.some((t) => t.x === Math.floor(g.player.x) && t.z === Math.floor(g.player.z));
-        const boss = [...g.combatRS.engaged.values()].find((s) => s.entity.type === 'rootbound_golem')?.entity;
+        const boss = [...g.combatRS.engaged.values()].find((s) => s.entity.type === 'goblin_warchief')?.entity;
         if (inDanger) {
           g.player.x += 3; // step out of the slam
         } else if (boss && Math.hypot(boss.x - g.player.x, boss.z - g.player.z) > 2) {
@@ -235,12 +235,12 @@ try {
   const bossAfter = await gState(() => ({
     over: !window.__game.combatRS.active,
     alive: !window.__game.player.dead,
-    heart: window.__game.inventory.count('rootbound_heart'),
-    flag: !!window.__game.flags.boss_rootbound,
+    trophy: window.__game.inventory.count('warchief_standard'),
+    flag: !!window.__game.flags.boss_gorrak,
   }));
-  check('boss defeated in classic combat', bossAfter.over && bossAfter.alive && bossAfter.heart >= 1, JSON.stringify(bossAfter));
+  check('boss defeated in classic combat', bossAfter.over && bossAfter.alive && bossAfter.trophy >= 1, JSON.stringify(bossAfter));
   check('boss slam telegraphs ground tiles', sawTelegraphTiles);
-  check('boss summons rootlings at half health', sawSummons);
+  check('boss summons the warband at half health', sawSummons);
   check('boss flag set', bossAfter.flag);
   await page.screenshot({ path: 'tests/screenshots/rs-boss.png' });
 } catch (e) {

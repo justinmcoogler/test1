@@ -383,7 +383,7 @@ test('the sink contract drops a real, standable mineshaft into a live World', ()
 // ---- content ---------------------------------------------------------------
 test('every id a site places already exists — the audit stays clean', () => {
   const gen = new WorldGen(20260725);
-  const seen = { nodes: new Set(), mobs: new Set(), items: new Set() };
+  const seen = { nodes: new Set(), mobs: new Set(), items: new Set(), ids: new Set() };
   for (const seed of SEEDS) {
     const g = new WorldGen(seed);
     for (let rx = -8; rx <= 8; rx++) {
@@ -392,7 +392,7 @@ test('every id a site places already exists — the audit stays clean', () => {
           if (!site) continue;
           const { nodes, spawns, chests } = stampSite(g, site);
           for (const n of nodes) seen.nodes.add(n.type);
-          for (const s of spawns) seen.mobs.add(s.type);
+          for (const s of spawns) { seen.mobs.add(s.type); if (s.id) seen.ids.add(s.id); }
           for (const c of chests) for (const l of c.loot) seen.items.add(l.item);
         }
       }
@@ -402,9 +402,12 @@ test('every id a site places already exists — the audit stays clean', () => {
   for (const t of seen.nodes) assert.ok(NODE_TYPES[t], `node type ${t} exists`);
   for (const t of seen.mobs) assert.ok(ENEMY_TYPES[t] && !ENEMY_TYPES[t].noOverworld, `mob ${t} exists and can stand in the world`);
   for (const i of seen.items) assert.ok(ITEMS[i], `loot item ${i} exists`);
-  // The world's boss flags are keyed by mob TYPE (js/main.js BOSS_FLAGS), so a
-  // procedural copy of a flagged boss would unlock the hand-built Rootgrave and
-  // Rimehowl chests from the other side of the map.
-  for (const t of seen.mobs) assert.ok(t !== 'rootbound_golem' && t !== 'rimehowl_alpha', `${t} is not a flag-carrying boss`);
+  // The world's hand-built boss flags are keyed by SPAWN ID (js/main.js
+  // BOSS_FLAGS), precisely because both boss TYPES are also ordinary procedural
+  // content — a warchief holds the deep room of every ring-2 dungeon. So the
+  // thing that must never collide is the id, not the type.
+  for (const id of seen.ids) {
+    assert.ok(id !== 'boss_gorrak' && id !== 'boss_vashk', `${id} collides with a hand-built boss id`);
+  }
   assert.ok(ITEMS[findDungeon(gen, 6).door.keyItem], 'the door key is a real item');
 });

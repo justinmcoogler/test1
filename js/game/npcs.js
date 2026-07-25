@@ -271,7 +271,7 @@ export const DIALOGUES = {
   },
   maren_about: {
     speaker: 'maren',
-    text: () => `Brookhollow is the last friendly hearth before the wilds. We keep a grove, a mine, a pond and good soil. Beyond the valley the land grows stranger — highlands, marshes, worse. They say the Rootgrave under our mine has been… restless.`,
+    text: () => `Brookhollow is the last friendly hearth before the wilds. We keep a grove, a mine, a pond and good soil. Beyond the valley the land grows stranger — highlands, marshes, worse. They say something's taken up residence in the Rootgrave under our mine, and it has drums.`,
     options: [
       { label: 'What should I do first?', next: 'maren_quest_hub' },
       { label: 'Farewell.', action: 'close' },
@@ -297,7 +297,7 @@ export const DIALOGUES = {
   tam_work: { speaker: 'tam', dynamic: 'tam' },
   sylla_root: {
     speaker: 'sylla',
-    text: () => `Hold there — oh. You're the one Maren wrote about. Welcome to the Frostwatch, such as it is: one fire, one forge, and a great deal of wind. The wolves out here answer to something bigger. Mind the den north of camp.`,
+    text: () => `Hold there — oh. You're the one Maren wrote about. Welcome to the Frostwatch, such as it is: one fire, one forge, and a great deal of wind. The goblins out here answer to something bigger. Mind the stone ring north of camp.`,
     options: [
       { label: 'What is this place?', next: 'sylla_about' },
       { label: 'Need a hand with anything?', next: 'sylla_hub' },
@@ -306,7 +306,7 @@ export const DIALOGUES = {
   },
   sylla_about: {
     speaker: 'sylla',
-    text: () => `The Frostwatch is the valley's tripwire. Anything that comes down from the deep tundra passes us first. Lately the passing has gone one way — wolves, more every week, drawn in by the big alpha that took the old ruin. Use the forge if you need it; that's what it's for.`,
+    text: () => `The Frostwatch is the valley's tripwire. Anything that comes down from the deep tundra passes us first. Lately the passing has gone one way — goblins, more every week, drawn in by the big one that took the old ruin ring. Use the forge if you need it; that's what it's for.`,
     options: [
       { label: 'Need a hand with anything?', next: 'sylla_hub' },
       { label: 'Stay warm.', action: 'close' },

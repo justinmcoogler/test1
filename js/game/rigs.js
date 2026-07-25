@@ -1,35 +1,21 @@
 // Auto-rigger for built-in creatures: converts each flat voxel-box model into
 // an animated part hierarchy (body/head/legs/arms/tail) and generates
 // idle/walk/attack keyframes suited to the creature's movement style.
-// Imported mobs bring their own parts + animations; this covers the natives.
-import { IMPORTED_RIGS } from './mobs-imported.js';
+// Drop-in .bbmodel mobs bring their own parts + animations; this covers the
+// natives, which are authored as flat box models.
 
 // movement style per creature
 const RIGS = {
   practice_dummy: 'sway',
-  mudback_boar: 'quadruped', craghorn_ram: 'quadruped',
-  dune_stalker: 'quadruped', frostmaw_wolf: 'quadruped', rimehowl_alpha: 'quadruped',
-  gloomrat: 'scamper', bindweed: 'scamper', sunscale_serpent: 'slither',
-  thicket_sprite: 'floater', marsh_wisp: 'floater', rime_shade: 'floater',
-  hollow_watcher: 'floater', duskwing: 'floater',
-  cinder_imp: 'hopper', rootling: 'hopper',
-  moss_lurker: 'lumberer', shell_snapper: 'lumberer',
-  bog_shambler: 'biped', magma_hulk: 'biped', blight_horror: 'biped',
-  rootbound_golem: 'biped', stone_pecker: 'pecker',
-  // fantasy roster
-  pixie: 'floater', will_o_wisp: 'floater', gaze_orb: 'floater',
-  bog_ooze: 'lumberer', cave_slime: 'lumberer',
-  scrap_goblin: 'biped', frost_elemental: 'biped', grave_wight: 'biped',
-  skeletal_archer: 'biped', stone_golem: 'biped',
-  bone_hound: 'quadruped', veil_crawler: 'quadruped',
-  // textured-remake new creatures
-  meadow_stag: 'quadruped', dust_scarab: 'scamper', mire_toad: 'hopper',
-  crag_bat: 'floater', snow_hare: 'scamper', ash_salamander: 'slither',
   // farm animals
   cow: 'quadruped', pig: 'quadruped', sheep: 'quadruped', goat: 'quadruped', horse: 'quadruped',
   chicken: 'pecker', duck: 'pecker', rabbit: 'scamper',
-  // imported licensed mob pack — each id's converted rig (never overrides a native)
-  ...IMPORTED_RIGS,
+  // vermin
+  rat: 'scamper',
+  // goblins — one body plan, so one rig
+  scrap_goblin: 'biped', bog_goblin: 'biped', cave_goblin: 'biped',
+  ash_goblin: 'biped', frost_goblin: 'biped', goblin_slinger: 'biped',
+  goblin_warchief: 'biped', goblin_warlord: 'biped',
 };
 
 const cx = (b) => b.x + b.w / 2;

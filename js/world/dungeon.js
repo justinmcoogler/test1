@@ -36,31 +36,36 @@ const BOSS_H = 6;
 // masonry, the lamps, the roster and the payout all step together as you walk
 // out: a mossy crypt near home, a sunken ruin, a garrison fortress, then a vault.
 //
-// No entry names rootbound_golem or rimehowl_alpha even though both are flagged
-// bosses: main.js keys its world flags off the mob TYPE, so a procedural one
-// would silently unlock the hand-built Rootgrave and Rimehowl chests.
+// A procedural dungeon is a goblin warren that moved into somebody else's
+// masonry, so the roster is the same eight liveries you meet on the surface —
+// what changes with the ring is the MIX and the pay, not the bestiary. The two
+// chiefs are the boss slots at the deep end, and yes, that is the same warchief
+// type as the hand-built Gorrak: main.js keys its world flags off the SPAWN ID,
+// not the mob type, so killing a procedural warchief cannot unseal the
+// Rootgrave from the other side of the map. (It used to key off type, which is
+// why this comment used to say the opposite.)
 const THEMES = [
   {
     key: 'crypt', wall: 'stone_brick', floor: 'mossy_cobble', trim: 'bone_block', light: 'torch_post',
-    fill: ['gloomrat', 'ashen_penitent', 'slagwalker', 'crag_bat'], mini: 'bone_hound', boss: 'grave_wight', dig: 'dig_site',
+    fill: ['rat', 'cave_goblin', 'scrap_goblin', 'rat'], mini: 'goblin_slinger', boss: 'scrap_goblin', dig: 'dig_site',
     bossLoot: [['coin', 150], ['relic_fragment', 2], ['old_coin', 6], ['uncut_amethyst', 1]],
     keyLoot: [['coin', 40], ['torch_item', 4], ['pottery_shard', 3]],
   },
   {
     key: 'ruin', wall: 'ruin_brick', floor: 'mossy_ruin', trim: 'rootstone', light: 'torch_post',
-    fill: ['moss_lurker', 'seepmass', 'hookleg', 'bone_hound'], mini: 'shardcaster', boss: 'stone_golem', dig: 'dig_trench',
+    fill: ['cave_goblin', 'bog_goblin', 'scrap_goblin', 'rat'], mini: 'goblin_slinger', boss: 'bog_goblin', dig: 'dig_trench',
     bossLoot: [['coin', 320], ['relic_fragment', 3], ['uncut_garnet', 1], ['veilcrystal', 1], ['ironbud_charm', 1]],
     keyLoot: [['coin', 90], ['iron_bar', 2], ['bone_needle', 2]],
   },
   {
     key: 'fortress', wall: 'stone_brick', floor: 'andesite', trim: 'iron_block', light: 'sea_lantern',
-    fill: ['shardcaster', 'scrap_goblin', 'grave_wight', 'frost_elemental'], mini: 'hollow_watcher', boss: 'blight_horror', dig: 'dig_bog',
+    fill: ['cave_goblin', 'ash_goblin', 'frost_goblin', 'goblin_slinger'], mini: 'ash_goblin', boss: 'goblin_warchief', dig: 'dig_bog',
     bossLoot: [['coin', 640], ['relic_fragment', 4], ['uncut_sapphire', 1], ['veilcrystal', 2], ['keen_charm', 1]],
     keyLoot: [['coin', 200], ['silver_bar', 2], ['amber_resin', 2]],
   },
   {
     key: 'vault', wall: 'deepslate', floor: 'polished_tuff', trim: 'gilded_blackstone', light: 'glowstone',
-    fill: ['cinder_imp', 'ash_salamander', 'gaze_orb', 'rime_shade'], mini: 'veil_crawler', boss: 'magma_hulk', dig: 'dig_vault',
+    fill: ['ash_goblin', 'frost_goblin', 'goblin_slinger', 'cave_goblin'], mini: 'goblin_warchief', boss: 'goblin_warlord', dig: 'dig_vault',
     bossLoot: [['coin', 1200], ['relic_fragment', 6], ['uncut_diamond', 1], ['flawless_veilcrystal', 1], ['riftwarden_seal', 1]],
     keyLoot: [['coin', 400], ['veilcrystal', 1], ['uncut_topaz', 1]],
   },

@@ -16,13 +16,12 @@
 //   * the boss chest stays sealed until that dungeon's boss is dead.
 //
 // The last one is why the flags here are keyed by the dungeon's ANCHOR and never
-// by a mob type. main.js's BOSS_FLAGS maps a mob TYPE to a world flag, which is
-// correct for the two hand-built bosses (rootbound_golem and rimehowl_alpha are
-// each one creature in one place), and would be a bug here: `grave_wight` is a
-// crypt dungeon's boss AND ordinary garrison fodder in the fortress ring, so a
-// type-keyed flag would unseal every crypt hoard in the world the first time a
-// player cut down a wandering wight. dungeon.js flags this in its own comments;
-// this file is the other side of that contract.
+// by a mob type. Every dungeon boss is also ordinary roster fodder somewhere
+// else — `scrap_goblin` is a crypt's boss AND the commonest thing in the west
+// meadow — so a type-keyed flag would unseal every crypt hoard in the world the
+// first time a player cut down a wandering scrapper. main.js's BOSS_FLAGS has
+// the same problem and solves it the same way: it keys the two hand-built
+// bosses off their SPAWN IDS, which the generator can never mint.
 import { dungeonAt, DG_REGION, DG_HALF, KEY_ITEM } from '../world/dungeon.js';
 import { ENEMY_TYPES } from './enemies.js';
 import { ITEMS } from './items.js';

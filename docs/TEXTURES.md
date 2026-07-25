@@ -787,7 +787,7 @@ boxes) — an over-coloured tile will tint wrong. Opaque.
 | `item_veilcrystal.png` | Veilcrystal | translucent pale-violet crystal |
 | `item_flawless_veilcrystal.png` | Flawless veilcrystal | brilliant faceted violet, glowing |
 | `item_flame_opal.png` | Flame opal | fiery orange-red iridescent opal |
-| `item_rootbound_heart.png` | Rootbound heart (quest) | gnarled root-wrapped glowing heart |
+| `item_warchief_standard.png` | Warchief's standard (quest) | iron-and-bone banner pole, torn heraldry |
 | `item_waterlogged_cache.png` | Waterlogged cache | soggy dripping wooden chest/bundle |
 
 ### Batch R9 — Item icons: tools & utility (9) — transparent, 1px outline

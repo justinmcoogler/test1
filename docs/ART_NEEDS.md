@@ -63,9 +63,10 @@ pen/trough/coop, **beehive**.
 
 ## NICE-TO-HAVE
 - **Fantasy Frontier exile:** a mode toggle/badge; **retain** the existing
-  sk_magic/sk_enchanting icons, mana bar, runestone altar and fantasy mob rigs
-  (thicket_sprite, marsh_wisp, rime_shade, golems) behind that off-by-default gate —
-  no new art, just gated.
+  sk_magic/sk_enchanting icons, mana bar and runestone altar behind that
+  off-by-default gate — no new art, just gated. (The fantasy mob rigs it used to
+  name are gone: the roster is eighteen creatures now — livestock, a rat and the
+  goblins. See `docs/MOB_BRIEF.md`.)
 
 ## Rough totals
 - Non-mob NEW art: **~8 skill icons + ~40 HUD glyphs + ~250 blocks/items** (herbs,

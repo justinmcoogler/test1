@@ -486,7 +486,7 @@ const DEFS = {
   sk_tactics: ['brain'], sk_athletics: ['burst'],
   // items
   it_coin: ['coin'], it_old_coin: ['coin', '#b87e3c'],
-  it_rootbound_heart: ['heart', '#4ac06a'], it_relic_fragment: ['puzzle'],
+  it_warchief_standard: ['staff', '#c0a24a'], it_relic_fragment: ['puzzle'],
   it_waterlogged_cache: ['box', '#4a7a8a'],
   it_rough_stone: ['stone'], it_clay_lump: ['stone', '#c98a4f'],
   it_plant_fibre: ['fiber'], it_cord: ['fiber', '#c9a86a'], it_sinew: ['fiber', '#d8c9a8'],

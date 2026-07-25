@@ -836,7 +836,10 @@ export class Combat {
       for (const l of loot) inventory.add(l.item, l.qty);
       inventory.add('coin', coins);
       this.addLog(`Victory! +${coins} coins.`);
-      emit('combatEnd', { result, loot, coins, types: this.combatants.filter((c) => c.kind === 'enemy').map((c) => c.type) });
+      const foes = this.combatants.filter((c) => c.kind === 'enemy');
+      // `ids` are SPAWN ids — main.js keys the hand-built boss flags off them,
+      // because a boss TYPE is ordinary roster fodder everywhere else.
+      emit('combatEnd', { result, loot, coins, types: foes.map((c) => c.type), ids: foes.map((c) => c.entity?.id).filter(Boolean) });
     } else if (result === 'fled') {
       for (const c of this.combatants) {
         if (c.kind !== 'enemy' || !c.entity || c.summoned) continue;

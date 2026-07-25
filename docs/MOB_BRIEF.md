@@ -10,7 +10,8 @@ constructed — the machine-checkable parts are enforced by
 
 ## 1. The roster
 
-Start small and real. The shipping roster is **farm animals plus a wolf**:
+The shipping roster is **eighteen creatures, and that is all of them**:
+livestock, one rat, and eight goblins.
 
 | mob | rig | reads as |
 | --- | --- | --- |
@@ -22,11 +23,29 @@ Start small and real. The shipping roster is **farm animals plus a wolf**:
 | chicken | pecker | plump hen, comb + wattle |
 | duck | pecker | boat body, flat bill |
 | rabbit | scamper | hunched, tall ears, big hind feet |
-| wolf | quadruped | slender predator, mane, howl |
+| rat | scamper | low, grey, mostly tail |
+| practice_dummy | sway | straw sack lashed to a cross-post |
+| scrap_goblin | biped | warty green, stolen rags, pot helm |
+| bog_goblin | biped | olive and silt, plastered in mud |
+| cave_goblin | biped | bone-pale, eyes far too large |
+| ash_goblin | biped | burnt red and grey, carrying fire |
+| frost_goblin | biped | rimed blue-white under stolen furs |
+| goblin_slinger | biped | yellow-green runt with a sling |
+| goblin_warchief | biped | the same goblin, half again as big |
+| goblin_warlord | biped | bigger still, iron-shod, brand in hand |
 
-Fantasy creatures stay out of the starter set. A mob earns a place by being
-something a player already recognises; invented monsters come later, built to the
-same rules.
+**The eight goblins are ONE body plan in eight liveries.** Same skeleton every
+time — two stubby legs, a slab torso, long ears, a near-cube head — generated
+from a shared builder in `js/game/mobremakes/batch_goblins.js`. The chiefs are
+that skeleton scaled up, not a different creature. A player learns to read the
+silhouette in the first hour and from then on the only variable is COLOUR, which
+tells them where they are and what the thing can do. Do not give a livery a
+wing, a tail or a fourth limb: `tests/unit/mobs.test.mjs` asserts the plan is
+shared, and breaking it breaks the one thing that makes a small roster legible.
+
+A mob earns a place by being something the world actually needs. The roster was
+sixty natives plus a ninety-six-model import pack once, and it read like a
+bestiary someone was filling in rather than a place someone lived.
 
 ## 2. Geometry — the non-negotiables
 

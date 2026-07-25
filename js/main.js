@@ -209,9 +209,9 @@ class Game {
         if (mobSkinOverride(type)) registerRemadeMob(this.renderer, type, def);
       }
     });
-    // Imported Blockbench models (assets/mobs/*.bbmodel drop-ins + the licensed
-    // pack in js/gfx/mobpack-imported.js) fully replace a type's model — decoded
-    // + registered async once ready. Pack mobs are admin-activated, not spawned.
+    // Imported Blockbench models (assets/mobs/*.bbmodel drop-ins) fully replace a
+    // type's model — decoded + registered async once ready. A drop-in never wins
+    // over a hand-authored native's id.
     registerImportedMobs(this.renderer).then((done) => {
       if (done.length) console.log(`[mobpack] ${done.length} imported model(s) active`);
     });
@@ -374,8 +374,8 @@ class Game {
     on('combatFx', (fx) => this.onCombatFx(fx));
     on('questCompleted', () => { this.autosaveTimer = Math.min(this.autosaveTimer, 2); });
     // A procedural dungeon's two flagged bosses: the key holder on the way in and
-    // the boss behind the grate. Keyed by SPAWN ID, not mob type — see the note in
-    // js/game/dungeonlock.js and BOSS_FLAGS at the foot of this file.
+    // the boss behind the grate. Keyed by SPAWN ID, as the hand-built pair are —
+    // see js/game/dungeonlock.js and BOSS_FLAGS at the foot of this file.
     on('enemyKilled', ({ id, boss }) => this.onDungeonBossKilled(id, boss));
     on('nodeDepleted', ({ node }) => {
       const [x, y, z] = [node.x, node.y, node.z];
@@ -1358,11 +1358,11 @@ class Game {
 
   // Why this chest won't open, or null.
   //
-  // Hand-built boss chests carry `requiresBossDead`, a world flag keyed by mob
-  // TYPE (js/world/structures.js + BOSS_FLAGS below). A procedural dungeon's
-  // hoard cannot use that: its boss type is ordinary roster fodder elsewhere in
-  // the world, so one kill anywhere would unseal every dungeon of that theme. It
-  // is keyed by the dungeon's own anchor instead.
+  // Hand-built boss chests carry `requiresBossDead`, a world flag keyed by the
+  // boss's SPAWN ID (js/world/structures.js + BOSS_FLAGS below). A procedural
+  // dungeon's hoard cannot use those flags at all: its boss type is ordinary
+  // roster fodder elsewhere in the world. It is keyed by the dungeon's own
+  // anchor instead.
   chestSealedReason(id) {
     const meta = this.world.chestMeta.get(id);
     if (!meta) return null;
@@ -2061,8 +2061,8 @@ class Game {
   onCombatEnd(e) {
     if (e.rs) {
       // classic-mode kill: no arena teardown, just world-state consequences
-      for (const [type, info] of Object.entries(BOSS_FLAGS)) {
-        if (e.types?.includes(type)) {
+      for (const [spawnId, info] of Object.entries(BOSS_FLAGS)) {
+        if (e.ids?.includes(spawnId)) {
           this.flags[info.flag] = true;
           this.ui.toast(info.toast, 'gold');
           SFX.victory();
@@ -2079,9 +2079,10 @@ class Game {
     if (result === 'won') {
       SFX.victory();
       for (const t of this.combat.combatants.filter((c) => c.kind === 'enemy')) {
-        if (t.type === 'rootbound_golem') {
-          this.flags.boss_rootbound = true;
-          this.ui.toast('The Rootgrave falls silent…', 'gold');
+        const info = BOSS_FLAGS[t.entity?.id];
+        if (info) {
+          this.flags[info.flag] = true;
+          this.ui.toast(info.toast, 'gold');
         }
       }
       this.autosaveTimer = Math.min(this.autosaveTimer, 2);
@@ -2602,10 +2603,16 @@ function gatherVerb(def) {
 
 const TOOL_NAMES = { axe: 'an axe', pickaxe: 'a pickaxe', shovel: 'a shovel', rod: 'a fishing rod', hoe: 'a hoe' };
 
-// world-state consequences of boss kills (classic combat path)
+// World-state consequences of the two HAND-BUILT boss kills.
+//
+// Keyed by SPAWN ID, not by mob type. Both bosses are goblin chiefs, and a
+// warchief is also the boss of any ring-2 procedural dungeon — keying by type
+// would have let a warren three thousand blocks away unseal the Rootgrave
+// hoard. Spawn ids are unique to the hand-built sites (js/world/structures.js),
+// so this cannot collide with anything the generator places.
 const BOSS_FLAGS = {
-  rootbound_golem: { flag: 'boss_rootbound', toast: 'The Rootgrave falls silent…' },
-  rimehowl_alpha: { flag: 'boss_rimehowl', toast: 'The Rimehowl Alpha is slain — the frontier can breathe.' },
+  boss_gorrak: { flag: 'boss_gorrak', toast: 'The Rootgrave falls silent — Gorrak is down.' },
+  boss_vashk: { flag: 'boss_vashk', toast: 'Vashk the Warlord is slain — the frontier can breathe.' },
 };
 
 function normAngle(a) {

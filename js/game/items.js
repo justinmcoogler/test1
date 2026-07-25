@@ -19,7 +19,7 @@ function it(id, label, opts = {}) {
 
 // ---- currencies & quest items ----
 it('coin', 'Ember Coin', { stack: 9999, type: 'currency' });
-it('rootbound_heart', 'Rootbound Heart', { stack: 1, type: 'quest', desc: 'The still-pulsing core of the Rootgrave guardian.' });
+it('warchief_standard', 'Warchief\'s Standard', { stack: 1, type: 'quest', desc: 'Gorrak\'s banner-pole, taken out of the Rootgrave. Iron, bone and somebody else\'s heraldry.' });
 it('relic_fragment', 'Relic Fragment', { desc: 'A piece of something ancient. Enchanters prize these.' });
 // The one key in the world. Carried by the mini-boss guarding a procedural
 // dungeon's boss room (js/world/dungeon.js `theme.mini`) and spent turning that
@@ -54,7 +54,7 @@ it('woven_cloth', 'Woven Cloth');
 it('pottery_shard', 'Pottery Shard');
 it('old_coin', 'Weathered Coin');
 it('bone_needle', 'Bone Needle');
-it('spider_silk', 'Spider Silk', { desc: 'Tough, slightly tacky thread. Weavers pay well for a clean skein.' });
+it('spider_silk', 'Spider Silk', { desc: 'Tough, slightly tacky thread, cut from the trip-lines cave goblins string across the dark. Weavers pay well for a clean skein.' });
 it('grave_rot', 'Grave Rot', { desc: 'Sour flesh off a walking corpse. Tanners boil it down; nobody eats it.' });
 
 // ---- herbs & produce ----
@@ -130,7 +130,7 @@ weapon('boneshard_spear', 'Boneshard Spear', 'melee', { atk: 8, acc: 9, spd: 2, 
 weapon('thornwood_bow', 'Thornwood Bow', 'ranged', { atk: 5, acc: 8, spd: 1, crit: 7, range: 6, dur: 160 }, 'Fires slivers of hardened thorn.');
 weapon('recurve_silverbow', 'Silverbark Recurve', 'ranged', { atk: 9, acc: 10, spd: 1, crit: 9, range: 7, dur: 320 }, 'Silent, springy, deadly at distance.');
 weapon('ember_staff', 'Ember Staff', 'magic', { atk: 6, acc: 7, spd: 0, crit: 5, range: 5, dur: 240 }, 'A staff warm to the touch.');
-weapon('frostbrand_blade', 'Frostbrand Blade', 'melee', { atk: 12, acc: 8, spd: 1, crit: 8, dur: 420 }, 'Torn from the Rimehowl den. Cold enough to burn.');
+weapon('frostbrand_blade', 'Frostbrand Blade', 'melee', { atk: 12, acc: 8, spd: 1, crit: 8, dur: 420 }, 'Taken off Vashk at the Ironring. Cold enough to burn.');
 
 // ---- armor ----
 // slot: head|body|legs|hands|feet|off. stats trade off armor/evasion/speed/etc.

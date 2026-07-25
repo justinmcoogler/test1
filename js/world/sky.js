@@ -76,17 +76,23 @@ const CRUSTS = [
   { top: B.snow, soil: B.gravel, core: B.deepslate, keel: B.deepslate, soilD: 2 },
 ];
 
-// What LIVES up here, by ring. The Mistgrazer is on every band on purpose: it is
-// the reason to fly up at all, rather than only things that try to stop you. An
-// archipelago populated purely by predators is an obstacle course, not a place.
+// What LIVES up here, by ring.
 //
-// The Anvilhead is top-band only because it browses the meteoric seams — it
-// guards the payoff by standing on it. The Warden is one per high cluster.
+// The goblins got to the archipelago first — which is the answer to the obvious
+// question about the halls and the bridges up there, because somebody built
+// them and it was not you. Their liveries band the same way the islands do:
+// scrappers on the low shelf, a mixed warband in the middle, and frost goblins
+// on the snow-capped top rocks where the meteoric iron is.
+//
+// The grazers matter as much as the fighters. An archipelago populated purely
+// by things that try to stop you is an obstacle course, not a place, so the
+// low and middle bands carry livestock gone feral on the grass islands — the
+// reason to fly up is that there is something up there worth the trip.
 const FAUNA = [
   null,
-  [['mistgrazer', 3], ['tetherling', 2]],
-  [['mistgrazer', 3], ['tetherling', 2], ['lancewing', 2]],
-  [['mistgrazer', 2], ['lancewing', 3], ['anvilhead', 2], ['tetherling', 1]],
+  [['goat', 3], ['rabbit', 2], ['scrap_goblin', 2], ['rat', 1]],
+  [['goat', 2], ['scrap_goblin', 3], ['goblin_slinger', 2], ['rabbit', 1]],
+  [['frost_goblin', 3], ['goblin_slinger', 2], ['cave_goblin', 2], ['goat', 1]],
 ];
 
 // Ore on an island, by ring. Meteoric only exists in the top band: that is the
@@ -268,10 +274,11 @@ function buildIsland(gen, rx, rz) {
         z: is.cz + Math.round(Math.sin(ba) * is.r * bd),
       });
     }
-    // One Warden to a high cluster, over the biggest rock — the thing at the top
-    // of the sky, and it should be a meeting rather than a patrol.
+    // One warchief to a high cluster, over the biggest rock. Somebody is in
+    // charge of the sky holdings and this is them — a meeting rather than a
+    // patrol, standing on the meteoric seam it is there to sit on.
     if (ring === 3 && is === isles[0] && rand() < 0.5) {
-      is.beasts.push({ type: 'skyveil_warden', x: is.cx + keepOut + 3, z: is.cz, boss: true });
+      is.beasts.push({ type: 'goblin_warchief', x: is.cx + keepOut + 3, z: is.cz, boss: true });
     }
   }
 

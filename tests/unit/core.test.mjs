@@ -133,9 +133,21 @@ test('rings: difficulty is distance, and a new player starts in ring 0', () => {
 test('rings: the starting bowl spawns wildlife but nothing ring-gated', () => {
   // Which mobs are held back is read from the biome tables, so re-tiering the
   // roster keeps this honest without editing the test.
-  const gated = new Set();
-  for (const b of Object.values(BIOMES)) for (const e of b.enemies || []) if (e.ring > 0) gated.add(e.type);
-  assert.ok(gated.size >= 6, 'the hostile roster should be ring-gated');
+  //
+  // "Held back" means the type has NO ungated entry anywhere. The old version
+  // of this asked whether a type was gated in *any* biome, which flags a mob
+  // that legitimately spawns at ring 0 somewhere else — `scrap_goblin` is the
+  // starting bowl's own hostile wildlife (the quest chain's first fight is
+  // against one) and is also held back out on the badlands. That is correct
+  // design and it should not read as a leak.
+  const seen = new Set(), ungatedSomewhere = new Set();
+  for (const b of Object.values(BIOMES)) {
+    for (const e of b.enemies || []) { seen.add(e.type); if (!(e.ring > 0)) ungatedSomewhere.add(e.type); }
+  }
+  const gated = new Set([...seen].filter((t) => !ungatedSomewhere.has(t)));
+  // Four is the honest floor for an eighteen-creature roster where eight are
+  // livestock and two are bosses that never enter a biome table at all.
+  assert.ok(gated.size >= 4, `the hostile roster should be ring-gated (got ${gated.size})`);
 
   const w = new World(20260725);
   const found = new Set();
@@ -261,8 +273,11 @@ test('starter structures: chests/npcs/nodes/spawns are valid', () => {
   assert.equal(s.npcs.length, 4); // Maren, Tam, Warden Sylla, and Pip (Numbers Meadow guide)
   assert.ok(s.npcs.some((n) => n.id === 'sylla'));
   assert.ok(s.npcs.some((n) => n.id === 'pip'));
-  assert.ok(s.spawns.some((sp) => sp.type === 'rootbound_golem' && sp.boss));
-  assert.ok(s.spawns.some((sp) => sp.type === 'rimehowl_alpha' && sp.boss));
+  // The two hand-built bosses, asserted by SPAWN ID rather than by type: both
+  // are goblin chiefs, and a warchief is also the boss of any ring-2 procedural
+  // dungeon, so the id is the only thing that identifies *these* two.
+  assert.ok(s.spawns.some((sp) => sp.id === 'boss_gorrak' && sp.type === 'goblin_warchief' && sp.boss));
+  assert.ok(s.spawns.some((sp) => sp.id === 'boss_vashk' && sp.type === 'goblin_warlord' && sp.boss));
   assert.ok(s.nodes.filter((n) => n.type.startsWith('ore_')).length >= 5);
   assert.ok(s.nodes.some((n) => n.type === 'fishing_spot'));
   for (const n of s.nodes) assert.ok(NODE_TYPES[n.type], `unknown node ${n.type}`);
@@ -282,7 +297,8 @@ test('quests: chain is well-formed, rewards exist', () => {
     assert.ok(NPC_DEFS[q.giver], `${q.id} unknown giver`);
   }
   // tutorial chain reaches the boss
-  assert.ok(QUESTS.some((q) => q.stages.some((s) => s.type === 'defeat' && s.enemy === 'rootbound_golem')));
+  assert.ok(QUESTS.some((q) => q.stages.some((s) => s.type === 'defeat' && s.enemy === 'goblin_warchief')));
+  assert.ok(QUESTS.some((q) => q.stages.some((s) => s.type === 'defeat' && s.enemy === 'goblin_warlord')));
 });
 
 test('dialogue graph has no dangling links', () => {

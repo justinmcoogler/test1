@@ -60,7 +60,7 @@ try {
   await gState(() => {
     const g = window.__game;
     for (const e of [...g.enemyMgr.entities.values()]) {
-      if (e.type !== 'rootbound_golem' && e.z < -55 && e.y < 25) g.enemyMgr.markKilled(e);
+      if (e.type !== 'goblin_warchief' && e.z < -55 && e.y < 25) g.enemyMgr.markKilled(e);
     }
     for (const [id, t] of g.enemyMgr.killed) g.enemyMgr.killed.set(id, g.world.time + 3600);
   });
@@ -77,7 +77,7 @@ try {
     const g = window.__game;
     return {
       active: g.combat.active,
-      vsBoss: g.combat.active && g.combat.enemies().some((e) => e.type === 'rootbound_golem'),
+      vsBoss: g.combat.active && g.combat.enemies().some((e) => e.type === 'goblin_warchief'),
       playerHp: g.combat.playerC?.maxHp,
     };
   });
@@ -155,16 +155,16 @@ try {
     return {
       combatOver: !g.combat.active,
       alive: !g.player.dead,
-      heart: g.inventory.count('rootbound_heart'),
-      flag: !!g.flags.boss_rootbound,
-      bossGone: ![...g.enemyMgr.entities.values()].some((e) => e.type === 'rootbound_golem'),
+      trophy: g.inventory.count('warchief_standard'),
+      flag: !!g.flags.boss_gorrak,
+      bossGone: ![...g.enemyMgr.entities.values()].some((e) => e.type === 'goblin_warchief'),
       huntOrTactics: g.skills.xp.tactics,
     };
   });
   check('boss defeated', after.combatOver && after.alive && after.bossGone, JSON.stringify(after));
   check('boss telegraphed attacks during fight', sawTelegraph);
-  check('phase 2 summoned rootlings', sawPhase);
-  check('boss trophy dropped', after.heart >= 1);
+  check('phase 2 summoned the warband', sawPhase);
+  check('boss trophy dropped', after.trophy >= 1);
   check('boss flag set (chest unsealed)', after.flag);
   check(`fight length reasonable`, rounds >= 4, `${rounds} rounds`);
   await page.screenshot({ path: 'tests/screenshots/boss-after.png' });
@@ -195,9 +195,9 @@ try {
     // spawn a fresh rat right here so the hopeless fight is deterministic
     g.player.x = 24.5; g.player.y = 47.02; g.player.z = -64.5;
     g.player.vx = g.player.vy = g.player.vz = 0;
-    const def = window.__enemies.ENEMY_TYPES.gloomrat;
+    const def = window.__enemies.ENEMY_TYPES.rat;
     g.enemyMgr.entities.set('test_rat', {
-      id: 'test_rat', type: 'gloomrat', def,
+      id: 'test_rat', type: 'rat', def,
       x: 25.5, y: 13, z: -64.5, homeX: 25.5, homeZ: -64.5,
       yaw: 0, hp: def.hp, wanderT: 99, transient: true,
     });

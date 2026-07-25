@@ -192,10 +192,15 @@ export function buildStarterStructures() {
   spawns.push({ id: 'dummy1', type: 'practice_dummy', x: 12, y: F, z: 12, fixed: true });
   set(8, F, 8, B.torch_post); set(16, F, 16, B.torch_post);
 
-  // ---- Boar meadow (for the hunting quest) -------------------------------
-  spawns.push({ id: 'boar_m1', type: 'mudback_boar', x: -22, y: F, z: 22, fixed: true });
-  spawns.push({ id: 'boar_m2', type: 'mudback_boar', x: -26, y: F, z: 27, fixed: true });
-  spawns.push({ id: 'sprite_m1', type: 'thicket_sprite', x: -27, y: F, z: 20, fixed: true });
+  // ---- West meadow scrap camp (for the first fight of the chain) ----------
+  // Four scrappers and nothing else. This is the first real fight in the game,
+  // so it is the one livery that spawns ungated in the starting bowl and there
+  // is deliberately no slinger in it — learning that goblins come in numbers is
+  // one lesson, and learning that some of them shoot is a later one.
+  spawns.push({ id: 'gob_m1', type: 'scrap_goblin', x: -22, y: F, z: 22, fixed: true });
+  spawns.push({ id: 'gob_m2', type: 'scrap_goblin', x: -26, y: F, z: 27, fixed: true });
+  spawns.push({ id: 'gob_m3', type: 'scrap_goblin', x: -20, y: F, z: 27, fixed: true });
+  spawns.push({ id: 'gob_m4', type: 'scrap_goblin', x: -27, y: F, z: 20, fixed: true });
 
   // ---- Mine: arch, stairway, ore chamber ---------------------------------
   // Entrance arch at z=-24, stairs descend northward (z decreasing).
@@ -239,7 +244,7 @@ export function buildStarterStructures() {
   nodes.push({ type: 'ore_iron', x: 19, y: 19, z: -52 });
   // the mine's cut face reaches stratified ground the surface test-pits can't
   nodes.push({ type: 'dig_trench', x: 21, y: 19, z: -48 });
-  spawns.push({ id: 'rat_mine1', type: 'gloomrat', x: 27, y: 19, z: -48, fixed: true });
+  spawns.push({ id: 'rat_mine1', type: 'rat', x: 27, y: 19, z: -48, fixed: true });
 
   // ---- Descent to the Rootgrave (dungeon) --------------------------------
   for (let i = 0; i <= 5; i++) {
@@ -259,9 +264,9 @@ export function buildStarterStructures() {
   box(20, 17, -68, 28, 17, -61, B.rootstone);
   hollowWalls(19, -69, 29, -60, 13, 16, B.mossy_ruin);
   for (let y = 13; y <= 15; y++) for (let x = 23; x <= 25; x++) set(x, y, -60, B.air); // entry mouth
-  spawns.push({ id: 'rat_d1', type: 'gloomrat', x: 22, y: 13, z: -63, fixed: true });
-  spawns.push({ id: 'rat_d2', type: 'gloomrat', x: 26, y: 13, z: -65, fixed: true });
-  spawns.push({ id: 'creeper_d1', type: 'bindweed', x: 24, y: 13, z: -67, fixed: true });
+  spawns.push({ id: 'rat_d1', type: 'rat', x: 22, y: 13, z: -63, fixed: true });
+  spawns.push({ id: 'rat_d2', type: 'rat', x: 26, y: 13, z: -65, fixed: true });
+  spawns.push({ id: 'gob_d1', type: 'scrap_goblin', x: 24, y: 13, z: -67, fixed: true });
   nodes.push({ type: 'dig_site', x: 21, y: 13, z: -67 });
   nodes.push({ type: 'dig_bog', x: 27, y: 13, z: -62 }); // waterlogged floor, so organics survive
   set(20, 13, -61, B.torch_post); set(28, 13, -67, B.torch_post);
@@ -280,12 +285,12 @@ export function buildStarterStructures() {
   }
   set(18, 13, -71, B.torch_post); set(30, 13, -71, B.torch_post);
   set(18, 13, -81, B.torch_post); set(30, 13, -81, B.torch_post);
-  spawns.push({ id: 'boss_rootbound', type: 'rootbound_golem', x: 24, y: 13, z: -76, fixed: true, boss: true });
+  spawns.push({ id: 'boss_gorrak', type: 'goblin_warchief', x: 24, y: 13, z: -76, fixed: true, boss: true });
   set(24, 13, -80, B.chest_block);
   chests.push({
-    id: 'rootgrave_chest', x: 24, y: 13, z: -80, requiresBossDead: 'boss_rootbound',
+    id: 'rootgrave_chest', x: 24, y: 13, z: -80, requiresBossDead: 'boss_gorrak',
     loot: [
-      { item: 'rootbound_heart', qty: 1 }, { item: 'coin', qty: 120 },
+      { item: 'warchief_standard', qty: 1 }, { item: 'coin', qty: 120 },
       { item: 'ironbud_charm', qty: 1 }, { item: 'relic_fragment', qty: 2 },
     ],
   });
@@ -327,7 +332,9 @@ export function buildStarterStructures() {
     set(CX + 3, F2, CZ + 2, B.workbench);
     set(CX + 6, F2, CZ + 4, B.campfire);
 
-    // ---- the Rimehowl den: a broken ring of ancient stone, north of camp --
+    // ---- the Ironring: a broken ring of ancient stone, north of camp -----
+    // Vashk took it for a warcamp because it is the only walls for forty
+    // blocks. The ring is older than the goblins and it will outlast them.
     const DZ = CZ - 16; // z = -136, fully inside the pinned-flat zone
     for (let a = 0; a < 24; a++) {
       const ang = (a / 24) * Math.PI * 2;
@@ -341,13 +348,13 @@ export function buildStarterStructures() {
     for (let x = CX - 6; x <= CX + 6; x++) for (let z = DZ - 6; z <= DZ + 6; z++) {
       if (Math.hypot(x - CX, z - DZ) <= 7 && (x * 5 + z * 11) % 4 === 0) set(x, G2, z, B.snow_grass);
     }
-    spawns.push({ id: 'boss_rimehowl', type: 'rimehowl_alpha', x: CX, y: F2, z: DZ, fixed: true, boss: true });
-    spawns.push({ id: 'den_wolf1', type: 'frostmaw_wolf', x: CX - 5, y: F2, z: DZ + 4, fixed: true });
-    spawns.push({ id: 'den_wolf2', type: 'frostmaw_wolf', x: CX + 5, y: F2, z: DZ - 3, fixed: true });
-    spawns.push({ id: 'den_shade1', type: 'rime_shade', x: CX + 4, y: F2, z: DZ + 5, fixed: true });
+    spawns.push({ id: 'boss_vashk', type: 'goblin_warlord', x: CX, y: F2, z: DZ, fixed: true, boss: true });
+    spawns.push({ id: 'ring_frost1', type: 'frost_goblin', x: CX - 5, y: F2, z: DZ + 4, fixed: true });
+    spawns.push({ id: 'ring_frost2', type: 'frost_goblin', x: CX + 5, y: F2, z: DZ - 3, fixed: true });
+    spawns.push({ id: 'ring_sling1', type: 'goblin_slinger', x: CX + 4, y: F2, z: DZ + 5, fixed: true });
     set(CX - 3, F2, DZ - 6, B.chest_block);
     chests.push({
-      id: 'rimehowl_chest', x: CX - 3, y: F2, z: DZ - 6, requiresBossDead: 'boss_rimehowl',
+      id: 'ironring_chest', x: CX - 3, y: F2, z: DZ - 6, requiresBossDead: 'boss_vashk',
       loot: [
         { item: 'frostbrand_blade', qty: 1 }, { item: 'coin', qty: 250 },
         { item: 'veilcrystal', qty: 2 }, { item: 'relic_fragment', qty: 2 },
@@ -419,7 +426,7 @@ export function buildStarterStructures() {
     manor: [-60, F, 0],
     spawn: [6, F, 6],
     frostwatch: [556, 34, -119],
-    wolfDen: [560, 34, -136],
+    ironring: [560, 34, -136],
     cottage: [-12, F, -7],
     workshop: [12, F, -12],
     stall: [-13, F, 9],

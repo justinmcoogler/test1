@@ -24,29 +24,22 @@ test('allMobTypes lists every registered mob, sorted', () => {
 });
 
 test('the shipped roster is active; everything else defaults OFF', () => {
-  // The starter set is deliberately small — the farm animals, plus the handful of
-  // low-tier hostiles a new world should meet (docs/MOB_BRIEF.md). The rest stay
-  // in the library but out of new worlds.
-  //
-  // The de-Minecraft pass cut rat/bob/goblin/wolf as duplicates of gloomrat/
-  // practice_dummy/scrap_goblin/frostmaw_wolf, and replaced zombie/spider/
-  // skeleton with slagwalker/hookleg/ashen_penitent.
+  // The whole roster ships active now, and that is the point: it is eighteen
+  // creatures (js/game/enemies.js), so there is no "library" of hundreds to hold
+  // back any more. Every one of them has a place in the world, so switching any
+  // of them off would leave a hole — no wildlife on the sky islands, no vermin
+  // in the mineshafts, no boss at the bottom of the Rootgrave.
   const ROSTER = ['cow', 'pig', 'sheep', 'chicken', 'duck', 'goat', 'horse', 'rabbit',
-    'frostmaw_wolf', 'gloomrat', 'practice_dummy', 'scrap_goblin',
-    'slagwalker', 'hookleg', 'ashen_penitent',
-    // The mounts ship active on purpose: they are the only way up to the sky
-    // archipelago, so a default world with them switched off has a whole
-    // vertical axis in it that nothing can reach.
-    'ridgewing', 'stormjack', 'riftwing',
-    // …and the sky fauna, for the same reason: an archipelago you can reach but
-    // which has nothing living on it is scenery.
-    'mistgrazer', 'lancewing', 'tetherling', 'anvilhead', 'skyveil_warden'];
+    'practice_dummy', 'rat',
+    'scrap_goblin', 'bog_goblin', 'cave_goblin', 'ash_goblin',
+    'frost_goblin', 'goblin_slinger', 'goblin_warchief', 'goblin_warlord'];
+  assert.equal(ROSTER.length, 18);
   for (const t of ROSTER) {
     assert.ok(ENEMY_TYPES[t], `${t} should exist in the registry`);
     assert.equal(mc.mobActive(t), true, `${t} should ship active`);
   }
-  const offRoster = mc.allMobTypes().filter((t) => !ROSTER.includes(t));
-  for (const t of offRoster) assert.equal(mc.mobActive(t), false, `${t} should ship inactive`);
+  // Nothing is in the registry that is not on the list.
+  assert.deepEqual(mc.allMobTypes().filter((t) => !ROSTER.includes(t)), []);
 
   // synthetic imported entry exercises the imported fallback branch
   ENEMY_TYPES.__imp_test = { label: 'Test', imported: true, drops: [] };

@@ -26,9 +26,10 @@ import {
   markBossDead, bossChestSealed, sealedChestMsg,
 } from '../../js/game/dungeonlock.js';
 
-// Boss flags in main.js are keyed by mob type; these two are the hand-built
-// bosses that keying gets away with, because each is one creature in one place.
-const HAND_BUILT_BOSSES = ['rootbound_golem', 'rimehowl_alpha'];
+// The hand-built bosses, by SPAWN ID. main.js BOSS_FLAGS keys off these rather
+// than off the mob type, because both types (goblin_warchief, goblin_warlord)
+// are also procedural dungeon bosses out in the world.
+const HAND_BUILT_BOSSES = ['boss_gorrak', 'boss_vashk'];
 
 // A dungeon plus a world with every chunk its grate touches generated.
 // ensureChunk, not generateChunk — generateChunk does not cache, so a later
@@ -196,23 +197,31 @@ test('unlocking one dungeon leaves every other dungeon locked', () => {
   }
 });
 
-test('no procedural dungeon reuses a hand-built boss type', () => {
-  // A dungeon that spawned a rootbound_golem would let main.js BOSS_FLAGS unseal
-  // the Rootgrave chest from the far side of the world. dungeon.js keeps its
-  // rosters clear of both; this is the assertion that keeps it that way.
+test('no procedural dungeon reuses a hand-built boss SPAWN ID', () => {
+  // A dungeon that minted the id `boss_gorrak` would let main.js BOSS_FLAGS
+  // unseal the Rootgrave chest from the far side of the world. Dungeon spawn ids
+  // are `dg:<x>,<y>,<z>`, which cannot collide with a hand-authored name — this
+  // is the assertion that keeps that true. Reusing the boss TYPE is fine and
+  // deliberate: a warchief holds the deep room of every ring-2 warren.
   const w = new World(20260725);
-  const seen = new Set();
+  const types = new Set(), ids = new Set();
   for (let rx = -8; rx <= 8; rx++) {
     for (let rz = -8; rz <= 8; rz++) {
       const dg = dungeonAt(w.gen, rx, rz);
       if (!dg) continue;
-      for (const s of dg.spawns) seen.add(s.type);
+      // The id every spawn gets when the chunk stamps it (js/world/dungeon.js).
+      for (const s of dg.spawns) { types.add(s.type); ids.add(`dg:${s.x},${s.y},${s.z}`); }
     }
   }
-  assert.ok(seen.size > 8, `sampled a real spread of dungeon creatures (${seen.size})`);
-  for (const t of HAND_BUILT_BOSSES) {
-    assert.equal(seen.has(t), false, `no procedural dungeon spawns ${t}`);
+  assert.ok(types.size >= 6, `sampled a real spread of dungeon creatures (${types.size})`);
+  assert.ok(ids.size > 20, `sampled a real spread of dungeon spawns (${ids.size})`);
+  for (const id of ids) assert.ok(id.startsWith('dg:'), `${id} is not generator-minted`);
+  for (const b of HAND_BUILT_BOSSES) {
+    assert.equal(ids.has(b), false, `a procedural dungeon minted the hand-built id ${b}`);
   }
+  // The types ARE shared on purpose — this is the half of the contract that
+  // would silently break if someone "fixed" main.js back to type-keyed flags.
+  assert.ok(types.has('goblin_warchief'), 'a warchief holds the deep room of a ring-2 warren');
 });
 
 test('the boss chest carries the ring-themed payout, registered under its own id', () => {
