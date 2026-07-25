@@ -24,6 +24,18 @@ for (const ring of [1, 2, 3]) {
   const back = Math.round(is.r * 1.9 + 26);
   shots.push({ ring, name: `ring${ring}`, from: [is.cx + back, is.cz + back], at: [is.cx, is.y, is.cz] });
 }
+// …and one framing a BRIDGE: stand off to the side of the span's midpoint so
+// both islands and the deck between them are in shot.
+const bridged = isles.find((s) => s.bridges.length);
+if (bridged) {
+  const br = bridged.bridges[0];
+  const mx = (br.x0 + br.x1) / 2, mz = (br.z0 + br.z1) / 2;
+  const perp = Math.atan2(br.x1 - br.x0, -(br.z1 - br.z0));
+  const off = Math.hypot(br.x1 - br.x0, br.z1 - br.z0) * 1.1 + 40;
+  shots.push({ ring: bridged.ring, name: 'bridge',
+    from: [Math.round(mx + Math.cos(perp) * off), Math.round(mz + Math.sin(perp) * off)],
+    at: [Math.round(mx), br.y, Math.round(mz)] });
+}
 if (!shots.length) { console.error('no islands on this seed'); process.exit(1); }
 
 const server = spawn('node', ['tests/server.mjs', String(PORT)], { stdio: 'ignore' });
@@ -68,7 +80,7 @@ try {
       }
       // Stand the player in the air at island height so the island is not a
       // speck on the horizon — this is a portrait, not a gameplay shot.
-      g.player.respawnAt(fx + 0.5, ay - 6, fz + 0.5);
+      g.player.respawnAt(fx + 0.5, ay - 4, fz + 0.5);
       g.player.vx = g.player.vy = g.player.vz = 0;
       g.player.debug = true;              // creative flight: no gravity, no collision
       for (const key of [...g.world.dirtyChunks]) {

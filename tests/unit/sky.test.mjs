@@ -22,7 +22,7 @@
 //    reason to get up there at all.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { World } from '../../js/world/world.js';
+import { World, initSlabSet } from '../../js/world/world.js';
 import { WorldGen, CHUNK, WORLD_H, ringAt } from '../../js/world/worldgen.js';
 import { stampChunkStructures } from '../../js/world/structures.js';
 import { B, BLOCKS } from '../../js/world/blocks.js';
@@ -134,8 +134,12 @@ test('the surface course is the topmost solid block, and skySurfaceAt agrees', (
       for (let b = -2; b <= 2; b++) w.ensureChunk((is.cx >> 4) + a, (is.cz >> 4) + b);
     }
     // Sample a cross of columns, not just the centre — the dome and the rim are
-    // different code paths.
-    for (const [dx, dz] of [[0, 0], [4, 0], [-4, 0], [0, 5], [0, -5], [3, 3]]) {
+    // different code paths. Kept clear of anything BUILT on the island: a hall
+    // floor or a campfire is legitimately the top block there, and this test is
+    // about the natural crust, which the build pass sits on top of.
+    const clearOf = is.build ? 11 : 0;
+    for (const [dx, dz] of [[0, 0], [4, 0], [-4, 0], [0, 5], [0, -5], [3, 3]]
+      .map(([a, b]) => [a + clearOf, b + clearOf])) {
       const x = is.cx + dx, z = is.cz + dz;
       let top = -1;
       for (let y = is.y + is.crownH + 4; y > is.y - is.keelD - 4; y--) {
@@ -270,4 +274,112 @@ test('the headroom is actually used', () => {
   const top = highestIsland(gen, 6);
   assert.ok(top > 300, `the archipelago reaches into the headroom (highest top y=${top})`);
   assert.ok(top < WORLD_H - 8, `and stays under the roof (y=${top} of ${WORLD_H})`);
+});
+
+// ---- bridges and what stands on the islands --------------------------------
+test('bridged cluster members are one place: the span is walkable, not a jump', () => {
+  // An archipelago you cannot cross is three separate errands. The span has to
+  // be WALKABLE, which in this game is stricter than "connected": only stairs
+  // and slabs are steps (World.isStep), so a plain one-block rise anywhere along
+  // the deck is a jump and the bridge has failed at its one job.
+  initSlabSet();
+  const w = new World(20260725);
+  let spans = 0;
+  const broken = [];
+  for (const s of allIslands(w.gen, 4)) {
+    for (const br of s.bridges) {
+      // load every chunk the span crosses, plus a margin for the stair flights
+      const lo = Math.min(br.x0, br.x1) - 8, hi = Math.max(br.x0, br.x1) + 8;
+      const lz = Math.min(br.z0, br.z1) - 8, hz = Math.max(br.z0, br.z1) + 8;
+      for (let cx = lo >> 4; cx <= hi >> 4; cx++) for (let cz = lz >> 4; cz <= hz >> 4; cz++) w.ensureChunk(cx, cz);
+      spans++;
+      if (spans > 6) break;
+
+      // Walk the centre line and demand every step is level, or a stair/slab.
+      const dx = br.x1 - br.x0, dz = br.z1 - br.z0;
+      const n = Math.max(Math.abs(dx), Math.abs(dz));
+      const alongX = Math.abs(dx) >= Math.abs(dz);
+      let prevY = null;
+      for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        const x = alongX ? br.x0 + Math.sign(dx) * i : Math.round(br.x0 + dx * t);
+        const z = alongX ? Math.round(br.z0 + dz * t) : br.z0 + Math.sign(dz) * i;
+        // the deck under foot, and two blocks of headroom over it
+        if (w.collisionHeight(x, br.y, z) === 0) { broken.push(`hole in the deck at ${x},${br.y},${z}`); break; }
+        if (w.collisionHeight(x, br.y + 1, z) > 0 || w.collisionHeight(x, br.y + 2, z) > 0) {
+          broken.push(`no headroom on the deck at ${x},${br.y},${z}`); break;
+        }
+        if (prevY !== null && br.y !== prevY && !w.isStep(x, br.y, z)) {
+          broken.push(`the deck steps without a stair at ${x},${br.y},${z}`);
+        }
+        prevY = br.y;
+      }
+      // …and the rails are continuous, both sides, for the whole span.
+      let railed = 0;
+      for (let i = 1; i < n; i++) {
+        const t = i / n;
+        const x = alongX ? br.x0 + Math.sign(dx) * i : Math.round(br.x0 + dx * t);
+        const z = alongX ? Math.round(br.z0 + dz * t) : br.z0 + Math.sign(dz) * i;
+        const a = alongX ? w.getBlock(x, br.y + 1, z - 1) : w.getBlock(x - 1, br.y + 1, z);
+        const b = alongX ? w.getBlock(x, br.y + 1, z + 1) : w.getBlock(x + 1, br.y + 1, z);
+        if (a === B.planks_fence && b === B.planks_fence) railed++;
+      }
+      assert.ok(railed > (n - 2) * 0.75,
+        `a span from ${br.x0},${br.z0} is railed both sides for its length (${railed}/${n - 1})`);
+    }
+    if (spans > 6) break;
+  }
+  assert.ok(spans >= 3, `there are real spans to walk (${spans})`);
+  assert.deepEqual(broken, [], 'every span must be walkable end to end');
+});
+
+test('the stair flight lands you on the higher island, not inside it', () => {
+  initSlabSet();
+  const w = new World(20260725);
+  let checked = 0;
+  for (const s of allIslands(w.gen, 4)) {
+    for (const br of s.bridges) {
+      if (br.hiY === br.y) continue;                       // level span, no flight
+      const lo = Math.min(br.x0, br.x1) - 12, hi = Math.max(br.x0, br.x1) + 12;
+      const lz = Math.min(br.z0, br.z1) - 12, hz = Math.max(br.z0, br.z1) + 12;
+      for (let cx = lo >> 4; cx <= hi >> 4; cx++) for (let cz = lz >> 4; cz <= hz >> 4; cz++) w.ensureChunk(cx, cz);
+      const ex = br.hiAtEnd ? br.x1 : br.x0, ez = br.hiAtEnd ? br.z1 : br.z0;
+      const rise = br.hiY - br.y;
+      const alongX = Math.abs(br.x1 - br.x0) >= Math.abs(br.z1 - br.z0);
+      const sgn = br.hiAtEnd ? 1 : -1;
+      const sx = alongX ? sgn * Math.sign(br.x1 - br.x0) : 0;
+      const sz = alongX ? 0 : sgn * Math.sign(br.z1 - br.z0);
+      for (let k = 1; k <= rise; k++) {
+        const x = ex + sx * k, z = ez + sz * k;
+        assert.ok(w.isStep(x, br.y + k, z),
+          `flight tread ${k} at ${x},${br.y + k},${z} must be a stair you can walk up`);
+        assert.equal(w.collisionHeight(x, br.y + k + 1, z), 0, `headroom over tread ${k}`);
+      }
+      checked++;
+      if (checked >= 4) break;
+    }
+    if (checked >= 4) break;
+  }
+  assert.ok(checked >= 1, `there are sloped spans to check (${checked})`);
+});
+
+test('islands carry buildings, and they sit ON the surface', () => {
+  const w = new World(20260725);
+  const built = [];
+  for (const s of allIslands(w.gen, 4)) for (const is of s.isles) if (is.build) built.push({ s, is });
+  assert.ok(built.length >= 6, `the archipelago is inhabited (${built.length} built islands)`);
+  const kinds = new Set(built.map((b) => b.is.build));
+  assert.ok(kinds.size >= 3, `more than one kind of place up there (${[...kinds].join(', ')})`);
+
+  for (const { is } of built.slice(0, 5)) {
+    for (let a = -2; a <= 2; a++) for (let b = -2; b <= 2; b++) w.ensureChunk((is.cx >> 4) + a, (is.cz >> 4) + b);
+    // Whatever it is, there is something man-made standing above the crust at the
+    // island's centre, and it is not floating over a hole.
+    let solidBelow = false;
+    for (let y = is.y + is.crownH; y > is.y - 4; y--) if (w.getBlock(is.cx, y, is.cz) !== B.air) { solidBelow = true; break; }
+    assert.ok(solidBelow, `${is.build} at ${is.cx},${is.cz} stands on rock`);
+    let stack = 0;
+    for (let y = is.y; y < is.y + is.crownH + 9; y++) if (w.getBlock(is.cx, y, is.cz) !== B.air) stack++;
+    assert.ok(stack >= 2, `${is.build} at ${is.cx},${is.cz} actually built something (${stack} blocks up the centre)`);
+  }
 });

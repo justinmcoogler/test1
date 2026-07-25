@@ -85,6 +85,22 @@ const ORES = [
   ['ore_meteoric', 'ore_meteoric', 'ore_platinum', 'ore_gold'],
 ];
 
+// Bridges. BRIDGE_RISE is bounded by what a stair flight at one end can climb
+// without eating the whole span; BRIDGE_MAX by how far a plank span reads as a
+// bridge rather than a tightrope.
+const BRIDGE_RISE = 7;
+const BRIDGE_MAX = 96;
+const BRIDGE_HW = 1;              // deck half-width: three planks across
+
+// What stands on an island, by ring. The low shelf is somewhere people still
+// go, the middle is what is left of them, the top is older than either.
+const SITE_KINDS = [
+  null,
+  ['eyrie', 'camp'],
+  ['eyrie', 'ruin'],
+  ['ruin', 'hall'],
+];
+
 const CACHE = new Map();
 const CACHE_CAP = 64;
 
@@ -161,7 +177,48 @@ function buildIsland(gen, rx, rz) {
     if (y + crownH > top) top = y + crownH;
   }
   if (!isles.length) return null;
-  return { x: ax, z: az, ring, isles, minX, maxX, minZ, maxZ, top, band };
+
+  // ---- bridges -------------------------------------------------------------
+  // An archipelago you cannot walk across is three separate errands. Every pair
+  // of members close enough in height gets a plank span, so a cluster is ONE
+  // place: land once, walk the rest.
+  //
+  // Height is the constraint that matters. The deck runs level at the LOWER of
+  // the two rims and the higher end gets a stair flight, and only stairs and
+  // slabs are walkable steps in this game (World.isStep), so a pair too far
+  // apart vertically would need a flight longer than the span. Pairs beyond
+  // BRIDGE_RISE simply go unbridged.
+  const bridges = [];
+  for (let i = 0; i < isles.length; i++) {
+    for (let j = i + 1; j < isles.length; j++) {
+      const a = isles[i], b = isles[j];
+      if (Math.abs(a.y - b.y) > BRIDGE_RISE) continue;
+      const span = Math.hypot(b.cx - a.cx, b.cz - a.cz);
+      if (span > BRIDGE_MAX) continue;
+      const ux = (b.cx - a.cx) / span, uz = (b.cz - a.cz) / span;
+      // Start and end INSIDE each rim, so the deck lands on rock rather than
+      // stopping in mid-air short of a wobbled edge.
+      const ra = rimAt(a, ux, uz) * 0.82, rb = rimAt(b, -ux, -uz) * 0.82;
+      const x0 = Math.round(a.cx + ux * ra), z0 = Math.round(a.cz + uz * ra);
+      const x1 = Math.round(b.cx - ux * rb), z1 = Math.round(b.cz - uz * rb);
+      if (Math.hypot(x1 - x0, z1 - z0) < 4) continue;      // rims already touch
+      bridges.push({ x0, z0, x1, z1, y: Math.min(a.y, b.y), hiY: Math.max(a.y, b.y), hiAtEnd: b.y > a.y });
+    }
+  }
+
+  // ---- what stands on them -------------------------------------------------
+  // One structure per island, themed by ring, and some islands left bare so
+  // arriving somewhere built means something. The largest member of a cluster
+  // always gets one — that is the island you aim for.
+  const big = isles.reduce((m, i) => (i.r > m.r ? i : m), isles[0]);
+  for (const is of isles) {
+    if (is !== big && rand() > 0.55) continue;
+    if (is.r < 11) continue;                                // no room for anything
+    is.build = SITE_KINDS[ring][Math.floor(rand() * SITE_KINDS[ring].length)];
+    is.buildRot = Math.floor(rand() * 4);
+  }
+
+  return { x: ax, z: az, ring, isles, bridges, minX, maxX, minZ, maxZ, top, band };
 }
 
 export function skyAt(gen, rx, rz) {
@@ -174,6 +231,165 @@ export function skyAt(gen, rx, rz) {
 function rimAt(is, dx, dz) {
   const a = Math.atan2(dz, dx);
   return is.r * (1 + is.wob.amp * Math.sin(a * is.wob.k + is.wob.ph));
+}
+
+// The surface height of an island at one column — the same dome the rasteriser
+// lays, so anything built on top lands flush with the turf rather than sunk into
+// it or hovering over it.
+function surfOf(is, x, z) {
+  const dx = x - is.cx, dz = z - is.cz;
+  const d = Math.hypot(dx, dz), rim = rimAt(is, dx, dz);
+  if (d > rim) return -1;
+  const t = 1 - d / rim;
+  return is.y + Math.round(is.crownH * t * t * (3 - 2 * t));
+}
+
+// ---- bridges ---------------------------------------------------------------
+// A plank deck three wide with a fence rail down each edge, run along whichever
+// world axis the span is more nearly parallel to so the deck stays axis-aligned
+// and the rails stay continuous. The deck is level; the climb onto the higher
+// island is a stair flight at that end, because only stairs and slabs are
+// walkable steps here (World.isStep) and a bare one-block rise is a jump.
+function stampBridge(br, cx, cz) {
+  const dx = br.x1 - br.x0, dz = br.z1 - br.z0;
+  const alongX = Math.abs(dx) >= Math.abs(dz);
+  const n = Math.max(Math.abs(dx), Math.abs(dz));
+  if (n < 1) return;
+  const sx = Math.sign(dx), sz = Math.sign(dz);
+  const y = br.y;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const x = alongX ? br.x0 + sx * i : Math.round(br.x0 + dx * t);
+    const z = alongX ? Math.round(br.z0 + dz * t) : br.z0 + sz * i;
+    for (let k = -BRIDGE_HW; k <= BRIDGE_HW; k++) {
+      const px = alongX ? x : x + k, pz = alongX ? z + k : z;
+      put(px, y, pz, B.planks);
+      // Headroom: at the ends the deck runs into the island's own rock, so the
+      // walkway has to be cut clear or the bridge dead-ends in a wall.
+      put(px, y + 1, pz, B.air);
+      put(px, y + 2, pz, B.air);
+      if (Math.abs(k) === BRIDGE_HW) put(px, y + 1, pz, B.planks_fence);
+    }
+    // A pair of hanging chains every few metres, so the span reads as suspended
+    // rather than as a plank floating in the sky.
+    if (i % 7 === 3) {
+      for (let h = 1; h <= 3; h++) {
+        const px = alongX ? x : x - (BRIDGE_HW + 1), pz = alongX ? z - (BRIDGE_HW + 1) : z;
+        put(px, y - h, pz, B.chain);
+        const qx = alongX ? x : x + (BRIDGE_HW + 1), qz = alongX ? z + (BRIDGE_HW + 1) : z;
+        put(qx, y - h, qz, B.chain);
+      }
+    }
+  }
+  // The flight up onto the higher island, cut into its rim.
+  const rise = br.hiY - br.y;
+  const ex = br.hiAtEnd ? br.x1 : br.x0, ez = br.hiAtEnd ? br.z1 : br.z0;
+  const fx = br.hiAtEnd ? Math.sign(dx) : -Math.sign(dx);
+  const fz = br.hiAtEnd ? Math.sign(dz) : -Math.sign(dz);
+  const stepX = alongX ? fx : 0, stepZ = alongX ? 0 : fz;
+  for (let k = 1; k <= rise; k++) {
+    const x = ex + stepX * k, z = ez + stepZ * k;
+    for (let m = -BRIDGE_HW; m <= BRIDGE_HW; m++) {
+      const px = alongX ? x : x + m, pz = alongX ? z + m : z;
+      put(px, br.y + k, pz, B.stone_brick_stairs);
+      put(px, br.y + k + 1, pz, B.air);
+      put(px, br.y + k + 2, pz, B.air);
+    }
+  }
+}
+
+// ---- what stands on an island ----------------------------------------------
+function stampBuild(is, cx, cz) {
+  const kind = is.build;
+  if (!kind) return;
+  const bx = is.cx, bz = is.cz;
+  const y = surfOf(is, bx, bz);
+  if (y < 0) return;
+  const rot = is.buildRot;
+  // Doorway bearing, so the way in is not always north.
+  const dxs = [1, 0, -1, 0][rot], dzs = [0, 1, 0, -1][rot];
+
+  if (kind === 'camp') {
+    // A fire, some log seats and a kist. Somebody put down here and stayed.
+    put(bx, y + 1, bz, B.campfire);
+    for (const [ox, oz] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) put(bx + ox, y + 1, bz + oz, B.oak_log);
+    put(bx + 3, y + 1, bz + 3, B.chest_block);
+    put(bx - 3, y + 1, bz - 3, B.torch_post);
+    put(bx + 3, y + 1, bz - 3, B.torch_post);
+    return;
+  }
+
+  if (kind === 'eyrie') {
+    // A timber wayhouse with a mooring mast — the built thing on the low shelf.
+    const h = 4, r = 3;
+    for (let x = bx - r; x <= bx + r; x++) {
+      for (let z = bz - r; z <= bz + r; z++) {
+        const edge = x === bx - r || x === bx + r || z === bz - r || z === bz + r;
+        for (let k = 1; k <= h; k++) {
+          if (edge) put(x, y + k, z, k === h ? B.oak_log : B.planks);
+          else put(x, y + k, z, k === h ? B.planks : B.air);
+        }
+        if (!edge) put(x, y, z, B.planks);                   // a floor over the turf
+      }
+    }
+    // Doorway: two blocks, on the rotated face.
+    const dx = bx + dxs * r, dz = bz + dzs * r;
+    put(dx, y + 1, dz, B.air); put(dx, y + 2, dz, B.air);
+    put(bx, y + 1, bz, B.campfire);
+    put(bx - dzs * 2, y + 1, bz - dxs * 2, B.chest_block);
+    // The mast: what a mount is tied to, and what you see from a long way off.
+    const mx = bx + dzs * (r + 2), mz = bz + dxs * (r + 2);
+    for (let k = 1; k <= 7; k++) put(mx, y + k, mz, B.oak_log);
+    put(mx, y + 8, mz, B.sea_lantern);
+    put(mx + 1, y + 7, mz, B.planks_fence);
+    put(mx - 1, y + 7, mz, B.planks_fence);
+    return;
+  }
+
+  if (kind === 'ruin') {
+    // Walls that stopped being walls. Height falls off with distance so it reads
+    // as collapse rather than as an unfinished build.
+    const r = Math.min(6, is.r - 4);
+    for (let x = bx - r; x <= bx + r; x++) {
+      for (let z = bz - r; z <= bz + r; z++) {
+        const edge = x === bx - r || x === bx + r || z === bz - r || z === bz + r;
+        if (!edge) continue;
+        const j = hash2(is.salt + 17, x, z);
+        const h = Math.round(1 + j * 4);
+        for (let k = 1; k <= h; k++) {
+          put(x, y + k, z, j > 0.6 ? B.mossy_stone_brick : B.ruin_brick);
+        }
+      }
+    }
+    for (const [ox, oz] of [[-2, -2], [2, 2], [-2, 2]]) {
+      if (hash2(is.salt + 29, ox, oz) < 0.6) put(bx + ox, y + 1, bz + oz, B.rootstone);
+    }
+    put(bx, y + 1, bz, B.chest_block);
+    put(bx + 1, y + 1, bz, B.torch_post);
+    return;
+  }
+
+  // hall — the top band. Masonry, lit, and worth the flight.
+  const rx = Math.min(6, is.r - 5), rz = Math.min(4, is.r - 6);
+  if (rx < 3 || rz < 2) return;
+  for (let x = bx - rx; x <= bx + rx; x++) {
+    for (let z = bz - rz; z <= bz + rz; z++) {
+      const edge = x === bx - rx || x === bx + rx || z === bz - rz || z === bz + rz;
+      put(x, y, z, B.stone_brick);                          // a flagged floor
+      for (let k = 1; k <= 5; k++) {
+        if (edge) put(x, y + k, z, k === 5 ? B.stone_brick_slab : B.stone_brick);
+        else put(x, y + k, z, k === 5 ? B.stone_brick : B.air);
+      }
+    }
+  }
+  const dx = bx + dxs * rx, dz = bz + dzs * rz;
+  put(dx, y + 1, dz, B.air); put(dx, y + 2, dz, B.air);
+  for (const [ox, oz] of [[-rx + 2, -rz + 1], [rx - 2, -rz + 1], [-rx + 2, rz - 1], [rx - 2, rz - 1]]) {
+    put(bx + ox, y + 4, bz + oz, B.sea_lantern);
+  }
+  put(bx, y + 1, bz, B.chest_block);
+  put(bx - 2, y + 1, bz, B.cobble_wall);
+  put(bx + 2, y + 1, bz, B.cobble_wall);
 }
 
 function stampOne(gen, sky, cx, cz) {
@@ -225,6 +441,22 @@ function stampOne(gen, sky, cx, cz) {
     for (const v of is.veins) {
       putNode({ type: v.type, x: v.x, y: v.y, z: v.z, ready: true });
     }
+  }
+  // Bridges and buildings go down AFTER every rock in the cluster, so a deck cut
+  // into a rim and a hall floor laid over turf both win where they overlap. The
+  // order is fixed by the layout, not by which chunk is asking, so it stays
+  // chunk-local.
+  for (const br of sky.bridges) {
+    const lo = Math.min(br.x0, br.x1) - BRIDGE_HW - 2, hi = Math.max(br.x0, br.x1) + BRIDGE_HW + 2;
+    const lz = Math.min(br.z0, br.z1) - BRIDGE_HW - 2, hz = Math.max(br.z0, br.z1) + BRIDGE_HW + 2;
+    if (!overlaps(lo, lz, hi, hz)) continue;
+    stampBridge(br, cx, cz);
+  }
+  for (const is of sky.isles) {
+    if (!is.build) continue;
+    const r = 10;
+    if (!overlaps(is.cx - r, is.cz - r, is.cx + r, is.cz + r)) continue;
+    stampBuild(is, cx, cz);
   }
 }
 
