@@ -159,8 +159,14 @@ const S_WANDER1 = 5101, S_WANDER2 = 5209, S_WANDER3 = 5417, S_EDGE_CORE = 5303, 
 // Wayside crofts: how often a site is OFFERED, how rarely it is taken, how far
 // back from the lane it sits, and how far out from the road a chunk has to look
 // to find one that reaches it. Rare on purpose — see _crofts.
+// CROFT_SPAN is the widest a cottage plus its eaves reaches from its anchor.
 const CROFT_SPACING = 190, CROFT_CHANCE = 0.28, CROFT_START = 260;
-const CROFT_OFFSET = 11, CROFT_REACH = 20;
+const CROFT_OFFSET = 11, CROFT_REACH = 20, CROFT_SPAN = 6;
+// Two crofts nearer than this destroy each other: building one levels a tall air
+// column over its whole footprint, so an overlapping neighbour loses its walls.
+// Sites are offered independently per road, and a fork runs close to its parent
+// for a while after it leaves, so collisions are not hypothetical.
+const CROFT_APART = 18;
 const S_CROFT = 6101, S_CROFT_SIDE = 6203, S_CROFT_ART = 6301;
 // Finite TRAILS. Unlike a road, a trail does no earthworks: it is a worn line
 // over whatever ground is already there, so it needs no height profile, makes no
@@ -168,9 +174,12 @@ const S_CROFT = 6101, S_CROFT_SIDE = 6203, S_CROFT_ART = 6301;
 // the road mask. That is also what a trail IS — a footpath, not a lane — and it
 // keeps them cheap enough to be common.
 const TRAIL_SPACING = 120, TRAIL_CHANCE = 0.55, TRAIL_START = 150;
-const TRAIL_MIN = 90, TRAIL_MAX = 460;    // how far a trail runs before it peters out
+const TRAIL_MIN = 90, TRAIL_MAX = 240;    // how far a trail runs before it peters out
 const TRAIL_HW = 1.15;                    // half-width of the worn line
 const S_TRAIL = 7101, S_TRAIL_LEN = 7207, S_TRAIL_TURN = 7309, S_TRAIL_W = 7411;
+// How far off a road its features can possibly land — the bound the roadside pass
+// rejects on. A trail dominates it.
+const FEATURE_REACH = Math.max(CROFT_OFFSET + CROFT_SPAN, TRAIL_MAX + TRAIL_HW + 2);
 const S_PAVE = 5407, S_RAGGED = 5501, S_WAYSIDE = 5701;
 const DIR_SALT = 131;
 
@@ -193,9 +202,11 @@ export class Roads {
     this._j0 = 0; this._j1 = 0;          // anchor index range currently in _R
     this._mask = new Uint8Array(CHUNK * CHUNK);   // 1 = this column is road
     this._roadY = new Int16Array(CHUNK * CHUNK);  // its graded surface
-    this._dirs = new Int32Array(ARTERIALS);       // arterials in play this chunk
+    this._dirs = new Int32Array(ARTERIALS);       // arterials this chunk must carve
+    this._fdirs = new Int32Array(ARTERIALS);      // …and those whose ROADSIDE features reach it
     this._col = new Int32Array(2);       // column-coordinate out-param
     this._col2 = new Int32Array(2);      // second out-param, for a croft's door bearing
+    this._col3 = new Int32Array(2);      // third, for comparing rival croft sites
     // Frame origin of each road, expressed as (along, across) in that road's own
     // rotated axes. Zero for a primary, which starts at spawn. For a fork it is
     // the point on its PARENT's centre line where it leaves, so the two roads
@@ -360,19 +371,30 @@ export class Roads {
     // Coarse reject first: eight scalar tests decide whether this chunk can hold
     // any arterial at all. Nearly every chunk in the world leaves here.
     this._frame(gen);
-    const dirs = this._dirs;
-    let nd = 0;
+    // TWO rejects, because a road and the things beside it have very different
+    // lateral reach. The carve only touches its own corridor; a croft stands
+    // CROFT_OFFSET back from the verge and a trail runs TRAIL_MAX blocks away at
+    // right angles. Sharing one bound truncated both: a chunk holding the far half
+    // of a cottage was rejected before the croft pass could run, so cottages came
+    // out as a couple of corner posts with no walls and no door, and a trail was
+    // clipped to the few chunks that happened to hug the road.
+    const dirs = this._dirs, fdirs = this._fdirs;
+    let nd = 0, nf = 0;
     for (let d = 0; d < ARTERIALS; d++) {
       const ux = U[d * 2], uz = U[d * 2 + 1];
       const s0 = ccx * ux + ccz * uz - this._s0[d];
-      if (s0 + CHUNK_R < RC_START[d]) continue;
+      if (s0 + CHUNK_R + TRAIL_MAX < RC_START[d]) continue;
       const t0 = ccx * -uz + ccz * ux - this._t0[d];
       let amp = (s0 + CHUNK_R) * AMP_GROW;
       if (amp > RC_AMP[d]) amp = RC_AMP[d];
-      if ((t0 < 0 ? -t0 : t0) > amp + RC_GRADE[d] + CHUNK_R) continue;
+      const ta = t0 < 0 ? -t0 : t0;
+      if (ta > amp + FEATURE_REACH + CHUNK_R) continue;
+      fdirs[nf++] = d;
+      if (s0 + CHUNK_R < RC_START[d]) continue;
+      if (ta > amp + RC_GRADE[d] + CHUNK_R) continue;
       dirs[nd++] = d;
     }
-    if (nd === 0) return -1;
+    if (nd === 0 && nf === 0) return -1;
 
     const x0 = cx * CHUNK, z0 = cz * CHUNK;
     this._near = 0;
@@ -396,6 +418,13 @@ export class Roads {
         const w = this._waystones(gen, blocks, cx, cz, d, s0 - CHUNK_R - 8, s0 + CHUNK_R + 8);
         if (w > top) top = w;
       }
+    }
+    // Roadside features run AFTER every carve, so `_mask` is the complete road
+    // footprint by the time a trail asks whether a cell is already lane.
+    for (let i = 0; i < nf; i++) {
+      const d = fdirs[i];
+      const ux = U[d * 2], uz = U[d * 2 + 1];
+      const s0 = ccx * ux + ccz * uz - this._s0[d];
       const c = this._crofts(gen, chunk, blocks, cx, cz, d, s0 - CHUNK_R - CROFT_REACH, s0 + CHUNK_R + CROFT_REACH);
       if (c > top) top = c;
       this._trails(gen, chunk, blocks, cx, cz, d, s0);
@@ -424,10 +453,32 @@ export class Roads {
       if (hash2(gen.seed + S_CROFT, n, d) > CROFT_CHANCE) continue;   // most sites stay empty
       if (this._blocked(gen, ...this.column(gen, d, s, 0, this._col), 15)) continue;
       const side = hash2(gen.seed + S_CROFT_SIDE, n, d) < 0.5 ? 1 : -1;
+      const a0 = this.column(gen, d, s, CROFT_OFFSET * side, this._col);
+      if (!this._croftWins(gen, d, n, a0[0], a0[1])) continue;
       const y = this._croft(gen, chunk, blocks, cx, cz, d, s, side, n);
       if (y > top) top = y;
     }
     return top;
+  }
+
+  // Does this site beat every rival close enough to wreck it? Sites are totally
+  // ordered by (road, station), the test is symmetric, and every term is a pure
+  // function of the seed — so exactly one of any colliding pair builds, and every
+  // chunk that touches it agrees which one that is.
+  _croftWins(gen, d, n, ax, az) {
+    const key = d * 4096 + n;
+    for (let od = 0; od < ARTERIALS; od++) {
+      for (let on = n - 2; on <= n + 2; on++) {
+        if (od * 4096 + on >= key) continue;
+        const os = on * CROFT_SPACING;
+        if (os < CROFT_START + RC_START[od]) continue;
+        if (hash2(gen.seed + S_CROFT, on, od) > CROFT_CHANCE) continue;
+        const oside = hash2(gen.seed + S_CROFT_SIDE, on, od) < 0.5 ? 1 : -1;
+        const oc = this.column(gen, od, os, CROFT_OFFSET * oside, this._col3);
+        if (Math.abs(oc[0] - ax) < CROFT_APART && Math.abs(oc[1] - az) < CROFT_APART) return false;
+      }
+    }
+    return true;
   }
 
   _croft(gen, chunk, blocks, cx, cz, d, s, side, n) {
