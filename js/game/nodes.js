@@ -4,6 +4,7 @@
 // (js/game/materials.js) so they can never drift from the spine; the non-metal
 // gathering nodes (fishing, foraging, digging, farming) stay hand-authored.
 import { B } from '../world/blocks.js';
+import { TREE_SPECIES, buildTree } from '../world/trees.js';
 import { METALS, WOODS, GEMS } from './materials.js';
 
 // Gems are found RANDOMLY while mining any rock (the owner's realistic rule):
@@ -16,29 +17,29 @@ function gemRareTable(mineLevel) {
   }));
 }
 
-const NEEDLE = new Set(['pine', 'cedar', 'yew']);            // conifers → tall layered cone
-const TROPICAL = new Set(['teak', 'ebony', 'lignum_vitae']); // rainforest → high spreading crown
-const BIG = new Set(['oak', 'walnut', 'hickory', 'teak', 'ebony', 'lignum_vitae']); // buttressed base
+// How tall a trunk of each canopy shape runs, before the wood's tier stretches
+// it. The SHAPE of a tree lives in js/world/trees.js; only this range is derived
+// here, because it scales off the material spine's tier and the tier is what
+// makes a far-ring species read as a bigger tree of the same silhouette.
+const TRUNK_BASE = { conical: [6, 8], spreading: [7, 10], weeping: [6, 8], round: [4, 6] };
+
 const generated = {};
-// One woodcutting node per real wood species. Canopy silhouette + trunk height
-// vary by type so a pine reads as a pine, a birch as a slim birch, an oak as a
-// broad oak (see nodeBlocks). Big species get a flared root base.
+// One woodcutting node per real wood species. The node owns the ECONOMY of a
+// tree (level, xp, charges, respawn, drops); its geometry is TREE_SPECIES' —
+// nodeBlocks below hands off to buildTree, so a pine reads as a pine and a
+// weeping yew as a yew without a second copy of the canopy code living here.
 for (const w of WOODS) {
-  const canopy = NEEDLE.has(w.id) ? 'cone'
-    : TROPICAL.has(w.id) ? 'spread'
-      : w.id === 'birch' ? 'slim'
-        : 'round';
-  const big = BIG.has(w.id);
-  const trunk = canopy === 'cone' ? [6 + Math.floor(w.tier / 4), 8 + Math.floor(w.tier / 3)]
-    : canopy === 'spread' ? [7 + Math.floor(w.tier / 4), 10 + Math.floor(w.tier / 3)]
-      : canopy === 'slim' ? [6, 8] // birch: tall & slender
-        : [(big ? 5 : 4) + Math.floor(w.tier / 4), (big ? 7 : 6) + Math.floor(w.tier / 3)];
+  const sp = TREE_SPECIES[w.id];
+  if (!sp) throw new Error(`wood ${w.id} has no tree species in js/world/trees.js`);
+  const [lo, hi] = TRUNK_BASE[sp.canopy];
+  // Branchy species carry a heavier crown, so they stand a block taller.
+  const heavy = sp.branches >= 3 ? 1 : 0;
+  const trunk = [lo + heavy + Math.floor(w.tier / 4), hi + heavy + Math.floor(w.tier / 3)];
   generated[`tree_${w.id}`] = {
     label: `${w.label} Tree`, skill: 'woodcutting', level: w.woodLevel, tool: 'axe',
     xp: Math.round(12 + w.tier * 6), time: +(2.6 + w.tier * 0.25).toFixed(1),
     charges: [3, 5 + Math.floor(w.tier / 3)], respawn: 40 + w.tier * 20, kind: 'tree',
-    log: `${w.id}_log`, leaves: `${w.id}_leaves`,
-    trunk, canopy, big, wide: w.id === 'oak',
+    log: `${w.id}_log`, leaves: `${w.id}_leaves`, species: w.id, trunk,
     drops: [{ item: `${w.id}_log`, qty: [1, 1], weight: 1 }],
     rare: [],
   };
@@ -299,83 +300,17 @@ export const NODE_TYPES = {
 // Prop forage nodes (kind 'prop'), for worldgen scatter + entity rendering.
 export const PROP_NODE_TYPES = Object.keys(NODE_TYPES).filter((k) => NODE_TYPES[k].kind === 'prop');
 
-// Deterministic 0–1 hash for organic, save-stable canopy raggedness.
-function thash(a, b, c) {
-  const s = Math.sin(a * 12.9898 + b * 78.233 + c * 37.719) * 43758.5453;
-  return s - Math.floor(s);
-}
-
 // Blocks a node occupies for a given state. Coordinates are absolute.
-// Canopies stay within a radius-2 footprint so they never cross into an
-// unloaded neighbour chunk at generation time.
+// Tree canopies stay within a radius-2 footprint so they never cross into an
+// unloaded neighbour chunk at generation time — buildTree enforces that itself.
 export function nodeBlocks(node, state) {
   const def = NODE_TYPES[node.type];
   const out = [];
   const { x, y, z } = node;
   if (def.kind === 'tree') {
     if (state === 'ready') {
-      const h = node.meta?.h ?? def.trunk[0];
-      const leafId = B[def.leaves], logId = B[def.log];
-      // Envelope-guarded writers: every cell stays within ±2 of the trunk so a
-      // canopy never spills into an unloaded neighbour chunk (dropped by stampNodeInto).
-      const leaf = (lx, ly, lz) => { if (Math.abs(lx - x) <= 2 && Math.abs(lz - z) <= 2 && ly > y - 1) out.push({ x: lx, y: ly, z: lz, id: leafId }); };
-      const log = (lx, ly, lz) => { if (Math.abs(lx - x) <= 2 && Math.abs(lz - z) <= 2) out.push({ x: lx, y: ly, z: lz, id: logId }); };
-      for (let i = 0; i < h; i++) log(x, y + i, z);          // trunk
-      const top = y + h - 1;
-      const size = thash(x, 7, z);                            // 0–1 per-tree size variation
-
-      // buttressed root flare for big broadleaf/tropical species
-      if (def.big) { log(x + 1, y, z); log(x - 1, y, z); log(x, y, z + 1); log(x, y, z - 1); }
-
-      if (def.canopy === 'cone') {
-        // conifer: full stacked rings, wide at the crown base, tapering to a point
-        const baseY = y + Math.max(2, Math.floor(h * 0.38));
-        const tipY = y + h + 1;
-        for (let yy = baseY; yy <= tipY; yy++) {
-          const t = (yy - baseY) / Math.max(1, tipY - baseY);
-          const rad = yy >= tipY ? 0 : (t < 0.45 ? 2 : 1);
-          for (let dx = -rad; dx <= rad; dx++) for (let dz = -rad; dz <= rad; dz++) {
-            if (dx * dx + dz * dz > rad * rad + 0.5) continue;
-            if (dx === 0 && dz === 0 && yy <= top) continue;                 // keep the trunk showing
-            if (rad === 2 && thash(x + dx, yy, z + dz) > 0.82) continue;     // ragged skirt
-            leaf(x + dx, yy, z + dz);
-          }
-        }
-        // drooping lowest branch tips
-        leaf(x + 2, baseY, z); leaf(x - 2, baseY, z); leaf(x, baseY, z + 2); leaf(x, baseY, z - 2);
-      } else if (def.canopy === 'spread') {
-        // tropical: a high, wide, flattish crown on branch stubs (umbrella)
-        log(x + 1, top, z); log(x - 1, top, z); log(x, top, z + 1);           // branch stubs
-        for (let dy = 0; dy <= 1; dy++) {
-          const rad = dy === 0 ? 2 : 1;
-          for (let dx = -rad; dx <= rad; dx++) for (let dz = -rad; dz <= rad; dz++) {
-            if (dx * dx + dz * dz > rad * rad + 0.4) continue;
-            if (rad === 2 && thash(x + dx, top + dy, z + dz) > 0.76) continue;
-            leaf(x + dx, top + 1 + dy, z + dz);                              // crown above the trunk top
-          }
-        }
-        leaf(x + 2, top, z); leaf(x - 2, top, z); leaf(x, top, z + 2); leaf(x, top, z - 2); // low fronds
-      } else if (def.canopy === 'slim') {
-        // birch: a narrow egg-shaped crown on a tall slender trunk
-        for (let dy = -1; dy <= 2; dy++) {
-          const rad = (dy <= -1 || dy >= 2) ? 0 : 1;
-          for (let dx = -rad; dx <= rad; dx++) for (let dz = -rad; dz <= rad; dz++) {
-            if (dx === 0 && dz === 0 && top + dy <= top) continue;           // trunk stays visible
-            if (thash(x + dx, top + dy, z + dz) > 0.86) continue;
-            leaf(x + dx, top + dy, z + dz);
-          }
-        }
-        leaf(x, top + 3, z);                                                  // slim top tuft
-      } else {
-        // broadleaf: a rounded crown, size-varied, centred just above the trunk top
-        const R2 = (def.wide ? 5.6 : 4.8) + size * 0.9;
-        for (let dx = -2; dx <= 2; dx++) for (let dy = -1; dy <= 2; dy++) for (let dz = -2; dz <= 2; dz++) {
-          if (dx * dx + dy * dy * 1.3 + dz * dz > R2) continue;               // squashed sphere
-          if (dx === 0 && dz === 0 && top + dy <= top) continue;             // trunk stays visible
-          if (thash(x + dx, top + dy, z + dz) > 0.90) continue;              // slight raggedness
-          leaf(x + dx, top + dy, z + dz);
-        }
-      }
+      buildTree(TREE_SPECIES[def.species], x, y, z, node.meta?.h ?? def.trunk[0],
+        (bx, by, bz, id) => out.push({ x: bx, y: by, z: bz, id }));
     } else {
       out.push({ x, y, z, id: B.stump });
     }

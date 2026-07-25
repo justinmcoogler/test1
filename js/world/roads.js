@@ -66,6 +66,7 @@ const H_LO = SEA + 1, H_HI = 132;
 // Truncation is what keeps the profile computable from a bounded neighbourhood
 // — i.e. what makes it chunk-local.
 const ENV_P = Math.ceil((H_HI - H_LO) / GRADE_C);
+const WINDOW_MAX_J = 60;   // anchors one profile window can span (see `window`)
 
 // ---- Cross-section ---------------------------------------------------------
 // A cobble core, gravel verges, and a graded but unpaved shoulder beyond them
@@ -112,6 +113,10 @@ export class Roads {
     this._roadY = new Int16Array(CHUNK * CHUNK);  // its graded surface
     this._dirs = new Int32Array(ARTERIALS);       // arterials in play this chunk
     this._col = new Int32Array(2);       // column-coordinate out-param
+    // Profile sampling gets its OWN column scratch: building a window walks the
+    // centre line, and doing that through _col would quietly clobber the caller's
+    // column between `roads.column(...)` and `roads.surfaceY(...)`.
+    this._anchorCol = new Int32Array(2);
     this._near = 0;                      // which exclusions this chunk can hit
     this._trunk = null;                  // bbox of worldgen's inter-town lanes
   }
@@ -144,7 +149,7 @@ export class Roads {
   // where one exists, and an arterial that chased another road's grade would
   // stop being a function of its own `s`.
   _anchor(gen, dir, s) {
-    const c = this.column(gen, dir, s, 0, this._col);
+    const c = this.column(gen, dir, s, 0, this._anchorCol);
     let h = gen._naturalHeight(c[0], c[1]);
     if (h < H_LO) h = H_LO;
     else if (h > H_HI) h = H_HI;
@@ -351,9 +356,10 @@ export class Roads {
     let surf;
     if (!paved) {
       // Graded shoulder. On a cut the block already sitting there IS the biome's
-      // own subsoil, which is exactly what a fresh cutting exposes — so only a
-      // fill needs a face put on it.
-      surf = y > hNat ? B.dirt : 0;
+      // own subsoil, which is exactly what a fresh cutting exposes — so it only
+      // needs a face where there is nothing to expose: fresh fill, or a cave
+      // mouth the grade happened to open right beside the lane.
+      surf = isSolid(blocks[base + y * step]) ? 0 : B.dirt;
     } else if (a <= coreEdge) {
       const r = hash2(seed + S_PAVE, wx, wz);
       surf = bridge ? B.stone_brick : r < 0.09 ? B.gravel : r < 0.18 ? B.mossy_cobble : r < 0.24 ? B.stone : B.cobble;

@@ -2,7 +2,7 @@
 // node lifecycle (deplete/respawn), chest storage, raycasting, persistence.
 import { B, BLOCKS, isSolid, SHAPE_COLLISION } from './blocks.js';
 import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, LEARN_MEADOW, BIOMES, WorldGen, newBlend, ringAt, undergroundNodeCandidates } from './worldgen.js';
-import { buildStarterStructures, indexEditsByChunk } from './structures.js';
+import { buildStarterStructures, indexEditsByChunk, stampChunkStructures, structureClaims } from './structures.js';
 import { carveRoads } from './roads.js';
 import { NODE_TYPES, PROP_NODE_TYPES, nodeBlocks, nodeCells } from '../game/nodes.js';
 import { ENEMY_TYPES } from '../game/enemies.js';
@@ -143,6 +143,12 @@ export class World {
     // line. One blend scratch for the whole chunk keeps the inner loop
     // allocation-free (js/world/worldgen.js `newBlend`).
     const blend = newBlend();
+    // Trees grown this chunk, by column. A tree is a NODE, so its trunk and
+    // canopy are not in `blocks` yet while this pass runs — a forage prop two
+    // columns away therefore sees clear air and plants itself inside the trunk.
+    // Keeping the node (not just the column) lets the pass below ask the tree
+    // exactly which cells it fills rather than guessing at a radius.
+    const treeRoots = new Map();
     for (let lz = 0; lz < CHUNK; lz++) {
       for (let lx = 0; lx < CHUNK; lx++) {
         const wx = cx * CHUNK + lx, wz = cz * CHUNK + lz;
@@ -152,10 +158,17 @@ export class World {
         if (Math.hypot(wx - MANOR_PAD.x, wz - MANOR_PAD.z) < 26) continue; // manor pad stays hand-built
         if (Math.hypot(wx - LEARN_MEADOW.x, wz - LEARN_MEADOW.z) < 26) continue; // Numbers Meadow stays hand-built & combat-free
         if (gen.pathSet && gen.pathSet.has(wx + ',' + wz)) continue; // keep the road corridor clear & walkable
+        if (structureClaims(gen, wx, wz)) continue; // a mineshaft head / dungeon stair owns this column
         const h = chunk.surfaceH[lz * CHUNK + lx];
         const surfId = blocks[lidx(lx, h, lz)];
         gen.blendAt(wx, wz, h, blend);
         const above = h + 1 < WORLD_H ? blocks[lidx(lx, h + 1, lz)] : B.air;
+        // `h` is the TERRAIN height, not necessarily where the ground is: a cave
+        // that breaks the surface carves the block at `h` to air, and then `above`
+        // is air too. Anything scattered on `h + 1` in that column hangs over the
+        // cave mouth with nothing under it. Every scatter below must therefore
+        // test the ground, not just the space above it — this flag is that test.
+        const onGround = isSolid(surfId);
         const grassy = surfId === B.grass || surfId === B.snow_grass || surfId === B.corrupt_soil;
         // trees also root on the bare ground of their biomes (highland ash/hickory
         // on stone, badlands teak on sand) — else those woods would never spawn.
@@ -173,7 +186,9 @@ export class World {
           if (chosen) {
             const def = NODE_TYPES[chosen];
             const th = def.trunk[0] + Math.floor(hash2(this.seed + 902, wx, wz) * (def.trunk[1] - def.trunk[0] + 1));
-            chunk.nodes.push({ type: chosen, x: wx, y: h + 1, z: wz, meta: { h: th } });
+            const tree = { type: chosen, x: wx, y: h + 1, z: wz, meta: { h: th } };
+            chunk.nodes.push(tree);
+            treeRoots.set(lz * CHUNK + lx, tree);
             continue;
           }
         }
@@ -211,7 +226,7 @@ export class World {
                     .some(([dx, dz]) => gen.heightAt(wx + dx, wz + dz) >= SEA);
                   if (shore) { chunk.nodes.push({ type: n.type, x: wx, y: SEA, z: wz }); placedNode = true; }
                 }
-              } else if (above === B.air && surfId !== B.water) {
+              } else if (above === B.air && onGround) {
                 chunk.nodes.push({ type: n.type, x: wx, y: h + 1, z: wz }); placedNode = true;
               }
               rolled = true;
@@ -233,7 +248,7 @@ export class World {
           }
         }
         // enemy spawn points (packs place several creatures on one point)
-        if (d0 > 60 && above === B.air && surfId !== B.water) {
+        if (d0 > 60 && above === B.air && onGround) {
           // Difficulty is distance: a mob only appears once the player has walked
           // out to its minimum ring, which is what keeps the starting bowl to
           // rabbits and cows while wolves and skeletons wait past 512 blocks.
@@ -262,6 +277,39 @@ export class World {
           }
         }
       }
+    }
+
+    // Drop forage props that a tree has since grown over. This has to run after
+    // the whole scatter, not inside it: the loop walks columns in order, so a
+    // prop planted early cannot see a tree rooted later that reaches back over
+    // it.
+    //
+    // It asks the tree for its actual cells rather than clearing a radius around
+    // it: a tree's ENVELOPE is 5x5, but the cells it really fills at ground level
+    // are just the trunk and its root buttress. Excluding the whole envelope
+    // would delete 15-30% of all forage to prevent the handful that truly
+    // collide, and a mushroom standing under a canopy is exactly where a mushroom
+    // belongs. Props are sparse (~3 a chunk), so the exact test is cheaper than
+    // the loss.
+    if (treeRoots.size) {
+      chunk.nodes = chunk.nodes.filter((n) => {
+        if (NODE_TYPES[n.type].kind !== 'prop') return true;
+        const lx = n.x - cx * CHUNK, lz = n.z - cz * CHUNK;
+        for (let dz = -2; dz <= 2; dz++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const nx = lx + dx, nz = lz + dz;
+            if (nx < 0 || nx >= CHUNK || nz < 0 || nz >= CHUNK) continue;
+            const tree = treeRoots.get(nz * CHUNK + nx);
+            if (!tree) continue;
+            let hit = false;
+            for (const c of nodeBlocks(tree, 'ready')) {
+              if (c.x === n.x && c.y === n.y && c.z === n.z) { hit = true; break; }
+            }
+            if (hit) return false;
+          }
+        }
+        return true;
+      });
     }
 
     // Endless arterial roads + waystones (js/world/roads.js). They regrade whole
@@ -316,6 +364,20 @@ export class World {
     for (const sp of this.structure.spawns) {
       if (Math.floor(sp.x / CHUNK) === cx && Math.floor(sp.z / CHUNK) === cz) chunk.spawns.push({ ...sp });
     }
+
+    // Procedural mineshafts & dungeons (js/world/structures.js). Endless, so they
+    // can't be pre-indexed the way the hand-built set is — every chunk stamps its
+    // own slice of whatever sites reach it. Deterministic and chunk-local, so this
+    // needs no neighbour loaded and no particular load order.
+    stampChunkStructures(gen, cx, cz, {
+      block: (x, y, z, id) => {
+        blocks[lidx(x - cx * CHUNK, y, z - cz * CHUNK)] = id;
+        if (id !== B.air) bumpTop(y);
+      },
+      node: (n) => chunk.nodes.push(n),
+      spawn: (s) => chunk.spawns.push(s),
+      chest: (c) => this.chestMeta.set(c.id, c),
+    });
 
     // Register nodes and stamp their current visual state
     for (const node of chunk.nodes) {

@@ -166,3 +166,26 @@ Each phase ships green and is independently testable.
 
 Phases 1–3 are the ones that change how the game *feels* today; 4–7 are what
 make it large.
+
+## Status
+
+| phase | state |
+| --- | --- |
+| 1. Ring scaffolding | **done** |
+| 2. Biome blending | **done** |
+| 3. Skills re-tier | **done** |
+| 4. New biomes + trees | **done** — 23 biomes ringed, `js/world/trees.js` is the single source of tree geometry, all 8 wild node tiers placed |
+| 5. Roads + waystones | **done** — eight endless arterials, waystones every 256 blocks |
+| 6. Procedural towns + NPCs + quests | not started (depends on 5) |
+| 7. Mineshafts + dungeons | **done** — branching shafts, seeded room graphs, ring-themed |
+
+Two deviations worth recording, both deliberate:
+
+- **12 tree species, not 14.** `NODE_TYPES` generates exactly one tree per wood
+  in the material spine and there are 12 woods. A 13th would mean new blocks,
+  items and recipes in `materials.js` — a content change, not a worldgen one.
+- **Height blending was dropped from phase 2.** The plan called for averaging
+  each candidate biome's height function, but this generator has a single
+  continuous noise field shared by every biome, so the weighted average is the
+  same number every time. Surface and foliage blending shipped; height blending
+  would have been dead code.

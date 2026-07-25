@@ -8,13 +8,11 @@
 // could not do: every new silhouette meant another `else if` in the middle of a
 // 50-line function, so the roster froze at four shapes.
 //
-// WIRING NOTE — the geometry below is not live yet. Trees are stamped by
-// `nodeBlocks` in js/game/nodes.js, which still carries its own copy of the
-// canopy code and derives `canopy` from hardcoded species sets. Making this
-// builder the one that renders is a small delegation in that file (its
-// `def.kind === 'tree'` branch calls buildTree with the species from here);
-// until then nodes.js's shapes are what you see in game, and `TREE_SPECIES`
-// below is live only as the roster worldgen plants from.
+// This module is the ONLY source of tree geometry: `nodeBlocks` in
+// js/game/nodes.js delegates its `kind === 'tree'` branch straight to
+// buildTree. Trunk height is the one thing it still owns, because it scales off
+// the wood's tier in the material spine — which is why it arrives as an
+// argument rather than a field here.
 import { B } from './blocks.js';
 import { hash3 } from '../core/rng.js';
 
@@ -23,6 +21,16 @@ import { hash3 } from '../core/rng.js';
 // outside this box would land in a neighbour chunk that may not be generated —
 // where the write is silently dropped and the tree comes out half-built.
 const R = 2;
+
+// Widest a canopy reaches from its own centre. R and CROWN_R are equal, which
+// is the whole reason `lean` cannot carry the crown with it: a crown centred one
+// column downwind would need R+1 to stay whole. So the trunk leans and the crown
+// stays over the foot — which is what a real leaning tree does anyway, since it
+// grows back toward the light. Before this was clamped, tall leaning species
+// (yew, teak, ebony, lignum vitae) lost 5–8% of their cells off the lee side and
+// came out visibly lopsided.
+const CROWN_R = 2;
+const clampEnv = (v, origin, reach) => Math.max(origin - (R - reach), Math.min(origin + (R - reach), v));
 
 // Deterministic, SEED-FREE per-cell jitter. A tree's silhouette has to be
 // identical on every world at the same coordinates: nodeBlocks re-derives a
@@ -44,7 +52,7 @@ const CANOPIES = {
   round(t) {
     for (let dx = -R; dx <= R; dx++) for (let dy = -1; dy <= 2; dy++) for (let dz = -R; dz <= R; dz++) {
       if (dx * dx + dy * dy * 1.3 + dz * dz > t.crown) continue;
-      if (dx === 0 && dz === 0 && dy <= 0) continue;                    // trunk stays visible
+      if (t.cx + dx === t.tx && t.cz + dz === t.tz && dy <= 0) continue; // trunk stays visible
       if (jitter(t.cx + dx, t.top + dy, t.cz + dz) > 0.90) continue;    // slight raggedness
       t.leaf(t.cx + dx, t.top + dy, t.cz + dz);
     }
@@ -60,7 +68,7 @@ const CANOPIES = {
       const rad = yy >= tipY ? 0 : (f < 0.45 ? 2 : 1);
       for (let dx = -rad; dx <= rad; dx++) for (let dz = -rad; dz <= rad; dz++) {
         if (dx * dx + dz * dz > rad * rad + 0.5) continue;
-        if (dx === 0 && dz === 0 && yy <= t.top) continue;
+        if (t.cx + dx === t.tx && t.cz + dz === t.tz && yy <= t.top) continue;
         if (rad === 2 && jitter(t.cx + dx, yy, t.cz + dz) > 0.82) continue;
         t.leaf(t.cx + dx, yy, t.cz + dz);
       }
@@ -88,7 +96,7 @@ const CANOPIES = {
       const rad = (dy === -1 || dy === 2) ? 1 : R;
       for (let dx = -rad; dx <= rad; dx++) for (let dz = -rad; dz <= rad; dz++) {
         if (dx * dx + dz * dz > rad * rad + 0.5) continue;
-        if (dx === 0 && dz === 0 && dy <= 0) continue;
+        if (t.cx + dx === t.tx && t.cz + dz === t.tz && dy <= 0) continue;
         if (jitter(t.cx + dx, t.top + dy, t.cz + dz) > 0.88) continue;
         t.leaf(t.cx + dx, t.top + dy, t.cz + dz);
       }
@@ -122,7 +130,12 @@ export function buildTree(sp, x, y, z, h, emit) {
   const offZ = (i) => z + Math.round(hz * sp.lean * i);
 
   for (let i = 0; i < h; i++) log(offX(i), y + i, offZ(i));
-  const top = y + h - 1, cx = offX(h - 1), cz = offZ(h - 1);
+  // The trunk top and the crown centre are NOT the same column on a leaning
+  // tree: the crown is pulled back inside the envelope, the trunk is not. The
+  // canopies need both — the centre to build around, the trunk top to leave a
+  // hole for, so the trunk still shows through its own crown.
+  const top = y + h - 1, tx = offX(h - 1), tz = offZ(h - 1);
+  const cx = clampEnv(tx, x, CROWN_R), cz = clampEnv(tz, z, CROWN_R);
 
   // Branch stubs climb the trunk on rotating sides. The lowest one sits at the
   // foot, where a ring of them reads as the flared root buttress of a big
@@ -131,14 +144,16 @@ export function buildTree(sp, x, y, z, h, emit) {
     const f = sp.branches === 1 ? 0.55 : b / (sp.branches - 1);
     const i = Math.round(f * (h - 2));
     const [ox, oz] = HEADINGS[(b + head) & 3];
-    log(offX(i) + ox, y + i, offZ(i) + oz);
-    if (f > 0.4) log(offX(i) + ox * 2, y + i + 1, offZ(i) + oz * 2);  // upper limbs reach out and up
+    // Clamped, not dropped: a limb that would reach past the envelope is worth
+    // more shortened by a column than deleted, which is what the raw guard did.
+    log(clampEnv(offX(i) + ox, x, 0), y + i, clampEnv(offZ(i) + oz, z, 0));
+    if (f > 0.4) log(clampEnv(offX(i) + ox * 2, x, 0), y + i + 1, clampEnv(offZ(i) + oz * 2, z, 0));
   }
 
   // Crown size grows with the trunk, so the same species reads as a sapling at
   // its short end and a full tree at its tall one.
   const crown = 4.4 + jitter(x, 7, z) * 0.9 + (h >= 8 ? 0.8 : 0);
-  CANOPIES[sp.canopy]({ x, y, z, h, top, cx, cz, crown, leaf, log });
+  CANOPIES[sp.canopy]({ x, y, z, h, top, cx, cz, tx, tz, crown, leaf, log });
 }
 
 // ---- Species ---------------------------------------------------------------

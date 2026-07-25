@@ -17,7 +17,10 @@ import {
 const SALT = 918277;
 export const DG_REGION = 256;      // one candidate dungeon per 256×256 blocks
 const DG_MARGIN = 62;
-const DG_CHANCE = 0.45;
+// Rarer than a mineshaft on purpose. A mineshaft is somewhere you work and there
+// should be one over most ridges; a dungeon is somewhere you go, and at about one
+// per six hundred blocks it stays an expedition rather than scenery.
+const DG_CHANCE = 0.28;
 // Conservative reach bound for the cheap chunk reject; the layout carries the
 // exact AABB and a test asserts the exact one never exceeds this.
 export const DG_HALF = 46;
@@ -68,6 +71,10 @@ const THEMES = [
 const KEY_ITEM = 'relic_fragment';
 
 const DIRS = [1, 0, -1, 0, 0, 1, 0, -1];
+// Hoisted: stampOne runs per chunk per site and must not allocate to do it.
+const PIERS = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+const NO_LANDINGS = [];
+const CORR = new Int32Array(4);   // reused corridor-bounds out-param
 const CACHE = new Map();
 const CACHE_CAP = 64;
 
@@ -237,11 +244,18 @@ function boreRoom(r, y) {
   box(r.x - r.hx, y + 1, r.z - r.hz, r.x + r.hx, y + h, r.z + r.hz, B.air);
 }
 
+// Writes [x0, z0, x1, z1] into the shared CORR scratch — callers must consume it
+// before the next call. Rooms only ever join across a lattice edge, so every
+// corridor is a straight axis-aligned run.
 function corridorBounds(a, b, pad) {
-  const alongX = a.z === b.z;
-  return alongX
-    ? [Math.min(a.x, b.x), a.z - pad, Math.max(a.x, b.x), a.z + pad]
-    : [a.x - pad, Math.min(a.z, b.z), a.x + pad, Math.max(a.z, b.z)];
+  if (a.z === b.z) {
+    CORR[0] = Math.min(a.x, b.x); CORR[1] = a.z - pad;
+    CORR[2] = Math.max(a.x, b.x); CORR[3] = a.z + pad;
+  } else {
+    CORR[0] = a.x - pad; CORR[1] = Math.min(a.z, b.z);
+    CORR[2] = a.x + pad; CORR[3] = Math.max(a.z, b.z);
+  }
+  return CORR;
 }
 
 function stampOne(dg, sink) {
@@ -253,9 +267,9 @@ function stampOne(dg, sink) {
   // ---- shells --------------------------------------------------------------
   for (const r of rooms) shellRoom(r, y, wall);
   for (const e of edges) {
-    const [ax, az, bx, bz] = corridorBounds(rooms[e.a], rooms[e.b], 2);
-    if (!overlaps(ax, az, bx, bz)) continue;
-    box(ax, y, az, bx, y + 4, bz, wall);
+    const c = corridorBounds(rooms[e.a], rooms[e.b], 2);
+    if (!overlaps(c[0], c[1], c[2], c[3])) continue;
+    box(c[0], y, c[1], c[2], y + 4, c[3], wall);
   }
   shaftShell(x, z, y, surfaceY, wall);
   box(x - PAD, surfaceY - 3, z - PAD, x + PAD, surfaceY, z + PAD, floorId);
@@ -264,9 +278,9 @@ function stampOne(dg, sink) {
   // ---- bores ---------------------------------------------------------------
   for (const r of rooms) boreRoom(r, y);
   for (const e of edges) {
-    const [ax, az, bx, bz] = corridorBounds(rooms[e.a], rooms[e.b], 1);
-    if (!overlaps(ax, az, bx, bz)) continue;
-    box(ax, y + 1, az, bx, y + 3, bz, B.air);
+    const c = corridorBounds(rooms[e.a], rooms[e.b], 1);
+    if (!overlaps(c[0], c[1], c[2], c[3])) continue;
+    box(c[0], y + 1, c[1], c[2], y + 3, c[3], B.air);
   }
   shaftBore(x, z, y + 1, headTop);
 
@@ -275,7 +289,7 @@ function stampOne(dg, sink) {
     if (!overlaps(r.x - r.hx, r.z - r.hz, r.x + r.hx, r.z + r.hz)) continue;
     box(r.x - r.hx, y, r.z - r.hz, r.x + r.hx, y, r.z + r.hz, floorId);
     // Corner piers of the theme's trim, and a lamp at the ceiling's midpoint.
-    for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    for (const [dx, dz] of PIERS) {
       box(r.x + dx * (r.hx - 1), y + 1, r.z + dz * (r.hz - 1), r.x + dx * (r.hx - 1), y + roomHeight(r), r.z + dz * (r.hz - 1), trim);
     }
     put(r.x, y + roomHeight(r), r.z, light);
@@ -319,7 +333,7 @@ function stampOne(dg, sink) {
   }
   put(x - PAD, surfaceY + 1, z - PAD, B.torch_post);
   put(x + PAD, surfaceY + 1, z + PAD, B.torch_post);
-  shaftFittings(x, z, y + 1, surfaceY, [], floorId);
+  shaftFittings(x, z, y + 1, surfaceY, NO_LANDINGS, floorId);
   put(x + 1, surfaceY + 1, z, B.ladder);
 
   putChest(dg.bossChest);

@@ -7,6 +7,7 @@ import { fbm2, valueNoise2 } from '../../js/core/noise.js';
 import { xpForLevel, levelForXp, Skills } from '../../js/game/skills.js';
 import { WorldGen, CHUNK, SEA, WORLD_H, BIOMES, ringAt, newBlend } from '../../js/world/worldgen.js';
 import { World, chunkKey } from '../../js/world/world.js';
+import { B } from '../../js/world/blocks.js';
 import { NODE_TYPES, nodeBlocks, nodeCells, rollNodeDrops } from '../../js/game/nodes.js';
 import { RECIPES } from '../../js/game/crafting.js';
 import { ITEMS } from '../../js/game/items.js';
@@ -298,4 +299,48 @@ test('abilities all resolvable', () => {
     assert.ok(ab.label, id);
     if (ab.req) assert.ok(['strength', 'ranged', 'magic', 'healing'].includes(ab.req[0]));
   }
+});
+
+test('nothing the world scatters is left hanging over a cave mouth', () => {
+  // `column()` returns the TERRAIN height, which is not the same thing as where
+  // the ground is: a cave that breaks the surface carves the block at `h` to air.
+  // Scatters that only checked `h + 1` for air used to place nodes and mob spawns
+  // on the lip of that hole, floating. This walks a wide spread of real chunks
+  // and asserts the invariant directly on generated output.
+  const w = new World(12345);
+  const lidx = (lx, y, lz) => (y * CHUNK + lz) * CHUNK + lx;
+  const orphans = [];
+  let checked = 0;
+
+  for (let cx = -14; cx <= 14; cx += 2) {
+    for (let cz = -14; cz <= 14; cz += 2) {
+      const ch = w.generateChunk(cx, cz);
+      const inChunk = (x, z) => {
+        const lx = x - cx * CHUNK, lz = z - cz * CHUNK;
+        return lx >= 0 && lx < CHUNK && lz >= 0 && lz < CHUNK ? [lx, lz] : null;
+      };
+      for (const n of ch.nodes) {
+        // Water nodes float on purpose; ore nodes REPLACE a stone block, so they
+        // are embedded in a cave wall and legitimately have air below them. Only
+        // things standing above the surface need ground under them.
+        if (NODE_TYPES[n.type].kind === 'water') continue;
+        const at = inChunk(n.x, n.z);
+        if (!at) continue;
+        if (n.y <= ch.surfaceH[at[1] * CHUNK + at[0]]) continue;  // underground, wall-mounted
+        checked++;
+        const under = ch.blocks[lidx(at[0], n.y - 1, at[1])];
+        if (under === B.air) orphans.push(`node ${n.type} at ${n.x},${n.y},${n.z}`);
+      }
+      for (const s of ch.spawns) {
+        const at = inChunk(s.x, s.z);
+        if (!at) continue;
+        checked++;
+        const under = ch.blocks[lidx(at[0], s.y - 1, at[1])];
+        if (under === B.air) orphans.push(`spawn ${s.type} at ${s.x},${s.y},${s.z}`);
+      }
+    }
+  }
+
+  assert.ok(checked > 500, `too few placements sampled to mean anything (${checked})`);
+  assert.deepEqual(orphans.slice(0, 8), [], `${orphans.length}/${checked} placements have no ground under them`);
 });

@@ -62,6 +62,11 @@ const LOOT = [
 ];
 
 const DIRS = [1, 0, -1, 0, 0, 1, 0, -1];
+// Hoisted: stampOne runs per chunk per site, and these would otherwise be fresh
+// arrays every time.
+const HEAD_POSTS = [[-2, -2], [2, -2], [-2, 2], [2, 2]];
+const ROOM_LAMPS = [[-3, -3], [3, -3], [-3, 3], [3, 3]];
+const SIDES = [-1, 1];
 const CACHE = new Map();
 const CACHE_CAP = 96;
 
@@ -258,10 +263,12 @@ function fitSeg(s) {
         }
         continue;
       }
-      if (a >= mid - 1 && a <= mid + 1) put(cx, s.y + 2, cz, B.cobweb);
+      if (a >= mid - 2 && a <= mid + 2) {
+        for (let p = -1; p <= 1; p++) put(cx + px * p, s.y + 2, cz + pz * p, B.cobweb);
+      }
     }
     if (((a % SUPPORT_EVERY) + SUPPORT_EVERY) % SUPPORT_EVERY === 0) {
-      for (const p of [-1, 1]) {
+      for (const p of SIDES) {
         put(cx + px * p, s.y + 1, cz + pz * p, B.oak_log);
         put(cx + px * p, s.y + 2, cz + pz * p, B.oak_log);
       }
@@ -289,12 +296,13 @@ function stampOne(ms, sink) {
   // ---- bores ---------------------------------------------------------------
   shaftBore(x, z, bottom + 1, headTop);
   for (const s of ms.segs) boreSeg(s);
-  box(room.x - 4, room.y + 1, room.z - 4, room.x + 4, room.y + 4, room.z + 4, B.air);
+  box(room.x - ROOM_HALF + 1, room.y + 1, room.z - ROOM_HALF + 1,
+    room.x + ROOM_HALF - 1, room.y + 4, room.z + ROOM_HALF - 1, B.air);
 
   // ---- fittings ------------------------------------------------------------
   // Headframe: four posts and a beam ring. The whole point of putting a mine
   // entrance on the surface is that you can see it from a ridge away.
-  for (const [dx, dz] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) {
+  for (const [dx, dz] of HEAD_POSTS) {
     box(x + dx, surfaceY + 1, z + dz, x + dx, surfaceY + 4, z + dz, B.oak_log);
   }
   box(x - 2, surfaceY + 5, z - 2, x + 2, surfaceY + 5, z - 2, B.planks);
@@ -322,11 +330,12 @@ function stampOne(ms, sink) {
   put(x + 1, surfaceY + 1, z, B.ladder);
 
   // Chest room: lit corners, the pay chest, and rich ground nobody got to.
-  for (const [dx, dz] of [[-3, -3], [3, -3], [-3, 3], [3, 3]]) put(room.x + dx, room.y + 1, room.z + dz, B.torch_post);
+  for (const [dx, dz] of ROOM_LAMPS) put(room.x + dx, room.y + 1, room.z + dz, B.torch_post);
   putChest(ms.chest);
+  // The two show veins sit IN the chamber wall, not floating in the middle of it.
   const deep = ORE_BY_LEVEL[ORE_BY_LEVEL.length - 1];
-  putNode({ type: deep[0], x: room.x - 4, y: room.y + 2, z: room.z - 2 });
-  putNode({ type: deep[4], x: room.x + 4, y: room.y + 2, z: room.z + 2 });
+  putNode({ type: deep[0], x: room.x - ROOM_HALF, y: room.y + 2, z: room.z - 2 });
+  putNode({ type: deep[4], x: room.x + ROOM_HALF, y: room.y + 2, z: room.z + 2 });
   putNode({ type: 'dig_trench', x: room.x + 2, y: room.y + 1, z: room.z - 3 });
 
   for (const v of ms.veins) putNode(v);
