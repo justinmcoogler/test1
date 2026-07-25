@@ -20,7 +20,12 @@ const GOBLINS = [
   'scrap_goblin', 'bog_goblin', 'cave_goblin', 'ash_goblin',
   'frost_goblin', 'goblin_slinger', 'goblin_warchief', 'goblin_warlord',
 ];
-const ROSTER = [...LIVESTOCK, 'practice_dummy', 'rat', ...GOBLINS];
+// The mounts and the whelp (js/game/mounts.js). Separate from the bestiary
+// above on purpose: these are things you tame, not things you fight, and they
+// are the only reason the sky archipelago is reachable at all.
+const MOUNTS_ROSTER = ['courser', 'destrier', 'steppe_runner', 'crag_drake', 'storm_wyrm', 'riftdrake', 'dragon_whelp'];
+const BESTIARY = [...LIVESTOCK, 'practice_dummy', 'rat', ...GOBLINS];
+const ROSTER = [...BESTIARY, ...MOUNTS_ROSTER];
 
 // Everywhere a creature can legitimately come from: the biome tables, and the
 // hand-built starter sites (which is where the two chiefs live — a boss is not
@@ -31,8 +36,11 @@ for (const biome of Object.values(BIOMES)) {
 }
 for (const sp of buildStarterStructures().spawns) spawnedTypes.add(sp.type);
 
-test('the roster is exactly the eighteen creatures the world is built from', () => {
-  assert.equal(ROSTER.length, 18);
+test('the roster is exactly the creatures the world is built from', () => {
+  // Eighteen in the bestiary, seven mounts. Written out rather than counted, so
+  // that adding a creature is a deliberate edit here and never a side effect.
+  assert.equal(BESTIARY.length, 18);
+  assert.equal(MOUNTS_ROSTER.length, 7);
   const actual = Object.keys(ENEMY_TYPES).sort();
   assert.deepEqual(actual, [...ROSTER].sort());
 });
@@ -145,5 +153,5 @@ test('no creature in the game is named after a Minecraft mob', () => {
   assert.deepEqual(hits(Object.keys(ENEMY_TYPES)), [], 'ENEMY_TYPES still carries Minecraft creatures');
   assert.deepEqual(hits(Object.keys(MOB_REMAKES)), [], 'the model batches still carry Minecraft creatures');
   // …and this cannot pass by the roster simply being empty.
-  assert.ok(Object.keys(ENEMY_TYPES).length === 18);
+  assert.equal(Object.keys(ENEMY_TYPES).length, ROSTER.length);
 });

@@ -46,6 +46,10 @@ export const ABILITIES = {
   void_gaze: { label: 'Void Gaze', style: 'magic', range: 6, power: 1.4, element: 'shadow', accMod: 10 },
   crunch: { label: 'Crunch', style: 'melee', range: 1, power: 1.3 },
   root_slam: { label: 'Root Slam', style: 'melee', range: 0, power: 1.6, areaTelegraph: 1, element: 'nature', telegraph: 'roots writhe beneath the marked ground…', cd: 4 },
+  // A chief's signature. Marks the ground it is about to flatten, so the answer
+  // is to step off the tile — a boss fight in a pillared hall should be about
+  // where you stand, not about being shoved around by a charge.
+  club_slam: { label: 'Club Slam', style: 'melee', range: 0, power: 1.6, areaTelegraph: 1, telegraph: 'hauls the club back over its head…', cd: 4 },
   grasping_roots: { label: 'Grasping Roots', style: 'magic', range: 5, power: 0.5, element: 'nature', status: { id: 'root', turns: 2, chance: 0.85 }, cd: 3 },
 };
 

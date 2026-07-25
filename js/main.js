@@ -14,7 +14,10 @@ import { Skills, SKILL_DEFS } from './game/skills.js';
 import { ITEMS } from './game/items.js';
 import { QuestLog } from './game/quests.js';
 import { EnemyManager, ENEMY_TYPES } from './game/enemies.js';
-import { Stable, MOUNTS, mountDef, tameHint, SADDLE_H } from './game/mounts.js';
+import {
+  Stable, MOUNTS, PETS, TAMEABLE, mountDef, tameHint, SADDLE_H,
+  levelFor, feedNeeded, tameXp, FEED_XP, RIDE_XP_PER_SEC, FLY_XP_PER_SEC,
+} from './game/mounts.js';
 import { Combat } from './game/combat.js';
 import { CombatRS } from './game/combatrs.js';
 import { NPC_DEFS } from './game/npcs.js';
@@ -83,6 +86,7 @@ class Game {
     // Mounts. Built before restore() for the same reason the waystone net is.
     this.stable = new Stable();
     this.nearMount = null;       // a tameable creature within reach, if any
+    this.petEntity = null;       // the pet that is out, as a world entity
     this.waystonesInSight = [];  // stones close enough to label in the world
     this.flags = {};
     this.playtime = 0;
@@ -616,6 +620,23 @@ class Game {
     // spawns/despawns appear within 0.4s — chunks stream in over seconds anyway.
     this._refreshAccum = (this._refreshAccum ?? 1) + dt;
     if (this._refreshAccum >= 0.4) { this._refreshAccum = 0; this.enemyMgr.refresh(); this.updateMounts(); }
+    this.updatePet();
+    // Time in the saddle is Handling practice. Flying pays more because getting
+    // into the air was the hard part; both are a trickle, so riding keeps the
+    // skill moving on a long journey and is never a way to farm it.
+    //
+    // Accumulated and paid in whole points, NOT handed to addXp() per frame:
+    // addXp rounds, so a fractional award adds nothing but still fires an
+    // xpGained event — which is a `+0 Handling XP` toast every single frame.
+    const ridden = this.stable.ridingDef();
+    if (ridden) {
+      this._rideXp = (this._rideXp || 0) + (ridden.flying ? FLY_XP_PER_SEC : RIDE_XP_PER_SEC) * dt;
+      if (this._rideXp >= 1) {
+        const whole = Math.floor(this._rideXp);
+        this._rideXp -= whole;
+        this.skills.addXp('handling', whole);
+      }
+    }
     this.enemyMgr.update(dt, p, this.combat.active);
     this.combat.update(dt);
     this.combatRS.update(dt);
@@ -721,7 +742,9 @@ class Game {
       const sdt = this._survAccum; this._survAccum = 0;
       this._fireWarmth = this.computeFireWarmth(p);
       const est = this.inventory.equipStats();
-      const warmth = (est.warmth || 0) * 0.03 + est.armor * 0.012; // insulation proxy
+      // insulation proxy — gear, plus whatever is asleep in your hood. A
+      // Dragon Whelp runs hot, which is the entire reason to carry one.
+      const warmth = (est.warmth || 0) * 0.03 + est.armor * 0.012 + this.stable.perk('warmth') * 0.01;
       // Wide comfort band: unprepared cold/heat is a slow pressure (find a fire /
       // clothes), not a quick death. Constitution widens it further.
       const band = 0.24 + this.skills.level('vitality') * 0.0012;
@@ -1641,10 +1664,20 @@ class Game {
     for (const d of drops) {
       this.inventory.add(d.item, crit ? d.qty * 2 : d.qty);
     }
-    this.skills.addXp(def.skill, def.xp * (crit ? 1.5 : 1));
+    // The pet that is out, if any (js/game/mounts.js). A rat or a rabbit turns
+    // up an extra find; a hen is worth a little XP; a goat carries the load so
+    // the swing costs you less. `perk` is 0 when nothing is out, so all three
+    // of these are no-ops on an empty stable.
+    const forage = this.stable.perk('forage');
+    if (forage && Math.random() < forage && drops.length) {
+      const bonus = drops[Math.floor(Math.random() * drops.length)];
+      this.inventory.add(bonus.item, 1);
+      this.ui.toast(`${this.stable.petOutDef().label} turns up an extra ${ITEMS[bonus.item]?.label || bonus.item}`, 'xp');
+    }
+    this.skills.addXp(def.skill, def.xp * (crit ? 1.5 : 1) * (1 + this.stable.perk('gatherXp')));
     if (crit) this.ui.toast('Critical gather! Double yield', 'gold');
     if (toolStack) this.inventory.damageTool(toolStack, 1);
-    this.player.energy = Math.max(0, this.player.energy - 3);
+    this.player.energy = Math.max(0, this.player.energy - Math.max(1, 3 - this.stable.perk('haul')));
     this.world.depleteCharge(node);
     emit('nodeGathered', { nodeType: node.type });
     SFX.pickup();
@@ -1848,7 +1881,10 @@ class Game {
     const p = this.player;
     let best = null, bestD = 3.4 * 3.4;
     for (const e of this.enemyMgr.entities.values()) {
-      if (!MOUNTS[e.type] || e.dead) continue;
+      // TAMEABLE, not MOUNTS: a Warren Rabbit is approached exactly the way a
+      // Destrier is, and one prompt covers both. The pet that is already out is
+      // skipped — it follows you, so it would win every proximity check forever.
+      if (!TAMEABLE[e.type] || e.dead || e.pet) continue;
       const dx = e.x - p.x, dy = (e.y ?? p.y) - p.y, dz = e.z - p.z;
       if (Math.abs(dy) > 3) continue;
       const d = dx * dx + dz * dz;
@@ -1857,26 +1893,81 @@ class Game {
     this.nearMount = best;
   }
 
+  // The pet that is out, as a real creature in the world.
+  //
+  // It is a transient entity in the ordinary creature manager, so it renders,
+  // animates and settles onto terrain with everything else and needs no special
+  // drawing path. Steering is just moving its wander HOME to wherever you are —
+  // the existing wander code then has it potter about near you, which is what a
+  // pet looks like. A leash snap covers the fact that its walk speed (1.1 b/s)
+  // is a third of yours: past LEASH it reappears at your heel rather than
+  // trailing further and further behind you across a continent.
+  updatePet() {
+    const want = this.stable.petOut();
+    if (!want) {
+      if (this.petEntity) { this.enemyMgr.entities.delete(this.petEntity.id); this.petEntity = null; }
+      return;
+    }
+    const p = this.player;
+    const live = this.petEntity && this.petEntity.type === want
+      && this.enemyMgr.entities.has(this.petEntity.id);
+    if (!live) {
+      if (this.petEntity) this.enemyMgr.entities.delete(this.petEntity.id);
+      const def = ENEMY_TYPES[want];
+      if (!def) { this.petEntity = null; return; }
+      const gy = this.world.groundNear(Math.floor(p.x), Math.floor(p.z), p.y) ?? p.y;
+      const id = `pet:${want}`;
+      this.petEntity = {
+        id, type: want, def, x: p.x, y: gy, z: p.z, homeX: p.x, homeZ: p.z,
+        yaw: p.yaw, hp: def.hp, wanderT: 1, transient: true, pet: true,
+      };
+      this.enemyMgr.entities.set(id, this.petEntity);
+      return;
+    }
+    const e = this.petEntity;
+    e.homeX = p.x; e.homeZ = p.z;
+    if (Math.hypot(e.x - p.x, e.z - p.z) > PET_LEASH) {
+      const bx = p.x - Math.sin(p.yaw) * 1.5, bz = p.z - Math.cos(p.yaw) * 1.5;
+      const gy = this.world.groundNear(Math.floor(bx), Math.floor(bz), p.y);
+      if (gy !== null) { e.x = bx; e.z = bz; e.y = gy; e.targetX = undefined; }
+    }
+  }
+
   // What the HUD says at a mount: either how to tame it, or how to get on.
   mountPrompt() {
     const e = this.nearMount;
     if (!e) return null;
-    const d = MOUNTS[e.type];
+    const d = TAMEABLE[e.type];
     const key = this.touch ? 'Tap Action' : 'F';
-    if (this.stable.has(e.type)) return `${d.label} — ${key} to ride`;
-    const need = d.tameCount - (this.stable.progress.get(e.type) || 0);
+    const hl = this.skills.level('handling');
+    if (this.stable.has(e.type)) {
+      return PETS[e.type]
+        ? `${d.label} — ${key} to ${this.stable.petOut() === e.type ? 'send home' : 'call'}`
+        : `${d.label} — ${key} to ride`;
+    }
+    // The level gate is stated up front rather than discovered by failing: a
+    // creature you cannot tame yet should read as a goal, not as a bug.
+    if (hl < levelFor(e.type)) return `${d.label} — needs Handling ${levelFor(e.type)} (you: ${hl})`;
+    const need = feedNeeded(e.type, hl) - (this.stable.progress.get(e.type) || 0);
     const item = ITEMS[d.tame]?.label || d.tame;
     return this.inventory.count(d.tame) > 0
       ? `${d.label} — ${key} to offer ${item} (${need} more)`
-      : `${d.label} — it wants ${tameHint(e.type)}`;
+      : `${d.label} — it wants ${tameHint(e.type, hl)}`;
   }
 
   // Feed it, or get on it. One key does both, because at any moment only one of
   // them is possible.
   tryMount(e) {
-    const d = MOUNTS[e.type];
+    const d = TAMEABLE[e.type];
     if (!d) return false;
+    const hl = this.skills.level('handling');
     if (this.stable.has(e.type)) {
+      if (PETS[e.type]) {
+        this.stable.callPet(e.type);
+        this.ui.toast(this.stable.petOut() === e.type
+          ? `${d.label} falls in behind you.` : `${d.label} heads home.`, 'gold');
+        return true;
+      }
       this.stable.mount(e.type);
       this.player.mountDef = d;
       // Seat the rider clear of whatever the mount was standing in.
@@ -1885,17 +1976,25 @@ class Game {
       SFX.questDone();
       return true;
     }
+    if (hl < levelFor(e.type)) {
+      this.ui.toast(`${d.label} will not let you near it — Handling ${levelFor(e.type)} (you're ${hl}).`, 'warn');
+      return true;
+    }
     if (this.inventory.count(d.tame) <= 0) {
-      this.ui.toast(`${d.label} will not come near you. It wants ${tameHint(e.type)}.`, 'warn');
+      this.ui.toast(`${d.label} will not come near you. It wants ${tameHint(e.type, hl)}.`, 'warn');
       return true;
     }
     this.inventory.remove(d.tame, 1);
-    const r = this.stable.feed(e.type, 1);
+    const r = this.stable.feed(e.type, 1, hl);
     if (r.tamed) {
-      this.ui.toast(`${d.label} lets you close. It will carry you now.`, 'gold');
+      this.skills.addXp('handling', tameXp(e.type));
+      this.ui.toast(PETS[e.type]
+        ? `${d.label} decides you will do. It is yours now.`
+        : `${d.label} lets you close. It will carry you now.`, 'gold');
       SFX.questDone();
       this.autosaveTimer = Math.min(this.autosaveTimer, 3);
     } else {
+      this.skills.addXp('handling', FEED_XP);
       this.ui.toast(`${d.label} takes it, and waits. (${r.need} more)`, 'xp');
     }
     return true;
@@ -2602,6 +2701,11 @@ function gatherVerb(def) {
 }
 
 const TOOL_NAMES = { axe: 'an axe', pickaxe: 'a pickaxe', shovel: 'a shovel', rod: 'a fishing rod', hoe: 'a hoe' };
+
+// How far a pet may trail before it reappears at your heel. Wide enough that
+// the snap is never something you watch happen, short enough that a pet is
+// never a dot on the horizon you have to wait for.
+const PET_LEASH = 14;
 
 // World-state consequences of the two HAND-BUILT boss kills.
 //

@@ -38,23 +38,37 @@ try {
   // covers those).
   const tamed = await page.evaluate(async () => {
     const g = window.__game, p = g.player;
-    const d = (await import('/js/game/mounts.js')).MOUNTS.ridgewing;
+    const d = (await import('/js/game/mounts.js')).MOUNTS.crag_drake;
     const { ENEMY_TYPES } = await import('/js/game/enemies.js');
     g.inventory.add(d.tame, d.tameCount + 2);
     // A real def, or EnemyManager.serialize throws on it at save time.
-    g.enemyMgr.entities.set('test:ridgewing', {
-      id: 'test:ridgewing', type: 'ridgewing', def: ENEMY_TYPES.ridgewing,
-      x: p.x + 1.5, y: p.y, z: p.z, hp: ENEMY_TYPES.ridgewing.hp, dead: false,
+    g.enemyMgr.entities.set('test:crag_drake', {
+      id: 'test:crag_drake', type: 'crag_drake', def: ENEMY_TYPES.crag_drake,
+      x: p.x + 1.5, y: p.y, z: p.z, hp: ENEMY_TYPES.crag_drake.hp, dead: false,
     });
     g.updateMounts();
     const seen = !!g.nearMount;
+    // Before the skill: the Handling gate, and it must SAY so rather than just
+    // silently refusing. A fresh character is Handling 1 and a Crag Drake wants 25.
+    const gated = g.mountPrompt();
+    g.tryMount(g.nearMount);
+    const gateHeld = !g.stable.has('crag_drake');
+    // Grant the level the long way — through the skill, not by poking the stable.
+    const { xpForLevel } = await import('/js/game/skills.js');
+    g.skills.xp.handling = xpForLevel(30);
     const prompt0 = g.mountPrompt();
     let feeds = 0;
-    while (!g.stable.has('ridgewing') && feeds < 12) { g.tryMount(g.nearMount); feeds++; }
-    return { seen, prompt0, feeds, tamed: g.stable.has('ridgewing'), left: g.inventory.count(d.tame) };
+    while (!g.stable.has('crag_drake') && feeds < 12) { g.tryMount(g.nearMount); feeds++; }
+    return {
+      seen, gated, gateHeld, prompt0, feeds,
+      tamed: g.stable.has('crag_drake'), left: g.inventory.count(d.tame),
+      handling: g.skills.level('handling'),
+    };
   });
   check(tamed.seen, 'a mount standing beside you is detected');
-  check(/offer|wants/i.test(tamed.prompt0 || ''), `the prompt tells you what it wants — "${tamed.prompt0}"`);
+  check(/Handling/i.test(tamed.gated || ''), `below the level the prompt names it — "${tamed.gated}"`);
+  check(tamed.gateHeld, 'and the tame is actually refused, not just discouraged');
+  check(/offer|wants/i.test(tamed.prompt0 || ''), `at level the prompt tells you what it wants — "${tamed.prompt0}"`);
   check(tamed.tamed, `it tames after ${tamed.feeds} feeds`);
   check(tamed.left === 2, `taming spent exactly the tame cost (${tamed.left} left over of +2 spare)`);
 
@@ -64,7 +78,7 @@ try {
     g.tryMount(g.nearMount);
     return { riding: g.stable.riding(), mounted: !!g.player.mountDef, prompt: g.buildPrompt ? null : g.stable.ridingDef()?.label };
   });
-  check(rode.riding === 'ridgewing', 'you get on it');
+  check(rode.riding === 'crag_drake', 'you get on it');
   check(rode.mounted, 'and the player is actually flying the mount, not walking');
 
   // ---- climb, and stop at the ceiling ---------------------------------------
@@ -74,7 +88,7 @@ try {
     const IN = { jump: true, sprint: false, worldMove: null, moveVector: () => [0, 0] };
     const y0 = p.y;
     for (let i = 0; i < 900; i++) p.update(0.05, IN, g.world);
-    const ceil = MOUNTS.ridgewing.ceiling;
+    const ceil = MOUNTS.crag_drake.ceiling;
     return { y0, y: p.y, ceil, over: p.y > ceil + 0.01 };
   });
   check(flew.y > flew.y0 + 40, `it climbs (${flew.y0.toFixed(0)} → ${flew.y.toFixed(0)})`);
@@ -85,8 +99,8 @@ try {
     const g = window.__game, p = g.player;
     const { MOUNTS } = await import('/js/game/mounts.js');
     const { allIslands } = await import('/js/world/sky.js');
-    g.stable.feed('riftwing', 99); g.stable.mount('riftwing');
-    p.mountDef = MOUNTS.riftwing;
+    g.stable.feed('riftdrake', 99); g.stable.mount('riftdrake');
+    p.mountDef = MOUNTS.riftdrake;
     const s = allIslands(g.world.gen, 5).find((s) => s.ring === 3);
     const is = s.isles[0];
     const CH = 16;
@@ -96,7 +110,7 @@ try {
     p.x = is.cx + 0.5; p.z = is.cz + 0.5; p.y = is.y + is.crownH + 25;
     const DIVE = { jump: false, sprint: true, worldMove: null, moveVector: () => [0, 0] };
     for (let i = 0; i < 400; i++) p.update(0.05, DIVE, g.world);
-    return { y: p.y, target: is.y + is.crownH, onGround: p.onGround, ceil: MOUNTS.riftwing.ceiling };
+    return { y: p.y, target: is.y + is.crownH, onGround: p.onGround, ceil: MOUNTS.riftdrake.ceiling };
   });
   check(high.onGround, `a Riftwing lands ON a ring-3 island (y=${high.y.toFixed(1)}, surface ~${high.target})`);
   // Not `== surface + 1`: the largest island in a cluster always carries a
@@ -122,7 +136,7 @@ try {
     return { off, stable };
   });
   check(saved.off, 'dismounting puts you back on your feet');
-  check(!!saved.stable && saved.stable.tamed.includes('ridgewing'), 'the stable is written to the save');
+  check(!!saved.stable && saved.stable.tamed.includes('crag_drake'), 'the stable is written to the save');
 
   await page.screenshot({ path: 'tests/screenshots/mount-island.png' });
   if (errors.length) { console.log('\npage errors:'); for (const e of errors.slice(0, 6)) console.log('  ' + e); }

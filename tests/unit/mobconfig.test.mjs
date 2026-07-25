@@ -32,8 +32,13 @@ test('the shipped roster is active; everything else defaults OFF', () => {
   const ROSTER = ['cow', 'pig', 'sheep', 'chicken', 'duck', 'goat', 'horse', 'rabbit',
     'practice_dummy', 'rat',
     'scrap_goblin', 'bog_goblin', 'cave_goblin', 'ash_goblin',
-    'frost_goblin', 'goblin_slinger', 'goblin_warchief', 'goblin_warlord'];
-  assert.equal(ROSTER.length, 18);
+    'frost_goblin', 'goblin_slinger', 'goblin_warchief', 'goblin_warlord',
+    // …and the mounts, which ship active for a structural reason: the dragons
+    // are the only way up to the sky archipelago, so switching them off leaves
+    // a whole vertical axis in the world that nothing can reach.
+    'courser', 'destrier', 'steppe_runner',
+    'crag_drake', 'storm_wyrm', 'riftdrake', 'dragon_whelp'];
+  assert.equal(ROSTER.length, 25);
   for (const t of ROSTER) {
     assert.ok(ENEMY_TYPES[t], `${t} should exist in the registry`);
     assert.equal(mc.mobActive(t), true, `${t} should ship active`);

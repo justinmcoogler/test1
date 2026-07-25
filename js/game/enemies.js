@@ -375,12 +375,12 @@ export const ENEMY_TYPES = {
 
   goblin_warchief: {
     label: 'Gorrak the Warchief', behavior: 'aggressive', tier: 1, boss: true,
-    hp: 100, atk: 10, acc: 62, evasion: 2, armor: 4, speed: 4, moveRange: 2,
-    abilities: ['skull_rush', 'boulder_swat'], element: null, weak: [], resist: [],
+    hp: 82, atk: 10, acc: 62, evasion: 2, armor: 4, speed: 4, moveRange: 2,
+    abilities: ['club_slam', 'boulder_swat'], element: null, weak: [], resist: [],
     // Half health and it stops fighting you alone. A warchief's authority IS the
     // warband, so the fight's second half is the thing it commands rather than a
     // bigger version of the thing it does.
-    phases: [{ at: 0.5, addAtk: 4, summon: ['scrap_goblin', 'scrap_goblin'], banner: 'Gorrak bellows — the warren answers!' }],
+    phases: [{ at: 0.5, addAtk: 2, summon: ['scrap_goblin', 'scrap_goblin'], banner: 'Gorrak bellows — the warren answers!' }],
     xp: 500, respawn: 900, aggroRange: 6,
     headBoxes: [1],
     drops: [
@@ -412,7 +412,7 @@ export const ENEMY_TYPES = {
     // Two phases, and they escalate differently: first it calls the ring in,
     // then — with the adds spent — it stops conserving the brand.
     phases: [
-      { at: 0.66, addAtk: 3, summon: ['frost_goblin', 'goblin_slinger'], banner: 'Vashk roars — the Ironring closes in!' },
+      { at: 0.66, addAtk: 0, summon: ['frost_goblin', 'goblin_slinger'], banner: 'Vashk roars — the Ironring closes in!' },
       { at: 0.3, addAtk: 4, summon: [], banner: 'The brand comes up white-hot. Vashk has stopped pacing itself.' },
     ],
     xp: 900, respawn: 900, aggroRange: 7,
@@ -442,6 +442,144 @@ export const ENEMY_TYPES = {
     ]),
   },
 
+
+  // ---- mounts and pets (js/game/mounts.js) ---------------------------------
+  // Ordinary creatures in the roster: you find them, you feed them, and then
+  // they will carry you. All `defensive`, so a mount you are trying to tame does
+  // not open by fighting you, and ring-tiered so the one that reaches the high
+  // archipelago lives out where the high archipelago is.
+  //
+  // Their real gate is the Handling skill, not the walk — see mounts.js. These
+  // stats only matter if you attack one, which is a choice you get to make and
+  // then live with.
+  courser: {
+    label: 'Courser', behavior: 'defensive', tier: 1,
+    hp: 34, atk: 7, acc: 60, evasion: 18, armor: 1, speed: 12, moveRange: 6,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 40, huntXp: 30, respawn: 160, aggroRange: 0,
+    drops: [
+      { item: 'boarhide', qty: [1, 2], chance: 0.9 },
+      { item: 'cured_hide', qty: [1, 1], chance: 0.5 },
+      { item: 'sinew', qty: [1, 2], chance: 0.6 },
+    ],
+    desc: 'A leggy grey road-horse, bred to eat distance and to know it. Stands off at exactly the range where you have to decide whether to bother.',
+    recommend: 'Do not. It is worth more under you than in pieces.',
+    model: M([
+      box(0, 0.78, 0, 0.5, 0.48, 1.22, [0.62, 0.6, 0.58]),
+      box(0, 1.36, 0.55, 0.26, 0.26, 0.46, [0.62, 0.6, 0.58]),
+    ]),
+  },
+  destrier: {
+    label: 'Destrier', behavior: 'defensive', tier: 2,
+    hp: 56, atk: 10, acc: 60, evasion: 8, armor: 4, speed: 11, moveRange: 5,
+    abilities: ['skull_rush'], element: null, weak: [], resist: [],
+    xp: 70, huntXp: 50, respawn: 200, aggroRange: 0,
+    drops: [
+      { item: 'boarhide', qty: [2, 3], chance: 1 },
+      { item: 'cured_hide', qty: [1, 2], chance: 0.7 },
+      { item: 'sinew', qty: [1, 2], chance: 0.6 },
+    ],
+    desc: 'Black, deep-chested and entirely unhurried. It has been walked at by worse things than you and it did not move then either.',
+    recommend: 'It will not start it. It will finish it.',
+    model: M([
+      box(0, 0.8, 0, 0.62, 0.56, 1.3, [0.2, 0.18, 0.18]),
+      box(0, 1.44, 0.58, 0.3, 0.3, 0.48, [0.2, 0.18, 0.18]),
+    ]),
+  },
+  steppe_runner: {
+    label: 'Steppe Runner', behavior: 'defensive', tier: 2,
+    hp: 38, atk: 8, acc: 64, evasion: 26, armor: 1, speed: 15, moveRange: 7,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 80, huntXp: 60, respawn: 220, aggroRange: 0,
+    drops: [
+      { item: 'boarhide', qty: [1, 2], chance: 0.9 },
+      { item: 'cured_hide', qty: [1, 2], chance: 0.6 },
+      { item: 'sinew', qty: [2, 3], chance: 0.7 },
+    ],
+    desc: 'Dun, wind-burnt and half wild, with a wall-eye and a scar nobody gave it. It is gone before you have finished deciding.',
+    recommend: 'You will not catch it in a fight. That is rather the point of it.',
+    model: M([
+      box(0, 0.74, 0, 0.46, 0.46, 1.18, [0.76, 0.66, 0.44]),
+      box(0, 1.3, 0.52, 0.24, 0.24, 0.44, [0.76, 0.66, 0.44]),
+    ]),
+  },
+  crag_drake: {
+    label: 'Crag Drake', behavior: 'defensive', tier: 2,
+    hp: 70, atk: 12, acc: 64, evasion: 10, armor: 5, speed: 7, moveRange: 4,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 140, huntXp: 90, respawn: 320, aggroRange: 0,
+    drops: [
+      { item: 'cured_hide', qty: [2, 4], chance: 1 },
+      { item: 'rough_gem', qty: [1, 2], chance: 0.4 },
+      { item: 'sinew', qty: [2, 3], chance: 0.7 },
+    ],
+    desc: 'A broad slate-grey cliff dragon, wings folded like a shut door, dozing on a ledge that took you an hour to reach.',
+    recommend: 'Armoured, patient, and much heavier than it looks. Feed it instead.',
+    model: M([
+      box(0, 0.7, 0, 0.7, 0.6, 1.5, [0.4, 0.42, 0.44]),
+      box(0, 1.1, 0.95, 0.4, 0.36, 0.5, [0.44, 0.46, 0.48]),
+      box(-0.9, 0.9, -0.1, 1.1, 0.1, 0.8, [0.34, 0.36, 0.38]),
+      box(0.9, 0.9, -0.1, 1.1, 0.1, 0.8, [0.34, 0.36, 0.38]),
+    ]),
+  },
+  storm_wyrm: {
+    label: 'Storm Wyrm', behavior: 'defensive', tier: 3,
+    hp: 88, atk: 15, acc: 70, evasion: 20, armor: 4, speed: 10, moveRange: 5,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 260, huntXp: 160, respawn: 420, aggroRange: 0,
+    drops: [
+      { item: 'cured_hide', qty: [2, 4], chance: 1 },
+      { item: 'uncut_sapphire', qty: [1, 1], chance: 0.35 },
+      { item: 'sinew', qty: [2, 4], chance: 0.7 },
+    ],
+    desc: 'Narrow, blue-black and never quite still, standing into the wind on a ridge with its wings half open. It is reading the weather and you are not.',
+    recommend: 'It will simply leave. Bring fish.',
+    model: M([
+      box(0, 0.66, 0, 0.6, 0.52, 1.6, [0.2, 0.24, 0.36]),
+      box(0, 1.06, 1.0, 0.36, 0.32, 0.52, [0.24, 0.28, 0.42]),
+      box(-1.0, 0.86, -0.1, 1.3, 0.1, 0.7, [0.18, 0.2, 0.3]),
+      box(1.0, 0.86, -0.1, 1.3, 0.1, 0.7, [0.18, 0.2, 0.3]),
+    ]),
+  },
+  riftdrake: {
+    label: 'Riftdrake', behavior: 'defensive', tier: 3,
+    hp: 120, atk: 20, acc: 74, evasion: 16, armor: 7, speed: 12, moveRange: 6,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 520, huntXp: 320, respawn: 600, aggroRange: 0,
+    drops: [
+      { item: 'cured_hide', qty: [3, 5], chance: 1 },
+      { item: 'veilcrystal', qty: [1, 2], chance: 0.6 },
+      { item: 'flawless_veilcrystal', qty: [1, 1], chance: 0.2 },
+    ],
+    desc: 'Veil-lit along every seam, and it watches you with the particular calm of a thing that has been higher than anything else alive. The only creature in the world that can reach the top islands.',
+    recommend: 'Nothing good comes of it. Bring veilcrystal and be polite.',
+    model: M([
+      box(0, 0.8, 0, 0.76, 0.62, 1.8, [0.26, 0.2, 0.36]),
+      box(0, 1.3, 1.1, 0.44, 0.4, 0.58, [0.32, 0.24, 0.44]),
+      box(-1.2, 1.04, -0.1, 1.5, 0.12, 0.9, [0.22, 0.16, 0.3]),
+      box(1.2, 1.04, -0.1, 1.5, 0.12, 0.9, [0.22, 0.16, 0.3]),
+      box(0, 1.44, 1.28, 0.16, 0.12, 0.1, [0.7, 0.95, 0.9]),
+    ]),
+  },
+  dragon_whelp: {
+    label: 'Dragon Whelp', behavior: 'passive', tier: 0,
+    hp: 14, atk: 2, acc: 50, evasion: 28, armor: 1, speed: 8, moveRange: 4,
+    abilities: [], element: 'fire', weak: [], resist: ['fire'],
+    xp: 20, huntXp: 14, respawn: 300, aggroRange: 0,
+    drops: [
+      { item: 'charcoal', qty: [1, 2], chance: 0.5 },
+      { item: 'rough_gem', qty: [1, 1], chance: 0.2 },
+    ],
+    desc: 'Cat-sized, permanently warm, and it will never get any bigger — whatever it is, it is not a baby anything. It sleeps in your hood and singes the lining.',
+    recommend: 'It is the size of a loaf. Leave it alone.',
+    model: M([
+      box(0, 0.16, 0, 0.26, 0.22, 0.5, [0.6, 0.28, 0.2]),
+      box(0, 0.32, 0.3, 0.2, 0.18, 0.22, [0.68, 0.32, 0.22]),
+      box(-0.24, 0.3, -0.02, 0.3, 0.05, 0.26, [0.52, 0.24, 0.18]),
+      box(0.24, 0.3, -0.02, 0.3, 0.05, 0.26, [0.52, 0.24, 0.18]),
+      box(0, 0.14, -0.34, 0.07, 0.07, 0.3, [0.56, 0.26, 0.2]),
+    ]),
+  },
 };
 
 // ---- creature skins ---------------------------------------------------------
@@ -570,6 +708,11 @@ export class EnemyManager {
   nearbyGroup(cx, cz, radius = 6, cy = null) {
     const group = [];
     for (const e of this.entities.values()) {
+      // A pet is standing right next to you by definition. Without this, calling
+      // a Pocket Rat and then picking a fight enlists the rat as an ENEMY —
+      // every pet type is also a wild creature type, so nothing else here can
+      // tell them apart.
+      if (e.pet) continue;
       if (Math.hypot(e.x - cx, e.z - cz) > radius) continue;
       if (cy !== null && Math.abs(e.y - cy) > 3.5) continue;
       group.push(e);
@@ -580,6 +723,7 @@ export class EnemyManager {
   entityAt(x, y, z, maxDist = 1.4) {
     let best = null, bestD = maxDist;
     for (const e of this.entities.values()) {
+      if (e.pet) continue;   // you cannot swing at your own pet
       const d = Math.hypot(e.x - x, e.z - z) + Math.abs(e.y - y) * 0.5;
       if (d < bestD) { best = e; bestD = d; }
     }

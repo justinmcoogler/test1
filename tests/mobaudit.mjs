@@ -24,7 +24,9 @@ const result = await page.evaluate(async () => {
   const ROSTER = ['cow', 'pig', 'sheep', 'goat', 'horse', 'chicken', 'duck', 'rabbit',
     'practice_dummy', 'rat',
     'scrap_goblin', 'bog_goblin', 'cave_goblin', 'ash_goblin',
-    'frost_goblin', 'goblin_slinger', 'goblin_warchief', 'goblin_warlord'];
+    'frost_goblin', 'goblin_slinger', 'goblin_warchief', 'goblin_warlord',
+    'courser', 'destrier', 'steppe_runner',
+    'crag_drake', 'storm_wyrm', 'riftdrake', 'dragon_whelp'];
   const CELL = 150, PAD = 20;
   const cols = 3;                                   // idle | walk | ambient
   const sheet = document.createElement('canvas');

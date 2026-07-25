@@ -16,6 +16,10 @@ const RIGS = {
   scrap_goblin: 'biped', bog_goblin: 'biped', cave_goblin: 'biped',
   ash_goblin: 'biped', frost_goblin: 'biped', goblin_slinger: 'biped',
   goblin_warchief: 'biped', goblin_warlord: 'biped',
+  // mounts + the whelp — horses and dragons both walk on four legs
+  courser: 'quadruped', destrier: 'quadruped', steppe_runner: 'quadruped',
+  crag_drake: 'quadruped', storm_wyrm: 'quadruped', riftdrake: 'quadruped',
+  dragon_whelp: 'quadruped',
 };
 
 const cx = (b) => b.x + b.w / 2;

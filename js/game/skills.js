@@ -1,7 +1,7 @@
-// 21 independent skills, levels 1–99, XP through use, milestone unlock tables.
+// 22 independent skills, levels 1–99, XP through use, milestone unlock tables.
 import { emit } from '../core/events.js';
 
-// The real-world skill roster (20 live skills). Internal keys are kept stable so
+// The real-world skill roster (21 live skills). Internal keys are kept stable so
 // recipes/nodes/combat and old saves keep working; the real-craft names live in
 // `label`. Magic & Enchanting are anachronistic — flagged `frontier` and hidden
 // unless the optional Fantasy Frontier is enabled. (Tactics was dissolved into
@@ -14,6 +14,7 @@ export const SKILL_DEFS = {
   foraging:    { label: 'Foraging', group: 'Gathering', desc: 'Identify and gather wild herbs, fruit and fungi by biome and season.' },
   hunting:     { label: 'Hunting', group: 'Gathering', desc: 'Track, stalk, trap and butcher wild game for hide, meat, sinew and bone.' },
   farming:     { label: 'Farming', group: 'Gathering', desc: 'Sow, rotate and irrigate crops; raise and breed livestock.' },
+  handling:    { label: 'Handling', group: 'Gathering', desc: 'Win the trust of animals — the horses you ride, the dragons that carry you over the sky islands, and the small things that follow you home.' },
   // Processing — re-living the real craft tech tree
   smithing:     { label: 'Smithing', group: 'Processing', desc: 'Smelt ore at real melting temperatures and forge metal gear.' },
   woodworking:  { label: 'Woodworking', group: 'Processing', desc: 'Shape timber into planks, hafts, bows and gunstocks.' },
@@ -44,6 +45,16 @@ export const SKILL_UNLOCKS = {
     [20, 'Lead & silver ore'], [25, 'Iron ore'], [30, 'Zinc ore'], [40, 'Gold ore'],
     [55, 'Platinum ore'], [70, 'Meteoric iron (crater sites)'],
     [90, 'Master miner: rare gem chance doubled — gems drop while mining any rock'],
+  ],
+  handling: [
+    [1, 'Moorland Pony; a pocket rat for company'], [5, 'Yard hen'], [10, 'Warren rabbit'],
+    [15, 'Courser — the first horse that really moves'], [20, 'Pack goat (carries for you)'],
+    [25, 'Crag Drake — the low sky shelf opens'], [30, 'Destrier — heavy, armoured, unbothered'],
+    [45, 'Steppe Runner — the fastest thing on the ground'],
+    [50, 'Storm Wyrm — the middle archipelago'],
+    [60, 'Dragon whelp (a pet, and it never grows up)'],
+    [75, 'Riftdrake — the high islands, and the meteoric iron on them'],
+    [90, 'Beastmaster: everything takes half the feed to tame'],
   ],
   woodcutting: [
     [1, 'Pine'], [10, 'Cedar'], [20, 'Birch'], [30, 'Oak'], [35, 'Ash'], [45, 'Hickory'],

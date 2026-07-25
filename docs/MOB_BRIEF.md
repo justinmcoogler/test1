@@ -47,6 +47,26 @@ A mob earns a place by being something the world actually needs. The roster was
 sixty natives plus a ninety-six-model import pack once, and it read like a
 bestiary someone was filling in rather than a place someone lived.
 
+### The mounts
+
+On top of the eighteen sit seven creatures you tame rather than fight — the
+Handling skill (`js/game/mounts.js`). Same rule about shared plans applies.
+
+| mob | rig | reads as |
+| --- | --- | --- |
+| courser | quadruped | dapple grey, leggy, built for the road |
+| destrier | quadruped | black, deep-chested, heavy in the leg |
+| steppe_runner | quadruped | dun with a dorsal stripe, lightest frame |
+| crag_drake | quadruped | slate cliff dragon, broadest wings, short neck |
+| storm_wyrm | quadruped | blue-black, long and narrow, spar-like wings |
+| riftdrake | quadruped | violet-black, Veil-lit seams, biggest of the three |
+| dragon_whelp | quadruped | the same dragon at a quarter scale, ember orange |
+
+The three horses are ONE skeleton at three builds and the four dragons are ONE
+skeleton at four scales, both generated from shared builders in
+`js/game/mobremakes/batch_mounts.js`. Wingspan is the dragons' tell; height at
+the withers is the horses'. Neither family gets a new limb.
+
 ## 2. Geometry — the non-negotiables
 
 1. **One block = 16 pixels.** Author in pixels. Every offset and every size is a

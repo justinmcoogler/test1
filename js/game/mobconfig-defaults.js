@@ -33,4 +33,15 @@ export const MOB_DEFAULTS = {
   "goblin_slinger": { active: true },
   "goblin_warchief": { active: true },
   "goblin_warlord": { active: true },
+  // mounts and the one pet that is not already livestock (js/game/mounts.js).
+  // These ship active for a structural reason: the dragons are the only way up
+  // to the sky archipelago, so a world with them switched off has a whole
+  // vertical axis in it that nothing can reach.
+  "courser": { active: true },
+  "destrier": { active: true },
+  "steppe_runner": { active: true },
+  "crag_drake": { active: true },
+  "storm_wyrm": { active: true },
+  "riftdrake": { active: true },
+  "dragon_whelp": { active: true },
 };

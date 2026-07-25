@@ -72,6 +72,10 @@ try {
   }
   const afterDummy = await gState(() => ({
     over: !window.__game.combatRS.active,
+    // diagnostics — a stalled first fight should say what stalled it
+    dummyHp: [...window.__game.combatRS.engaged.values()].map((s) => `${s.entity.type}:${Math.round(s.entity.hp)}`),
+    target: window.__game.combatRS.target?.type,
+    playerHp: Math.round(window.__game.player.hp),
     dummyGone: ![...window.__game.enemyMgr.entities.values()].some((e) => e.type === 'practice_dummy'),
     strXp: window.__game.skills.xp.strength,
     defXp: window.__game.skills.xp.defense,
@@ -209,7 +213,14 @@ try {
         }
         const tiles = g.combatRS.telegraphTiles();
         const inDanger = tiles.some((t) => t.x === Math.floor(g.player.x) && t.z === Math.floor(g.player.z));
-        const boss = [...g.combatRS.engaged.values()].find((s) => s.entity.type === 'goblin_warchief')?.entity;
+        // Chase the boss while it lives, then whatever it called in. Without the
+        // fallback the autopilot simply stands still once the chief is down and
+        // the adds are out of reach, and the fight never resolves — which is a
+        // harness that stopped playing, not a fight that failed.
+        const engaged = [...g.combatRS.engaged.values()].map((s) => s.entity);
+        const boss = engaged.find((e) => e.type === 'goblin_warchief')
+          || engaged.sort((a, c) => Math.hypot(a.x - g.player.x, a.z - g.player.z)
+            - Math.hypot(c.x - g.player.x, c.z - g.player.z))[0];
         if (inDanger) {
           g.player.x += 3; // step out of the slam
         } else if (boss && Math.hypot(boss.x - g.player.x, boss.z - g.player.z) > 2) {
@@ -232,13 +243,53 @@ try {
     if (st.over) break;
     await page.waitForTimeout(500);
   }
-  const bossAfter = await gState(() => ({
-    over: !window.__game.combatRS.active,
-    alive: !window.__game.player.dead,
-    trophy: window.__game.inventory.count('warchief_standard'),
-    flag: !!window.__game.flags.boss_gorrak,
-  }));
-  check('boss defeated in classic combat', bossAfter.over && bossAfter.alive && bossAfter.trophy >= 1, JSON.stringify(bossAfter));
+  // Mop-up. Killing the chief does not end the fight — it called two scrappers in
+  // at half health and they are still swinging, which is ordinary play and not a
+  // failure. Given its own budget rather than sharing the boss fight's, so a long
+  // boss fight can never eat the time the clean-up needs.
+  for (let i = 0; i < 80; i++) {
+    const st = await gState(() => {
+      const g = window.__game;
+      if (!g.combatRS.active) return { over: true };
+      const foe = [...g.combatRS.engaged.values()].map((e) => e.entity)
+        .sort((a, c) => Math.hypot(a.x - g.player.x, a.z - g.player.z)
+          - Math.hypot(c.x - g.player.x, c.z - g.player.z))[0];
+      if (foe && Math.hypot(foe.x - g.player.x, foe.z - g.player.z) > 2) {
+        const dx = foe.x - g.player.x, dz = foe.z - g.player.z, d = Math.hypot(dx, dz);
+        g.player.x += (dx / d) * 1.2; g.player.z += (dz / d) * 1.2;
+      }
+      if (g.player.hp < g.player.maxHp * 0.6) {
+        const idx = g.inventory.slots.findIndex((sl) => sl && sl.item === 'roast_haunch');
+        if (idx >= 0) g.useItem(idx);
+      }
+      return { over: false, dead: g.player.dead };
+    });
+    if (st.over || st.dead) break;
+    await page.waitForTimeout(400);
+  }
+
+  const bossAfter = await gState(() => {
+    const g = window.__game;
+    const boss = [...g.combatRS.engaged.values()].find((s) => s.entity.type === 'goblin_warchief')?.entity;
+    return {
+      over: !g.combatRS.active,
+      alive: !g.player.dead,
+      trophy: g.inventory.count('warchief_standard'),
+      flag: !!g.flags.boss_gorrak,
+      // diagnostics — where everyone ended up, so a stall is legible
+      bossHp: boss?.hp, engaged: g.combatRS.engaged.size,
+      gap: boss ? +Math.hypot(boss.x - g.player.x, boss.z - g.player.z).toFixed(1) : null,
+      at: [+g.player.x.toFixed(1), +g.player.y.toFixed(1), +g.player.z.toFixed(1)],
+    };
+  });
+  // The kill itself: the trophy and the world flag are what a defeated boss
+  // leaves behind, and `gap === null` means it is no longer in the fight. These
+  // are stronger evidence than "combat ended", which was only ever a proxy and
+  // which also goes false while you are still clearing the adds it summoned.
+  check('boss defeated in classic combat',
+    bossAfter.alive && bossAfter.trophy >= 1 && bossAfter.flag && bossAfter.gap === null,
+    JSON.stringify(bossAfter));
+  check('and the fight it started actually resolves', bossAfter.over, JSON.stringify(bossAfter));
   check('boss slam telegraphs ground tiles', sawTelegraphTiles);
   check('boss summons the warband at half health', sawSummons);
   check('boss flag set', bossAfter.flag);
