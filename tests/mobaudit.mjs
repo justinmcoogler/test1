@@ -22,7 +22,11 @@ const result = await page.evaluate(async () => {
   const { evaluatePose } = await import('./js/game/mobloader.js');
   const ROSTER = ['cow', 'pig', 'sheep', 'goat', 'horse', 'chicken', 'duck', 'rabbit',
     'frostmaw_wolf', 'gloomrat', 'practice_dummy', 'scrap_goblin',
-    'slagwalker', 'hookleg', 'ashen_penitent'];
+    'slagwalker', 'hookleg', 'ashen_penitent',
+    // The mounts ship active on purpose: they are the only way up to the sky
+    // archipelago, so a default world with them switched off has a whole
+    // vertical axis in it that nothing can reach.
+    'ridgewing', 'stormjack', 'riftwing'];
   const CELL = 150, PAD = 20;
   const cols = 3;                                   // idle | walk | ambient
   const sheet = document.createElement('canvas');

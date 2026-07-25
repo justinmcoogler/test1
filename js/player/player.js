@@ -1,6 +1,7 @@
 // First-person player: AABB physics against the voxel world, vitals, stats.
 import { clamp } from '../core/math.js';
 import { emit } from '../core/events.js';
+import { DIVE_RATE } from '../game/mounts.js';
 
 const GRAVITY = -23;
 const JUMP_VEL = 8.1;
@@ -42,6 +43,7 @@ export class Player {
     this.fallStartVy = 0;
     this.dead = false;
     this.debug = false;   // debug/creative: fly (noclip) + invulnerable
+    this.mountDef = null; // MOUNTS entry while riding, else null (js/game/mounts.js)
     this.bleeding = 0;    // seconds of open-wound bleeding remaining (real-world wounds)
     this.bleedDps = 0;    // health lost per second while bleeding
     this._bleedTick = 0;
@@ -63,6 +65,9 @@ export class Player {
 
   update(dt, input, world) {
     dt = Math.min(dt, 0.05);
+    // Riding replaces walking entirely — see rideUpdate. Checked before
+    // debug flight so a creative-mode player still gets noclip.
+    if (!this.debug && this.mountDef) { this.rideUpdate(dt, input, world, this.mountDef); return; }
     if (this.debug) { this.hp = this.maxHp; this.dead = false; this.bleeding = 0; this.bleedDps = 0; this.bodyTemp = 0.5; this.tempState = 'ok'; this.hydration = 100; this.hydState = 'ok'; this.malnourished = false; this.flyUpdate(dt, input); return; }
     if (this.dead) return;
 
@@ -180,6 +185,64 @@ export class Player {
     this.y = clamp(this.y + dy * SPEED * dt, 1, 600);
     this.vx = this.vy = this.vz = 0;
     this.mana = Math.min(this.maxMana, this.mana + 0.4 * dt);
+  }
+
+  // Riding. Unlike debug flight this COLLIDES: you land on an island, you are
+  // stopped by its keel, and you can be swatted out of the air. The differences
+  // from walking are that gravity is replaced by the mount holding altitude, and
+  // that the mount has a hard CEILING it will not climb past — which is what
+  // makes the sky bands a progression rather than one unlock (js/game/mounts.js).
+  //
+  // `def` is a MOUNTS entry. A ground mount (flying:false) just walks faster:
+  // it falls under gravity and cannot leave the floor, so the same code path
+  // teaches the controls you will fly with.
+  rideUpdate(dt, input, world, def) {
+    this.inWater = false; this.headUnder = false;
+    this.air = this.maxAir; this.sprinting = false;
+
+    let dx, dz;
+    if (input.worldMove) { [dx, dz] = input.worldMove; }
+    else {
+      const [mx, mz] = input.moveVector();
+      const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
+      dx = (-sy * mx) + (cy * mz);
+      dz = (-cy * mx) + (-sy * mz);
+    }
+    const dl = Math.hypot(dx, dz);
+    if (dl > 1) { dx /= dl; dz /= dl; }
+
+    if (!def.flying) {
+      // A horse. Gravity as usual, just quicker over the ground.
+      this.vx = dx * def.speed; this.vz = dz * def.speed;
+      this.vy += GRAVITY * dt;
+      if (input.jump && this.onGround) { this.vy = JUMP_VEL; this.onGround = false; }
+      this.vy = clamp(this.vy, -40, 12);
+      this.moveAxis(world, this.vx * dt, 0, 0);
+      this.moveAxis(world, 0, 0, this.vz * dt);
+      this.moveAxis(world, 0, this.vy * dt, 0);
+      if (this.y < 0.5) { this.y = 0.5; this.vy = 0; this.onGround = true; }
+      return;
+    }
+
+    // Flying. Space climbs, Shift dives, and letting go of both holds altitude —
+    // no gravity, so a mount cannot drop you by accident.
+    let dy = 0;
+    if (input.jump) dy += def.climb;
+    if (input.sprint) dy -= DIVE_RATE;
+    // The ceiling. It is a soft stop rather than a wall: the climb is refused,
+    // the mount keeps flying level, and descending always works — so a ceiling
+    // can strand nobody, wherever they are when they hit it.
+    if (dy > 0 && this.y >= def.ceiling) dy = 0;
+    if (dy > 0 && this.y + dy * dt > def.ceiling) dy = (def.ceiling - this.y) / dt;
+
+    this.vx = dx * def.speed; this.vz = dz * def.speed; this.vy = dy;
+    this.moveAxis(world, this.vx * dt, 0, 0);
+    this.moveAxis(world, 0, 0, this.vz * dt);
+    this.moveAxis(world, 0, dy * dt, 0);
+    // Landing on an island sets onGround through moveAxis; riders take no fall
+    // damage, because the mount is doing the falling.
+    this.fallStartVy = 0;
+    if (this.y < 0.5) { this.y = 0.5; this.onGround = true; }
   }
 
   // Is the player's box clear of the world at this position? Used by the step-up

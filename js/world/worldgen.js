@@ -168,7 +168,7 @@ export const BIOMES = {
     trees: grove(['pine', 0.006], ['ash', 0.006], ['hickory', 0.004]),
     plants: [{ block: 'tall_grass', d: 0.008 }],
     nodes: [{ type: 'ore_iron', d: 0.005 }, { type: 'ore_copper', d: 0.004 }, { type: 'ore_tin', d: 0.004 }, { type: 'deposit_coal', d: 0.003 }, { type: 'dig_trench', d: 0.002 }],
-    enemies: [{ type: 'craghorn_ram', d: 0.0025 }, { type: 'stone_pecker', d: 0.002 }, { type: 'scrap_goblin', d: 0.002, ring: 1 }, { type: 'seepmass', d: 0.0016, ring: 1 }, { type: 'shardcaster', d: 0.0014, ring: 2 }, { type: 'stone_golem', d: 0.0009, ring: 2 }, { type: 'crag_bat', d: 0.0018, pack: [2, 3], ring: 1 }, { type: 'goat', d: 0.0022 }],
+    enemies: [{ type: 'craghorn_ram', d: 0.0025 }, { type: 'stone_pecker', d: 0.002 }, { type: 'scrap_goblin', d: 0.002, ring: 1 }, { type: 'seepmass', d: 0.0016, ring: 1 }, { type: 'shardcaster', d: 0.0014, ring: 2 }, { type: 'stone_golem', d: 0.0009, ring: 2 }, { type: 'crag_bat', d: 0.0018, pack: [2, 3], ring: 1 }, { type: 'goat', d: 0.0022 }, { type: 'ridgewing', d: 0.0011, ring: 1 }],
   },
   savanna: {
     label: 'Savanna', ring: 1, climate: 'tropical grassland / savanna',
@@ -288,7 +288,7 @@ export const BIOMES = {
     trees: [],
     plants: [],
     nodes: [{ type: 'ore_silver', d: 0.003 }, { type: 'ore_gold', d: 0.0016 }, { type: 'deposit_coal', d: 0.002 }, { type: 'dig_vault', d: 0.001 }],
-    enemies: [{ type: 'rime_shade', d: 0.0022, ring: 1 }, { type: 'craghorn_ram', d: 0.002 }, { type: 'hollow_watcher', d: 0.0012, ring: 3 }, { type: 'frost_elemental', d: 0.0016, ring: 2 }, { type: 'stone_golem', d: 0.0009, ring: 2 }, { type: 'gaze_orb', d: 0.0012, ring: 3 }],
+    enemies: [{ type: 'rime_shade', d: 0.0022, ring: 1 }, { type: 'craghorn_ram', d: 0.002 }, { type: 'hollow_watcher', d: 0.0012, ring: 3 }, { type: 'frost_elemental', d: 0.0016, ring: 2 }, { type: 'stone_golem', d: 0.0009, ring: 2 }, { type: 'gaze_orb', d: 0.0012, ring: 3 }, { type: 'riftwing', d: 0.0007, ring: 3 }, { type: 'stormjack', d: 0.0009, ring: 2 }],
   },
   volcanic_wastes: {
     label: 'Volcanic Fields', ring: 3, climate: 'active volcanic',

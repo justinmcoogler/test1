@@ -154,4 +154,7 @@ export const MOB_DEFAULTS = {
   "slagwalker": { active: true },
   "hookleg": { active: true },
   "ashen_penitent": { active: true },
+  "ridgewing": { active: true },
+  "stormjack": { active: true },
+  "riftwing": { active: true },
 };

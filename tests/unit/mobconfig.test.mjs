@@ -33,7 +33,11 @@ test('the shipped roster is active; everything else defaults OFF', () => {
   // skeleton with slagwalker/hookleg/ashen_penitent.
   const ROSTER = ['cow', 'pig', 'sheep', 'chicken', 'duck', 'goat', 'horse', 'rabbit',
     'frostmaw_wolf', 'gloomrat', 'practice_dummy', 'scrap_goblin',
-    'slagwalker', 'hookleg', 'ashen_penitent'];
+    'slagwalker', 'hookleg', 'ashen_penitent',
+    // The mounts ship active on purpose: they are the only way up to the sky
+    // archipelago, so a default world with them switched off has a whole
+    // vertical axis in it that nothing can reach.
+    'ridgewing', 'stormjack', 'riftwing'];
   for (const t of ROSTER) {
     assert.ok(ENEMY_TYPES[t], `${t} should exist in the registry`);
     assert.equal(mc.mobActive(t), true, `${t} should ship active`);

@@ -14,6 +14,7 @@ import { Skills, SKILL_DEFS } from './game/skills.js';
 import { ITEMS } from './game/items.js';
 import { QuestLog } from './game/quests.js';
 import { EnemyManager, ENEMY_TYPES } from './game/enemies.js';
+import { Stable, MOUNTS, mountDef, tameHint, SADDLE_H } from './game/mounts.js';
 import { Combat } from './game/combat.js';
 import { CombatRS } from './game/combatrs.js';
 import { NPC_DEFS } from './game/npcs.js';
@@ -79,6 +80,9 @@ class Game {
     // Waystone fast-travel network. Built before restore() so a save can fill it.
     this.waystones = new WaystoneNet();
     this.nearWaystone = null;    // the stone you're standing at, if any
+    // Mounts. Built before restore() for the same reason the waystone net is.
+    this.stable = new Stable();
+    this.nearMount = null;       // a tameable creature within reach, if any
     this.waystonesInSight = [];  // stones close enough to label in the world
     this.flags = {};
     this.playtime = 0;
@@ -611,7 +615,7 @@ class Game {
     // Set + two array spreads); it's idempotent, so ~2.5 Hz is plenty. New
     // spawns/despawns appear within 0.4s — chunks stream in over seconds anyway.
     this._refreshAccum = (this._refreshAccum ?? 1) + dt;
-    if (this._refreshAccum >= 0.4) { this._refreshAccum = 0; this.enemyMgr.refresh(); }
+    if (this._refreshAccum >= 0.4) { this._refreshAccum = 0; this.enemyMgr.refresh(); this.updateMounts(); }
     this.enemyMgr.update(dt, p, this.combat.active);
     this.combat.update(dt);
     this.combatRS.update(dt);
@@ -1470,6 +1474,9 @@ class Game {
     // A waystone you're standing at names itself and says what it is for. It
     // outranks a soft break prompt and nothing else.
     if (this.nearWaystone && (!prompt || soft)) prompt = this.waystonePrompt();
+    // A mount you are standing at outranks both — it is the rarer thing to meet.
+    if (this.nearMount && (!prompt || soft)) prompt = this.mountPrompt();
+    if (this.stable.riding()) prompt = `Riding ${this.stable.ridingDef().label} — ${this.touch ? 'Tap Action' : 'F'} to dismount`;
     this.ui.setPrompt(prompt);
 
     // classic combat: no skilling while creatures are on you
@@ -1832,8 +1839,83 @@ class Game {
     SFX.place();
   }
 
+  // ------------------------------------------------------------------- mounts
+  // Which tameable creature you are standing at, refreshed on the same throttle
+  // as the waystone scan. `enemyMgr.entities` is the live set, so this only ever
+  // looks at creatures actually loaded around you.
+  updateMounts() {
+    if (this.stable.riding()) { this.nearMount = null; return; }
+    const p = this.player;
+    let best = null, bestD = 3.4 * 3.4;
+    for (const e of this.enemyMgr.entities.values()) {
+      if (!MOUNTS[e.type] || e.dead) continue;
+      const dx = e.x - p.x, dy = (e.y ?? p.y) - p.y, dz = e.z - p.z;
+      if (Math.abs(dy) > 3) continue;
+      const d = dx * dx + dz * dz;
+      if (d < bestD) { bestD = d; best = e; }
+    }
+    this.nearMount = best;
+  }
+
+  // What the HUD says at a mount: either how to tame it, or how to get on.
+  mountPrompt() {
+    const e = this.nearMount;
+    if (!e) return null;
+    const d = MOUNTS[e.type];
+    const key = this.touch ? 'Tap Action' : 'F';
+    if (this.stable.has(e.type)) return `${d.label} — ${key} to ride`;
+    const need = d.tameCount - (this.stable.progress.get(e.type) || 0);
+    const item = ITEMS[d.tame]?.label || d.tame;
+    return this.inventory.count(d.tame) > 0
+      ? `${d.label} — ${key} to offer ${item} (${need} more)`
+      : `${d.label} — it wants ${tameHint(e.type)}`;
+  }
+
+  // Feed it, or get on it. One key does both, because at any moment only one of
+  // them is possible.
+  tryMount(e) {
+    const d = MOUNTS[e.type];
+    if (!d) return false;
+    if (this.stable.has(e.type)) {
+      this.stable.mount(e.type);
+      this.player.mountDef = d;
+      // Seat the rider clear of whatever the mount was standing in.
+      this.player.y += SADDLE_H;
+      this.ui.toast(`Riding ${d.label}. ${d.flying ? 'Jump to climb, sprint to dive.' : ''}`.trim(), 'gold');
+      SFX.questDone();
+      return true;
+    }
+    if (this.inventory.count(d.tame) <= 0) {
+      this.ui.toast(`${d.label} will not come near you. It wants ${tameHint(e.type)}.`, 'warn');
+      return true;
+    }
+    this.inventory.remove(d.tame, 1);
+    const r = this.stable.feed(e.type, 1);
+    if (r.tamed) {
+      this.ui.toast(`${d.label} lets you close. It will carry you now.`, 'gold');
+      SFX.questDone();
+      this.autosaveTimer = Math.min(this.autosaveTimer, 3);
+    } else {
+      this.ui.toast(`${d.label} takes it, and waits. (${r.need} more)`, 'xp');
+    }
+    return true;
+  }
+
+  dismount() {
+    const d = this.stable.ridingDef();
+    if (!d) return;
+    this.stable.dismount();
+    this.player.mountDef = null;
+    this.player.vy = 0;
+    this.ui.toast(`Down off the ${d.label}.`, 'gold');
+  }
+
   tryInteract(silent = false) {
     if (this.combat.active || this.combatRS.active || this.player.dead) return false;
+    // Riding: the same key gets off. Checked first so a rider is never stuck
+    // because they happen to be facing a chest.
+    if (this.stable.riding()) { this.dismount(); return true; }
+    if (this.nearMount && this.tryMount(this.nearMount)) return true;
     const npc = this.npcInFront();
     if (npc) {
       this.quests.talkedTo(npc.id);
@@ -2480,6 +2562,7 @@ class Game {
       skills: this.skills.serialize(),
       quests: this.quests.serialize(),
       enemies: this.enemyMgr.serialize(),
+      stable: this.stable.serialize(),
       education: this.education.serialize(),
       lessons: this.lessons.serialize(),
       flags: this.flags,
@@ -2500,6 +2583,9 @@ class Game {
     this.skills.deserialize(d.skills);
     this.quests.deserialize(d.quests);
     this.enemyMgr.deserialize(d.enemies);
+    // An old save has no `stable` at all; deserialize(undefined) is an empty one.
+    this.stable.deserialize(d.stable);
+    this.player.mountDef = mountDef(this.stable.riding());
     this.education.deserialize(d.education);
     this.lessons.deserialize(d.lessons);
     this.flags = d.flags || {};

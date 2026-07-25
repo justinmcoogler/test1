@@ -1000,6 +1000,78 @@ export const ENEMY_TYPES = {
       box(0, 0.62, 0.02, 0.12, 0.14, 0.12, [0.5, 0.72, 0.62]),
     ]),
   },
+  // ---- mounts --------------------------------------------------------------
+  // The three flying mounts (js/game/mounts.js). They are ordinary creatures in
+  // the roster — you find them, you feed them, and then they will carry you.
+  // Defensive, so a mount you are trying to tame does not fight you first, and
+  // ring-tiered so the one that reaches the high archipelago lives out where the
+  // high archipelago is.
+  ridgewing: {
+    label: 'Ridgewing', behavior: 'defensive', tier: 1,
+    hp: 40, atk: 7, acc: 58, evasion: 16, armor: 2, speed: 8, moveRange: 5,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 46, huntXp: 40, respawn: 220, aggroRange: 0,
+    headBoxes: [1],
+    drops: [
+      { item: 'cured_hide', qty: [1, 2], chance: 0.5 },
+      { item: 'sinew', qty: [1, 2], chance: 0.4 },
+    ],
+    desc: 'A broad-winged glider that rides the crag updrafts for hours without a wingbeat. Patient, heavy, and quite unbothered by you.',
+    recommend: 'Worth far more tamed than killed — it is the first thing in this world that will carry you off the ground.',
+    model: M([
+      box(0, 0.3, 0, 0.5, 0.5, 0.9, [0.44, 0.38, 0.3]),        // body
+      box(0, 0.62, 0.5, 0.34, 0.3, 0.34, [0.5, 0.43, 0.34]),   // head
+      box(-0.85, 0.5, 0, 1.2, 0.1, 0.7, [0.38, 0.33, 0.26]),   // wings
+      box(0.85, 0.5, 0, 1.2, 0.1, 0.7, [0.38, 0.33, 0.26]),
+      box(0, 0.28, -0.62, 0.2, 0.12, 0.5, [0.34, 0.29, 0.23]), // tail
+    ]),
+  },
+
+  stormjack: {
+    label: 'Stormjack', behavior: 'defensive', tier: 2,
+    hp: 52, atk: 10, acc: 66, evasion: 24, armor: 2, speed: 12, moveRange: 6,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 88, huntXp: 70, respawn: 260, aggroRange: 0,
+    headBoxes: [1],
+    drops: [
+      { item: 'cured_hide', qty: [1, 2], chance: 0.5 },
+      { item: 'sinew', qty: [2, 3], chance: 0.5 },
+    ],
+    desc: 'Built like a storm-petrel and just as nervous — long swept wings, forked tail, always facing into the wind. It will not let you close on a bad day.',
+    recommend: 'Feed it before the weather turns. It rides updrafts higher than anything on the crags.',
+    model: M([
+      box(0, 0.3, 0, 0.42, 0.42, 0.95, [0.28, 0.32, 0.4]),
+      box(0, 0.6, 0.55, 0.3, 0.26, 0.3, [0.34, 0.38, 0.46]),
+      box(-1.0, 0.48, 0, 1.5, 0.09, 0.55, [0.24, 0.28, 0.36]),
+      box(1.0, 0.48, 0, 1.5, 0.09, 0.55, [0.24, 0.28, 0.36]),
+      box(-0.16, 0.28, -0.66, 0.14, 0.1, 0.5, [0.22, 0.26, 0.33]),   // forked tail
+      box(0.16, 0.28, -0.66, 0.14, 0.1, 0.5, [0.22, 0.26, 0.33]),
+    ]),
+  },
+
+  riftwing: {
+    label: 'Riftwing', behavior: 'defensive', tier: 3,
+    hp: 78, atk: 14, acc: 72, evasion: 26, armor: 4, speed: 14, moveRange: 7,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 190, huntXp: 150, respawn: 320, aggroRange: 0,
+    headBoxes: [1],
+    drops: [
+      { item: 'veilcrystal', qty: [1, 2], chance: 0.5 },
+      { item: 'cured_hide', qty: [1, 2], chance: 0.4 },
+      { item: 'relic_fragment', qty: [1, 1], chance: 0.2 },
+    ],
+    desc: 'Veil-touched, and it shows: the light goes wrong at its wingtips. It flies higher than anything else alive here, which is the only reason anyone has ever seen the high islands.',
+    recommend: 'Do not fight it. Three veilcrystals and it is the only way to the meteoric iron.',
+    model: M([
+      box(0, 0.34, 0, 0.5, 0.5, 1.1, [0.3, 0.34, 0.42]),
+      box(0, 0.68, 0.62, 0.34, 0.3, 0.36, [0.36, 0.42, 0.5]),
+      box(-1.15, 0.54, 0, 1.7, 0.1, 0.75, [0.26, 0.3, 0.4]),
+      box(1.15, 0.54, 0, 1.7, 0.1, 0.75, [0.26, 0.3, 0.4]),
+      box(-1.7, 0.56, 0, 0.5, 0.09, 0.5, [0.55, 0.82, 0.86]),        // veil-lit tips
+      box(1.7, 0.56, 0, 0.5, 0.09, 0.5, [0.55, 0.82, 0.86]),
+      box(0, 0.3, -0.74, 0.22, 0.12, 0.6, [0.28, 0.32, 0.4]),
+    ]),
+  },
 };
 
 // ---- Minecraft-proportioned remodel ----------------------------------------
@@ -1298,6 +1370,8 @@ const SKINS = {
   frost_elemental: 'skin_glow', grave_wight: 'skin_hide',
   // the deepkin
   slagwalker: 'skin_stone', ashen_penitent: 'skin_stone', shardcaster: 'skin_glow',
+  // mounts
+  ridgewing: 'skin_hide', stormjack: 'skin_hide', riftwing: 'skin_glow',
   hookleg: 'skin_scales', seepmass: 'skin_stone',
   stone_golem: 'skin_stone', veil_crawler: 'skin_scales', gaze_orb: 'skin_glow',
 };
@@ -1314,6 +1388,7 @@ const HEAD_BOX = {
   frost_elemental: 1, grave_wight: 1, stone_golem: 1, veil_crawler: 1,
   // the deepkin — slagwalker's head is box 2 (torso, seam, head)
   slagwalker: 2, ashen_penitent: 1, shardcaster: 1, hookleg: 1, seepmass: 1,
+  ridgewing: 1, stormjack: 1, riftwing: 1,
 };
 for (const [type, def] of Object.entries(ENEMY_TYPES)) {
   def.skin = SKINS[type] || 'skin_hide';
