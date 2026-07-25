@@ -12,7 +12,8 @@ import { FARM } from './batch_farm.js';
 import { WOLF } from './batch_wolf.js';
 import { VERMIN } from './batch_vermin.js';
 import { FOLK } from './batch_folk.js';
+import { UNDEAD } from './batch_undead.js';
 
 export const MOB_REMAKES = {
-  ...WARDENS, ...MEADOW, ...WETLANDS, ...HIGHLANDS, ...DRYLANDS, ...FROST, ...EMBER, ...FARM, ...WOLF, ...VERMIN, ...FOLK,
+  ...WARDENS, ...MEADOW, ...WETLANDS, ...HIGHLANDS, ...DRYLANDS, ...FROST, ...EMBER, ...FARM, ...WOLF, ...VERMIN, ...FOLK, ...UNDEAD,
 };

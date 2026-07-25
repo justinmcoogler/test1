@@ -36,10 +36,19 @@ test('every imported type is a well-formed enemy def with real-item drops', () =
   }
 });
 
+// Ids the licensed pack ships that a hand-authored native also claims. The
+// native wins — the pack spreads first in enemies.js precisely so it cannot
+// shadow a curated creature. Add an id here when a native takes over a pack id.
+const NATIVE_OVERRIDES = new Set(['zombie']);
+
 test('imported types merge into ENEMY_TYPES without clobbering natives', () => {
   // every imported id is reachable through ENEMY_TYPES
   for (const id of Object.keys(IMPORTED_TYPES)) {
     assert.ok(ENEMY_TYPES[id], `imported ${id} missing from ENEMY_TYPES`);
+    if (NATIVE_OVERRIDES.has(id)) {
+      assert.ok(!ENEMY_TYPES[id].imported, `${id} is claimed by a native — the native must win`);
+      continue;
+    }
     assert.equal(ENEMY_TYPES[id].imported, true, `ENEMY_TYPES[${id}] should be the imported def`);
   }
   // natives keep their own (non-imported) defs — collisions were deduped

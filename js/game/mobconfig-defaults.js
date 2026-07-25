@@ -142,6 +142,7 @@ export const MOB_DEFAULTS = {
   "snow_hare": { active: false },
   "soul_spear_summoner": { active: false },
   "sparrow": { active: false },
+  "spider": { active: true },
   "spotted_gudgeon": { active: false },
   "stone_golem": { active: false },
   "stone_pecker": { active: false },
@@ -156,6 +157,6 @@ export const MOB_DEFAULTS = {
   "vulture": { active: false },
   "will_o_wisp": { active: false },
   "wolf": { active: true },
-  "zombie": { active: false },
+  "zombie": { active: true },
   "zombie_bomber": { active: false },
 };

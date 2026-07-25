@@ -10,6 +10,11 @@ const M = (boxes) => boxes;
 const box = (x, y, z, w, h, d, color) => ({ x: x - w / 2, y, z: z - d / 2, w, h, d, color });
 
 export const ENEMY_TYPES = {
+  // Imported licensed mob pack spreads FIRST so a hand-authored native below
+  // always wins its id. The importer dedupes collisions, but it can only know
+  // about ids that existed when it ran — `zombie` shipped in the pack and was
+  // silently shadowing the native one until this order was fixed.
+  ...IMPORTED_TYPES,
   practice_dummy: {
     label: 'Practice Dummy', behavior: 'passive', tier: 0,
     hp: 12, atk: 0, acc: 0, evasion: 0, armor: 0, speed: 1, moveRange: 0,
@@ -805,6 +810,39 @@ export const ENEMY_TYPES = {
       box(0, 0.7, 0.55, 0.36, 0.36, 0.4, [0.85, 0.85, 0.8]),
     ]),
   },
+  spider: {
+    label: 'Spider', behavior: 'aggressive', tier: 1, nocturnal: true,
+    hp: 24, atk: 8, acc: 64, evasion: 20, armor: 1, speed: 9, moveRange: 6,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 55, huntXp: 30, respawn: 140, aggroRange: 8,
+    drops: [
+      { item: 'spider_silk', qty: [1, 3], chance: 0.85 },
+      { item: 'sinew', qty: [1, 2], chance: 0.4 },
+    ],
+    desc: 'Eight red eyes over a bulbous abdomen, carried on eight long bent legs. It crosses open ground in bursts.',
+    recommend: 'Faster than you and it dodges well — corner it rather than chase it.',
+    model: M([
+      box(0, 0.2, -0.35, 0.62, 0.5, 0.75, [0.18, 0.15, 0.13]),
+      box(0, 0.24, 0.35, 0.5, 0.5, 0.5, [0.2, 0.17, 0.15]),
+    ]),
+  },
+  zombie: {
+    label: 'Zombie', behavior: 'aggressive', tier: 1, nocturnal: true,
+    hp: 36, atk: 10, acc: 56, evasion: 4, armor: 2, speed: 3, moveRange: 3,
+    abilities: [], element: null, weak: ['fire'], resist: [],
+    xp: 70, huntXp: 0, respawn: 150, aggroRange: 9,
+    drops: [
+      { item: 'grave_rot', qty: [1, 2], chance: 0.9 },
+      { item: 'woven_cloth', qty: [1, 2], chance: 0.35 },
+      { item: 'old_coin', qty: [1, 3], chance: 0.25 },
+    ],
+    desc: 'It walks with its arms out in front, as if still reaching for the door it died at. Slow, and it does not stop.',
+    recommend: 'Slower than you are — back away and swing, and never let two close at once.',
+    model: M([
+      box(0, 0.75, 0, 0.5, 0.75, 0.25, [0.23, 0.37, 0.54]),
+      box(0, 1.5, 0, 0.5, 0.5, 0.5, [0.35, 0.54, 0.29]),
+    ]),
+  },
   rat: {
     label: 'Rat', behavior: 'defensive', tier: 0,
     hp: 8, atk: 3, acc: 48, evasion: 22, armor: 0, speed: 9, moveRange: 4,
@@ -987,9 +1025,6 @@ export const ENEMY_TYPES = {
     ]),
   },
 
-  // Imported licensed mob pack — spread in AFTER the natives (never overrides a
-  // native id; the importer dedupes collisions). Admin-activated, not spawned.
-  ...IMPORTED_TYPES,
 };
 
 // ---- Minecraft-proportioned remodel ----------------------------------------

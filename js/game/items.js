@@ -49,6 +49,8 @@ it('woven_cloth', 'Woven Cloth');
 it('pottery_shard', 'Pottery Shard');
 it('old_coin', 'Weathered Coin');
 it('bone_needle', 'Bone Needle');
+it('spider_silk', 'Spider Silk', { desc: 'Tough, slightly tacky thread. Weavers pay well for a clean skein.' });
+it('grave_rot', 'Grave Rot', { desc: 'Sour flesh off a walking corpse. Tanners boil it down; nobody eats it.' });
 
 // ---- herbs & produce ----
 it('bitterleaf', 'Bitterleaf');
