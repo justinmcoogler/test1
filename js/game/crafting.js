@@ -179,13 +179,15 @@ for (const wid of ['ash', 'hickory', 'yew', 'oak', 'lignum_vitae']) {
   push(`${wid}_longbow`, 1, 'workbench', 'woodworking', Math.min(99, w.woodLevel + 5), Math.round(30 + w.tier * 5), [[`${wid}_plank`, 3], ['cord', 3]]);
 }
 
-// black-powder line (Gunsmithing) — every recipe flagged educationLocked so the UI
-// can hide the whole chain when firearms are disabled for schools.
+// black-powder line (Smithing) — a barrel is a forged tube and a lock is a
+// spring-and-sear mechanism, so firearms train the same skill that made them.
+// Every recipe is flagged educationLocked so the UI can hide the whole chain
+// when firearms are disabled for schools.
 const GUN_LEVEL = { 1: 35, 2: 55, 3: 55, 4: 75 };
-lockedGun(FIREARMS.powder.id, 4, 'workbench', 'gunsmithing', 35, 30, [['saltpeter', 2], ['charcoal', 1], ['sulfur', 1]]);
-lockedGun('lead_ball', 8, 'furnace', 'gunsmithing', 35, 12, [['lead_bar', 1]]);
-lockedGun('lead_shot', 12, 'furnace', 'gunsmithing', 35, 14, [['lead_bar', 1]]);
-for (const g of FIREARMS.guns) lockedGun(g.id, 1, 'workbench', 'gunsmithing', GUN_LEVEL[g.tier], Math.round(60 + g.tier * 20), [[`${g.barrel}_bar`, 3], [`${g.stock}_plank`, 2], [FIREARMS.powder.id, 1]]);
+lockedGun(FIREARMS.powder.id, 4, 'workbench', 'smithing', 35, 30, [['saltpeter', 2], ['charcoal', 1], ['sulfur', 1]]);
+lockedGun('lead_ball', 8, 'furnace', 'smithing', 35, 12, [['lead_bar', 1]]);
+lockedGun('lead_shot', 12, 'furnace', 'smithing', 35, 14, [['lead_bar', 1]]);
+for (const g of FIREARMS.guns) lockedGun(g.id, 1, 'workbench', 'smithing', GUN_LEVEL[g.tier], Math.round(60 + g.tier * 20), [[`${g.barrel}_bar`, 3], [`${g.stock}_plank`, 2], [FIREARMS.powder.id, 1]]);
 
 // jewelry per jewelry metal (Crafting); amulet takes a cut gem as a socket
 for (const m of jewelryMetals()) {

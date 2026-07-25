@@ -1,7 +1,7 @@
-// 24 independent skills, levels 1–99, XP through use, milestone unlock tables.
+// 23 independent skills, levels 1–99, XP through use, milestone unlock tables.
 import { emit } from '../core/events.js';
 
-// The real-world skill roster (22 live skills). Internal keys are kept stable so
+// The real-world skill roster (21 live skills). Internal keys are kept stable so
 // recipes/nodes/combat and old saves keep working; the real-craft names live in
 // `label`, which is why several of them differ — `alchemy` is an Apothecary,
 // `crafting` is Jewelcraft, `vitality` is Constitution. The key is the
@@ -19,14 +19,13 @@ export const SKILL_DEFS = {
   farming:     { label: 'Farming', group: 'Gathering', desc: 'Sow, rotate and irrigate crops; raise and breed livestock.' },
   handling:    { label: 'Handling', group: 'Gathering', desc: 'Win the trust of animals — the horses you ride, the dragons that carry you over the sky islands, and the small things that follow you home.' },
   // Processing — re-living the real craft tech tree
-  smithing:     { label: 'Smithing', group: 'Processing', desc: 'Smelt ore at real melting temperatures and forge metal gear.' },
+  smithing:     { label: 'Smithing', group: 'Processing', desc: 'Smelt ore at real melting temperatures and forge metal gear — including barrels, locks and the powder that fills them.' },
   woodworking:  { label: 'Woodworking', group: 'Processing', desc: 'Shape timber into planks, hafts, bows and gunstocks.' },
   cooking:      { label: 'Cooking', group: 'Processing', desc: 'Cook, ferment and preserve food; balance real nutrition.' },
   tailoring:    { label: 'Tailoring', group: 'Processing', desc: 'Tan hides and weave cloth into clothing and armor.' },
   alchemy:      { label: 'Apothecary', group: 'Processing', desc: 'Compound herbs and minerals — remedies, reagents, gunpowder chemistry.' },
   construction: { label: 'Construction', group: 'Processing', desc: 'Build with timber, fired brick and lime mortar — arches to grand halls.' },
-  crafting:     { label: 'Jewelcraft', group: 'Processing', desc: 'Cut gems and set jewelry — the lapidary\'s wheel and the setter\'s bench.' },
-  gunsmithing:  { label: 'Gunsmithing', group: 'Processing', desc: 'Black-powder chemistry, barrel-boring and lock work — hand cannon to blunderbuss.' },
+  crafting:     { label: 'Jewelcraft', group: 'Processing', desc: 'Cut gems and set jewelry — the lapidary\'s wheel and the setter\'s bench. Firearms are Smithing\'s work.' },
   // Survival — the body and the realism layer
   vitality: { label: 'Constitution', group: 'Survival', desc: 'Endurance and carrying power — warmth, hydration, nutrition and acclimatization.' },
   healing:  { label: 'Medicine', group: 'Survival', desc: 'Real first aid — wounds, bleeding, fractures, infection and field surgery.' },
@@ -91,8 +90,12 @@ export const SKILL_UNLOCKS = {
   ],
   smithing: [
     [1, 'Fire clay & anneal native copper'], [10, 'Charcoal furnace: smelt copper & tin'],
-    [15, 'Bronze alloying & casting'], [25, 'Bloomery iron; forge-welding'], [40, 'Steel (carburise & temper)'],
+    [15, 'Bronze alloying & casting'], [25, 'Bloomery iron; forge-welding'],
+    [35, 'Corned black powder, cast ball & shot; the hand cannon'],
+    [40, 'Steel (carburise & temper)'],
+    [55, 'Matchlock & flintlock — serpentine, frizzen and pan'],
     [60, 'Damascus pattern-welding'], [70, 'Meteoric iron — masterwork forging'],
+    [75, 'Rifled bores; the blunderbuss'],
   ],
   woodworking: [
     [1, 'Riven planks, hafts & hardened points'], [10, 'Joinery (mortise & tenon)'],
@@ -103,13 +106,6 @@ export const SKILL_UNLOCKS = {
     [1, 'Polish rock crystal & amethyst; bone & shell'], [10, 'Silver & pewter; cut garnet (Mohs gate begins)'],
     [25, 'Brass & topaz'], [45, 'Gold & electrum; emerald & sapphire'], [60, 'Ruby'],
     [75, 'Diamond — the master cut'],
-  ],
-  gunsmithing: [
-    [1, 'Read a barrel: proof marks, bore and windage'],
-    [35, 'Corned black powder; cast ball & shot'], [40, 'The hand cannon — a pipe, a touch-hole and nerve'],
-    [50, 'Matchlock: a serpentine, a slow match and both hands free'],
-    [60, 'Flintlock — frizzen, pan and a spark you can trust in the wet'],
-    [75, 'The blunderbuss'], [90, 'Rifled bores and a gunsmith\'s proof'],
   ],
   cooking: [
     [1, 'Roast & sun-dry / salt-cure'], [10, 'Smoking & clay-pot boiling'], [20, 'Fermentation — cheese, pickles, ale'],

@@ -15,7 +15,7 @@ what the real-world route **adds or changes**.
 Redesign & add 16×16 vector icons to match the new names:
 - **Medicine** (was Healing): cross + bandage/splint
 - **Apothecary** (was Alchemy): mortar & pestle + herb sprig
-- New: **Constitution** (endurance/heart-shield), **Athletics** (runner/burst), **Jewelcraft/Gunsmithing** (gem + faceting), **Marksmanship** (was Ranged: crosshair/sight)
+- New: **Constitution** (endurance/heart-shield), **Athletics** (runner/burst), **Jewelcraft** (gem + faceting), **Marksmanship** (was Ranged: crosshair/sight), **Handling** (hand + hoofprint)
 - Optional **Husbandry** sub-icon (animal + heart)
 - **Magic** & **Enchanting**: keep but add a small "frontier — off by default" lock badge
 

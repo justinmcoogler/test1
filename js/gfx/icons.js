@@ -484,7 +484,6 @@ const DEFS = {
   sk_vitality: ['heart'], sk_strength: ['muscle'], sk_defense: ['shield', '#8f9298'],
   sk_ranged: ['target'], sk_magic: ['sparkle'], sk_healing: ['heartplus'],
   sk_tactics: ['brain'], sk_athletics: ['burst'], sk_handling: ['handstar', '#c8a45a'],
-  sk_gunsmithing: ['powder', '#b8a68a'],
   // items
   it_coin: ['coin'], it_old_coin: ['coin', '#b87e3c'],
   it_warchief_standard: ['staff', '#c0a24a'], it_relic_fragment: ['puzzle'],
