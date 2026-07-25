@@ -125,7 +125,16 @@ belongs to, so put the hips where they really are.
 ## 6. Before you call it done
 
 - `node tools/mc-grid-mobs.mjs` reports **0 numbers off-grid**.
-- No walking limb thinner than its species rule allows.
-- Render it: `node tests/_mobshot.mjs <port> <outdir> <mob>` and look at the
-  idle, walk and ambient frames. If the walk doesn't read as an animal from
-  three metres away, the legs are too thin or the body is too small.
+- No walking limb thinner than its species rule allows. (The wolf's 2×2 legs are
+  the deliberate exception — vanilla builds them that way.)
+- `node tests/mobposedir.mjs` — proves each ambient clip moves the muzzle the way
+  it should: graze/peck/sniff **down**, howl **up**. Cheap insurance against a
+  sign flip that would otherwise ship as a head rotating into the body.
+- `node tests/mobaudit.mjs` — renders the whole roster in every clip onto one
+  contact sheet (`tests/screenshots/roster-audit.png`) and flags anything that
+  drew nothing, sits tiny in frame, or runs off the edge.
+- **Then actually look at the sheet.** The numeric checks cannot see a shapeless
+  animal. Judge it from a 3/4 side view, never head-on — a quadruped seen from
+  the front is unreadable, and a dipped head hides behind the body, which looks
+  like a bug that isn't there. If the walk doesn't read as an animal from three
+  metres away, the legs are too thin or the body is too small.
