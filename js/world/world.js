@@ -1,7 +1,7 @@
 // Chunked voxel world: generation, block access, player edits, resource
 // node lifecycle (deplete/respawn), chest storage, raycasting, persistence.
 import { B, BLOCKS, isSolid, SHAPE_COLLISION } from './blocks.js';
-import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, LEARN_MEADOW, BIOMES, WorldGen, undergroundNodeCandidates } from './worldgen.js';
+import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, LEARN_MEADOW, BIOMES, WorldGen, newBlend, ringAt, undergroundNodeCandidates } from './worldgen.js';
 import { buildStarterStructures, indexEditsByChunk } from './structures.js';
 import { NODE_TYPES, PROP_NODE_TYPES, nodeBlocks, nodeCells } from '../game/nodes.js';
 import { ENEMY_TYPES } from '../game/enemies.js';
@@ -28,6 +28,11 @@ export const DAY_LEN = 480; // seconds per full day/night cycle
 // Global wildlife-spawn multiplier applied to every biome's per-block enemy
 // density. Lower = sparser, more realistic wildlife. Tune here in one place.
 const MOB_SPAWN_RATE = 0.4;
+
+// Salt step that gives each biome-blend candidate its own hash stream. Without
+// it two biomes meeting at a seam would share a roll, so the second could only
+// ever shadow the first instead of adding its own share of the scatter.
+const BLEND_SALT_STEP = 1861;
 
 export const chunkKey = (cx, cz) => `${cx},${cz}`;
 export const cellKey = (x, y, z) => `${x},${y},${z}`;
@@ -87,7 +92,7 @@ export class World {
     // steered by any per-mob biomes override. Rebuilt each generateChunk so new
     // chunks reflect the current mob config, but computed once per distinct
     // biome in the chunk (cheap). See js/game/mobconfig.js.
-    const spawnListCache = new Map(); // biomeKey → [{ type, d, pack, _salt }]
+    const spawnListCache = new Map(); // biomeKey → [{ type, d, pack, ring, _salt }]
     const effectiveEnemies = (biome, biomeKey) => {
       let list = spawnListCache.get(biomeKey);
       if (list) return list;
@@ -99,7 +104,7 @@ export class World {
         const bs = mobBiomes(e.type);
         if (bs && !bs.includes(biomeKey)) continue; // restricted away from here
         e._salt ??= hashSeed(e.type);
-        list.push({ type: e.type, d: e.d * mobRate(e.type), pack: e.pack, _salt: e._salt });
+        list.push({ type: e.type, d: e.d * mobRate(e.type), pack: e.pack, ring: e.ring || 0, _salt: e._salt });
       }
       // Mobs steered INTO this biome by a biomes override but not natively listed
       // here (e.g. an activated imported mob) — make them actually appear.
@@ -109,7 +114,7 @@ export class World {
         const bs = mobBiomes(type);
         if (!bs || !bs.includes(biomeKey)) continue;
         if (ENEMY_TYPES[type]?.noOverworld) continue; // summon-only creatures
-        list.push({ type, d: ADDED_MOB_D * mobRate(type), pack: null, _salt: hashSeed(type) });
+        list.push({ type, d: ADDED_MOB_D * mobRate(type), pack: null, ring: 0, _salt: hashSeed(type) });
       }
       spawnListCache.set(biomeKey, list);
       return list;
@@ -130,7 +135,13 @@ export class World {
       }
     }
 
-    // Vegetation + biome node/spawn placement (outside the settlement ring)
+    // Vegetation + biome node/spawn placement (outside the settlement ring).
+    // Every scatter below reads the column's biome BLEND rather than one biome,
+    // seeding each candidate's foliage/nodes/mobs at that candidate's weight —
+    // so a forest thins into the meadow beside it instead of stopping dead on a
+    // line. One blend scratch for the whole chunk keeps the inner loop
+    // allocation-free (js/world/worldgen.js `newBlend`).
+    const blend = newBlend();
     for (let lz = 0; lz < CHUNK; lz++) {
       for (let lx = 0; lx < CHUNK; lx++) {
         const wx = cx * CHUNK + lx, wz = cz * CHUNK + lz;
@@ -142,18 +153,22 @@ export class World {
         if (gen.pathSet && gen.pathSet.has(wx + ',' + wz)) continue; // keep the road corridor clear & walkable
         const h = chunk.surfaceH[lz * CHUNK + lx];
         const surfId = blocks[lidx(lx, h, lz)];
-        const biome = gen.biomeAt(wx, wz);
+        gen.blendAt(wx, wz, h, blend);
         const above = h + 1 < WORLD_H ? blocks[lidx(lx, h + 1, lz)] : B.air;
         const grassy = surfId === B.grass || surfId === B.snow_grass || surfId === B.corrupt_soil;
         // trees also root on the bare ground of their biomes (highland ash/hickory
         // on stone, badlands teak on sand) — else those woods would never spawn.
         const treeGround = grassy || surfId === B.stone || surfId === B.sand;
 
-        // trees (kept ≥2 from chunk edge so canopies stay chunk-local)
+        // trees (kept ≥2 from chunk edge so canopies stay chunk-local). One roll
+        // walks every candidate's species in turn, each scaled by its weight, so
+        // the total tree density is the weighted average of the candidates'.
         if (lx >= 2 && lx <= 13 && lz >= 2 && lz <= 13 && treeGround && above === B.air && h > SEA + 1) {
           const r = hash2(this.seed + 901, wx, wz);
           let acc = 0, chosen = null;
-          for (const t of biome.trees) { acc += t.density; if (r < acc) { chosen = t.type; break; } }
+          for (let i = 0; i < blend.n && !chosen; i++) {
+            for (const t of blend.b[i].trees) { acc += t.density * blend.w[i]; if (r < acc) { chosen = t.type; break; } }
+          }
           if (chosen) {
             const def = NODE_TYPES[chosen];
             const th = def.trunk[0] + Math.floor(hash2(this.seed + 902, wx, wz) * (def.trunk[1] - def.trunk[0] + 1));
@@ -164,34 +179,43 @@ export class World {
         // small plants (pure decoration). Reeds are the exception: they only
         // sprout on grass right at the waterline with a water block beside them.
         if (grassy && above === B.air) {
-          for (const p of biome.plants) {
-            if (hash2(this.seed + 903 + B[p.block], wx, wz) >= p.d) continue;
-            if (p.block === 'reed') {
-              if (h > SEA) continue; // above the shoreline — no water to root beside
-              const beside = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => gen.heightAt(wx + dx, wz + dz) < h);
-              if (!beside) continue; // no submerged neighbour → not next to water
+          let planted = false;
+          // Each candidate rolls on its own hash stream (the `i` salt), so two
+          // biomes offering the same plant add up instead of shadowing one another.
+          for (let i = 0; i < blend.n && !planted; i++) {
+            for (const p of blend.b[i].plants) {
+              if (hash2(this.seed + 903 + B[p.block] + i * BLEND_SALT_STEP, wx, wz) >= p.d * blend.w[i]) continue;
+              if (p.block === 'reed') {
+                if (h > SEA) continue; // above the shoreline — no water to root beside
+                const beside = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => gen.heightAt(wx + dx, wz + dz) < h);
+                if (!beside) continue; // no submerged neighbour → not next to water
+              }
+              setLocal(lx, h + 1, lz, B[p.block]); bumpTop(h + 1); planted = true; break;
             }
-            setLocal(lx, h + 1, lz, B[p.block]); bumpTop(h + 1); break;
           }
         }
         // surface nodes
         let placedNode = false;
         if (above === B.air || surfId === B.water) {
-          for (const n of biome.nodes) {
-            const def = NODE_TYPES[n.type];
-            if (hash2(this.seed + 907 + def.xp * 7, wx, wz) >= n.d) continue;
-            if (def.kind === 'water') {
-              // fishing spots hug the shoreline: deep enough to fish, with
-              // dry land on at least one neighboring column to stand on
-              if (h < SEA - 1 && blocks[lidx(lx, SEA, lz)] === B.water) {
-                const shore = [[1, 0], [-1, 0], [0, 1], [0, -1]]
-                  .some(([dx, dz]) => gen.heightAt(wx + dx, wz + dz) >= SEA);
-                if (shore) { chunk.nodes.push({ type: n.type, x: wx, y: SEA, z: wz }); placedNode = true; }
+          let rolled = false;
+          for (let i = 0; i < blend.n && !rolled; i++) {
+            for (const n of blend.b[i].nodes) {
+              const def = NODE_TYPES[n.type];
+              if (hash2(this.seed + 907 + def.xp * 7 + i * BLEND_SALT_STEP, wx, wz) >= n.d * blend.w[i]) continue;
+              if (def.kind === 'water') {
+                // fishing spots hug the shoreline: deep enough to fish, with
+                // dry land on at least one neighboring column to stand on
+                if (h < SEA - 1 && blocks[lidx(lx, SEA, lz)] === B.water) {
+                  const shore = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+                    .some(([dx, dz]) => gen.heightAt(wx + dx, wz + dz) >= SEA);
+                  if (shore) { chunk.nodes.push({ type: n.type, x: wx, y: SEA, z: wz }); placedNode = true; }
+                }
+              } else if (above === B.air && surfId !== B.water) {
+                chunk.nodes.push({ type: n.type, x: wx, y: h + 1, z: wz }); placedNode = true;
               }
-            } else if (above === B.air && surfId !== B.water) {
-              chunk.nodes.push({ type: n.type, x: wx, y: h + 1, z: wz }); placedNode = true;
+              rolled = true;
+              break;
             }
-            break;
           }
         }
         // nature-prop forage: a light scatter of 3D mushrooms/rocks/sticks/stumps
@@ -209,21 +233,30 @@ export class World {
         }
         // enemy spawn points (packs place several creatures on one point)
         if (d0 > 60 && above === B.air && surfId !== B.water) {
-          // Live, admin-override-aware candidate list for this biome (active
-          // mobs only, densities scaled, biome restrictions/steering applied).
-          // Per-type salt is from the name's hash — NOT its length, which
-          // collides for equal-length names and would let an earlier same-length
-          // enemy permanently shadow a later one.
-          const candidates = effectiveEnemies(biome, BIOME_KEY.get(biome));
-          for (const e of candidates) {
-            if (hash2(this.seed + e._salt, wx, wz) < e.d * MOB_SPAWN_RATE) {
-              const n = e.pack
-                ? e.pack[0] + Math.floor(hash2(this.seed + 913, wx, wz) * (e.pack[1] - e.pack[0] + 1))
-                : 1;
-              for (let i = 0; i < n; i++) {
-                chunk.spawns.push({ id: `sp:${wx},${wz}${i ? ':' + i : ''}`, type: e.type, x: wx, y: h + 1, z: wz });
+          // Difficulty is distance: a mob only appears once the player has walked
+          // out to its minimum ring, which is what keeps the starting bowl to
+          // rabbits and cows while wolves and skeletons wait past 512 blocks.
+          const ring = ringAt(wx, wz);
+          let spawned = false;
+          for (let i = 0; i < blend.n && !spawned; i++) {
+            // Live, admin-override-aware candidate list for this biome (active
+            // mobs only, densities scaled, biome restrictions/steering applied).
+            // Per-type salt is from the name's hash — NOT its length, which
+            // collides for equal-length names and would let an earlier same-length
+            // enemy permanently shadow a later one.
+            const candidates = effectiveEnemies(blend.b[i], BIOME_KEY.get(blend.b[i]));
+            for (const e of candidates) {
+              if (ring < e.ring) continue;                        // too close to spawn for this one
+              if (hash2(this.seed + e._salt + i * BLEND_SALT_STEP, wx, wz) < e.d * MOB_SPAWN_RATE * blend.w[i]) {
+                const n = e.pack
+                  ? e.pack[0] + Math.floor(hash2(this.seed + 913, wx, wz) * (e.pack[1] - e.pack[0] + 1))
+                  : 1;
+                for (let k = 0; k < n; k++) {
+                  chunk.spawns.push({ id: `sp:${wx},${wz}${k ? ':' + k : ''}`, type: e.type, x: wx, y: h + 1, z: wz });
+                }
+                spawned = true;
+                break;
               }
-              break;
             }
           }
         }

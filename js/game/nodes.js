@@ -76,6 +76,11 @@ generated.deposit_sulfur = {
 // time: base seconds per gather at level 1 with the minimum tool.
 export const NODE_TYPES = {
   ...generated,
+  // ---- Fishing water, tiered ------------------------------------------------
+  // Four kinds of water, following the Fishing unlock ladder: still water off a
+  // bank, then a running river, then the coastal shelf, then open deep water.
+  // Each tier is slower to work but pays a better catch, so levelling changes
+  // WHERE you fish, not just how fast the same silverfin arrives.
   fishing_spot: {
     label: 'Fishing Spot', skill: 'fishing', level: 1, tool: 'rod',
     xp: 22, time: 4.5, charges: [3, 6], respawn: 50, kind: 'water',
@@ -85,6 +90,36 @@ export const NODE_TYPES = {
       { item: 'duskeel', qty: [1, 1], weight: 1, level: 20 },
     ],
     rare: [{ item: 'waterlogged_cache', chance: 0.02 }],
+  },
+  fishing_river: {
+    label: 'River Run', skill: 'fishing', level: 20, tool: 'rod',
+    xp: 40, time: 5.0, charges: [3, 6], respawn: 60, kind: 'water',
+    drops: [
+      { item: 'reedpike', qty: [1, 1], weight: 4 },
+      { item: 'mudwhisker', qty: [1, 2], weight: 3 },
+      { item: 'duskeel', qty: [1, 1], weight: 1, level: 30 },
+    ],
+    rare: [{ item: 'waterlogged_cache', chance: 0.04 }],
+  },
+  fishing_coastal: {
+    label: 'Coastal Shelf', skill: 'fishing', level: 30, tool: 'rod',
+    xp: 58, time: 5.4, charges: [4, 7], respawn: 75, kind: 'water',
+    drops: [
+      { item: 'saltcrab', qty: [1, 2], weight: 4 },
+      { item: 'reedpike', qty: [1, 2], weight: 2 },
+      { item: 'palefin', qty: [1, 1], weight: 1, level: 50 },
+    ],
+    rare: [{ item: 'waterlogged_cache', chance: 0.05 }, { item: 'amber_resin', chance: 0.03 }],
+  },
+  fishing_deep: {
+    label: 'Deep Water', skill: 'fishing', level: 50, tool: 'rod',
+    xp: 84, time: 6.0, charges: [4, 8], respawn: 95, kind: 'water',
+    drops: [
+      { item: 'palefin', qty: [1, 2], weight: 4 },
+      { item: 'saltcrab', qty: [1, 2], weight: 2 },
+      { item: 'duskeel', qty: [1, 2], weight: 2 },
+    ],
+    rare: [{ item: 'waterlogged_cache', chance: 0.08 }, { item: 'veilcrystal', chance: 0.03 }],
   },
   herb_patch: {
     label: 'Herb Patch', skill: 'foraging', level: 1, tool: null,
@@ -111,6 +146,10 @@ export const NODE_TYPES = {
     drops: [{ item: 'clay_lump', qty: [1, 2], weight: 1 }],
     rare: [],
   },
+  // ---- Dig sites, tiered -----------------------------------------------------
+  // A surface test-pit turns up potsherds; a cut trench reaches stratified
+  // layers; waterlogged ground preserves organics and amber; and the sealed
+  // assemblages under a ruin hold the relics everything else only hints at.
   dig_site: {
     label: 'Ancient Dig Site', skill: 'archaeology', level: 1, tool: 'shovel',
     xp: 30, time: 5.0, charges: [1, 2], respawn: 300, kind: 'ground',
@@ -122,12 +161,70 @@ export const NODE_TYPES = {
     ],
     rare: [{ item: 'relic_fragment', chance: 0.06 }],
   },
+  dig_trench: {
+    label: 'Excavation Trench', skill: 'archaeology', level: 15, tool: 'shovel',
+    xp: 55, time: 5.6, charges: [2, 3], respawn: 330, kind: 'ground',
+    ready: 'dig_mound', depleted: null,
+    drops: [
+      { item: 'pottery_shard', qty: [1, 3], weight: 3 },
+      { item: 'old_coin', qty: [2, 4], weight: 3 },
+      { item: 'bone_needle', qty: [1, 2], weight: 2 },
+    ],
+    rare: [{ item: 'relic_fragment', chance: 0.10 }, { item: 'rough_gem', chance: 0.04 }],
+  },
+  dig_bog: {
+    label: 'Bog Deposit', skill: 'archaeology', level: 30, tool: 'shovel',
+    xp: 90, time: 6.2, charges: [2, 4], respawn: 380, kind: 'ground',
+    ready: 'dig_mound', depleted: null,
+    drops: [
+      { item: 'amber_resin', qty: [1, 2], weight: 3 },
+      { item: 'bone_needle', qty: [2, 3], weight: 3 },
+      { item: 'old_coin', qty: [3, 5], weight: 2 },
+    ],
+    rare: [{ item: 'relic_fragment', chance: 0.15 }, { item: 'uncut_topaz', chance: 0.05 }],
+  },
+  dig_vault: {
+    label: 'Lost-Age Assemblage', skill: 'archaeology', level: 60, tool: 'shovel',
+    xp: 160, time: 7.0, charges: [2, 4], respawn: 450, kind: 'ground',
+    ready: 'dig_mound', depleted: null,
+    drops: [
+      { item: 'relic_fragment', qty: [1, 2], weight: 3 },
+      { item: 'old_coin', qty: [5, 9], weight: 3 },
+      { item: 'veilcrystal', qty: [1, 1], weight: 2 },
+    ],
+    rare: [{ item: 'uncut_diamond', chance: 0.03 }, { item: 'flawless_veilcrystal', chance: 0.02 }],
+  },
+  // ---- Farm beds, tiered -----------------------------------------------------
+  // Soil quality is the farming ladder: thin plot → worked loam → rich, manured
+  // ground. Better soil takes longer to come round but carries more per bed and
+  // keeps back more seed.
   farm_plot: {
-    label: 'Farm Plot', skill: 'farming', level: 1, tool: null,
+    label: 'Thin Soil Plot', skill: 'farming', level: 1, tool: null,
     xp: 25, time: 1.2, charges: [1, 1], respawn: 150, kind: 'farm',
     ready: 'crop_ripe', depleted: 'crop_young', // regrows through a young stage
     drops: [{ item: 'grainsheaf', qty: [1, 2], weight: 1 }],
     rare: [{ item: 'golden_grain', chance: 0.03 }, { item: 'grain_seeds', chance: 0.4 }],
+  },
+  farm_loam: {
+    label: 'Loam Bed', skill: 'farming', level: 25, tool: null,
+    xp: 60, time: 1.6, charges: [1, 2], respawn: 175, kind: 'farm',
+    ready: 'crop_ripe', depleted: 'crop_young',
+    drops: [
+      { item: 'grainsheaf', qty: [2, 3], weight: 3 },
+      { item: 'plant_fibre', qty: [2, 4], weight: 2 }, // fibre crops enter at 25
+    ],
+    rare: [{ item: 'golden_grain', chance: 0.06 }, { item: 'grain_seeds', chance: 0.5 }],
+  },
+  farm_rich: {
+    label: 'Rich Bed', skill: 'farming', level: 50, tool: null,
+    xp: 120, time: 2.0, charges: [2, 3], respawn: 210, kind: 'farm',
+    ready: 'crop_ripe', depleted: 'crop_young',
+    drops: [
+      { item: 'grainsheaf', qty: [3, 5], weight: 3 },
+      { item: 'golden_grain', qty: [1, 2], weight: 1 },
+      { item: 'tartberries', qty: [2, 4], weight: 2 }, // orchard row along the bed
+    ],
+    rare: [{ item: 'silverleaf', chance: 0.05 }, { item: 'grain_seeds', chance: 0.6 }],
   },
 
   // ---- Nature-prop forage (kind 'prop') --------------------------------------

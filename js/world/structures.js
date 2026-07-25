@@ -123,12 +123,51 @@ export function buildStarterStructures() {
   nodes.push({ type: 'fishing_spot', x: -2, y: 29, z: 16 });
   nodes.push({ type: 'fishing_spot', x: 0, y: 29, z: 21 });
 
+  // ---- Millbrook & the spring pool (the upper fishing tiers) --------------
+  // The pond only ever teaches the first cast. A brook runs east off its lip
+  // into a spring pool that shelves away into deep water, so the river, shelf
+  // and deep-water spots have real water to sit in without a day's walk. The
+  // wild versions belong in the marsh/mangrove/coast biome tables (worldgen).
+  const water = (x, z, floor) => {
+    set(x, floor, z, B.sand);
+    for (let y = floor + 1; y <= 29; y++) set(x, y, z, B.water);
+    set(x, GROUND, z, B.air); set(x, F, z, B.air);
+  };
+  // a bank you stand down onto, its top level with the water like the pond ledge
+  const bank = (x, z) => { set(x, 29, z, B.sand); set(x, GROUND, z, B.air); set(x, F, z, B.air); };
+  // pool first, brook second — the channel then cuts cleanly through its shelf
+  for (let x = 15; x <= 29; x++) for (let z = 13; z <= 27; z++) {
+    const d = Math.hypot(x - 22, z - 20);
+    if (d <= 2.4) water(x, z, 24);        // sunken middle: five blocks of water
+    else if (d <= 5.2) water(x, z, 27);
+    else if (d <= 6.4) bank(x, z);
+  }
+  for (let x = 5; x <= 17; x++) {
+    for (let z = 19; z <= 21; z++) water(x, z, 27);
+    if (x <= 15) { bank(x, 18); bank(x, 22); }
+  }
+  set(10, GROUND, 18, B.torch_post); set(15, GROUND, 22, B.torch_post);
+  set(22, GROUND, 26, B.torch_post); set(28, GROUND, 20, B.torch_post);
+  nodes.push({ type: 'fishing_river', x: 9, y: 29, z: 20 });
+  nodes.push({ type: 'fishing_river', x: 14, y: 29, z: 20 });
+  nodes.push({ type: 'fishing_coastal', x: 22, y: 29, z: 24 });
+  nodes.push({ type: 'fishing_coastal', x: 25, y: 29, z: 18 });
+  nodes.push({ type: 'fishing_deep', x: 22, y: 29, z: 20 });
+  nodes.push({ type: 'fishing_deep', x: 21, y: 29, z: 21 });
+
   // ---- Farm --------------------------------------------------------------
   for (let x = -18; x <= -10; x++) for (let z = 16; z <= 22; z++) set(x, GROUND, z, B.farmland);
   for (const [fx, fz] of [[-16, 18], [-14, 18], [-16, 20], [-14, 20]]) {
     nodes.push({ type: 'farm_plot', x: fx, y: F, z: fz });
   }
   set(-18, F, 16, B.torch_post); set(-10, F, 22, B.torch_post);
+
+  // Worked loam and rich, manured beds south of the thin plots: the soil tiers
+  // need somewhere to stand before worldgen scatters them across the biomes.
+  for (let x = -18; x <= -12; x++) for (let z = 24; z <= 28; z++) set(x, GROUND, z, B.farmland);
+  for (const [fx, fz] of [[-16, 25], [-14, 25]]) nodes.push({ type: 'farm_loam', x: fx, y: F, z: fz });
+  for (const [fx, fz] of [[-16, 27], [-14, 27]]) nodes.push({ type: 'farm_rich', x: fx, y: F, z: fz });
+  set(-18, F, 28, B.torch_post); set(-12, F, 24, B.torch_post);
 
   // ---- Grove (woodcutting) ----------------------------------------------
   const groveTrees = [
@@ -193,6 +232,8 @@ export function buildStarterStructures() {
   nodes.push({ type: 'ore_tin', x: 26, y: 19, z: -46 });
   nodes.push({ type: 'ore_tin', x: 28, y: 19, z: -50 });
   nodes.push({ type: 'ore_iron', x: 19, y: 19, z: -52 });
+  // the mine's cut face reaches stratified ground the surface test-pits can't
+  nodes.push({ type: 'dig_trench', x: 21, y: 19, z: -48 });
   spawns.push({ id: 'rat_mine1', type: 'gloomrat', x: 27, y: 19, z: -48, fixed: true });
 
   // ---- Descent to the Rootgrave (dungeon) --------------------------------
@@ -217,6 +258,7 @@ export function buildStarterStructures() {
   spawns.push({ id: 'rat_d2', type: 'gloomrat', x: 26, y: 13, z: -65, fixed: true });
   spawns.push({ id: 'creeper_d1', type: 'root_creeper', x: 24, y: 13, z: -67, fixed: true });
   nodes.push({ type: 'dig_site', x: 21, y: 13, z: -67 });
+  nodes.push({ type: 'dig_bog', x: 27, y: 13, z: -62 }); // waterlogged floor, so organics survive
   set(20, 13, -61, B.torch_post); set(28, 13, -67, B.torch_post);
 
   // doorway antechamber → boss hall at z=-68/-69
@@ -245,6 +287,8 @@ export function buildStarterStructures() {
   set(29, 13, -80, B.enchant_altar);
   nodes.push({ type: 'ore_gold', x: 19, y: 13, z: -79 });
   nodes.push({ type: 'dig_site', x: 28, y: 13, z: -73 });
+  // sealed under the boss hall — the richest dig in the starter world
+  nodes.push({ type: 'dig_vault', x: 21, y: 13, z: -77 });
 
   // ---- Frostwatch: frontier camp in the forced-tundra ring ---------------
   // Terrain is pinned flat at ground 33 within r<26 of (560,-120) by worldgen.

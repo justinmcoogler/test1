@@ -63,9 +63,14 @@ it('grainsheaf', 'Grainsheaf');
 it('golden_grain', 'Golden Grain');
 
 // ---- fish & meat ----
+// One catch per fishing tier (js/game/nodes.js): still water, river, coastal
+// shelf, deep water — each only lands off the spot its skill level opens.
 it('silverfin', 'Silverfin');
 it('mudwhisker', 'Mudwhisker');
 it('duskeel', 'Duskeel');
+it('reedpike', 'Reedpike');
+it('saltcrab', 'Saltcrab');
+it('palefin', 'Palefin');
 it('boar_haunch', 'Boar Haunch');
 
 // ---- cooked food ----
@@ -75,12 +80,19 @@ it('seared_duskeel', 'Seared Duskeel', { type: 'food', heal: 22, nutrients: { pr
 it('roast_haunch', 'Roast Haunch', { type: 'food', heal: 12, nutrients: { protein: 20, fat: 10 } });
 it('hearth_loaf', 'Hearth Loaf', { type: 'food', heal: 10, nutrients: { carb: 22 } });
 it('travel_biscuit', 'Travel Biscuit', { type: 'food', heal: 6, nutrients: { carb: 14, fat: 4 } });
+it('grilled_reedpike', 'Grilled Reedpike', { type: 'food', heal: 18, nutrients: { protein: 20, fat: 8 } });
+it('saltcrab_boil', 'Saltcrab Boil', { type: 'food', heal: 28, nutrients: { protein: 26, fat: 10, vitamin: 8 } });
+it('palefin_steak', 'Palefin Steak', { type: 'food', heal: 36, nutrients: { protein: 32, fat: 18 } });
+// the master cook's plate — the only dish that covers every nutrient at once
+it('harvest_feast', 'Harvest Feast', { type: 'food', heal: 55, hydration: 15, nutrients: { protein: 30, fat: 20, carb: 34, vitamin: 22 } });
 
 // ---- potions & drink ----
 it('minor_healing_tonic', 'Minor Healing Tonic', { type: 'potion', heal: 15, hydration: 8 });
 it('energy_tonic', 'Energy Tonic', { type: 'potion', energy: 50, hydration: 20 });
 it('lesser_mana_tonic', 'Lesser Mana Tonic', { type: 'potion', mana: 15 });
 it('antidote', 'Antidote', { type: 'potion', cures: ['poison'] });
+it('greater_healing_draught', 'Greater Healing Draught', { type: 'potion', heal: 45, hydration: 12 });
+it('veilwater_elixir', 'Veilwater Elixir', { type: 'potion', mana: 45, hydration: 10 });
 it('waterskin', 'Waterskin', { type: 'potion', hydration: 60, desc: 'A skin of fresh water — drink to slake thirst.' });
 
 // ---- tools (dur = max durability, power = speed multiplier) ----
@@ -130,6 +142,7 @@ armor('bronze_cuirass', 'Bronze Cuirass', 'body', { armor: 5, evasion: -2, speed
 armor('bronze_greaves', 'Bronze Greaves', 'legs', { armor: 3, evasion: -1 });
 armor('woven_hood', 'Woven Hood', 'head', { armor: 0, magic: 2, mana: 5 }, 'Channels focus: +max mana.');
 armor('woven_robe', 'Woven Robe', 'body', { armor: 1, magic: 3, mana: 10 }, 'Threaded with silverleaf.');
+armor('frostweave_coat', 'Frostweave Coat', 'body', { armor: 4, evasion: 1, warmth: 6 }, 'Layered cloth over silk — the cold stops at the seams.');
 armor('timber_shield', 'Timber Shield', 'off', { armor: 3, evasion: -1, block: 10 }, '10% chance to block outright.');
 
 // ---- accessories & utility ----
@@ -141,6 +154,8 @@ acc('keen_charm', 'Keen Charm', { crit: 4 }, 'Sharpens the eye and the edge.');
 acc('forager_band', "Forager's Band", { gather: 0.1 }, '+10% gathering speed.');
 acc('ward_talisman', 'Ward Talisman', { magicResist: 5, armor: 1 }, 'Hums near sources of corruption.');
 acc('veilcharm', 'Veilcharm', { mana: 10, magic: 2, crit: 2 }, 'Cut from a flawless veilcrystal.');
+acc('emberward_sigil', 'Emberward Sigil', { armor: 2, magicResist: 4, warmth: 4 }, 'Warm to the touch, even in a blizzard.');
+acc('riftwarden_seal', 'Riftwarden Seal', { mana: 20, magic: 4, crit: 3, magicResist: 4 }, 'The veil thins around it, and holds.');
 it('torch_item', 'Torch Post', { block: 'torch_post', tileIcon: 'torch_post', type: 'block' });
 it('lantern', 'Glowmoss Lantern', { stack: 1, type: 'utility', slot: 'utility', desc: 'Softens the dark of deep places.' });
 

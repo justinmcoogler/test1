@@ -11,6 +11,21 @@ export const CHUNK = 16;
 export const WORLD_H = 512;
 export const SEA = 62;
 
+// ---- Difficulty rings ------------------------------------------------------
+// One rule drives progression: difficulty is distance. Ring 0 is the starting
+// bowl around the origin, and every 512 blocks out raises the tier of content
+// allowed to appear. The player never sees the number — they just feel the
+// world get sharper the further they walk. Capped at 3: past that the world is
+// as harsh as it gets, so the far reaches stay generatable forever.
+// Seed-independent on purpose, so "how dangerous is it here" is the same answer
+// on every world and can be reasoned about without a WorldGen in hand.
+export const RING_SIZE = 512;
+export const MAX_RING = 3;
+export function ringAt(x, z) {
+  const r = Math.floor(Math.hypot(x, z) / RING_SIZE);
+  return r > MAX_RING ? MAX_RING : r;
+}
+
 // The Frostwatch frontier camp: a second hand-built site far out in forced
 // tundra. Terrain, biome and danger tier are pinned around it so the camp
 // exists on every seed.
@@ -48,6 +63,13 @@ function skipPathColumn(x, z) {
 // woods & ores they hold) emerge the farther out you travel.
 // Keys greenwood_plains / ancient_forest / misty_wetlands / coastal_shores are
 // load-bearing (mob spawn files reference them) — do not rename them.
+//
+// An enemy entry may carry `ring`: the lowest difficulty ring (see ringAt) the
+// creature is allowed to spawn in, defaulting to 0. This is what keeps the
+// starting bowl safe — the tame animals a new player meets have no ring, while
+// anything that hunts back is held out past 512 blocks. It gates WHERE a mob
+// appears, never WHETHER: every gated mob's biomes also occur far out, so the
+// reachability audit stays green.
 export const BIOMES = {
   greenwood_plains: {
     label: 'Grassland', tier: 0, climate: 'temperate grassland / prairie',
@@ -55,7 +77,7 @@ export const BIOMES = {
     trees: [{ type: 'tree_pine', density: 0.01 }, { type: 'tree_birch', density: 0.005 }],
     plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'wildflower', d: 0.012 }],
     nodes: [{ type: 'herb_patch', d: 0.004 }, { type: 'berry_bush', d: 0.003 }, { type: 'deposit_saltpeter', d: 0.0016 }],
-    enemies: [{ type: 'mudback_boar', d: 0.0022 }, { type: 'thicket_sprite', d: 0.0015 }, { type: 'duskwing', d: 0.0014 }, { type: 'pixie', d: 0.0016 }, { type: 'meadow_stag', d: 0.0016 }, { type: 'cow', d: 0.0022 }, { type: 'pig', d: 0.002 }, { type: 'sheep', d: 0.0022 }, { type: 'chicken', d: 0.0024, pack: [2, 3] }, { type: 'horse', d: 0.0016 }, { type: 'rabbit', d: 0.0026 }, { type: 'wolf', d: 0.0012, pack: [2, 3] }, { type: 'rat', d: 0.0022, pack: [1, 2] }, { type: 'bob', d: 0.0009 }, { type: 'goblin', d: 0.0013, pack: [1, 3] }, { type: 'zombie', d: 0.0016, pack: [1, 2] }, { type: 'spider', d: 0.0014 }, { type: 'skeleton', d: 0.0013 }],
+    enemies: [{ type: 'mudback_boar', d: 0.0022 }, { type: 'thicket_sprite', d: 0.0015 }, { type: 'duskwing', d: 0.0014 }, { type: 'pixie', d: 0.0016 }, { type: 'meadow_stag', d: 0.0016 }, { type: 'cow', d: 0.0022 }, { type: 'pig', d: 0.002 }, { type: 'sheep', d: 0.0022 }, { type: 'chicken', d: 0.0024, pack: [2, 3] }, { type: 'horse', d: 0.0016 }, { type: 'rabbit', d: 0.0026 }, { type: 'wolf', d: 0.0012, pack: [2, 3], ring: 1 }, { type: 'rat', d: 0.0022, pack: [1, 2], ring: 1 }, { type: 'bob', d: 0.0009 }, { type: 'goblin', d: 0.0013, pack: [1, 3], ring: 1 }, { type: 'zombie', d: 0.0016, pack: [1, 2], ring: 1 }, { type: 'spider', d: 0.0014, ring: 1 }, { type: 'skeleton', d: 0.0013, ring: 1 }],
   },
   ancient_forest: {
     label: 'Temperate Forest', tier: 0, climate: 'temperate deciduous forest',
@@ -68,7 +90,7 @@ export const BIOMES = {
     ],
     plants: [{ block: 'tall_grass', d: 0.03 }, { block: 'mushroom_cap', d: 0.01 }],
     nodes: [{ type: 'herb_patch', d: 0.006 }, { type: 'berry_bush', d: 0.004 }],
-    enemies: [{ type: 'thicket_sprite', d: 0.003 }, { type: 'moss_lurker', d: 0.0018 }, { type: 'duskwing', d: 0.0018 }, { type: 'pixie', d: 0.0018 }, { type: 'meadow_stag', d: 0.0014 }, { type: 'cow', d: 0.0018 }, { type: 'pig', d: 0.0018 }, { type: 'sheep', d: 0.0018 }, { type: 'chicken', d: 0.002, pack: [2, 3] }, { type: 'horse', d: 0.0014 }, { type: 'rabbit', d: 0.0024 }, { type: 'wolf', d: 0.0016, pack: [2, 4] }, { type: 'rat', d: 0.0026, pack: [1, 3] }, { type: 'goblin', d: 0.0017, pack: [2, 3] }, { type: 'zombie', d: 0.002, pack: [1, 3] }, { type: 'spider', d: 0.0018, pack: [1, 2] }, { type: 'skeleton', d: 0.0017, pack: [1, 2] }],
+    enemies: [{ type: 'thicket_sprite', d: 0.003 }, { type: 'moss_lurker', d: 0.0018 }, { type: 'duskwing', d: 0.0018 }, { type: 'pixie', d: 0.0018 }, { type: 'meadow_stag', d: 0.0014 }, { type: 'cow', d: 0.0018 }, { type: 'pig', d: 0.0018 }, { type: 'sheep', d: 0.0018 }, { type: 'chicken', d: 0.002, pack: [2, 3] }, { type: 'horse', d: 0.0014 }, { type: 'rabbit', d: 0.0024 }, { type: 'wolf', d: 0.0016, pack: [2, 4], ring: 1 }, { type: 'rat', d: 0.0026, pack: [1, 3], ring: 1 }, { type: 'goblin', d: 0.0017, pack: [2, 3], ring: 1 }, { type: 'zombie', d: 0.002, pack: [1, 3], ring: 1 }, { type: 'spider', d: 0.0018, pack: [1, 2], ring: 1 }, { type: 'skeleton', d: 0.0017, pack: [1, 2], ring: 1 }],
   },
   temperate_rainforest: {
     label: 'Temperate Rainforest', tier: 1, climate: 'mild, very wet coniferous rainforest',
@@ -232,11 +254,41 @@ export const BIOMES = {
   },
 };
 
+// ---- Biome blending --------------------------------------------------------
+// Half-width of the blend band, in RAW climate-noise units (i.e. before the
+// distance-from-spawn stretch, so the band is the same width in blocks
+// everywhere rather than only far out). The climate fields move ~0.001 per
+// block, so this reads as roughly a 20-block crossfade either side of a seam:
+// wide enough to feel like a transition, narrow enough that biome interiors
+// stay pure.
+const BLEND_SPREAD = 0.02;
+// Eight climates on a circle around the column's own, flat [dt,dm,…] so walking
+// them allocates nothing. A ring rather than a cross is what makes the weights
+// ramp: the share of the circle lying past a boundary grows steadily as the
+// column approaches it, where a 4-point cross would just flip.
+const BLEND_RING = new Float64Array([1, 0, 0.71, 0.71, 0, 1, -0.71, 0.71, -1, 0, -0.71, -0.71, 0, -1, 0.71, -0.71]);
+const BLEND_N = BLEND_RING.length / 2 + 1;
+const BLEND_W = 1 / BLEND_N;
+
+// A reusable blend result: b[i] / w[i] for i < n, weights summing to 1, slot 0
+// always the column's own climate. Callers keep ONE of these and hand it to
+// blendAt for every column — blending runs 256× per chunk on a phone, so it
+// must not allocate.
+export function newBlend() {
+  return { n: 0, b: new Array(BLEND_N).fill(null), w: new Float64Array(BLEND_N) };
+}
+
+function addSample(out, biome) {
+  for (let i = 0; i < out.n; i++) if (out.b[i] === biome) { out.w[i] += BLEND_W; return; }
+  out.b[out.n] = biome; out.w[out.n] = BLEND_W; out.n++;
+}
+
 export class WorldGen {
   constructor(seed) {
     this.seed = seed >>> 0;
     this.pathY = null;   // Map 'x,z' → graded road-surface Y (null until built)
     this.pathSet = null; // Set of 'x,z' road cells (centre line + shoulders)
+    this._blend = newBlend(); // scratch for biomeAt's own blend; never handed out
     this.buildPaths();
   }
 
@@ -320,23 +372,13 @@ export class WorldGen {
   // snow-capped peaks, alpine meadows) → water's edge (coast, mangrove) →
   // waterlogged lowland (swamp/marsh) → Whittaker climate (temperature ×
   // moisture). Temperature is biased toward mild/temperate near spawn (the
-  // "extremity" term) so the spawn valley is livable and the colder/hotter/
-  // drier climates — and the rarer woods & ores they hold — emerge farther out.
-  biomeAt(x, z) {
+  // "extremity" term applied by blendAt) so the spawn valley is livable and the
+  // colder/hotter/drier climates — and the rarer woods & ores they hold — emerge
+  // farther out.
+  // Pure by design: every driver arrives as an argument, so blendAt can re-run
+  // it across a whole neighbourhood of climates without re-sampling any noise.
+  _classify(h, t, m, tier, volc) {
     const B = BIOMES;
-    const h = this.heightAt(x, z);
-    const tier = this.tierAt(x, z);
-
-    // The hand-built Frostwatch frontier is pinned cold on every seed.
-    if (Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z) < 90) return B.frostbound_tundra;
-
-    const d = Math.hypot(x, z);
-    const ext = smoothstep(clamp((d - 80) / 900, 0, 1));
-    // Temperature: mild near spawn, stretched to real extremes far out (so polar
-    // caps and hot deserts actually occur). Moisture: contrast-stretched so arid
-    // and rainforest-wet tails are reachable, not just the muddy middle.
-    const t = clamp(0.5 + (this.temperatureAt(x, z) - 0.5) * (0.20 + 1.05 * ext), 0, 1);
-    const m = clamp(0.5 + (this.moistureAt(x, z) - 0.5) * 1.45, 0, 1);
 
     // Water's edge: hot shores become mangrove, otherwise a sandy beach.
     if (h <= SEA + 1) return (t > 0.66 && m > 0.4) ? B.mangrove : B.coastal_shores;
@@ -352,7 +394,7 @@ export class WorldGen {
 
     // Rare active volcanic fields — clustered hotspots in the far hot-dry reaches,
     // NOT all arid land (a sparse ridge field keeps them scarce so deserts remain).
-    if (tier >= 3 && t > 0.7 && m < 0.34 && ridge2(this.seed + 123, x * 0.0025, z * 0.0025, 2) > 0.85) return B.volcanic_wastes;
+    if (tier >= 3 && t > 0.7 && m < 0.34 && volc > 0.85) return B.volcanic_wastes;
 
     // Low, waterlogged ground → wetlands, by temperature and how flooded.
     if (h < SEA + 8 && m > 0.66) {
@@ -388,6 +430,67 @@ export class WorldGen {
     return B.sunbaked_badlands;                                // hot & arid → desert
   }
 
+  // A column near a climate boundary belongs to BOTH biomes, and saying so is
+  // what kills the hard seam. blendAt runs the classifier over a small disc of
+  // climates around the column — the climate a short walk away in every
+  // direction — and reports each biome it lands on with that biome's share of
+  // the disc. Deep inside a biome that is one candidate at weight 1; approaching
+  // a seam the shares ramp, so callers can crossfade surface, foliage and spawns
+  // instead of changing all three on a line.
+  //
+  // Terrain height is deliberately NOT blended: this generator's height is one
+  // continuous noise field shared by every biome (see the file header), so there
+  // are no per-biome height functions to average — averaging them would be
+  // averaging a value with itself. The seams were only ever in what sits ON the
+  // terrain, and that is what blends here.
+  //
+  // Costs nine classifier runs per column and no noise beyond what a single pick
+  // already needed: h, tier, the two climate fields and the volcanic ridge are
+  // all sampled once and reused across the disc.
+  blendAt(x, z, h = this.heightAt(x, z), out = this._blend) {
+    out.n = 0;
+    // The hand-built Frostwatch frontier is pinned cold on every seed — whole and
+    // unblended, so the camp never grows a patch of somewhere else.
+    if (Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z) < 90) {
+      out.b[0] = BIOMES.frostbound_tundra; out.w[0] = 1; out.n = 1;
+      return out;
+    }
+    const tier = this.tierAt(x, z);
+    const d = Math.hypot(x, z);
+    // Temperature: mild near spawn, stretched to real extremes far out (so polar
+    // caps and hot deserts actually occur). Moisture: contrast-stretched so arid
+    // and rainforest-wet tails are reachable, not just the muddy middle.
+    const tGain = 0.20 + 1.05 * smoothstep(clamp((d - 80) / 900, 0, 1));
+    const rt = this.temperatureAt(x, z), rm = this.moistureAt(x, z);
+    // Volcanic hotspots read their ridge field here rather than inside the
+    // classifier, so classifying a neighbouring climate stays free of noise.
+    const volc = tier >= 3 ? ridge2(this.seed + 123, x * 0.0025, z * 0.0025, 2) : 0;
+    let t = clamp(0.5 + (rt - 0.5) * tGain, 0, 1);
+    let m = clamp(0.5 + (rm - 0.5) * 1.45, 0, 1);
+    addSample(out, this._classify(h, t, m, tier, volc));   // slot 0: the column's own climate
+    for (let i = 0; i < BLEND_RING.length; i += 2) {
+      t = clamp(0.5 + (rt + BLEND_RING[i] * BLEND_SPREAD - 0.5) * tGain, 0, 1);
+      m = clamp(0.5 + (rm + BLEND_RING[i + 1] * BLEND_SPREAD - 0.5) * 1.45, 0, 1);
+      addSample(out, this._classify(h, t, m, tier, volc));
+    }
+    return out;
+  }
+
+  // The one biome that owns a column, for everything that has to pick exactly
+  // one — the surface block, the map tile. It is the heaviest blend candidate
+  // everywhere except inside the blend band, where a hash of the column chooses
+  // among the candidates in proportion to their weight. That dither is what
+  // turns the boundary into interlocking fingers of one biome into the other
+  // instead of a drawn line. Pass `h` when the caller already has it; the extra
+  // heightAt is the most expensive thing in this file.
+  biomeAt(x, z, h = this.heightAt(x, z)) {
+    const bl = this.blendAt(x, z, h, this._blend);
+    if (bl.n === 1) return bl.b[0];
+    let r = hash2(this.seed + 141, x, z);
+    for (let i = 0; i < bl.n - 1; i++) { r -= bl.w[i]; if (r < 0) return bl.b[i]; }
+    return bl.b[bl.n - 1];
+  }
+
   isCave(x, y, z) {
     if (y < 4 || y > WORLD_H - 12) return false;
     if (this.pathSet && this.pathSet.has(x + ',' + z)) return false; // never carve a hole under the road
@@ -403,7 +506,7 @@ export class WorldGen {
   // Writes one column into the chunk-local block array (Uint16). Returns surface info.
   column(blocks, lx, lz, wx, wz, setLocal) {
     const h = this.heightAt(wx, wz);
-    const biome = this.biomeAt(wx, wz);
+    const biome = this.biomeAt(wx, wz, h);
     const onPath = this.pathSet ? this.pathSet.has(wx + ',' + wz) : false;
     const surfaceId = onPath ? B.gravel : B[biome.surface]; // roads read as a gravel lane
     const fillerId = B[biome.filler];

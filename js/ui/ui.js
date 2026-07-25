@@ -565,7 +565,7 @@ export class UI {
         for (let lx = 0; lx < CHUNK; lx++) {
           const wx = cx * CHUNK + lx, wz = cz * CHUNK + lz;
           const h = gen.heightAt(wx, wz);
-          const biome = gen.biomeAt(wx, wz);
+          const biome = gen.biomeAt(wx, wz, h);
           let rgb;
           if (h <= 28) rgb = [52, 88, 148];
           else if (biome.surface === 'sand') rgb = [214, 196, 138];

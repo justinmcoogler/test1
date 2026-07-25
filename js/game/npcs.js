@@ -65,7 +65,8 @@ export const NPC_DEFS = {
       buys: {
         fernwood_log: 2, emberpine_log: 8,
         copper_ore: 3, tin_ore: 3, iron_ore: 6, silver_ore: 12,
-        silverfin: 3, mudwhisker: 5, duskeel: 10, boar_haunch: 3, boarhide: 3,
+        silverfin: 3, mudwhisker: 5, duskeel: 10, reedpike: 8, saltcrab: 14, palefin: 26,
+        boar_haunch: 3, boarhide: 3,
         bitterleaf: 2, springroot: 2, tartberries: 1, pottery_shard: 4, old_coin: 6,
         bone_needle: 5, rough_gem: 15, amber_resin: 8, clay_lump: 2, grainsheaf: 2, golden_grain: 20,
         bronze_bar: 10, iron_bar: 18, relic_fragment: 20,

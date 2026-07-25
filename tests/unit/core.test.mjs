@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import { hashSeed, mulberry32, hash2 } from '../../js/core/rng.js';
 import { fbm2, valueNoise2 } from '../../js/core/noise.js';
 import { xpForLevel, levelForXp, Skills } from '../../js/game/skills.js';
-import { WorldGen, CHUNK, SEA, WORLD_H, BIOMES } from '../../js/world/worldgen.js';
+import { WorldGen, CHUNK, SEA, WORLD_H, BIOMES, ringAt, newBlend } from '../../js/world/worldgen.js';
+import { World, chunkKey } from '../../js/world/world.js';
 import { NODE_TYPES, nodeBlocks, nodeCells, rollNodeDrops } from '../../js/game/nodes.js';
 import { RECIPES } from '../../js/game/crafting.js';
 import { ITEMS } from '../../js/game/items.js';
@@ -109,6 +110,88 @@ test('biomes: real-world climate model is deterministic, mild at spawn, complete
   ];
   const missing = need.filter((n) => !seen.has(n));
   assert.deepEqual(missing, [], `unreachable biomes: ${missing.join(', ')}`);
+});
+
+test('rings: difficulty is distance, and a new player starts in ring 0', () => {
+  assert.equal(ringAt(0, 0), 0);
+  const [sx, , sz] = buildStarterStructures().markers.spawn;
+  assert.equal(ringAt(sx, sz), 0, 'the spawn plaza must sit in ring 0');
+  // The whole first 512 blocks are ring 0 — this is the proof that nothing
+  // ring-gated can reach the starting bowl, whatever the seed.
+  for (let x = -511; x <= 511; x += 7) {
+    for (let z = -511; z <= 511; z += 7) {
+      if (Math.hypot(x, z) < 512) assert.equal(ringAt(x, z), 0, `${x},${z} should be ring 0`);
+    }
+  }
+  assert.equal(ringAt(512, 0), 1);
+  assert.equal(ringAt(0, -1535), 2);
+  assert.equal(ringAt(2200, 2200), 3);
+  assert.equal(ringAt(1e6, 1e6), 3, 'rings cap so the far world stays generatable');
+});
+
+test('rings: the starting bowl spawns wildlife but nothing ring-gated', () => {
+  // Which mobs are held back is read from the biome tables, so re-tiering the
+  // roster keeps this honest without editing the test.
+  const gated = new Set();
+  for (const b of Object.values(BIOMES)) for (const e of b.enemies || []) if (e.ring > 0) gated.add(e.type);
+  assert.ok(gated.size >= 6, 'the hostile roster should be ring-gated');
+
+  const w = new World(20260725);
+  const found = new Set();
+  let total = 0;
+  for (let cx = -8; cx <= 8; cx++) {
+    for (let cz = -8; cz <= 8; cz++) {
+      const c = w.ensureChunk(cx, cz);
+      for (const sp of c.spawns) { total++; found.add(sp.type); }
+      w.chunks.delete(chunkKey(cx, cz)); // inspected — don't hold 289 chunks of blocks
+    }
+  }
+  assert.ok(total > 50, 'the starting bowl should still be full of creatures');
+  const leaked = [...found].filter((t) => gated.has(t));
+  assert.deepEqual(leaked, [], `ring-gated mobs spawned beside spawn: ${leaked.join(', ')}`);
+});
+
+test('biome blending: weights are a real distribution, interiors stay pure, seams blend', () => {
+  const g = new WorldGen(hashSeed('blend'));
+  const bl = newBlend();
+  const real = new Set(Object.values(BIOMES));
+  let cols = 0, pure = 0, blended = 0, dithered = 0;
+  for (let x = -1200; x <= 1200; x += 17) {
+    for (let z = -1200; z <= 1200; z += 19) {
+      const h = g.heightAt(x, z);
+      g.blendAt(x, z, h, bl);
+      cols++;
+      assert.ok(bl.n >= 1, `no biome candidate at ${x},${z}`);
+      let sum = 0, holdsPick = false;
+      const pick = g.biomeAt(x, z, h);
+      for (let i = 0; i < bl.n; i++) {
+        assert.ok(real.has(bl.b[i]), `blend candidate is not a biome at ${x},${z}`);
+        assert.ok(bl.w[i] > 0, `zero-weight candidate at ${x},${z}`);
+        sum += bl.w[i];
+        if (bl.b[i] === pick) holdsPick = true;
+      }
+      assert.ok(Math.abs(sum - 1) < 1e-9, `weights must sum to 1, got ${sum}`);
+      assert.ok(holdsPick, `the picked biome is not one of the candidates at ${x},${z}`);
+      if (bl.n === 1) pure++;
+      else { blended++; if (pick !== bl.b[0]) dithered++; }
+    }
+  }
+  assert.ok(pure / cols > 0.5, `biome interiors should stay pure, only ${pure}/${cols} were`);
+  assert.ok(blended > cols * 0.05, `seams should blend, only ${blended}/${cols} columns did`);
+  assert.ok(dithered > 0, 'the seam band must dither, or the boundary is still a drawn line');
+});
+
+test('biome blending is deterministic — same seed, same world', () => {
+  const g1 = new WorldGen(hashSeed('blend')), g2 = new WorldGen(hashSeed('blend'));
+  const a = newBlend(), b = newBlend();
+  for (let i = 0; i < 400; i++) {
+    const x = (i * 137) % 2400 - 1200, z = (i * 271) % 2400 - 1200;
+    assert.strictEqual(g1.biomeAt(x, z), g2.biomeAt(x, z), `biome differs at ${x},${z}`);
+    g1.blendAt(x, z, undefined, a);
+    g2.blendAt(x, z, undefined, b);
+    assert.equal(a.n, b.n);
+    for (let k = 0; k < a.n; k++) { assert.strictEqual(a.b[k], b.b[k]); assert.equal(a.w[k], b.w[k]); }
+  }
 });
 
 test('node definitions are complete and consistent', () => {
