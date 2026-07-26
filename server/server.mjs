@@ -12,6 +12,8 @@
 // the house. It has no authentication, and that is a deliberate choice for a
 // home network (see README). Do not port-forward it.
 import { createServer } from 'node:http';
+import { createServer as createSecureServer } from 'node:https';
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,13 +39,28 @@ function arg(name, dflt) {
 const port = parseInt(arg('port', '8080'), 10);
 const seed = arg('seed', 'sproutlands');
 
+// HTTPS IS OPTIONAL AND IT IS ONLY ABOUT INSTALLING. Play works perfectly well
+// over plain http on a home network. But a browser will only register a service
+// worker — and Chrome will only offer "Install" — on a SECURE CONTEXT, and a LAN
+// address like http://192.168.1.20:8080 is not one. localhost is, which is why
+// the host machine can install over http and the tablets cannot.
+//
+//   node tools/make-cert.mjs          # writes .certs/, gitignored
+//   npm run server -- --tls
+//
+// See README: the certificate is self-signed, so each device has to be told to
+// trust it once.
+const wantTls = process.argv.includes('--tls') || !!arg('cert', '');
+const certPath = arg('cert', '.certs/cert.pem');
+const keyPath = arg('key', '.certs/key.pem');
+
 const stamp = () => new Date().toTimeString().slice(0, 8);
 const log = (msg) => console.log(`[${stamp()}] ${msg}`);
 
 const room = new Room({ seed, onLog: log });
 
 // ---- static files -----------------------------------------------------------
-const http = createServer(async (req, res) => {
+const handler = async (req, res) => {
   try {
     let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (path === '/') path = '/index.html';
@@ -62,7 +79,27 @@ const http = createServer(async (req, res) => {
     res.writeHead(404);
     res.end('not found');
   }
-});
+};
+
+let tls = false;
+let http;
+if (wantTls) {
+  try {
+    http = createSecureServer(
+      { cert: readFileSync(certPath), key: readFileSync(keyPath) },
+      handler,
+    );
+    tls = true;
+  } catch (err) {
+    console.error(`\n  Could not read the certificate (${err.code === 'ENOENT' ? 'not found' : err.message}).`);
+    console.error(`  Looked for: ${certPath} and ${keyPath}`);
+    console.error('  Run: node tools/make-cert.mjs');
+    console.error('  Starting without TLS — play will work, installing to a home screen will not.\n');
+    http = createServer(handler);
+  }
+} else {
+  http = createServer(handler);
+}
 
 // ---- the game socket --------------------------------------------------------
 attachWebSocket(http, {
@@ -127,17 +164,27 @@ function lanAddresses() {
 }
 
 http.listen(port, '0.0.0.0', () => {
-  const urls = lanAddresses().map((ip) => `http://${ip}:${port}`);
+  const scheme = tls ? 'https' : 'http';
+  const urls = lanAddresses().map((ip) => `${scheme}://${ip}:${port}`);
   console.log('');
   console.log('  Sproutlands multiplayer');
-  console.log(`  seed "${seed}"  ·  ${SIM_HZ}Hz sim  ·  ${SNAP_HZ}Hz snapshots`);
+  console.log(`  seed "${seed}"  ·  ${SIM_HZ}Hz sim  ·  ${SNAP_HZ}Hz snapshots${tls ? '  ·  TLS' : ''}`);
   console.log('');
-  console.log(`  On this machine:  http://localhost:${port}`);
+  console.log(`  On this machine:  ${scheme}://localhost:${port}`);
   if (urls.length) {
     console.log('  On the wifi:');
     for (const u of urls) console.log(`      ${u}`);
   } else {
     console.log('  No LAN address found — other devices will not be able to reach this.');
+  }
+  console.log('');
+  if (tls) {
+    console.log('  Certificate is self-signed: each device will warn once. Accept it,');
+    console.log('  and the game becomes installable to the home screen.');
+  } else {
+    console.log('  Playing works from any of these. INSTALLING to a home screen works');
+    console.log('  only on this machine (localhost counts as secure) — for the tablets,');
+    console.log('  run `node tools/make-cert.mjs` then `npm run server -- --tls`.');
   }
   console.log('');
   console.log('  Ctrl-C to stop.');

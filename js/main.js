@@ -3257,19 +3257,90 @@ let _deferredInstall = null;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   _deferredInstall = e;
-  $('install-btn')?.classList.remove('hidden');
+  const btn = $('install-btn');
+  if (btn) { btn.textContent = 'Install Sproutlands'; btn.classList.remove('hidden'); }
 });
 window.addEventListener('appinstalled', () => { $('install-btn')?.classList.add('hidden'); _deferredInstall = null; });
+
+// SAFARI NEVER FIRES beforeinstallprompt — on iOS and iPadOS the only way in is
+// Share → Add to Home Screen, done by hand. Left to the code above, the button
+// would stay hidden on exactly the devices most likely to be handed to a child,
+// and nothing would ever tell them the app can be installed at all. So on iOS
+// the button is shown unconditionally and explains the manual route instead.
+const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  // iPadOS 13+ reports itself as a Mac; the touch points give it away.
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+// display-mode: standalone means we are ALREADY installed and running from the
+// home screen, so offering to install would be nonsense.
+const _installed = window.matchMedia?.('(display-mode: standalone)')?.matches
+  || window.navigator.standalone === true;
+
+if (_isIOS && !_installed) {
+  const btn = $('install-btn');
+  if (btn) { btn.textContent = 'Add to Home Screen'; btn.classList.remove('hidden'); }
+}
+
 $('install-btn')?.addEventListener('click', async () => {
-  if (!_deferredInstall) return;
-  _deferredInstall.prompt();
-  await _deferredInstall.userChoice.catch(() => {});
-  _deferredInstall = null;
-  $('install-btn')?.classList.add('hidden');
+  if (_deferredInstall) {
+    _deferredInstall.prompt();
+    await _deferredInstall.userChoice.catch(() => {});
+    _deferredInstall = null;
+    $('install-btn')?.classList.add('hidden');
+    return;
+  }
+  // The iOS path, and the fallback anywhere the browser has not offered a
+  // prompt: say what to tap rather than doing nothing on click.
+  const hint = $('title-hint');
+  if (hint) {
+    hint.textContent = _isIOS
+      ? 'Tap the Share button, then "Add to Home Screen".'
+      : 'Open your browser menu and choose "Install app" or "Add to Home screen".';
+  }
 });
-// Register the service worker for offline play + auto-update on redeploy. Skip
-// on localhost (so tests never load stale cached modules) and in the inlined
-// single-file build (no sw.js beside it).
-if ('serviceWorker' in navigator && !window.__EMBEDDED && !['localhost', '127.0.0.1'].includes(location.hostname)) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+// Register the service worker for offline play + auto-update on redeploy.
+//
+// THE GATE IS isSecureContext, which is the browser's OWN rule for whether a
+// service worker may register at all. It used to be a hostname blacklist that
+// skipped localhost, and that had the effect exactly backwards: localhost is the
+// one plain-http origin browsers treat as secure, so the check disabled the
+// worker on the only machine where it could have worked, while on a LAN address
+// like http://192.168.1.20:8080 registration was attempted and silently refused
+// by the browser. The net effect was a service worker that registered nowhere —
+// and since Chrome requires a registered worker before it will offer to install,
+// an app that advertised itself as installable and never was.
+//
+// Skipped in the inlined single-file build, which has no sw.js beside it.
+// Automated browsers do not get a worker unless they ask for it (?sw=1). The
+// e2e suite drives the real game on localhost, which is a secure context, so
+// without this every test would run against a worker that is busy caching the
+// build — measurably changing frame timing in tests that count rounds of combat.
+// tests/pwa.mjs opts in, because the worker is the thing it is testing.
+const _swWanted = !navigator.webdriver || location.search.includes('sw=1');
+
+if ('serviceWorker' in navigator && !window.__EMBEDDED && window.isSecureContext && _swWanted) {
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js');
+      // WARM THE CACHE WITH WHAT ACTUALLY LOADED. The precache list in sw.js is
+      // the shell only — index.html, the manifest, the icons — because the game
+      // is forty-odd ES modules plus CSS, fonts and mob JSON, and hand-listing
+      // that would rot the first time a file was renamed. Instead the page tells
+      // the worker what it really fetched, so one online launch is enough to
+      // make the next one work with the wifi off.
+      //
+      // WAIT FOR IDLE FIRST. Firing this at 'load' means a few hundred refetches
+      // land exactly as the world is generating and the first chunks are being
+      // meshed — the worst moment in the whole session, on the tablet least able
+      // to afford it. Nothing here is urgent: the cache only has to be warm
+      // before the NEXT launch.
+      const warm = () => {
+        const urls = performance.getEntriesByType('resource')
+          .map((e) => e.name)
+          .filter((u) => u.startsWith(location.origin));
+        (reg.active || navigator.serviceWorker.controller)?.postMessage({ type: 'warm', urls });
+      };
+      if ('requestIdleCallback' in window) requestIdleCallback(warm, { timeout: 15000 });
+      else setTimeout(warm, 8000);
+    } catch { /* an unsupported or blocked origin is not an error worth showing */ }
+  });
 }

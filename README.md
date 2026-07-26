@@ -17,6 +17,38 @@ npm run serve        # then open http://localhost:8080
 Any static file server works — the game is plain ES modules with no build step.
 Works on desktop, tablet and phone browsers (WebGL2 required).
 
+### Install it as an app
+
+Sproutlands is a PWA: a web app manifest, maskable icons and a service worker
+that keeps the whole build cached, so once it has loaded online it starts and
+plays with the wifi off.
+
+**On the machine running the server** — open `http://localhost:8080` and use the
+**Install Sproutlands** button on the title screen, or your browser's address-bar
+install icon.
+
+**On an iPad or iPhone** — open the page in Safari, tap **Share**, then **Add to
+Home Screen**. Safari never offers an automatic install prompt, so the title
+screen shows an **Add to Home Screen** button that explains this instead.
+
+**On an Android tablet — read this bit.** A browser only registers a service
+worker, and Chrome only offers to install, on a **secure context**: `https`, or
+`localhost`. A LAN address like `http://192.168.1.20:8080` is neither, so over
+plain http the kids' tablets can *play* perfectly well but cannot *install*.
+The fix is to serve https from your own machine:
+
+```bash
+node tools/make-cert.mjs      # self-signed, covers this machine's LAN addresses
+npm run server -- --tls       # now prints https:// URLs
+```
+
+Each device warns once that the certificate is not trusted — accept it
+(**Advanced → Proceed**) and the app becomes installable. The certificate lives
+in `.certs/` and is gitignored. Regenerate it if you change networks.
+
+Playing never needs any of this. It is only about getting an icon on a home
+screen.
+
 ### Your first ten minutes
 
 You wash up in **Brookhollow**, a settlement on a green plateau. Talk to **Elder Maren**
@@ -115,9 +147,19 @@ js/ui       HUD, windows, dialogue, combat interface
 ### Tests
 
 ```bash
-npm test           # 16 unit tests (worldgen determinism, XP curves, data integrity…)
-npm run test:e2e   # Playwright: smoke, full gameplay loop, boss fight, mobile touch
+npm test           # unit tests (worldgen determinism, XP curves, data integrity…)
+npm run test:e2e   # Playwright: smoke, gameplay loop, boss fight, mobile touch,
+                   # multiplayer (two real clients), PWA install + offline
 ```
+
+`tests/pwa.mjs` is the one that proves the install story: it registers the
+service worker, pulls the network, reloads, and asserts the game — modules and
+all, not just the HTML shell — still comes up.
+
+Automated browsers do **not** get a service worker unless the page is opened with
+`?sw=1`. Without that the whole e2e suite would race a worker busy caching the
+build, which measurably shifts frame timing in the tests that count rounds of
+combat.
 
 The e2e suites drive the real game in headless Chromium: accepting quests through
 dialogue, chopping trees by holding the mouse, crafting via the UI, watching nodes

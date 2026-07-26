@@ -6,3 +6,6 @@ scratchpad/
 
 # Claude Code local settings + agent worktrees (never commit)
 .claude/
+
+# self-signed TLS certs for the LAN server (node tools/make-cert.mjs)
+.certs/
