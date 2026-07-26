@@ -44,15 +44,16 @@ export function classroomFor(index) {
   const stand = floor + 1;           // where feet go
   return {
     index: i, cx, cz, floor, stand,
-    // The work mat, same shape as the old yard's: 9x5 with a plank divider down
-    // the middle so a sorting lesson has a left half and a right half.
-    // y1 gives six levels of build room above the mat, because "make a tower
-    // five tall" and "which tower is taller" are Year-1 measurement work and a
-    // three-block ceiling cannot express them.
-    // Thirteen wide, which is the room's full interior: the place-value lesson
-    // asks for an unbroken row of TEN and a nine-wide mat cannot hold one. A
-    // lesson whose answer does not fit on the mat is unwinnable, and it looks
-    // completely reasonable until somebody tries to build it.
+    // The work mat: 13 x 5, with a plank divider down the middle so a sorting
+    // or symmetry lesson has a left half and a right half.
+    //
+    // Both of those numbers are the smallest that fit the lessons. Thirteen
+    // wide because the place-value lesson asks for an unbroken row of TEN, and
+    // the old nine-wide mat could not hold one. Six levels of build room
+    // because "make a tower five tall" and "which tower is taller" are Year-1
+    // measurement work that a three-block ceiling cannot express. A lesson
+    // whose answer does not fit on the mat is unwinnable, and it reads as
+    // completely reasonable right up until somebody tries to build it.
     mat: {
       x0: cx - 6, x1: cx + 6, z0: cz - 2, z1: cz + 2,
       y0: stand, y1: stand + 6, div: cx,
