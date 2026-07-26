@@ -99,9 +99,17 @@ export function horseParts(d) {
   //   THE COLUMN MUST BE SHORT. Fourteen pixels on a barrel ten deep, swung out
   //   forty degrees, throws the head a long way off the chest. That is a giraffe;
   //   a horse carries its head close. Hence thirty degrees, and a shorter column.
-  const NECK_DEG = 30;
+  const NECK_DEG = 32;
   const nPivY = back - 3, nPivZ = zF - 5;   // the withers
-  const nLo = R(neck * 0.6), nHi = neck - nLo + 1;
+  // THE NECK IS A MASS, NOT A STRUT. This is the fault that has survived every
+  // pass: four wide by six deep and eleven long is a stick, and a stick with a
+  // head on it is a llama however well the head is built. A horse's neck is
+  // nearly as deep through as its head is long. So it is shorter — four fifths
+  // of what it was — and it is deep enough at the base to fill the gap between
+  // the withers and the throat.
+  const nLen = Math.max(6, R(neck * 0.8));
+  const nLo = R(nLen * 0.55), nHi = nLen - nLo + 1;
+  const nDeep = Math.max(6, R(bd * 0.36));  // depth at the base
   const nTop = nPivY + nLo - 1 + nHi;       // crest of the UNROTATED column
   const maneH = Math.max(3, R(neck * 0.36));
   // THE HEAD IS ONE BLOCK WITH A NOSE ON IT. Splitting it into a skull and a
@@ -115,9 +123,9 @@ export function horseParts(d) {
   // head swallowed the neck whole: everything above the barrel was head, and the
   // only "neck" left was the stub below the jaw. Five is enough to join them.
   const headL = Math.max(9, R(bd * 0.46));
-  const headH = 8;
-  const hy = nTop - 5;
-  const hPivY = nTop - 1, hPivZ = nPivZ + 2;
+  const headH = 7;
+  const hy = nTop - 4;
+  const hPivY = nTop - 2, hPivZ = nPivZ + 1;
   const LEGS = [['leg0', -legW - 1, zF - 5], ['leg1', 1, zF - 5],
     ['leg2', -legW - 1, -bd / 2 + 1], ['leg3', 1, -bd / 2 + 1]];
   return [
@@ -137,31 +145,28 @@ export function horseParts(d) {
     // so the crest is one straight line from withers to poll, which is what a
     // horse's actually is, and which gives the mane a continuous edge to sit on.
     part('neck', [0, nPivY, nPivZ], [
-      b([-2, nPivY, nPivZ - 2], [4, nLo, 6], H_UV.neck),
-      b([-2, nPivY + nLo - 1, nPivZ - 2], [4, nHi, 5], H_UV.neck),
-      // THE MANE IS A TUFT AT THE POLL, NOT A SPINE. Run full-length and two deep
-      // it stood a pixel proud of the whole crest, and since it is near-black on a
-      // pale coat the eye read it as a separate object: a stick laid along the
-      // neck. Vanilla gets away with a long mane because its neck TEXTURE is dark
-      // under it, so the box reads as thickness rather than as an attachment; this
-      // neck is coat-coloured. So the box now covers only the top third — where a
-      // mane actually gathers and falls — and sinks a pixel into the neck so only
-      // one of its two pixels of depth stands proud.
-      b([-2, nTop - maneH, nPivZ - 3], [4, maneH, 2], H_UV.mane),
+      b([-2, nPivY, nPivZ - 3], [4, nLo, nDeep], H_UV.neck),
+      b([-2, nPivY + nLo - 1, nPivZ - 3], [4, nHi, nDeep - 1], H_UV.neck),
+      // The mane runs the whole crest again. It was cut back to a tuft at the poll
+      // because on the old strut of a neck a full-length one read as a stick laid
+      // along a stick; with a neck of some mass under it there is something for the
+      // hair to lie on.
+      b([-2, nPivY + 1, nPivZ - 4], [4, nTop - nPivY - 1, 2], H_UV.mane),
     ], { rotation: [NECK_DEG, 0, 0] }),
-    // The head sits ON the crest and overlaps it by two, so the neck stays visible
-    // underneath. It carries a counter-angle against the neck's lean that leaves it
-    // just five degrees off level — the reference keeps its head rigid with the
-    // neck and so points the muzzle a full thirty degrees at the ground, which on
-    // a head this size reads as an animal nodding rather than an animal standing.
+    // The head CONTINUES THE NECK rather than perching level on top of it. Levelled
+    // off it read as a shelf stuck on a post — an animal holding its head up to look
+    // at something, permanently. The reference carries the head rigid with the neck,
+    // a full thirty-odd degrees down; that is too much on its own, so this splits
+    // the difference and comes to eighteen. The nose ends up at about chest height,
+    // which is where a standing horse holds it.
     part('head', [0, hPivY, hPivZ], [
-      b([-2, hy, nPivZ], [5, headH, headL],
+      b([-2, hy, nPivZ - 1], [5, headH, headL],
         { all: H_UV.headSide, south: H_UV.headFace, up: H_UV.headTop }),
-      b([-2, hy + 1, nPivZ + headL], [4, 4, 3], H_UV.muzzle),
-      b([-3, hy + headH, nPivZ + 1], [2, 3, 2], H_UV.ear),
-      b([1, hy + headH, nPivZ + 1], [2, 3, 2], H_UV.ear),
-      b([-1, hy + headH - 2, nPivZ + 3], [2, 4, 2], H_UV.forelock),
-    ], { parent: 'neck', rotation: [-NECK_DEG + 5, 0, 0] }),
+      b([-2, hy + 1, nPivZ - 1 + headL], [4, 4, 3], H_UV.muzzle),
+      b([-3, hy + headH, nPivZ], [2, 3, 2], H_UV.ear),
+      b([1, hy + headH, nPivZ], [2, 3, 2], H_UV.ear),
+      b([-1, hy + headH - 2, nPivZ + 2], [2, 4, 2], H_UV.forelock),
+    ], { parent: 'neck', rotation: [-NECK_DEG + 18, 0, 0] }),
     // ONE WIDTH ALL THE WAY DOWN. A tapered leg — muscled thigh, thin cannon,
     // flared hoof — is anatomically the right story and it read badly here: at
     // four pixels of leg the step in and out just looks like a knuckle, and four
