@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { networkInterfaces } from 'node:os';
 import { attachWebSocket, newId } from './ws.mjs';
 import { Room, SIM_HZ, SNAP_HZ } from './room.mjs';
+import { loadRoom, saveRoom, savePathFor, saveSize } from './persist.mjs';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 
@@ -58,10 +59,70 @@ const wantTls = process.argv.includes('--tls') || !!arg('cert', '');
 const certPath = arg('cert', '.certs/cert.pem');
 const keyPath = arg('key', '.certs/key.pem');
 
+// Where the world lives between sessions. --no-save runs it in memory only,
+// which is what the tests want and nothing else does.
+const saving = !process.argv.includes('--no-save');
+const savePath = arg('save', savePathFor(seed));
+// How often a changed world is written. A minute is short enough that the worst
+// case is losing a minute of building, and long enough that the disk is idle
+// almost all the time.
+const AUTOSAVE_MS = 60000;
+
 const stamp = () => new Date().toTimeString().slice(0, 8);
 const log = (msg) => console.log(`[${stamp()}] ${msg}`);
 
 const room = new Room({ seed, onLog: log });
+
+// LOAD BEFORE THE FIRST TICK. Edits are replayed as chunks are generated
+// (js/world/world.js ensureChunk reads editedBlocks), so a chunk built before
+// the load would come from bare terrain and never be revisited — the base would
+// be missing until someone walked far enough away and back.
+let loaded = null;
+if (saving) {
+  try {
+    loaded = await loadRoom(savePath, { seed, onLog: log });
+  } catch (err) {
+    // A corrupt file or a seed mismatch is refused rather than overwritten. The
+    // save is somebody's afternoon; starting fresh on top of it is the one
+    // outcome that cannot be undone.
+    console.error(`\n  ${err.message}`);
+    console.error(`  ${savePath}\n`);
+    console.error('  Move that file aside, point --save somewhere else, or run with --no-save.\n');
+    process.exit(1);
+  }
+  if (loaded) {
+    room.deserialize(loaded);
+    log(`loaded ${savePath} (${await saveSize(savePath)} bytes, saved ${loaded.savedAt || 'at an unknown time'})`);
+  }
+}
+
+// SAVES ARE A QUEUE, NOT A LOCK. The first version guarded with a boolean and
+// returned early when a write was already running — which meant that on Ctrl-C
+// immediately after the last player left, the shutdown save returned instantly
+// while the previous one was still writing, and then process.exit ran before it
+// finished. The save that mattered most was the one guaranteed to be dropped.
+//
+// Chaining instead means `await persist(...)` waits for every write queued
+// before it as well as its own, so the shutdown path cannot outrun the disk.
+let chain = Promise.resolve();
+function persist(reason) {
+  if (!saving) return chain;
+  chain = chain.then(async () => {
+    // Re-checked HERE rather than at call time: an earlier link in the chain may
+    // have already written these exact bytes.
+    if (!room.dirty) return;
+    const data = room.serialize();
+    data.savedAt = new Date().toISOString();
+    try {
+      await saveRoom(savePath, data);
+      room.dirty = false;
+      log(`saved ${savePath} (${reason})`);
+    } catch (err) {
+      log(`SAVE FAILED (${reason}): ${err.message}`);
+    }
+  });
+  return chain;
+}
 
 // ---- static files -----------------------------------------------------------
 const handler = async (req, res) => {
@@ -138,7 +199,12 @@ attachWebSocket(http, {
       try { room.handle(id, raw); }
       catch (err) { log(`error handling a message from ${id}: ${err.stack || err}`); }
     });
-    conn.on('close', () => room.leave(id));
+    conn.on('close', () => {
+      room.leave(id);
+      // Everyone has gone home. Write now rather than waiting out the timer on
+      // an empty world — a ten-minute session should not depend on the clock.
+      if (room.players.size === 0) persist('last player left');
+    });
     conn.on('error', () => { /* the close handler does the cleanup */ });
   },
 });
@@ -170,6 +236,8 @@ const loop = setInterval(() => {
     }
   }
 }, SIM_MS);
+
+const autosave = saving ? setInterval(() => { persist('autosave'); }, AUTOSAVE_MS) : null;
 
 // A dead TCP connection can sit open for minutes. Pinging turns "the tablet went
 // to sleep" into a clean departure instead of a ghost standing in the field.
@@ -218,10 +286,18 @@ http.listen(port, '0.0.0.0', () => {
   console.log('');
 });
 
-const shutdown = () => {
+let stopping = false;
+const shutdown = async () => {
+  if (stopping) return;            // a second Ctrl-C must not race the first
+  stopping = true;
   log('shutting down');
   clearInterval(loop);
+  if (autosave) clearInterval(autosave);
   for (const p of room.players.values()) p.conn.close(1001, 'server stopping');
+  // The save is the LAST thing and it is awaited. Ctrl-C is how this server is
+  // normally stopped, so if that path does not write, persistence does not
+  // really exist.
+  await persist('shutdown');
   http.close(() => process.exit(0));
   // If a socket refuses to close, do not hang the terminal forever.
   setTimeout(() => process.exit(0), 1500).unref();

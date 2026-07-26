@@ -71,6 +71,47 @@ export class Room {
     this.pendingEdits = [];
     this.combatOut = new Map();     // playerId → queued combat events
     this._resident = new Set();
+    // Where each player was when last seen, keyed by NAME. There are no accounts
+    // here — a name is the whole identity — so a child who comes back tomorrow
+    // reappears where they left off rather than at the spawn point.
+    this.lastSeen = new Map();
+    // Set by anything worth writing to disk. The autosave skips a quiet world
+    // rather than rewriting an identical file every minute.
+    this.dirty = false;
+  }
+
+  // ---- persistence ----------------------------------------------------------
+  serialize() {
+    const players = {};
+    for (const [name, at] of this.lastSeen) players[name] = at;
+    // Live players are wherever they are right now, which is newer than
+    // lastSeen — that is only written when someone leaves.
+    for (const p of this.players.values()) {
+      if (p.joined) players[p.name] = { x: r2(p.x), y: r2(p.y), z: r2(p.z) };
+    }
+    return {
+      version: 1,
+      seed: this.seed,
+      savedAt: null,               // stamped by the caller; the room has no clock
+      world: this.world.serialize(),
+      enemies: this.enemyMgr.serialize(),
+      players,
+    };
+  }
+
+  // Must run BEFORE any chunk is generated. Edits are replayed as chunks come in
+  // (js/world/world.js ensureChunk reads editedBlocks), so a chunk built before
+  // the load would be built from bare terrain and then never revisited.
+  deserialize(data) {
+    if (!data) return;
+    this.world.deserialize(data.world);
+    this.enemyMgr.deserialize(data.enemies);
+    this.lastSeen.clear();
+    for (const [name, at] of Object.entries(data.players || {})) {
+      if (at && Number.isFinite(at.x) && Number.isFinite(at.y) && Number.isFinite(at.z)) {
+        this.lastSeen.set(name, { x: at.x, y: at.y, z: at.z });
+      }
+    }
   }
 
   // ---- membership -----------------------------------------------------------
@@ -116,6 +157,10 @@ export class Room {
     // an entity with rsEngaged set is skipped by the wander loop, so a guest who
     // closes the tab mid-fight would otherwise freeze that goblin forever.
     for (const st of p.combat.engaged.values()) if (st.entity) st.entity.rsEngaged = false;
+    if (p.joined) {
+      this.lastSeen.set(p.name, { x: r2(p.x), y: r2(p.y), z: r2(p.z) });
+      this.dirty = true;
+    }
     this.players.delete(id);
     this.combatOut.delete(id);
     this.broadcast({ t: S.LEFT, id, name: p.name }, id);
@@ -153,7 +198,8 @@ export class Room {
     }
     p.name = this._uniqueName(cleanName(m.name));
     p.joined = true;
-    const spawn = this.world.structure?.spawnPoint || { x: 0, y: 80, z: 0 };
+    const home = this.lastSeen.get(p.name);
+    const spawn = home || this.world.structure?.spawnPoint || { x: 0, y: 80, z: 0 };
     p.x = spawn.x; p.y = spawn.y; p.z = spawn.z;
 
     p.conn.send(encode({
@@ -211,6 +257,7 @@ export class Room {
 
     this.world.setBlock(e.x, e.y, e.z, e.id, true);
     this.pendingEdits.push([e.x, e.y, e.z, e.id]);
+    this.dirty = true;
   }
 
   _onAttack(p, m) {
@@ -369,6 +416,9 @@ export class Room {
         break;
       case 'combatEnd':
         // Everyone needs to know the mob is dead; only the killer needs the loot.
+        // A kill also carries a respawn timer, which is worth keeping across a
+        // restart — otherwise stopping the server resurrects the boss.
+        this.dirty = true;
         this.broadcast({ t: S.COMBAT, events: [{ k: 'died', ids: payload?.ids || [], by: p.name }] });
         this._combatEvent(p.id, { k: 'loot', loot: payload?.loot || [], coins: payload?.coins || 0 });
         break;

@@ -9,3 +9,7 @@ scratchpad/
 
 # self-signed TLS certs for the LAN server (node tools/make-cert.mjs)
 .certs/
+
+# multiplayer world saves (server/persist.mjs)
+saves/
+tests/.tmp-saves/

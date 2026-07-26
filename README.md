@@ -41,9 +41,27 @@ What the server owns, and what it doesn't:
   no anti-cheat: the line is "can't break other people", not "can't advantage
   yourself". For a family in one house that is the right trade.
 
-`--seed` picks the world (`npm run server -- --seed honeywood`). No accounts, no
-passwords, no save on the server — it is a room, not a service. Don't
-port-forward it.
+**It saves.** The world is written to `saves/<seed>.json` — every minute while
+anything has changed, when the last player leaves, and on Ctrl-C. Blocks, chests,
+crops, mined nodes, what has been killed and when it comes back, and where each
+player was standing. Start the server again and everyone picks up where they
+left off, at the spot they logged out from.
+
+Writes are atomic (write, then rename), so a crash or a closed laptop lid during
+a save leaves the previous one intact rather than half a file. A save that will
+not parse, or one belonging to a different seed, **stops the server** instead of
+being overwritten — replaying one world's edits onto another world's terrain
+gives you doors in cliffsides, and the save is somebody's afternoon.
+
+```bash
+npm run server -- --seed honeywood     # pick the world (and its save file)
+npm run server -- --save my/world.json # put the save somewhere else
+npm run server -- --no-save            # run it in memory only
+```
+
+No accounts and no passwords — a name is the whole identity. Characters
+(inventory, skills) still live in each device's own browser storage; the server
+owns the world, not your pockets. Don't port-forward it.
 
 ### Install it as an app
 
