@@ -282,10 +282,14 @@ const COLOR_BLOCK = new Set();
 for (const [c] of COLORS) for (const k of ['wool', 'carpet', 'concrete', 'concrete_powder', 'terracotta', 'glazed_terracotta', 'stained_glass', 'stained_glass_pane']) COLOR_BLOCK.add(`${c}_${k}`);
 const NATURAL_BLOCK = new Set(['granite', 'andesite', 'marble', 'deepslate', 'sandstone', 'brick', 'copper_block', 'copper_weathered', 'iron_block', 'gold_block', 'terracotta', 'mossy_cobble', 'mossy_stone_brick']);
 const SHAPE_RE = /_(slab|stairs|wall|fence|gate|pane|carpet|door)$/;
+// The alphabet. A letter block with no item cannot be picked up, held, crafted
+// or placed — it would be a block that exists only if worldgen puts one there,
+// which for Learning Mode's whole point (a child spelling a word) is useless.
+const LETTER_RE = /^letter_[a-z]$/;
 for (const d of BLOCKS) {
   if (!d || d.name in ITEMS) continue;
   const isShape = SHAPE_RE.test(d.name) && d.name !== 'timber_wall';
-  if (!isShape && !NATURAL_BLOCK.has(d.name) && !COLOR_BLOCK.has(d.name)) continue;
+  if (!isShape && !NATURAL_BLOCK.has(d.name) && !COLOR_BLOCK.has(d.name) && !LETTER_RE.test(d.name)) continue;
   const tile = d.tiles.all || d.tiles.side || d.tiles.top;
   it(d.name, d.label, { block: d.name, tileIcon: tile, type: 'block' });
 }

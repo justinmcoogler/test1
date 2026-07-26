@@ -955,6 +955,72 @@ Object.assign(PAINTERS, {
   },
 });
 
+
+// ---- Letter blocks ----------------------------------------------------------
+// A 5x7 uppercase alphabet, one string of 7 rows per letter. Drawn rather than
+// imported because a font file is a licence question and 26 legible capitals at
+// 5x7 is the oldest solved problem in computer graphics.
+//
+// These exist for Learning Mode: a child cannot spell CAT with coloured wool,
+// and every literacy lesson was blocked on having letters to place.
+const LETTER_ROWS = {
+  A: '01110,10001,10001,11111,10001,10001,10001',
+  B: '11110,10001,10001,11110,10001,10001,11110',
+  C: '01110,10001,10000,10000,10000,10001,01110',
+  D: '11110,10001,10001,10001,10001,10001,11110',
+  E: '11111,10000,10000,11110,10000,10000,11111',
+  F: '11111,10000,10000,11110,10000,10000,10000',
+  G: '01110,10001,10000,10111,10001,10001,01111',
+  H: '10001,10001,10001,11111,10001,10001,10001',
+  I: '11111,00100,00100,00100,00100,00100,11111',
+  J: '00111,00010,00010,00010,00010,10010,01100',
+  K: '10001,10010,10100,11000,10100,10010,10001',
+  L: '10000,10000,10000,10000,10000,10000,11111',
+  M: '10001,11011,10101,10101,10001,10001,10001',
+  N: '10001,11001,10101,10011,10001,10001,10001',
+  O: '01110,10001,10001,10001,10001,10001,01110',
+  P: '11110,10001,10001,11110,10000,10000,10000',
+  Q: '01110,10001,10001,10001,10101,10010,01101',
+  R: '11110,10001,10001,11110,10100,10010,10001',
+  S: '01111,10000,10000,01110,00001,00001,11110',
+  T: '11111,00100,00100,00100,00100,00100,00100',
+  U: '10001,10001,10001,10001,10001,10001,01110',
+  V: '10001,10001,10001,10001,10001,01010,00100',
+  W: '10001,10001,10001,10101,10101,11011,10001',
+  X: '10001,10001,01010,00100,01010,10001,10001',
+  Y: '10001,10001,01010,00100,00100,00100,00100',
+  Z: '11111,00001,00010,00100,01000,10000,11111',
+};
+export const LETTERS = Object.keys(LETTER_ROWS);
+
+// One tile: a pale card with a bevel, and the capital inked on it three pixels
+// thick so it survives being seen from across a room at mip level 2.
+function letterTile(ctx, x0, y0, rand, ch) {
+  noisyFill(ctx, x0, y0, rand, '#e8dcc0', 0.03);
+  for (let i = 0; i < LP; i++) {                      // bevel: lit top-left, shaded bottom-right
+    px(ctx, x0, y0, i, 0, '#f6eeda'); px(ctx, x0, y0, 0, i, '#f6eeda');
+    px(ctx, x0, y0, i, LP - 1, '#b9ab8c'); px(ctx, x0, y0, LP - 1, i, '#b9ab8c');
+  }
+  const rows = LETTER_ROWS[ch];
+  if (!rows) return;
+  const grid = rows.split(',');
+  const S = 4;                                        // each font pixel is 4x4 tile pixels
+  const ox = Math.floor((LP - 5 * S) / 2), oy = Math.floor((LP - 7 * S) / 2);
+  for (let gy = 0; gy < 7; gy++) {
+    for (let gx = 0; gx < 5; gx++) {
+      if (grid[gy][gx] !== '1') continue;
+      for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++) {
+        px(ctx, x0, y0, ox + gx * S + dx, oy + gy * S + dy, '#2f2a22');
+      }
+    }
+  }
+}
+
+// Register a painter per letter: letter_a … letter_z.
+for (const ch of LETTERS) {
+  PAINTERS[`letter_${ch.toLowerCase()}`] = (c, x, y, r) => letterTile(c, x, y, r, ch);
+}
+
 // Reserve atlas slots for any pack-only tiles (new station faces) so they get a
 // UV; the real art is blitted over the placeholder by applyTexturePack().
 for (const name of Object.keys(TEXPACK_TILES)) {

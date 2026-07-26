@@ -251,6 +251,72 @@ export const LESSONS_DATA = [
     reward: { coins: 50, items: [['hearth_loaf', 4], ['travel_biscuit', 4]] },
     next: null,
   },
+
+  // ---- The Spelling Shed: first words ---------------------------------------
+  // The letter blocks (js/world/blocks.js, A-Z) exist for these. Every lesson
+  // above is "place N of a colour" because coloured wool was all a child had to
+  // place, and you cannot spell CAT with it.
+  //
+  // `needs` names the letters the lesson hands out. A spelling lesson that made
+  // a child craft its letters first would be a crafting lesson.
+  {
+    id: 'sp_cat', area: 'spelling_shed', subject: 'reading', standard: 'RF.K.3.A',
+    minutes: 10, guide: 'pip', needs: 'CAT',
+    prompt: 'Spell CAT on the mat — put the letters in a row: C, A, T.',
+    hint: 'Say the word slowly: c… a… t. Place one letter for each sound, left to right, all touching.',
+    success: 'C-A-T spells CAT! You wrote a word!',
+    watch: ['blockPlaced', 'blockBroken'],
+    check: (ctx) => ctx.words().includes('CAT'),
+    reward: { coins: 20, items: [['letter_d', 4], ['letter_o', 4], ['letter_g', 4]] },
+    next: 'sp_dog',
+  },
+  {
+    id: 'sp_dog', area: 'spelling_shed', subject: 'reading', standard: 'RF.K.3.A',
+    minutes: 10, guide: 'pip', needs: 'DOG',
+    prompt: 'Now spell DOG.',
+    hint: 'd… o… g. Three sounds, three letters, in a row.',
+    success: 'D-O-G spells DOG! Two words now!',
+    watch: ['blockPlaced', 'blockBroken'],
+    check: (ctx) => ctx.words().includes('DOG'),
+    reward: { coins: 20, items: [['letter_h', 4], ['letter_b', 4]] },
+    next: 'sp_rhyme',
+  },
+  {
+    id: 'sp_rhyme', area: 'spelling_shed', subject: 'reading', standard: 'RF.K.2.C',
+    minutes: 12, guide: 'pip', needs: 'CATHB',
+    prompt: 'Rhyming time! Spell CAT, then HAT, then BAT — three rows, all rhyming.',
+    hint: 'They all end in A-T. Only the first letter changes: C, then H, then B.',
+    success: 'CAT, HAT, BAT — they all rhyme because they all end the same way!',
+    watch: ['blockPlaced', 'blockBroken'],
+    check: (ctx) => {
+      const w = ctx.words();
+      return w.includes('CAT') && w.includes('HAT') && w.includes('BAT');
+    },
+    reward: { coins: 30, items: [['letter_e', 4], ['letter_i', 4], ['letter_u', 4]] },
+    next: 'sp_vowels',
+  },
+  {
+    id: 'sp_vowels', area: 'spelling_shed', subject: 'reading', standard: 'RF.K.3.B',
+    minutes: 12, guide: 'pip', needs: 'AEIOU',
+    prompt: 'Put the five vowels in a row, in order: A E I O U.',
+    hint: 'Every word needs a vowel. Sing them: A, E, I, O, U.',
+    success: 'A E I O U — every single vowel, in order!',
+    watch: ['blockPlaced', 'blockBroken'],
+    check: (ctx) => ctx.words().includes('AEIOU'),
+    reward: { coins: 30, items: [['letter_s', 4], ['letter_n', 4], ['letter_p', 4]] },
+    next: 'sp_abc',
+  },
+  {
+    id: 'sp_abc', area: 'spelling_shed', subject: 'reading', standard: 'RF.K.1.D',
+    minutes: 12, guide: 'pip', needs: 'ABCDEFGH',
+    prompt: 'Put the alphabet in order, as far as H: A B C D E F G H.',
+    hint: 'Sing the alphabet song and place a letter for each one you sing. Keep them all touching.',
+    success: 'A B C D E F G H — the alphabet, in the right order!',
+    watch: ['blockPlaced', 'blockBroken'],
+    check: (ctx) => ctx.words().some((w) => w.startsWith('ABCDEFGH')),
+    reward: { coins: 50, items: [['hearth_loaf', 4], ['travel_biscuit', 4]] },
+    next: null,
+  },
 ];
 
 // Make each lesson a first-class education lesson so completing it banks the
@@ -514,8 +580,15 @@ export class LessonRunner {
     this._scratch ||= {};
     const scratch = (this._scratch[lesson.id] ||= {});
 
+    // Unbroken runs of LETTER blocks on the mat, read out as words. This is the
+    // whole of what a spelling check needs, and it keeps the lessons themselves
+    // readable: `ctx.words().includes('CAT')` says what it means.
+    const words = (region = mat) => runs(region)
+      .map((run) => run.map((n) => (/^letter_[a-z]$/.test(n) ? n.slice(-1).toUpperCase() : '\u0000')).join(''))
+      .filter((w) => w && !w.includes('\u0000'));
+
     return { game: this.game, world, mat, lesson, scratch,
-      countPlaced, blocksIn, stackAt, tallest, rowAt, runs, nameAt };
+      countPlaced, blocksIn, stackAt, tallest, rowAt, runs, words, nameAt };
   }
 
   // Re-show the prompt for any in-progress lesson (called after a save loads).

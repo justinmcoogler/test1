@@ -2417,6 +2417,17 @@ class Game {
       const have = this.inventory.count(c);
       if (have < 10) this.inventory.add(c, 16 - have);
     }
+    // …and the letters the lesson in front of them actually asks for. Only
+    // those: twenty-six letters at four apiece would bury the pack, and a child
+    // hunting for the C among a hundred slots is doing an inventory exercise.
+    for (const l of LESSONS_DATA) {
+      if (!l.needs || !Object.values(this.lessons?.current || {}).includes(l.id)) continue;
+      for (const ch of new Set(l.needs)) {
+        const item = `letter_${ch.toLowerCase()}`;
+        const have = this.inventory.count(item);
+        if (have < 4) this.inventory.add(item, 6 - have);
+      }
+    }
   }
 
   // "Go to Lessons" from the play-time lock screen: lift the lock enough to move

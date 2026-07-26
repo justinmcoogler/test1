@@ -179,6 +179,14 @@ for (const wid of ['ash', 'hickory', 'yew', 'oak', 'lignum_vitae']) {
   push(`${wid}_longbow`, 1, 'workbench', 'woodworking', Math.min(99, w.woodLevel + 5), Math.round(30 + w.tier * 5), [[`${wid}_plank`, 3], ['cord', 3]]);
 }
 
+// Letter blocks: the whole alphabet, one recipe apiece. A plank and a spot of
+// ink, at woodworking 1, because a six-year-old spelling CAT should not have to
+// grind for the C. Generated rather than written out — twenty-six hand-copied
+// lines is twenty-six chances to typo a letter into the wrong recipe.
+for (const ch of 'abcdefghijklmnopqrstuvwxyz') {
+  push(`letter_${ch}`, 4, 'workbench', 'woodworking', 1, 4, [['planks', 1], ['black_dye', 1]]);
+}
+
 // black-powder line (Smithing) — a barrel is a forged tube and a lock is a
 // spring-and-sear mechanism, so firearms train the same skill that made them.
 // Every recipe is flagged educationLocked so the UI can hide the whole chain

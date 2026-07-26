@@ -228,6 +228,14 @@ const solve = {
     for (let i = 0; i < 10; i++) put(m.x0 + i, m.y0, m.z0, 'red_wool');       // one ten
     for (let i = 0; i < 3; i++) put(m.x0 + i, m.y0, m.z0 + 1, 'red_wool');    // and three ones
   },
+  // ---- spelling: a word is an unbroken run of letter blocks ----
+  sp_cat: (m, put) => [...'CAT'].forEach((ch, i) => put(m.x0 + i, m.y0, m.z0, `letter_${ch.toLowerCase()}`)),
+  sp_dog: (m, put) => [...'DOG'].forEach((ch, i) => put(m.x0 + i, m.y0, m.z0, `letter_${ch.toLowerCase()}`)),
+  sp_rhyme: (m, put) => ['CAT', 'HAT', 'BAT'].forEach((w, row) =>
+    [...w].forEach((ch, i) => put(m.x0 + i, m.y0, m.z0 + row, `letter_${ch.toLowerCase()}`))),
+  sp_vowels: (m, put) => [...'AEIOU'].forEach((ch, i) => put(m.x0 + i, m.y0, m.z0, `letter_${ch.toLowerCase()}`)),
+  sp_abc: (m, put) => [...'ABCDEFGH'].forEach((ch, i) => put(m.x0 + i, m.y0, m.z0, `letter_${ch.toLowerCase()}`)),
+
   nm_mirror: (m, put) => {
     for (let i = 1; i <= 2; i++) {
       put(m.div + i, m.y0, m.z0, 'red_wool');

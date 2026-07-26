@@ -24,7 +24,7 @@ import { B } from './blocks.js';
 // Far outside anything any generator reaches, and above the top sky band.
 export const LESSON_REALM = { x: 30000, z: 30000, y: 420 };
 export const ROOM_SPACING = 40;   // no two rooms can see each other
-export const ROOM_COUNT = 16;     // room per lesson; add lessons, not plumbing
+export const ROOM_COUNT = 24;     // room per lesson; add lessons, not plumbing
 // Each lesson world is seeded off this. The seed does nothing to the terrain —
 // there is no terrain — but a World needs one and two lessons should not share.
 export const LESSON_SEED = 0x1e550;

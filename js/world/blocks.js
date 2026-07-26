@@ -344,6 +344,25 @@ def('bed_head', {
   drops: 'bed', tiles: { top: 'bed_head_top', side: 'bed_side', bottom: 'planks' },
 });
 
+// ---- Letter blocks: A-Z -----------------------------------------------------
+// Learning Mode's second verb. Every lesson until now was "place N of a colour",
+// because coloured wool is all a child had to place — you cannot spell CAT with
+// it. These are 26 plain blocks whose whole job is to have a letter on them.
+//
+// Appended HERE, after the beds, for the reason written above them: block ids
+// are assigned in file order and written raw into every save's edited-block
+// table, so a def inserted above this line renumbers everything below it and
+// corrupts every existing world.
+export const LETTER_BLOCKS = [];
+for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+  const name = `letter_${ch.toLowerCase()}`;
+  def(name, {
+    label: `Letter ${ch}`, hardness: 0.4, tool: 'axe',
+    tiles: { all: name },
+  });
+  LETTER_BLOCKS.push(name);
+}
+
 export function blockByName(name) { return BLOCKS[B[name]]; }
 export function isSolid(id) { return BLOCKS[id]?.solid === true; }
 export function isOpaque(id) { return BLOCKS[id]?.opaque === true; }
