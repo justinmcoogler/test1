@@ -463,7 +463,7 @@ export const FARM = {
     },
     // vanilla horse proportions: body 10x10x22, legs 4x14x4, arched neck, long head
     anims: { graze: GRAZE(64) }, ambient: { clip: 'graze', every: [12, 28] },
-    parts: horseParts({ bw: 10, bh: 10, bd: 22, legH: 14, legW: 4, neck: 11 }),
+    parts: horseParts({ bw: 10, bh: 10, bd: 22, legH: 11, legW: 4, neck: 12 }),
   },
 
   // --------------------------------------------------------------------------

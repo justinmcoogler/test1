@@ -71,102 +71,75 @@ const H_UV = {
 
 // WHAT MAKES A HORSE READ AS A HORSE.
 //
-// Not the barrel and not the legs — a cow has both. It is the LINE OF THE NECK
-// AND HEAD: a slender neck leaving the withers at an angle and a long narrow head
-// carried close in front of the chest, pointing slightly down.
+// Rebuilt against the PUBLISHED Minecraft horse geometry rather than from memory
+// of it (Mojang/bedrock-samples, resource_pack/models/entity/horse_v2.geo.json).
+// Four passes of eyeballing this got steadily further from a horse, because the
+// numbers I was carrying in my head were wrong in the places that matter. What
+// the real model says, and what each of these fixes:
 //
-// Straight off the reference (mcmodel.js MC_REF.horse: head 5x8x10, body 10x10x22,
-// limb 4x16x4). Two numbers there do most of the work: the neck is 4x4 IN
-// CROSS-SECTION against a ten-wide body — that contrast is most of what says
-// "horse" — and the head is 5 WIDE BY 10 LONG, narrow and long rather than square.
+//   THE LEGS ARE BARELY LONGER THAN THE BARREL IS TALL. Reference: 4x11x4 legs
+//   under a body 10 tall. Ours were fourteen to seventeen under a body of nine to
+//   twelve — half again too long — so the animal read as a horse on stilts no
+//   matter what was done above the shoulder.
+//   THE NECK IS BURIED IN THE BODY. Its cube runs from halfway down the barrel to
+//   well above it, twelve tall against a ten-tall body, so what SHOWS is a short
+//   thick column. Ours started at the withers and was therefore a strut.
+//   THE NECK IS SEVEN DEEP ON A TWENTY-TWO BODY, front face flush with the chest.
+//   Nearly as deep through as the head is long. That mass is most of the animal.
+//   THE HEAD IS FIVE TALL, sits ON the neck's top with NO overlap, and the mouth
+//   carries on forward from it in the SAME height band, stepping in on width only.
+//   Ours was seven or eight tall and sank into the neck, which is why the neck
+//   kept disappearing and why raising the head left it perched.
+//   THE WHOLE ASSEMBLY IS ONE RIGID GROUP at thirty degrees. There is no
+//   counter-angle on the head: the muzzle points thirty degrees at the ground, and
+//   that IS what a Minecraft horse looks like standing still.
+//   THE MANE IS HALF THE NECK'S WIDTH and sits entirely PROUD BEHIND it, running
+//   from the neck's base to past the top of the head.
 //
-// Vanilla builds the neck as ONE straight column rotated forward as a rigid group
-// with the head hung off it, and so does this. Two earlier goes approximated that
-// with a staircase of stacked boxes and both read as a staircase: at sixteen texels
-// to the block you see the steps. `rotation` is a rest pose the animation adds to
-// (js/game/mobloader.js), and +X pitches +Y toward +Z — forward.
+// `rotation` is a rest pose the animation adds to (js/game/mobloader.js), and +X
+// pitches +Y toward +Z — forward.
 export function horseParts(d) {
   const { bw, bh, bd, legH, legW, neck } = d;
   const R = Math.round;
-  const back = legH + bh;               // top of the barrel
-  const zF = bd / 2;
-  // Two sizing rules, both learned the hard way:
-  //
-  //   THE MANE MUST NOT OUTGROW THE NECK. Given its own height it overshot the
-  //   crest once the group rotated, and from the side the animal was a long black
-  //   diagonal spike with a head on it — the neck's pale flesh hidden behind its
-  //   own hair.
-  //   THE COLUMN MUST BE SHORT. Fourteen pixels on a barrel ten deep, swung out
-  //   forty degrees, throws the head a long way off the chest. That is a giraffe;
-  //   a horse carries its head close. Hence thirty degrees, and a shorter column.
-  const NECK_DEG = 32;
-  const nPivY = back - 3, nPivZ = zF - 5;   // the withers
-  // THE NECK IS A MASS, NOT A STRUT. This is the fault that has survived every
-  // pass: four wide by six deep and eleven long is a stick, and a stick with a
-  // head on it is a llama however well the head is built. A horse's neck is
-  // nearly as deep through as its head is long. So it is shorter — four fifths
-  // of what it was — and it is deep enough at the base to fill the gap between
-  // the withers and the throat.
-  const nLen = Math.max(6, R(neck * 0.8));
-  const nLo = R(nLen * 0.55), nHi = nLen - nLo + 1;
-  const nDeep = Math.max(6, R(bd * 0.36));  // depth at the base
-  const nTop = nPivY + nLo - 1 + nHi;       // crest of the UNROTATED column
-  const maneH = Math.max(3, R(neck * 0.36));
-  // THE HEAD IS ONE BLOCK WITH A NOSE ON IT. Splitting it into a skull and a
-  // separate muzzle of its own size — which is how the reference is actually built
-  // — does not survive being rebuilt from scratch here: the two boxes read as two
-  // boxes stuck end to end, and every attempt to disguise the join (matching the
-  // height band, matching the paint, tapering only on width) still left a seam
-  // across the middle of the animal's face. One block reads as a head.
-  //
-  // WHERE IT SITS is the part that was wrong. Hung seven pixels down the column the
-  // head swallowed the neck whole: everything above the barrel was head, and the
-  // only "neck" left was the stub below the jaw. Five is enough to join them.
-  const headL = Math.max(9, R(bd * 0.46));
-  const headH = 7;
-  const hy = nTop - 4;
-  const hPivY = nTop - 2, hPivZ = nPivZ + 1;
-  const LEGS = [['leg0', -legW - 1, zF - 5], ['leg1', 1, zF - 5],
-    ['leg2', -legW - 1, -bd / 2 + 1], ['leg3', 1, -bd / 2 + 1]];
+  const back = legH + bh;                      // top of the barrel
+  const zF = bd / 2, zB = -bd / 2;
+  const LEAN = 30;
+  const nDeep = Math.max(5, R(bd * 0.32));     // seven on a twenty-two body
+  const nzB = zF - nDeep;                      // the neck's back face
+  const nBase = back - R(bh * 0.5);            // buried half the barrel's depth
+  const nTop = nBase + neck;
+  const headH = Math.max(4, R(bh * 0.5));
+  const headW = Math.max(4, bw - 4);
+  const mouthD = Math.max(3, R(bd * 0.23));
+  const hTop = nTop + headH;
+  const pivY = back - R(bh * 0.4), pivZ = zF - 3;
+  const LEGS = [['leg0', -legW - 1, zF - legW], ['leg1', 1, zF - legW],
+    ['leg2', -legW - 1, zB], ['leg3', 1, zB]];
   return [
     part('body', [0, legH, 0], [
-      b([-bw / 2, legH, -bd / 2], [bw, bh, bd], { all: H_UV.flank, up: H_UV.top }),
-      // A horse is not a brick. The chest is deeper through than the barrel and
-      // the croup rounds up over the hips. Both stay FLUSH with the flank in x —
-      // widening them by a pixel a side put a shelf down the animal's ribs.
-      // Both sit one pixel INSIDE the barrel's top rather than one above it. Set
-      // proud, they ran a ledge the length of the animal and the whole body read
-      // as a stack of crates.
+      b([-bw / 2, legH, zB], [bw, bh, bd], { all: H_UV.flank, up: H_UV.top }),
+      // A horse is not quite a brick: the chest is deeper through than the barrel
+      // and the croup rounds up over the hips. Both stay FLUSH with the flank in x
+      // and sit one pixel INSIDE the barrel's top — set proud they ran a ledge the
+      // length of the animal and the whole body read as a stack of crates.
       b([-bw / 2, legH, zF - R(bd * 0.32)], [bw, bh - 1, R(bd * 0.32)], H_UV.chest),
-      b([-bw / 2 + 1, legH + 1, -bd / 2], [bw - 2, bh - 2, R(bd * 0.3)], H_UV.rump),
+      b([-bw / 2 + 1, legH + 1, zB], [bw - 2, bh - 2, R(bd * 0.3)], H_UV.rump),
     ]),
-    // The neck: a slender column off the withers, leaning forward as one unit.
-    // It tapers at the THROAT, not at the crest — the two boxes share a back edge
-    // so the crest is one straight line from withers to poll, which is what a
-    // horse's actually is, and which gives the mane a continuous edge to sit on.
-    part('neck', [0, nPivY, nPivZ], [
-      b([-2, nPivY, nPivZ - 3], [4, nLo, nDeep], H_UV.neck),
-      b([-2, nPivY + nLo - 1, nPivZ - 3], [4, nHi, nDeep - 1], H_UV.neck),
-      // The mane runs the whole crest again. It was cut back to a tuft at the poll
-      // because on the old strut of a neck a full-length one read as a stick laid
-      // along a stick; with a neck of some mass under it there is something for the
-      // hair to lie on.
-      b([-2, nPivY + 1, nPivZ - 4], [4, nTop - nPivY - 1, 2], H_UV.mane),
-    ], { rotation: [NECK_DEG, 0, 0] }),
-    // The head CONTINUES THE NECK rather than perching level on top of it. Levelled
-    // off it read as a shelf stuck on a post — an animal holding its head up to look
-    // at something, permanently. The reference carries the head rigid with the neck,
-    // a full thirty-odd degrees down; that is too much on its own, so this splits
-    // the difference and comes to eighteen. The nose ends up at about chest height,
-    // which is where a standing horse holds it.
-    part('head', [0, hPivY, hPivZ], [
-      b([-2, hy, nPivZ - 1], [5, headH, headL],
+    // Neck and mane. The mane is a separate bone in the reference but it never
+    // moves independently, so it rides here.
+    part('neck', [0, pivY, pivZ], [
+      b([-2, nBase, nzB], [4, neck, nDeep], H_UV.neck),
+      b([-1, nBase + 1, nzB - 2], [2, hTop - nBase - 1, 2], H_UV.mane),
+    ], { rotation: [LEAN, 0, 0] }),
+    // The head is rigid with the neck — no rest rotation of its own. It stays a
+    // separate bone only so the graze clip has something to swing.
+    part('head', [0, nTop, pivZ], [
+      b([-headW / 2, nTop, nzB], [headW, headH, nDeep],
         { all: H_UV.headSide, south: H_UV.headFace, up: H_UV.headTop }),
-      b([-2, hy + 1, nPivZ - 1 + headL], [4, 4, 3], H_UV.muzzle),
-      b([-3, hy + headH, nPivZ], [2, 3, 2], H_UV.ear),
-      b([1, hy + headH, nPivZ], [2, 3, 2], H_UV.ear),
-      b([-1, hy + headH - 2, nPivZ + 2], [2, 4, 2], H_UV.forelock),
-    ], { parent: 'neck', rotation: [-NECK_DEG + 18, 0, 0] }),
+      b([-2, nTop, zF], [4, headH, mouthD], H_UV.muzzle),
+      b([-3, hTop - 1, nzB], [2, 3, 1], H_UV.ear),
+      b([1, hTop - 1, nzB], [2, 3, 1], H_UV.ear),
+    ], { parent: 'neck' }),
     // ONE WIDTH ALL THE WAY DOWN. A tapered leg — muscled thigh, thin cannon,
     // flared hoof — is anatomically the right story and it read badly here: at
     // four pixels of leg the step in and out just looks like a knuckle, and four
@@ -177,12 +150,11 @@ export function horseParts(d) {
       b([sx, 2, sz], [legW, legH - 2, legW], H_UV.leg),
       b([sx, 0, sz], [legW, 2, legW], H_UV.hoof),
     ])),
-    // A dock at the top and the switch hanging off it — a 2x12x2 stick was
-    // reading as a rope tied to the animal.
-    part('tail', [0, back - 1, -bd / 2], [
-      b([-2, back - 4, -bd / 2 - 3], [4, 4, 3], H_UV.dock),
-      b([-1, back - 15, -bd / 2 - 4], [3, 13, 3], H_UV.tail),
-    ]),
+    // One tapering switch off the croup, swung back thirty degrees like the
+    // reference — a dock box on top of it just read as a knuckle at this size.
+    part('tail', [0, back - 1, zB], [
+      b([-1.5, back - R(bh * 1.4), zB - 2], [3, R(bh * 1.4) - 1, 4], H_UV.tail),
+    ], { rotation: [LEAN, 0, 0] }),
   ];
 }
 
@@ -492,21 +464,21 @@ export const MOUNTS_BATCH = {
   courser: horse({
     coat: '#a8a49e', cdk: '#6e6a64', shine: '#c8c4bc', mane: '#3a352e',
     blaze: '#efe7d6', hoof: '#2a2620', muz: '#4a453e', eye: '#c8a06a',
-  }, { bw: 10, bh: 10, bd: 22, legH: 16, legW: 4, neck: 12 }),
+  }, { bw: 10, bh: 10, bd: 22, legH: 13, legW: 4, neck: 12 }),
 
   // destrier — black, deep through the chest, heavy in the leg. Shorter at the
   // withers than a Courser and about half again as wide.
   destrier: horse({
     coat: '#2e2a28', cdk: '#171414', shine: '#4a4442', mane: '#0e0c0c',
     blaze: null, hoof: '#100e0c', muz: '#231f1e', eye: '#a08050',
-  }, { bw: 12, bh: 12, bd: 24, legH: 14, legW: 5, neck: 11 }),
+  }, { bw: 12, bh: 12, bd: 24, legH: 11, legW: 5, neck: 12 }),
 
   // steppe_runner — dun with a dark dorsal stripe and a coarse upright mane.
   // The lightest frame of the three, and it never quite stands still.
   steppe_runner: horse({
     coat: '#c2a068', cdk: '#8a6c3c', shine: '#dcc08c', mane: '#2c2016',
     blaze: '#e8dcc4', hoof: '#241c14', muz: '#5a4428', eye: '#d8b070',
-  }, { bw: 9, bh: 9, bd: 21, legH: 17, legW: 4, neck: 12 }),
+  }, { bw: 9, bh: 9, bd: 21, legH: 12, legW: 4, neck: 12 }),
 
   // --------------------------------------------------------------------------
   // The dragons. One skeleton at three scales, plus the whelp. Wingspan is the
