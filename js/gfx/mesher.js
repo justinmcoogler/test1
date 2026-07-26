@@ -217,6 +217,13 @@ export function meshChunk(world, cx, cz) {
         const facing = def.directional ? world.facingAt(wx, y, wz) : 0;
         for (const face of FACES) {
           const nx = x + face.n[0], ny = y + face.n[1], nz = z + face.n[2];
+          // Below the world is SOLID, not air. world.js reports y < 0 as air
+          // because that is the right answer for a gameplay query — you cannot
+          // walk or build there — but it is the wrong answer for face culling,
+          // and it made every chunk mesh the underside of its own bedrock
+          // floor: a full extra face on every column of the world, drawn for
+          // nobody, because there is no way to get beneath it and look up.
+          if (ny < 0) continue;
           const nid = get(nx, ny, nz);
           if (!isSlab || face.n[1] !== 1) {
             if (isOpaque(nid)) continue;                    // hidden by opaque neighbor

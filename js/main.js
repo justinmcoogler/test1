@@ -133,7 +133,7 @@ class Game {
   // ---------------------------------------------------------------- boot
   async init(onProgress) {
     initSlabSet();
-    onProgress(0, 'Waking Brookhollow…');
+    onProgress(0, 'Lighting the campfire…');
     // spawn placement
     const [sx, sy, sz] = this.world.markers.spawn;
     if (!this._restored) {
@@ -491,6 +491,12 @@ class Game {
     // phone that looks slow is usually frame-capped (Low Power Mode) rather than
     // short of GPU, which no amount of trimming can fix.
     this.renderer.dprCap = tier === 'low' ? 1.5 : 2;
+    // Changing the tier changes the frame cost, so whatever the adaptive scaler
+    // had concluded about this device's ceiling is now out of date. Clearing it
+    // makes the scaler re-probe rather than carry a verdict it reached under
+    // different settings (js/gfx/renderer.js adaptResolution).
+    this.renderer._fpsPeak = undefined;
+    this.renderer._droppedAt = null;
     const rdCap = tier === 'low' ? 4 : tier === 'medium' ? 6 : 8;
     this.renderer.renderDistance = Math.min(s.renderDistance, rdCap);
     this._entityCull = 44;
@@ -540,6 +546,10 @@ class Game {
       }
       // restore before reporting
       r.renderScale = savedScale; r.dynamicResolution = savedDynamic; r.resize();
+      // The self-test just ran the frame at several scales with the scaler off;
+      // let it start from nothing rather than from a peak measured during the
+      // test's own artificial load.
+      r._fpsPeak = undefined; r._droppedAt = null;
       this._probe = null;
       const base = Math.round(phase.base), low = Math.round(fps);
       const gain = fps / Math.max(1, phase.base);

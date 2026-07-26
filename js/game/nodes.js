@@ -325,12 +325,24 @@ export function nodeBlocks(node, state) {
 }
 
 // All cells that should map to this node for interaction purposes.
+//
+// A TREE IS ITS CANOPY TOO. This used to walk the trunk column by hand, so the
+// leaves belonged to no node at all — and leaves are SOLID here, so they stop a
+// raycast. In the classic camera the eye sits well back and high, and the ray to
+// a trunk goes through the crown first: world.raycast returned the leaf block
+// with `node: null`, and clicking a tree did nothing. You could only chop one by
+// finding an angle with a clear line to the trunk.
+//
+// Deriving the cells from the same builder that places the blocks is what stops
+// the two drifting apart again — nodeBlocks and nodeCells are now two readings
+// of one piece of geometry rather than two descriptions of it.
 export function nodeCells(node) {
   const def = NODE_TYPES[node.type];
   if (def.kind === 'tree') {
-    const h = node.meta?.h ?? def.trunk[0];
     const cells = [];
-    for (let i = 0; i < Math.max(h, 1); i++) cells.push([node.x, node.y + i, node.z]);
+    buildTree(TREE_SPECIES[def.species], node.x, node.y, node.z,
+      Math.max(node.meta?.h ?? def.trunk[0], 1),
+      (bx, by, bz) => cells.push([bx, by, bz]));
     return cells;
   }
   return [[node.x, node.y, node.z]];

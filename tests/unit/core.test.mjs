@@ -228,7 +228,21 @@ test('tree nodes stamp trunks and regrow from stumps', () => {
   const depleted = nodeBlocks(node, 'depleted');
   assert.ok(ready.length > 10, 'tree should have trunk + canopy');
   assert.equal(depleted.length, 1, 'depleted tree = stump only');
-  assert.ok(nodeCells(node).length === 5, 'interaction cells = trunk height');
+
+  // A tree's interaction cells must be EVERY cell it occupies, canopy included.
+  // This used to assert `=== 5`, the trunk height — which is the bug written
+  // down: leaves are solid and stop a raycast, so in the classic camera the ray
+  // to a trunk hit foliage that belonged to no node, and clicking a tree did
+  // nothing. Assert the invariant instead of the number, so the interaction
+  // shape and the block shape cannot drift apart again.
+  const cells = new Set(nodeCells(node).map(([x, y, z]) => `${x},${y},${z}`));
+  assert.ok(cells.size > 10, `interaction cells cover the whole tree (${cells.size})`);
+  for (const b of ready) {
+    assert.ok(cells.has(`${b.x},${b.y},${b.z}`),
+      `block at ${b.x},${b.y},${b.z} belongs to no node — clicking it does nothing`);
+  }
+  assert.equal(cells.size, new Set(ready.map((b) => `${b.x},${b.y},${b.z}`)).size,
+    'and claims nothing the tree does not actually occupy');
 });
 
 test('node drops respect level gates and always yield something', () => {

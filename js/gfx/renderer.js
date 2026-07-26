@@ -138,18 +138,35 @@ export class Renderer {
     // the blur floor and never recover, since 58 is unreachable there. The peak
     // rate we've recently sustained is that ceiling; it decays slowly so the
     // target follows the device if a cap switches on mid-session.
-    this._fpsPeak = Math.max(fps, (this._fpsPeak ?? fps) * 0.98);
+    // …but seed that ceiling OPTIMISTICALLY rather than from the first thing we
+    // happen to measure. Seeding from `fps` is what pinned a phone at exactly
+    // 30: a device one hair over the 16.7ms budget has rAF quantise it to half
+    // rate, the first window measures 30, the ceiling becomes 30, and the drop
+    // gate below (fps < ceiling × 0.75 = 22.5) can then never fire. The scaler
+    // concluded 30 was already perfect and sat at full resolution forever, on a
+    // device two steps of render scale away from 60. Start by assuming a normal
+    // panel and let the evidence below pull the ceiling down.
+    this._fpsPeak = Math.max(fps, (this._fpsPeak ?? 58) * 0.98);
     const ceiling = Math.max(28, Math.min(120, this._fpsPeak));
 
-    // Did the last cut actually buy anything? If we shrank the frame and the
-    // rate didn't move, we aren't fill-bound — something else is holding it
-    // down. Give the pixels back and stop cutting for a while.
-    if (this._droppedAt != null) {
+    // Did the cut actually buy anything? Only ask once we have cut ENOUGH to
+    // get an answer. vsync quantises the reply — between 30 and 60 there is
+    // nothing to measure — so the frame cost has to roughly HALVE before the
+    // number can move at all, and one 0.1 step of scale removes about 19% of
+    // the pixels. Asking after a single step therefore always read "that did
+    // not help", handed the pixels straight back, and waited twelve seconds to
+    // make the identical mistake again, forever.
+    const cutFar = s <= (this._dropFrom ?? 1) - 0.29 || s <= floor;
+    if (this._droppedAt != null && cutFar) {
       const helped = fps > this._droppedAt * 1.06;
       this._droppedAt = null;
       if (!helped) {
+        // The one place we have EVIDENCE that the device is capped rather than
+        // fill-bound: half the pixels went and the rate did not move. Believe
+        // the measured rate from here, give the pixels back, and stop cutting.
+        this._fpsPeak = fps;
         this._noDropUntil = 12;                     // seconds of hands-off
-        s = Math.min(1, +(s + 0.1).toFixed(2));
+        s = Math.min(1, this._dropFrom ?? 1);
         if (s !== this.renderScale) { this.renderScale = s; this._scaleCd = 2; this.resize(); }
         return;
       }
@@ -157,9 +174,13 @@ export class Renderer {
     this._noDropUntil = Math.max(0, (this._noDropUntil || 0) - 0.5);
 
     if (fps < ceiling * 0.75 && s > floor && !this._noDropUntil) {
+      // Keep descending while the verdict is still pending — `_droppedAt` holds
+      // the rate we started from so the comparison is against the beginning of
+      // the descent, not against the previous step.
+      if (this._droppedAt == null) { this._droppedAt = fps; this._dropFrom = s; }
       s = Math.max(floor, +(s - 0.1).toFixed(2));
-      this._droppedAt = fps;                        // measure whether it helped
     } else if (fps > ceiling * 0.92 && s < 1) {
+      this._droppedAt = null;                       // it recovered; nothing to judge
       s = Math.min(1, +(s + 0.1).toFixed(2));
     }
     if (s !== this.renderScale) { this.renderScale = s; this._scaleCd = 1.2; this.resize(); }

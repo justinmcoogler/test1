@@ -238,13 +238,27 @@ try {
   const miningXp = await gState(() => window.__game.skills.xp.mining);
   check('mining xp gained', miningXp > 0, `${miningXp}`);
 
-  // ---- 8. Smelt copper at the workshop furnace (the first realistic metal) ----
+  // ---- 8. Smelt copper at a furnace YOU BUILT (the first realistic metal) ----
+  // This used to teleport to (12.5, 65, -12.5) — Brookhollow's workshop, which
+  // does not exist any more. The camp that replaced it has no furnace on
+  // purpose (js/world/structures.js: "No furnace, no anvil, no loom — those you
+  // build"), so the test stood in an empty meadow and reported no station
+  // nearby. Building one is what the current design asks of the player, and it
+  // covers strictly more than the old line did.
   await gState(() => {
     const g = window.__game;
     g.inventory.add('copper_ore', 4);
     g.inventory.add('charcoal', 4); // fuel hot enough to smelt copper
   });
-  await teleportFacing(12.5, 65, -12.5, 12, 65, -14); // workshop, near furnace
+  await teleportFacing(6.5, 65, 8.5, 6, 65, 7);
+  await gState(() => {
+    const g = window.__game;
+    // Placed directly rather than crafted: the furnace recipe needs
+    // Construction 2, which this run has no reason to have earned, and the
+    // thing under test here is smelting, not the build. Same shortcut the chest
+    // check below already uses.
+    g.world.setBlock(6, 65, 7, window.__blocks.B.furnace, true);
+  });
   await page.waitForTimeout(300);
   const smelted = await gState(() => {
     const g = window.__game;
