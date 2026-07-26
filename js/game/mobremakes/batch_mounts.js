@@ -68,61 +68,43 @@ const H_UV = {
   leg: [40, 42, 8, 20], hoof: [50, 42, 8, 4], tail: [56, 42, 8, 22], dock: [50, 48, 6, 8],
 };
 
-// WHAT MAKES A HORSE READ AS A HORSE, and what this got wrong twice.
+// WHAT MAKES A HORSE READ AS A HORSE.
 //
-// It is not the barrel and it is not the legs — a cow has both. It is the LINE OF
-// THE NECK AND HEAD: a long neck leaving the withers at an angle, rising forward,
-// and a long narrow head hung off the end of it, carried well out in front of the
-// chest and pointing slightly down.
+// Not the barrel and not the legs — a cow has both. It is the LINE OF THE NECK
+// AND HEAD: a slender neck leaving the withers at an angle and a long narrow head
+// carried close in front of the chest, pointing slightly down.
 //
-// The first version had a vertical 6x13x6 post on the shoulders with a 6x6x9 cube
-// on top. That is a llama. The fix is a STAGGERED neck — three boxes each stepped
-// forward and up, narrowing as they go — and a head that is longer than it is
-// tall, with a jaw under the back of it and a muzzle out the front. No rotations
-// involved: the arch is built out of the offsets, the same way the dragons' necks
-// are, which is also what keeps the walk cycle and the graze clip honest.
+// Straight off the reference (mcmodel.js MC_REF.horse: head 5x8x10, body 10x10x22,
+// limb 4x16x4). Two numbers there do most of the work: the neck is 4x4 IN
+// CROSS-SECTION against a ten-wide body — that contrast is most of what says
+// "horse" — and the head is 5 WIDE BY 10 LONG, narrow and long rather than square.
+//
+// Vanilla builds the neck as ONE straight column rotated forward as a rigid group
+// with the head hung off it, and so does this. Two earlier goes approximated that
+// with a staircase of stacked boxes and both read as a staircase: at sixteen texels
+// to the block you see the steps. `rotation` is a rest pose the animation adds to
+// (js/game/mobloader.js), and +X pitches +Y toward +Z — forward.
 export function horseParts(d) {
   const { bw, bh, bd, legH, legW, neck } = d;
   const R = Math.round;
   const back = legH + bh;               // top of the barrel
   const zF = bd / 2;
-  // The neck climbs in three steps from the withers; the head hangs off the top.
-  // STRAIGHT OFF THE REFERENCE (mcmodel.js MC_REF.horse: head 5x8x10, body
-  // 10x10x22, limb 4x16x4). Two numbers there are doing all the work and both
-  // previous attempts missed them:
+  // Two sizing rules, both learned the hard way:
   //
-  //   THE NECK IS 4x4 IN CROSS-SECTION against a ten-wide body. That contrast —
-  //   slender column off a heavy barrel — is most of what says "horse". Mine was
-  //   6x6, nearly as thick as the chest, which is a llama's neck.
-  //   THE HEAD IS 5 WIDE AND 10 LONG. Narrow and long, not square.
-  //
-  // And vanilla builds the neck as ONE straight column, rotated forward as a
-  // rigid group, with the head hung off the top of it. Two goes at approximating
-  // that with a staircase of stacked boxes both read as a staircase, because at 16
-  // texels to the block you see the steps. So this rotates, the way the reference
-  // does. `rotation` is a rest pose the animation adds to (js/game/mobloader.js),
-  // and +X pitches +Y toward +Z — forward.
-  // THE NECK, third time. Two things were wrong and both were about the MANE and
-  // the LENGTH rather than about the rotation:
-  //
-  //   The mane box was taller than the neck box and started a pixel higher, so
-  //   once the group rotated it overshot the crest at both ends. All you saw from
-  //   the side was a long black diagonal spike with a head on it — the neck's own
-  //   pale flesh was hidden behind its own hair.
-  //   And the column was `neck + 2` = fourteen pixels on a barrel ten deep. Swung
-  //   out forty degrees that throws the head a long way off the chest, which is a
-  //   giraffe. A horse carries its head close.
-  //
-  // So: a shorter column in two boxes (thick at the throat, thinner at the crest,
-  // both inside one rotated bone so they cannot staircase), a mane that stops
-  // exactly where the neck stops, and thirty degrees instead of forty.
+  //   THE MANE MUST NOT OUTGROW THE NECK. Given its own height it overshot the
+  //   crest once the group rotated, and from the side the animal was a long black
+  //   diagonal spike with a head on it — the neck's pale flesh hidden behind its
+  //   own hair.
+  //   THE COLUMN MUST BE SHORT. Fourteen pixels on a barrel ten deep, swung out
+  //   forty degrees, throws the head a long way off the chest. That is a giraffe;
+  //   a horse carries its head close. Hence thirty degrees, and a shorter column.
   const NECK_DEG = 30;
   const nPivY = back - 3, nPivZ = zF - 5;   // the withers
   const nLo = R(neck * 0.6), nHi = neck - nLo + 1;
   const nTop = nPivY + nLo - 1 + nHi;       // crest of the UNROTATED column
   const hy = nTop - 7;                      // where the head hangs on it
+  const maneH = Math.max(3, R(neck * 0.36));
   const headL = Math.max(9, R(bd * 0.46));
-  const thigh = Math.max(4, R(legH * 0.42));            // how much of the leg is muscle
   const LEGS = [['leg0', -legW - 1, zF - 5], ['leg1', 1, zF - 5],
     ['leg2', -legW - 1, -bd / 2 + 1], ['leg3', 1, -bd / 2 + 1]];
   return [
@@ -137,13 +119,22 @@ export function horseParts(d) {
       b([-bw / 2, legH, zF - R(bd * 0.32)], [bw, bh - 1, R(bd * 0.32)], H_UV.chest),
       b([-bw / 2 + 1, legH + 1, -bd / 2], [bw - 2, bh - 2, R(bd * 0.3)], H_UV.rump),
     ]),
-    // The neck: a slender column off the withers, leaning forward as one unit —
-    // deeper through the throat, narrower at the crest.
+    // The neck: a slender column off the withers, leaning forward as one unit.
+    // It tapers at the THROAT, not at the crest — the two boxes share a back edge
+    // so the crest is one straight line from withers to poll, which is what a
+    // horse's actually is, and which gives the mane a continuous edge to sit on.
     part('neck', [0, nPivY, nPivZ], [
       b([-2, nPivY, nPivZ - 2], [4, nLo, 6], H_UV.neck),
-      b([-2, nPivY + nLo - 1, nPivZ - 1], [4, nHi, 5], H_UV.neck),
-      // the mane, flush along the back edge and stopping exactly at the crest
-      b([-1, nPivY + 1, nPivZ - 3], [2, nTop - nPivY - 1, 2], H_UV.mane),
+      b([-2, nPivY + nLo - 1, nPivZ - 2], [4, nHi, 5], H_UV.neck),
+      // THE MANE IS A TUFT AT THE POLL, NOT A SPINE. Run full-length and two deep
+      // it stood a pixel proud of the whole crest, and since it is near-black on a
+      // pale coat the eye read it as a separate object: a stick laid along the
+      // neck. Vanilla gets away with a long mane because its neck TEXTURE is dark
+      // under it, so the box reads as thickness rather than as an attachment; this
+      // neck is coat-coloured. So the box now covers only the top third — where a
+      // mane actually gathers and falls — and sinks a pixel into the neck so only
+      // one of its two pixels of depth stands proud.
+      b([-2, nTop - maneH, nPivZ - 3], [4, maneH, 2], H_UV.mane),
     ], { rotation: [NECK_DEG, 0, 0] }),
     // The head hangs off the top of that column, overlapping it so there is no
     // seam at the throat, and carries its own counter-angle so the face ends up
@@ -155,13 +146,15 @@ export function horseParts(d) {
       b([1, hy + 8, nPivZ + 1], [2, 3, 2], H_UV.ear),
       b([-1, hy + 6, nPivZ + 3], [2, 4, 2], H_UV.forelock),
     ], { parent: 'neck', rotation: [-NECK_DEG + 10, 0, 0] }),
-    // A horse's leg TAPERS: a heavy muscled thigh at the top, a thin cannon bone
-    // below it, and a hoof wider than the bone. Four identical posts read as four
-    // sticks however good the body is, and that is what these were.
+    // ONE WIDTH ALL THE WAY DOWN. A tapered leg — muscled thigh, thin cannon,
+    // flared hoof — is anatomically the right story and it read badly here: at
+    // four pixels of leg the step in and out just looks like a knuckle, and four
+    // of them turn the animal's underside into a row of knobbles. The reference
+    // horse's legs are plain columns and so are these. The hoof keeps its own box
+    // only so it can carry a darker tile; it is flush with the leg, not wider.
     ...LEGS.map(([id, sx, sz]) => part(id, [sx > 0 ? 3 : -3, legH, sz + legW / 2], [
-      b([sx - 1, legH - thigh, sz - 1], [legW + 2, thigh, legW + 2], H_UV.leg),  // thigh
-      b([sx, 2, sz], [legW, legH - thigh - 2, legW], H_UV.leg),                  // cannon
-      b([sx, 0, sz], [legW, 2, legW], H_UV.hoof),                                // hoof
+      b([sx, 2, sz], [legW, legH - 2, legW], H_UV.leg),
+      b([sx, 0, sz], [legW, 2, legW], H_UV.hoof),
     ])),
     // A dock at the top and the switch hanging off it — a 2x12x2 stick was
     // reading as a rope tied to the animal.
