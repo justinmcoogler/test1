@@ -19,8 +19,14 @@ Works on desktop, tablet and phone browsers (WebGL2 required).
 
 ### Play together on your wifi
 
+Run this **on a computer in the house** — the one on the same wifi as everyone
+else's devices. It needs Node 18 or newer and nothing else: no `npm install`, no
+build step, no dependencies. (`npm install` is only for running the tests.)
+
 ```bash
-npm run server          # prints the address to read out to a tablet
+git clone <this repo>
+cd test1
+npm run server          # or: node server/server.mjs
 ```
 
 The game and the game socket are served on **one port**, so the address on the
