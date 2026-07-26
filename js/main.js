@@ -302,6 +302,26 @@ class Game {
     on('rightClick', (pos) => this.onSecondary(pos));
     on('interactKey', () => this.tryInteract());
     // education-mode gates (invisible until a save switches to education mode)
+    // A lesson has its own room out in the Schoolhouse (js/world/classroom.js).
+    // Bank where they were standing only on the FIRST enter of a series — three
+    // lessons in a row would otherwise overwrite the way home with the previous
+    // classroom, and "back to the world" would mean "back to room two".
+    on('lessonEnter', ({ room }) => {
+      if (!room) return;
+      if (!this._lessonReturn) {
+        const p = this.player;
+        this._lessonReturn = { x: p.x, y: p.y, z: p.z, yaw: p.yaw };
+      }
+      this.warpTo(room.entry[0] + 0.5, room.entry[1], room.entry[2] + 0.5);
+      this.grantLessonKit();
+    });
+    on('lessonExit', ({ finished }) => {
+      const r = this._lessonReturn;
+      this._lessonReturn = null;
+      if (r) this.warpTo(r.x, r.y, r.z, r.yaw);
+      this.ui.toast(finished ? 'Lessons all done — back to the world!' : 'Back to the world.', 'gold');
+      this.saveGame();
+    });
     on('playtimeExhausted', () => {
       this.playtimeLocked = true;
       this.controls.enabled = false;
@@ -2324,21 +2344,30 @@ class Game {
     this.goToLearningMeadow();
   }
 
-  // Teleport to the Numbers Meadow classroom pad, generating its chunks first so
-  // the child never drops into unloaded void.
-  goToLearningMeadow() {
-    const m = this.world.markers.learnMeadow;
-    if (!m) return;
-    const [x, y, z] = m;
+  // Put the player down somewhere else, generating and meshing the destination
+  // chunks first so they never drop into unloaded void — which for a classroom
+  // 420 blocks up is not a stutter, it is a fall.
+  warpTo(x, y, z, yaw = null) {
     const pcx = Math.floor(x / CHUNK), pcz = Math.floor(z / CHUNK);
     for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) this.world.ensureChunk(pcx + dx, pcz + dz);
     for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) this.renderer.remeshChunk(this.world, pcx + dx, pcz + dz);
-    this.player.respawnAt(x + 0.5, y, z + 0.5);
+    this.player.respawnAt(x, y, z);
+    if (yaw != null) this.player.yaw = yaw;
     this.cancelClassicActions();
     this.travelDest = null;
     this.controls.worldMove = null;
     if (!this.player.dead) this.controls.enabled = true;
     this.touch?.show();
+  }
+
+  // Teleport to the Numbers Meadow classroom pad. The meadow is now the lobby —
+  // Pip stands here and hands out the lessons, and each lesson takes the child
+  // to a room of its own (js/world/classroom.js).
+  goToLearningMeadow() {
+    const m = this.world.markers.learnMeadow;
+    if (!m) return;
+    const [x, y, z] = m;
+    this.warpTo(x + 0.5, y, z + 0.5);
     this.grantLessonKit();
     this.ui.toast('Welcome to Numbers Meadow! Talk to Pip to start a lesson.', 'gold');
     this.saveGame();
@@ -2718,7 +2747,11 @@ class Game {
         const d = Math.hypot(npc.x - this.player.x, npc.z - this.player.z);
         if (d > 22) continue;
         if (!this.labelVisible(npc.x + 0.5, npc.y + 1.6, npc.z + 0.5, `npc:${npc.id}`)) continue;
+        // An NPC whose id has no definition gets no label rather than taking
+        // the whole tick loop down with it — this runs every frame, so one bad
+        // id anywhere in the world is a hard crash.
         const def = NPC_DEFS[npc.id];
+        if (!def) continue;
         const hasQuest = this.quests.availableFrom(npc.id).length > 0;
         const turnIn = this.quests.activeFrom(npc.id).some((q) => this.quests.readyToTurnIn(q, npc.id));
         labels.push({

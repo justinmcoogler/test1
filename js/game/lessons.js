@@ -7,7 +7,20 @@
 // celebrates and banks play-time minutes via education.completeLesson().
 //
 // Nothing here is punitive: a wrong build simply doesn't complete — hints are
-// shown on demand, and the child keeps trying. Lessons grant TIME, not power.
+// shown on demand, and the child keeps trying.
+//
+// EACH LESSON HAS ITS OWN ROOM, and starting one puts the child inside it (see
+// js/world/classroom.js). A lesson performed in the overworld is performed in
+// the world they play in — the blocks placed for a counting exercise are real
+// edits to their real save, so the mat starts dirty and anything can wander up
+// to it. Leaving a lesson, or finishing the series, puts them back on the exact
+// block they were standing on when it began.
+//
+// FINISHING A LESSON PAYS THE CHARACTER, not the world: banked play minutes as
+// before, plus coins and the materials the NEXT lesson asks for. Both live on
+// the character side of the save (js/game/characters.js CHARACTER_KEYS lists
+// `education`, `lessons` and `inventory`), so a child who starts a new world
+// keeps every minute and every coin they earned.
 //
 // A lesson:
 //   { id, area, subject, standard, minutes, guide,
@@ -15,12 +28,14 @@
 //     watch: ['blockPlaced', ...],   // world events that re-run check()
 //     setup?(ctx),                    // optional one-time prep
 //     check(ctx) -> bool,             // true when the goal is met
+//     reward: { coins, items: [[id, qty]] },   // paid to the CHARACTER on pass
 //     next }                          // id of the lesson that follows (or null)
 //
 // ctx helpers: { game, world, mat, countPlaced(blockName, region), lesson }.
 import { on, emit } from '../core/events.js';
 import { registerLesson, LESSONS } from './education.js';
 import { B } from '../world/blocks.js';
+import { ROOM_COUNT } from '../world/classroom.js';
 
 // ---- Numbers Meadow: three first-grade math lessons -------------------------
 export const LESSONS_DATA = [
@@ -32,6 +47,7 @@ export const LESSONS_DATA = [
     success: 'Seven! You counted every single one. Fantastic!',
     watch: ['blockPlaced', 'blockBroken'],
     check: (ctx) => ctx.countPlaced('red_wool', ctx.mat) === 7,
+    reward: { coins: 15, items: [['blue_wool', 12]] },
     next: 'nm_add',
   },
   {
@@ -42,6 +58,7 @@ export const LESSONS_DATA = [
     success: '5 and 3 make 8! You added them all together!',
     watch: ['blockPlaced', 'blockBroken'],
     check: (ctx) => ctx.countPlaced('blue_wool', ctx.mat) === 8,
+    reward: { coins: 20, items: [['red_wool', 8], ['yellow_wool', 8]] },
     next: 'nm_sort',
   },
   {
@@ -63,6 +80,7 @@ export const LESSONS_DATA = [
       return (rl >= 2 && yr >= 2 && rr === 0 && yl === 0)
           || (rr >= 2 && yl >= 2 && rl === 0 && yr === 0);
     },
+    reward: { coins: 40, items: [['bread', 4]] },
     next: null,
   },
 ];
@@ -127,12 +145,39 @@ export class LessonRunner {
     this.setLesson(area, next.id);
   }
 
+  // Which of the Schoolhouse's rooms this lesson owns. Position in the authored
+  // list, so it is stable across saves and needs no id table in the world layer.
+  roomIndex(id) {
+    const i = LESSONS_DATA.findIndex((l) => l.id === id);
+    return i < 0 ? 0 : i % ROOM_COUNT;
+  }
+
+  room(id) {
+    const rooms = this.game.world?.markers?.classrooms;
+    return rooms ? rooms[this.roomIndex(id)] : null;
+  }
+
   setLesson(area, id) {
     this.current[area] = id;
     const lesson = this.byId.get(id);
     if (lesson?.setup) { try { lesson.setup(this.makeCtx(lesson)); } catch (e) { console.error('[lesson] setup', e); } }
+    // Into its own room. `lessonEnter` carries the arrival cell; main.js banks
+    // where the child was standing the FIRST time (not on every advance within a
+    // series, or three lessons in a row would overwrite the way home with the
+    // previous classroom).
+    const room = this.room(id);
+    if (room) emit('lessonEnter', { area, id, room });
     emit('lessonStarted', { area, id, lesson });
     this.announce(lesson);
+  }
+
+  // The child asked to stop. Keep the lesson as their place in the series — a
+  // lesson left half-done is resumed, never restarted — and send them home.
+  leave(area) {
+    if (!this.current[area]) return false;
+    emit('lessonExit', { area, id: this.current[area] });
+    this.announce(null);
+    return true;
   }
 
   announce(lesson) {
@@ -157,25 +202,43 @@ export class LessonRunner {
     }
   }
 
+  // Pay a lesson's reward into the pack. Separate from the education ledger on
+  // purpose: minutes are the parent's currency and coins are the child's, and
+  // only one of them should be spendable on anything.
+  payReward(lesson) {
+    const r = lesson.reward;
+    const inv = this.game.inventory;
+    if (!r || !inv) return null;
+    const got = [];
+    if (r.coins > 0 && inv.add('coin', r.coins)) got.push(['coin', r.coins]);
+    for (const [item, qty] of r.items || []) if (inv.add(item, qty)) got.push([item, qty]);
+    return got.length ? got : null;
+  }
+
   complete(area, lesson) {
-    // Bank the reward through the education ledger, then celebrate + advance.
+    // Bank the minutes through the education ledger, pay the character, then
+    // celebrate + advance.
     const res = this.game.education?.completeLesson?.(lesson.id, { score: 1 });
-    this.game.ui?.showLessonSuccess?.(lesson);
-    emit('lessonSucceeded', { area, id: lesson.id, lesson, granted: res?.granted || 0 });
+    const paid = this.payReward(lesson);
+    this.game.ui?.showLessonSuccess?.(lesson, { granted: res?.granted || 0, paid });
+    emit('lessonSucceeded', { area, id: lesson.id, lesson, granted: res?.granted || 0, paid });
     if (lesson.next && this.byId.has(lesson.next)) {
-      this.setLesson(area, lesson.next);
+      this.setLesson(area, lesson.next);   // straight into the next room
     } else {
       delete this.current[area];
-      this.announce(null); // series finished — clear the prompt panel
+      this.announce(null);                 // series finished — clear the prompt
+      emit('lessonExit', { area, id: lesson.id, finished: true });
     }
   }
 
   // ---- context passed to setup()/check() ---------------------------------
   matFor(area) {
-    // Only Numbers Meadow exists in Phase 1; its work-mat AABB rides in the
-    // world's structure markers (js/world/structures.js).
-    if (area !== 'numbers_meadow') return null;
-    const m = this.game.world?.markers?.learnMat;
+    // The mat is the one in THIS lesson's room. markers.learnMat — the old
+    // shared yard at (200,200) — is still built and still readable, but no
+    // lesson counts blocks there any more: two children's leftovers on one mat
+    // is exactly the mess the rooms exist to end.
+    const id = this.current[area];
+    const m = (id && this.room(id)?.mat) || this.game.world?.markers?.learnMat;
     if (!m) return null;
     const region = { x0: m.x0, x1: m.x1, z0: m.z0, z1: m.z1, y0: m.y0, y1: m.y1 };
     // Sub-regions split by the divider column (for the sorting lesson). The

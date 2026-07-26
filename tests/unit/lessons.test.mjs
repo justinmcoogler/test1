@@ -29,19 +29,28 @@ function scenario() {
   const education = new EducationManager();
   education.setMode('education');
   const ui = { showLessonPrompt() {}, showLessonSuccess() {}, showLessonHint() {}, toast() {} };
-  const game = { world, education, ui, renderer: { spawnParticles() {} } };
+  // Just enough pack for payReward: a lesson now pays the CHARACTER as well as
+  // the play-time bank, and a runner with nowhere to put the coins must not
+  // throw — it simply pays nothing.
+  const bag = new Map();
+  const inventory = { add: (item, qty) => { bag.set(item, (bag.get(item) || 0) + qty); return true; },
+    count: (item) => bag.get(item) || 0 };
+  const game = { world, education, ui, inventory, renderer: { spawnParticles() {} } };
   const lessons = new LessonRunner(game);
   game.lessons = lessons;
-  return { game, world, education, lessons, put, clear };
+  return { game, world, education, lessons, put, clear, inventory };
 }
 
-const MAT = () => MARKERS.learnMat;
+// Each lesson is performed in a room of its own out in the Schoolhouse
+// (js/world/classroom.js), so the mat to build on is whichever room the runner
+// has the child in — not the one shared yard it used to be.
+const MAT = (lessons) => lessons.room(lessons.current.numbers_meadow).mat;
 
 test('nm_count: seven red blocks on the mat completes it and banks 10 minutes', () => {
   const { lessons, education, put } = scenario();
-  const y = MAT().y0, x0 = MAT().x0, z0 = MAT().z0;
   lessons.startArea('numbers_meadow');
   assert.equal(lessons.current.numbers_meadow, 'nm_count', 'starts on the counting lesson');
+  const y = MAT(lessons).y0, x0 = MAT(lessons).x0, z0 = MAT(lessons).z0;
 
   for (let i = 0; i < 6; i++) put(x0 + i, y, z0, 'red_wool'); // six is not seven
   assert.equal(lessons.current.numbers_meadow, 'nm_count', 'six reds does not complete it');
@@ -57,7 +66,7 @@ test('nm_count: seven red blocks on the mat completes it and banks 10 minutes', 
 test('nm_add: 5 blue then 3 more (eight total) completes and advances to sorting', () => {
   const { lessons, education, put } = scenario();
   lessons.setLesson('numbers_meadow', 'nm_add');
-  const y = MAT().y0, x0 = MAT().x0, z0 = MAT().z0;
+  const y = MAT(lessons).y0, x0 = MAT(lessons).x0, z0 = MAT(lessons).z0;
   for (let i = 0; i < 7; i++) put(x0 + i, y, z0, 'blue_wool'); // seven — not yet
   assert.equal(lessons.current.numbers_meadow, 'nm_add');
   put(x0 + 7, y, z0, 'blue_wool'); // eighth
@@ -68,7 +77,7 @@ test('nm_add: 5 blue then 3 more (eight total) completes and advances to sorting
 test('nm_sort: a mis-sorted red blocks the goal until it is fixed', () => {
   const { lessons, education, put, clear } = scenario();
   lessons.setLesson('numbers_meadow', 'nm_sort');
-  const m = MAT();
+  const m = MAT(lessons);
   const leftX = m.x0, rightX = m.x1; // 196 (left of divider), 204 (right)
 
   // The mat is mis-sorted from the start: a stray red sits on the RIGHT the whole
@@ -91,7 +100,7 @@ test('nm_sort: a mis-sorted red blocks the goal until it is fixed', () => {
 
 test('gentle: an overshot mat (8) does not pass, and breaking one recovers', () => {
   const { lessons, education, put, clear } = scenario();
-  const y = MAT().y0, x0 = MAT().x0, z0 = MAT().z0;
+  const y = MAT(lessons).y0, x0 = MAT(lessons).x0, z0 = MAT(lessons).z0;
   // The child piled on eight reds before the counting lesson is watching (e.g. a
   // resumed save): the runner ignores placements while no lesson is active, so
   // the mat starts overshot at eight rather than latching at seven on the way up.
@@ -123,9 +132,11 @@ test('countPlaced counts only matching blocks inside the given region', () => {
 test('nm_sort completes for correctly sorted colours from the player’s viewpoint', () => {
   const { lessons, education, put } = scenario();
   education.setMode('education', {});
+  // setLesson FIRST: the mat is the one in this lesson's room, so asking for it
+  // before the runner knows which lesson is running gets the fallback yard.
+  lessons.setLesson('numbers_meadow', 'nm_sort');
   const mat = lessons.matFor('numbers_meadow');
   const y = mat.y0;
-  lessons.setLesson('numbers_meadow', 'nm_sort');
   // Player faces +Z: their LEFT is the +X half (mat.left), RIGHT is -X (mat.right).
   // Put reds on the +X (left) half and yellows on the -X (right) half.
   for (let x = mat.left.x0; x <= mat.left.x0 + 2; x++) put(x, y, mat.z0, 'red_wool');
@@ -137,9 +148,11 @@ test('nm_sort completes for correctly sorted colours from the player’s viewpoi
 test('nm_sort also accepts the mirror arrangement (sorting is what matters)', () => {
   const { lessons, education, put } = scenario();
   education.setMode('education', {});
+  // setLesson FIRST: the mat is the one in this lesson's room, so asking for it
+  // before the runner knows which lesson is running gets the fallback yard.
+  lessons.setLesson('numbers_meadow', 'nm_sort');
   const mat = lessons.matFor('numbers_meadow');
   const y = mat.y0;
-  lessons.setLesson('numbers_meadow', 'nm_sort');
   // Reversed sides — still fully separated, so a child who faced the other way
   // and sorted correctly is not punished.
   for (let x = mat.right.x0; x <= mat.right.x0 + 2; x++) put(x, y, mat.z0, 'red_wool');
@@ -151,9 +164,11 @@ test('nm_sort also accepts the mirror arrangement (sorting is what matters)', ()
 test('nm_sort rejects a mixed (unsorted) mat', () => {
   const { lessons, education, put } = scenario();
   education.setMode('education', {});
+  // setLesson FIRST: the mat is the one in this lesson's room, so asking for it
+  // before the runner knows which lesson is running gets the fallback yard.
+  lessons.setLesson('numbers_meadow', 'nm_sort');
   const mat = lessons.matFor('numbers_meadow');
   const y = mat.y0;
-  lessons.setLesson('numbers_meadow', 'nm_sort');
   // Reds straddle BOTH halves — not sorted, must not pass.
   put(mat.left.x0, y, mat.z0, 'red_wool');
   put(mat.left.x0 + 1, y, mat.z0, 'red_wool');

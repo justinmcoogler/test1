@@ -416,11 +416,17 @@ export class UI {
     });
   }
 
-  showLessonSuccess(lesson) {
+  showLessonSuccess(lesson, { granted = 0, paid = null } = {}) {
     this.toast(lesson.success, 'gold');
     SFX.questDone();
+    // What they actually earned, in that order: the minutes are the point of
+    // the mode, and the coins are the thing a child cares about.
+    const earned = [];
+    if (granted > 0) earned.push(`${granted} minutes of play`);
+    for (const [item, qty] of paid || []) earned.push(`${qty} × ${ITEMS[item]?.name || item}`);
+    if (earned.length) this.toast(`You earned ${earned.join(', ')}!`, 'gold');
     // a burst of gold sparkles over the work mat
-    const m = this.game.world?.markers?.learnMat;
+    const m = this.game.lessons?.room?.(lesson.id)?.mat || this.game.world?.markers?.learnMat;
     if (m && this.game.renderer?.spawnParticles) {
       const cx = (m.x0 + m.x1) / 2 + 0.5, cz = (m.z0 + m.z1) / 2 + 0.5;
       this.game.renderer.spawnParticles(cx, m.y0 + 0.6, cz, [1, 0.85, 0.3], 30, 3, 1.0, 0.12);

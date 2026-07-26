@@ -14,6 +14,7 @@
 // settlement you stand in is one you found rather than one you spawned in.
 import { B } from './blocks.js';
 import { LEARN_MEADOW } from './worldgen.js';
+import { buildClassrooms, classroomMarkers } from './classroom.js';
 import { stampMineshafts, mineshaftClaims } from './mineshaft.js';
 import { stampSky } from './sky.js';
 import { stampUndercity, undercityClaims, attachUndercitySink } from './undercity.js';
@@ -571,6 +572,13 @@ export function buildStarterStructures() {
   // learnMat is an AABB object (already in real coords), not a [x,y,z] marker —
   // attach it after the blanket lift so its fields aren't mangled by m[1]+=LIFT.
   markers.learnMat = learnMat;
+
+  // The Schoolhouse: one sealed room per lesson, out in its own sky. Built with
+  // a RAW writer and attached after the blanket lift, because its coordinates
+  // are already real — a room floating at y=420 has no plateau to be lifted
+  // onto, and running it through set() would put it 34 blocks off.
+  buildClassrooms((x, y, z, id) => edits.set(key(x, y, z), id), npcs);
+  markers.classrooms = classroomMarkers();
 
   // Procedural towns (js/world/settlements.js) are discovered chunk by chunk long
   // after this runs, and their PEOPLE and map markers are not blocks, so they

@@ -14,6 +14,7 @@ import { ITEMS } from '../../js/game/items.js';
 import { ENEMY_TYPES } from '../../js/game/enemies.js';
 import { ABILITIES } from '../../js/game/combat.js';
 import { buildStarterStructures } from '../../js/world/structures.js';
+import { ROOM_COUNT, classroomFor } from '../../js/world/classroom.js';
 import { QUESTS } from '../../js/game/quests.js';
 import { NPC_DEFS, DIALOGUES } from '../../js/game/npcs.js';
 
@@ -284,14 +285,21 @@ test('every enemy is fully defined', () => {
 test('starter structures: chests/npcs/nodes/spawns are valid', () => {
   const s = buildStarterStructures();
   assert.ok(s.edits.size > 500, 'the hand-built content should be substantial');
-  // Three, and that is the whole hand-built population of the world: Maren at
+  // Three, and that is the whole hand-built population of the WORLD: Maren at
   // the camp, Warden Sylla at the Frostwatch, Pip at the Numbers Meadow. There
   // is no town any more and so no townsfolk — everyone else you meet is grown
   // by js/world/settlements.js out on the roads.
-  assert.equal(s.npcs.length, 3);
-  assert.ok(s.npcs.some((n) => n.id === 'maren'));
-  assert.ok(s.npcs.some((n) => n.id === 'sylla'));
-  assert.ok(s.npcs.some((n) => n.id === 'pip'));
+  //
+  // The Schoolhouse guides are counted separately and deliberately: they stand
+  // one to a room in sealed classrooms thirty thousand blocks away, which is
+  // nowhere a player walks, so they are furniture rather than population.
+  const guides = s.npcs.filter((n) => n.room !== undefined);
+  const world = s.npcs.filter((n) => n.room === undefined);
+  assert.equal(world.length, 3);
+  assert.ok(world.some((n) => n.id === 'maren'));
+  assert.ok(world.some((n) => n.id === 'sylla'));
+  assert.ok(world.some((n) => n.id === 'pip'));
+  assert.equal(guides.length, ROOM_COUNT, 'one guide per classroom');
   // The camp: one bedroll, one fire, one footlocker. If any of these stops being
   // placed the opening stops working — you cannot sleep, cook or stash anything.
   const at = (bx, by, bz) => s.edits.get(`${bx},${by},${bz}`);
