@@ -34,7 +34,7 @@ import { registerRemadeMob, preloadMobSkins, mobSkinOverride } from './game/mobr
 import { registerImportedMobs } from './game/mobpack.js';
 import { registerProps } from './game/proppack.js';
 import { EducationManager } from './game/education.js';
-import { LessonRunner } from './game/lessons.js';
+import { LessonRunner, LESSONS_DATA } from './game/lessons.js';
 import { WAYSTONE_SPACING } from './world/roads.js';
 import {
   WaystoneNet, atWaystone, waystonesNear, waystoneLanding, BEARINGS, WAYSTONE_HEIGHT,
@@ -2404,8 +2404,15 @@ class Game {
 
 
   // Stock the child with the coloured blocks the Numbers Meadow lessons use.
+  // Top the child up with every colour any lesson asks for. Derived from the
+  // lesson data rather than listed here, so adding a lesson that wants orange
+  // cannot leave a six-year-old staring at a prompt with nothing to place.
   grantLessonKit() {
-    for (const c of ['red_wool', 'blue_wool', 'yellow_wool']) {
+    const want = new Set(['red_wool', 'blue_wool', 'yellow_wool', 'green_wool']);
+    for (const l of LESSONS_DATA) {
+      for (const [item] of l.reward?.items || []) if (item.endsWith('_wool')) want.add(item);
+    }
+    for (const c of want) {
       const have = this.inventory.count(c);
       if (have < 10) this.inventory.add(c, 16 - have);
     }

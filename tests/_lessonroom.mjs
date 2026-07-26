@@ -51,7 +51,8 @@ try {
   }));
   check(menu.tab, 'Learning Mode puts a Lessons tab in the menu');
   check(menu.open === 'lessons', `and opens straight onto it (${menu.open})`);
-  check(menu.rows === 3, `listing every lesson (${menu.rows})`);
+  const lessonCount = await page.evaluate(() => window.__game.lessons.byId.size);
+  check(menu.rows === lessonCount, `listing every lesson (${menu.rows} of ${lessonCount})`);
 
   await page.click('[data-start="nm_count"]');
   await page.waitForTimeout(900);
@@ -73,7 +74,7 @@ try {
       // Scan up rather than guessing the exact course: the point is that the
       // room is closed, not which block number the ceiling landed on.
       ceiling: (() => {
-        for (let dy = 2; dy <= 8; dy++) {
+        for (let dy = 2; dy <= 14; dy++) {   // the room is nine tall now
           if (g.world.getBlock(Math.floor(g.player.x), Math.floor(g.player.y) + dy, Math.floor(g.player.z))) return dy;
         }
         return 0;

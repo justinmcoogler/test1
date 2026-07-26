@@ -24,14 +24,14 @@ import { B } from './blocks.js';
 // Far outside anything any generator reaches, and above the top sky band.
 export const LESSON_REALM = { x: 30000, z: 30000, y: 420 };
 export const ROOM_SPACING = 40;   // no two rooms can see each other
-export const ROOM_COUNT = 8;      // room per lesson; add lessons, not plumbing
+export const ROOM_COUNT = 16;     // room per lesson; add lessons, not plumbing
 // Each lesson world is seeded off this. The seed does nothing to the terrain —
 // there is no terrain — but a World needs one and two lessons should not share.
 export const LESSON_SEED = 0x1e550;
 
 const HALF_X = 7;   // 15 wide
 const HALF_Z = 6;   // 13 deep
-const WALL_H = 5;
+const WALL_H = 9;   // tall enough to build a tower of six and still see over it
 
 // Where room `i` is and what is in it. Pure geometry, in REAL world
 // coordinates — nothing here goes through structures.js's LIFT, because a room
@@ -46,9 +46,16 @@ export function classroomFor(index) {
     index: i, cx, cz, floor, stand,
     // The work mat, same shape as the old yard's: 9x5 with a plank divider down
     // the middle so a sorting lesson has a left half and a right half.
+    // y1 gives six levels of build room above the mat, because "make a tower
+    // five tall" and "which tower is taller" are Year-1 measurement work and a
+    // three-block ceiling cannot express them.
+    // Thirteen wide, which is the room's full interior: the place-value lesson
+    // asks for an unbroken row of TEN and a nine-wide mat cannot hold one. A
+    // lesson whose answer does not fit on the mat is unwinnable, and it looks
+    // completely reasonable until somebody tries to build it.
     mat: {
-      x0: cx - 4, x1: cx + 4, z0: cz - 2, z1: cz + 2,
-      y0: stand, y1: stand + 2, div: cx,
+      x0: cx - 6, x1: cx + 6, z0: cz - 2, z1: cz + 2,
+      y0: stand, y1: stand + 6, div: cx,
     },
     // Feet-on-floor spot the child arrives at: south of the mat, facing it.
     entry: [cx, stand, cz + 5],

@@ -23,6 +23,9 @@ function scenario() {
   const world = {
     markers: MARKERS,
     getBlock: (x, y, z) => placed.get(`${x},${y},${z}`) ?? B.air,
+    // A lesson's setup() lays out its starting position through the world, so
+    // the fake needs to accept writes or every such lesson silently starts blank.
+    setBlock: (x, y, z, id) => { placed.set(`${x},${y},${z}`, id); },
   };
   const put = (x, y, z, name) => { placed.set(`${x},${y},${z}`, B[name]); emit('blockPlaced', { x, y, z, block: name }); };
   const clear = (x, y, z) => { placed.delete(`${x},${y},${z}`); emit('blockBroken', { x, y, z, block: 'air' }); };
@@ -94,7 +97,7 @@ test('nm_sort: a mis-sorted red blocks the goal until it is fixed', () => {
   assert.equal(education.locked, false, 'wrong placement never locks/penalises');
 
   clear(m.div + 1, m.y0, m.z0); // fix the mistake — breaking re-checks
-  assert.equal(lessons.current.numbers_meadow, undefined, 'series finished — no active lesson');
+  assert.equal(lessons.current.numbers_meadow, 'nm_take', 'sorting done — on to taking away');
   assert.ok(education.balanceSec > 0, 'banked play-time for sorting');
 });
 
@@ -186,4 +189,80 @@ test('runner persists {area → currentLessonId} across serialize/deserialize', 
   const b = scenario();
   b.lessons.deserialize(snap);
   assert.equal(b.lessons.current.numbers_meadow, 'nm_add', 'resumes the saved lesson');
+});
+
+// ---- every lesson can actually be finished -----------------------------------
+// The one thing a lesson MUST be is completable. A check with a typo in a block
+// name, a shape that does not fit the mat, or a condition no arrangement can
+// satisfy looks perfectly fine in review and leaves a six-year-old stuck in a
+// sealed room with no way to win. Each case below is the solution a child would
+// build, played through the real runner.
+const solve = {
+  nm_count: (m, put) => { for (let i = 0; i < 7; i++) put(m.x0 + i, m.y0, m.z0, 'red_wool'); },
+  nm_add: (m, put) => { for (let i = 0; i < 8; i++) put(m.x0 + i, m.y0, m.z0, 'blue_wool'); },
+  nm_sort: (m, put) => {
+    for (let i = 0; i < 3; i++) put(m.left.x0 + i, m.y0, m.z0, 'red_wool');
+    for (let i = 0; i < 3; i++) put(m.right.x0 + i, m.y0, m.z0, 'yellow_wool');
+  },
+  nm_take: (m, put, clear) => {
+    for (let i = 0; i < 9; i++) put(m.x0 + (i % 9), m.y0, m.z0 + Math.floor(i / 9), 'green_wool');
+    for (let i = 5; i < 9; i++) clear(m.x0 + i, m.y0, m.z0);
+  },
+  // setup lays the 6 reds; the child adds 4 blues
+  nm_maketen: (m, put) => { for (let i = 0; i < 4; i++) put(m.x0 + i, m.y0, m.z0 + 1, 'blue_wool'); },
+  nm_taller: (m, put) => {
+    for (let i = 0; i < 4; i++) put(m.left.x0, m.y0 + i, m.z0, 'red_wool');
+    for (let i = 0; i < 2; i++) put(m.right.x0, m.y0 + i, m.z0, 'blue_wool');
+  },
+  nm_tower: (m, put) => { for (let i = 0; i < 5; i++) put(m.x0, m.y0 + i, m.z0, 'red_wool'); },
+  nm_pattern: (m, put) => {
+    for (let i = 0; i < 6; i++) put(m.x0 + i, m.y0, m.z0, i % 2 ? 'blue_wool' : 'red_wool');
+  },
+  nm_square: (m, put) => {
+    for (let dx = 0; dx < 3; dx++) for (let dz = 0; dz < 3; dz++) put(m.x0 + dx, m.y0, m.z0 + dz, 'yellow_wool');
+  },
+  nm_fives: (m, put) => {
+    for (let r = 0; r < 3; r++) for (let i = 0; i < 5; i++) put(m.x0 + i, m.y0, m.z0 + r, 'red_wool');
+  },
+  nm_tens: (m, put) => {
+    for (let i = 0; i < 10; i++) put(m.x0 + i, m.y0, m.z0, 'red_wool');       // one ten
+    for (let i = 0; i < 3; i++) put(m.x0 + i, m.y0, m.z0 + 1, 'red_wool');    // and three ones
+  },
+  nm_mirror: (m, put) => {
+    for (let i = 1; i <= 2; i++) {
+      put(m.div + i, m.y0, m.z0, 'red_wool');
+      put(m.div - i, m.y0, m.z0, 'red_wool');
+      put(m.div + i, m.y0, m.z0 + 1, 'blue_wool');
+      put(m.div - i, m.y0, m.z0 + 1, 'blue_wool');
+    }
+  },
+};
+
+test('every lesson can be finished by building its answer', () => {
+  for (const lesson of LESSONS_DATA) {
+    const { lessons, put, clear } = scenario();
+    lessons.setLesson(lesson.area, lesson.id);
+    const m = lessons.matFor(lesson.area);
+    const build = solve[lesson.id];
+    assert.ok(build, `${lesson.id} has no worked solution in this test`);
+    build(m, put, clear);
+    lessons.onWatch('blockPlaced');
+    assert.ok(lessons.isPassed(lesson.id), `${lesson.id} cannot be completed: "${lesson.prompt}"`);
+  }
+});
+
+test('a lesson is not passed by an empty mat or a wrong answer', () => {
+  // The mirror lesson is the one at real risk of this: "both sides match" is
+  // trivially true of a mat with nothing on it.
+  const { lessons } = scenario();
+  lessons.setLesson('numbers_meadow', 'nm_mirror');
+  lessons.onWatch('blockPlaced');
+  assert.equal(lessons.isPassed('nm_mirror'), false, 'an empty mat is not symmetry');
+
+  const s2 = scenario();
+  s2.lessons.setLesson('numbers_meadow', 'nm_tower');
+  const m = s2.lessons.matFor('numbers_meadow');
+  for (let i = 0; i < 3; i++) s2.put(m.x0, m.y0 + i, m.z0, 'red_wool');
+  s2.lessons.onWatch('blockPlaced');
+  assert.equal(s2.lessons.isPassed('nm_tower'), false, 'three is not five');
 });
