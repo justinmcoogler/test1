@@ -14,7 +14,9 @@ import { ITEMS } from '../../js/game/items.js';
 import { ENEMY_TYPES } from '../../js/game/enemies.js';
 import { ABILITIES } from '../../js/game/combat.js';
 import { buildStarterStructures } from '../../js/world/structures.js';
-import { lessonStructure, classroomFor } from '../../js/world/classroom.js';
+import { pathStructure, pathFor, PATH_REALM } from '../../js/world/lessonpath.js';
+import { pathPlan } from '../../js/game/lessons.js';
+import { CURRICULUM } from '../../js/game/curriculum/index.js';
 import { QUESTS } from '../../js/game/quests.js';
 import { NPC_DEFS, DIALOGUES } from '../../js/game/npcs.js';
 
@@ -286,18 +288,17 @@ test('starter structures: chests/npcs/nodes/spawns are valid', () => {
   const s = buildStarterStructures();
   assert.ok(s.edits.size > 500, 'the hand-built content should be substantial');
   // Three, and that is the whole hand-built population of the WORLD: Maren at
-  // the camp, Warden Sylla at the Frostwatch, Pip at the Numbers Meadow. There
-  // is no town any more and so no townsfolk — everyone else you meet is grown
-  // by js/world/settlements.js out on the roads.
-  //
-  // And no classroom guides: a lesson runs in a WORLD of its own, so the
-  // overworld carries no classrooms and nobody standing in one.
+  // the camp, Warden Sylla at the Frostwatch, Nan Willow at the Honeywood gate.
+  // There is no town any more and so no townsfolk — everyone else you meet is
+  // grown by js/world/settlements.js out on the roads.
   assert.equal(s.npcs.length, 3);
   assert.ok(s.npcs.some((n) => n.id === 'maren'));
   assert.ok(s.npcs.some((n) => n.id === 'sylla'));
-  assert.ok(s.npcs.some((n) => n.id === 'pip'));
-  assert.equal(s.npcs.filter((n) => n.room !== undefined).length, 0,
-    'the Schoolhouse is not part of the world you play in');
+  assert.ok(s.npcs.some((n) => n.id === 'nan'));
+  // A lesson runs in a WORLD of its own, so nobody in the overworld belongs to
+  // one: a `station` field on an overworld NPC means lesson content has leaked.
+  assert.equal(s.npcs.filter((n) => n.station !== undefined).length, 0,
+    'lesson stops are not part of the world you play in');
   // The camp: one bedroll, one fire, one footlocker. If any of these stops being
   // placed the opening stops working — you cannot sleep, cook or stash anything.
   const at = (bx, by, bz) => s.edits.get(`${bx},${by},${bz}`);
@@ -393,20 +394,34 @@ test('nothing the world scatters is left hanging over a cave mouth', () => {
   assert.deepEqual(orphans.slice(0, 8), [], `${orphans.length}/${checked} placements have no ground under them`);
 });
 
-test('a lesson world is a world of its own — one room, and nothing else in it', () => {
-  const s = lessonStructure(1);
-  const r = classroomFor(1);
-  assert.ok(s.edits.size > 500, 'the room is built');
+test('a lesson world is a world of its own — one farm, and nothing else in it', () => {
+  const lesson = CURRICULUM[0];
+  const plan = pathPlan(lesson);
+  const s = pathStructure(plan);
+  const path = pathFor(plan);
+  assert.equal(path.stations.length, lesson.steps.length, 'one stop per step');
+  assert.ok(s.edits.size > 5000, 'the farm is built');
   assert.equal(s.nodes.length, 0, 'nothing to harvest');
-  assert.equal(s.spawns.length, 0, 'and nothing to fight');
-  assert.equal(s.npcs.length, 1, 'just the guide');
-  assert.deepEqual(s.markers.spawn, r.entry, 'you arrive in the room');
-  // Every block it contains is inside that one room's footprint — no camp, no
-  // mine, no dungeon, no Frostwatch. This is the assertion that keeps a lesson
-  // world a lesson world if somebody is ever tempted to "just add" something.
+  assert.equal(s.chests.length, 0, 'and nothing to loot');
+  // Animals, not enemies. Every spawn on the farm is livestock a lesson counts.
+  const LIVESTOCK = new Set(['cow', 'pig', 'sheep', 'goat', 'chicken']);
+  assert.ok(s.spawns.length > 0, 'the farm is stocked');
+  for (const sp of s.spawns) assert.ok(LIVESTOCK.has(sp.type), `a lesson has no business spawning a ${sp.type}`);
+  // The guide walks the round: one of her at every stop, and nobody else.
+  assert.equal(s.npcs.length, path.stations.length);
+  for (const n of s.npcs) assert.equal(n.id, 'nan');
+  assert.deepEqual(s.markers.spawn, path.spawn, 'you arrive at the bottom of the lane');
+  // The child spawns SHORT of the first stop, so the round opens with a walk —
+  // and on solid ground, not a step off the end of the world.
+  assert.ok(path.spawn[0] < path.stations[0].sx, 'the first stop is walked to, not stood on');
+  assert.ok(path.spawn[0] > path.bounds.x0, 'and the spawn is inside the farm, not off the end of it');
+  assert.ok(s.edits.has(`${path.spawn[0]},${PATH_REALM.y},${path.spawn[2]}`), 'with ground under it');
+  // Every block it contains is inside the farm's own bounds — no camp, no mine,
+  // no dungeon, no Frostwatch. This is the assertion that keeps a lesson world a
+  // lesson world if somebody is ever tempted to "just add" something.
   for (const k of s.edits.keys()) {
     const [x, , z] = k.split(',').map(Number);
-    assert.ok(Math.abs(x - r.cx) <= 8 && Math.abs(z - r.cz) <= 7,
-      `a lesson world should hold nothing outside its room, found a block at ${k}`);
+    assert.ok(x >= path.bounds.x0 && x <= path.bounds.x1 && z >= path.bounds.z0 && z <= path.bounds.z1,
+      `a lesson world should hold nothing outside its farm, found a block at ${k}`);
   }
 });

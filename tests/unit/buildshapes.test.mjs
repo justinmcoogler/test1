@@ -7,12 +7,12 @@
 // must be rejected, and the checks that must not be fooled.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkShape, solveShape, setupShape, shapeNeeds, validateShape, MAT, GLYPH_BLOCK, GLYPH_OF } from '../../js/game/buildshapes.js';
+import { checkShape, solveShape, setupShape, beginShape, shapeNeeds, validateShape, MAT, SHAPE_KINDS, GLYPH_BLOCK, GLYPH_OF } from '../../js/game/buildshapes.js';
 import { B, BLOCKS, EDUCATION_BLOCKS } from '../../js/world/blocks.js';
 import { ITEMS } from '../../js/game/items.js';
 
-// A stand-in mat with the real geometry: 13 wide, 5 deep, 7 tall, split at the
-// middle column — same numbers as js/world/classroom.js.
+// A stand-in plot with the real geometry: 13 wide, 5 deep, 7 tall, split at the
+// middle column — same numbers as js/world/lessonpath.js.
 function mat(x0 = 0, y0 = 0, z0 = 0) {
   const m = { x0, x1: x0 + 12, y0, y1: y0 + 6, z0, z1: z0 + 4, div: x0 + 6 };
   m.left = { ...m, x0: m.div + 1, x1: m.x1 };
@@ -63,13 +63,25 @@ function ctxOver(m) {
   const words = (region = m) => runs(region)
     .map((r) => r.map((n) => GLYPH_OF[n] || ' ').join(''))
     .filter((w) => w && !w.includes(' '));
+  // Not every answer is a build. `walk` moves the body (that is the whole of a
+  // `reach`) and `give` puts something in the pack (that is the whole of a
+  // `gather`), so the fake has to have a body and a pack for those two kinds to be
+  // testable at all.
+  const bag = new Map();
+  const player = { x: -999, y: 0, z: -999 };
   const play = (ops) => {
     for (const op of ops) {
       if (op.op === 'break') cells.delete(key(op.x, op.y, op.z));
+      else if (op.op === 'walk') { player.x = op.x; player.y = op.y; player.z = op.z; }
+      else if (op.op === 'give') bag.set(op.block, (bag.get(op.block) || 0) + op.n);
       else cells.set(key(op.x, op.y, op.z), op.block);
     }
   };
-  const ctx = { mat: m, scratch: {}, nameAt, countPlaced, stackAt, tallest, rowAt, runs, words };
+  // A stop with a spot to walk to, three blocks' tolerance — the same shape
+  // pathFor() hands the runner.
+  const station = { find: [m.x0 + 20, m.y0, m.z0 + 9], findR: 3, plot: m };
+  const ctx = { mat: m, scratch: {}, nameAt, countPlaced, stackAt, tallest, rowAt, runs, words,
+    station, player, held: (name) => bag.get(name) || 0 };
   // Play the moves ONE AT A TIME, re-checking after each — which is what the
   // runner does, because every placement and every break fires an event. It
   // matters: `subtract` only knows nine were once there because it was asked
@@ -79,7 +91,7 @@ function ctxOver(m) {
     for (const op of ops) { play([op]); ok = checkShape(shape, ctx); }
     return ok;
   };
-  return { ctx, play, feed, cells };
+  return { ctx, play, feed, cells, player, bag, station };
 }
 
 const SHAPES = [
@@ -101,14 +113,27 @@ const SHAPES = [
   { kind: 'frame', block: 'brown_wool', w: 5, d: 3 },
   { kind: 'cells', block: 'yellow_wool', at: [[0, 0, 0], [2, 0, 1], [4, 0, 3]] },
   { kind: 'sentence', text: '3+2=5' },
+  { kind: 'reach' },
+  { kind: 'gather', block: 'nest_egg', n: 3 },
 ];
+
+// The one lesson in the game uses five of these kinds. The rest are the
+// vocabulary the next lessons will be written in, and an untested kind is a kind
+// that does not work yet — so coverage lives HERE, where every kind is exercised
+// against its own solution, rather than in the curriculum test, where it would
+// only ever mean "somebody wrote a lesson using it".
+test('every shape kind the game offers is exercised by this file', () => {
+  const covered = new Set(SHAPES.map((s) => s.kind));
+  for (const kind of SHAPE_KINDS) assert.ok(covered.has(kind), `shape kind "${kind}" has no test case`);
+});
 
 test('every kind: its own solution passes its own check', () => {
   for (const s of SHAPES) {
     const m = mat(100, 60, 200);          // not at the origin — offsets must be real
-    const { play, feed } = ctxOver(m);
+    const { ctx, play, feed, station } = ctxOver(m);
     play(setupShape(s, m));
-    assert.ok(feed(s, solveShape(s, m)), `${s.kind}: its worked solution does not satisfy it`);
+    beginShape(s, ctx);                   // a gather remembers what was held first
+    assert.ok(feed(s, solveShape(s, m, station)), `${s.kind}: its worked solution does not satisfy it`);
   }
 });
 
@@ -117,6 +142,7 @@ test('every kind: an empty mat fails it', () => {
     const m = mat();
     const { ctx, play } = ctxOver(m);
     play(setupShape(s, m));               // a bond's pre-placed blocks are not an answer
+    beginShape(s, ctx);
     assert.equal(checkShape(s, ctx), false, `${s.kind}: an empty mat passed`);
   }
 });
@@ -126,12 +152,43 @@ test('every kind: needs only names real blocks, and enough of them', () => {
     const need = shapeNeeds(s);
     const m = mat();
     const used = {};
-    for (const op of solveShape(s, m)) if (op.op !== 'break') used[op.block] = (used[op.block] || 0) + 1;
+    // Only what gets PLACED has to be in the pack. A gather's blocks come out of
+    // the world and a reach places nothing at all — declaring needs for either
+    // would have the kit hand a child the answer.
+    for (const op of solveShape(s, m)) if (op.op === 'place') used[op.block] = (used[op.block] || 0) + 1;
     for (const [block, n] of Object.entries(used)) {
       assert.ok(BLOCKS[B[block]], `${s.kind}: "${block}" is not a block`);
       assert.ok((need[block] || 0) >= n, `${s.kind}: needs ${n} × ${block}, declares ${need[block] || 0}`);
     }
   }
+});
+
+test('a reach is answered by standing there, and only by standing there', () => {
+  const m = mat();
+  const s = { kind: 'reach' };
+  const { ctx, play, station, player } = ctxOver(m);
+  assert.equal(checkShape(s, ctx), false, 'the far side of the field is not the spot');
+  // Just outside the tolerance, on the near side: close is not there.
+  play([{ op: 'walk', x: station.find[0] + 0.5 - 4, y: station.find[1], z: station.find[2] + 0.5 }]);
+  assert.equal(checkShape(s, ctx), false, 'four blocks short does not count as found');
+  play(solveShape(s, m, station));
+  assert.ok(checkShape(s, ctx), 'walking to the spot finds it');
+  // And a stop with nowhere to go can never pass, rather than passing always.
+  assert.equal(checkShape(s, { ...ctx, station: {} }), false);
+  void player;
+});
+
+test('a gather counts what was found, not what was already in the pack', () => {
+  const m = mat();
+  const s = { kind: 'gather', block: 'nest_egg', n: 3 };
+  const { ctx, play } = ctxOver(m);
+  play([{ op: 'give', block: 'nest_egg', n: 9 }]);   // the kit, before the hunt begins
+  beginShape(s, ctx);
+  assert.equal(checkShape(s, ctx), false, 'nine already held is not three found');
+  play([{ op: 'give', block: 'nest_egg', n: 2 }]);
+  assert.equal(checkShape(s, ctx), false, 'and two found is not three');
+  play([{ op: 'give', block: 'nest_egg', n: 1 }]);
+  assert.ok(checkShape(s, ctx), 'the third one finishes the hunt');
 });
 
 test('validate says no to shapes that do not fit the mat', () => {

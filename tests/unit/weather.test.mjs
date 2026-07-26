@@ -63,3 +63,20 @@ test('felt-temperature offset: a winter blizzard reads cold', () => {
   w.current = 'blizzard'; w.intensity = 1; w.worldTime = SEASON_LEN * 3.5;
   assert.ok(w.tempOffset() < 0, 'winter + blizzard is a cold offset');
 });
+
+test('a pinned sky does not move, whatever the climate or the season says', () => {
+  // A lesson world pins its weather (js/main.js enterLessonWorld). Weather is
+  // atmosphere in the world you play in and pure distraction in the middle of a
+  // maths lesson — and no lesson should ever be rained off.
+  const w = new Weather(1);
+  w.pin('clear');
+  const wet = { temp: 0.2, moist: 0.95 };            // the wettest, coldest front there is
+  for (let i = 0; i < 2000; i++) w.update(0.1, SEASON_LEN * 3.5 + i * 0.1, wet);
+  assert.equal(w.current, 'clear', 'still clear after a simulated week of storm weather');
+  assert.equal(w.intensity, 0);
+  const rs = w.renderState();
+  assert.equal(rs.precip, null, 'nothing falling');
+  assert.equal(rs.fog, 0, 'and no weather fog');
+  assert.equal(rs.day, 1, 'full daylight');
+  assert.equal(w.tempOffset(), 0, 'and no season, so nobody gets cold mid-lesson');
+});

@@ -376,7 +376,7 @@ for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
 
 // The numerals, and the signs that go between them. The letters let a child
 // spell CAT; these let them write 3 + 2 = 5, which is the other half of what a
-// primary classroom writes down.
+// a five-year-old is asked to write down.
 export const DIGIT_BLOCKS = [];
 for (let d = 0; d <= 9; d++) {
   const name = `digit_${d}`;

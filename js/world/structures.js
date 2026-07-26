@@ -486,14 +486,19 @@ export function buildStarterStructures() {
   // The imported schematic manor was removed — the town is hand-built now
   // (js/world/town.js). Its plateau west of town is left open ground.
 
-  // ---- Numbers Meadow: the kids' Learning Mode classroom pad ----------------
-  // A quiet, combat-free grass yard far east of town. Worldgen pins LEARN_MEADOW
-  // flat at ground 64 and keeps procedural trees/mobs off it. The child performs
-  // math lessons by placing wool blocks on the WORK MAT; js/game/lessons.js reads
-  // the mat region (recorded in markers.learnMat) to count what they've built.
+  // ---- Honeywood gate: where Nan Willow stands in the overworld -------------
+  // A quiet, combat-free grass yard far east of the camp. Worldgen pins
+  // LEARN_MEADOW flat at ground 64 and keeps procedural trees/mobs off it.
+  //
+  // Nothing is taught HERE. A lesson runs in a world of its own — a walked farm
+  // built by js/world/lessonpath.js — and it is picked from the Lessons menu, so
+  // a child never has to remember where anybody was standing. This yard is the
+  // one place in the world you can go and find Nan on purpose: the front gate of
+  // the farm, a bell to ring, and somewhere to sit while she talks.
+  //
   // Authored at the legacy scale like everything else: set() adds LIFT, so the
   // floor authored at GL=30 lands on the real surface (64) and standing is 65.
-  const learnMat = (() => {
+  (() => {
     const LX = LEARN_MEADOW.x, LZ = LEARN_MEADOW.z;   // world 200, 200
     const GL = LEARN_MEADOW.ground - LIFT;            // 30 → real 64 after set() lifts
     const FL = GL + 1;                                // 31 → real 65 (standing / build layer)
@@ -519,26 +524,27 @@ export function buildStarterStructures() {
       [LX - HALF + 1, LZ + HALF - 1], [LX + HALF - 1, LZ + HALF - 1]]) {
       set(tx, FL, tz, B.torch_post);
     }
-    // the work mat: 9×5 light-gray wool, a brown planks stripe down the middle
-    // splitting it into a LEFT and a RIGHT half (used by the sorting lesson)
-    const X0 = LX - 4, X1 = LX + 4, Z0 = LZ - 2, Z1 = LZ + 2;
-    for (let x = X0; x <= X1; x++) {
-      for (let z = Z0; z <= Z1; z++) set(x, GL, z, x === LX ? B.planks : B.light_gray_wool);
-    }
-    // torches flanking the mat's dividing line
-    set(LX, FL, Z0 - 1, B.torch_post);
-    set(LX, FL, Z1 + 1, B.torch_post);
-    // guide Pip's little stand, just south of the mat
-    box(LX - 1, GL, LZ - 6, LX + 1, GL, LZ - 4, B.planks);
-    set(LX - 2, FL, LZ - 5, B.torch_post);
-    npcs.push({ id: 'pip', x: LX, y: FL, z: LZ - 5 });
-    // return the mat AABB in REAL world coords (build layer = FL + LIFT = 65)
-    return { x0: X0, x1: X1, z0: Z0, z1: Z1, y0: FL + LIFT, y1: FL + LIFT + 2, div: LX };
+    // a swept flagstone forecourt, so the yard reads as somewhere kept rather
+    // than a fenced-off field
+    box(LX - 4, GL, LZ - 2, LX + 4, GL, LZ + 2, B.stone_brick);
+    // the farm bell: a post-and-lintel frame with the bell hung in the middle,
+    // the same bell the last stop of the lesson rings
+    set(LX - 1, FL, LZ + 1, B.planks);
+    set(LX + 1, FL, LZ + 1, B.planks);
+    set(LX - 1, FL + 1, LZ + 1, B.planks);
+    set(LX + 1, FL + 1, LZ + 1, B.planks);
+    set(LX, FL + 1, LZ + 1, B.planks);
+    set(LX, FL, LZ + 1, B.lantern_lit);
+    // Nan's bench and her lantern, a step south of the bell so she is facing the
+    // gate the child walks in through
+    box(LX - 2, GL, LZ - 5, LX + 2, GL, LZ - 5, B.planks);
+    set(LX - 3, FL, LZ - 5, B.torch_post);
+    npcs.push({ id: 'nan', x: LX, y: FL, z: LZ - 4 });
   })();
 
   const markers = {
-    // teleport-in point: a step south of Pip, facing the mat (lifted below)
-    learnMeadow: [LEARN_MEADOW.x, (LEARN_MEADOW.ground - LIFT) + 1, LEARN_MEADOW.z - 6],
+    // the Honeywood gate: a step inside the south gap, facing Nan (lifted below)
+    learnMeadow: [LEARN_MEADOW.x, (LEARN_MEADOW.ground - LIFT) + 1, LEARN_MEADOW.z - 9],
     manor: [-60, F, 0],
     spawn: [6, F, 6],
     frostwatch: [556, 34, -119],
@@ -568,13 +574,10 @@ export function buildStarterStructures() {
   for (const ch of chests) ch.y += LIFT;
   for (const n of npcs) n.y += LIFT;
   for (const m of Object.values(markers)) m[1] += LIFT;
-  // learnMat is an AABB object (already in real coords), not a [x,y,z] marker —
-  // attach it after the blanket lift so its fields aren't mangled by m[1]+=LIFT.
-  markers.learnMat = learnMat;
 
-  // The Schoolhouse is NOT here. A lesson runs in a world of its own — a
-  // separate World object built from js/world/classroom.js — so the overworld
-  // carries no classrooms at all. See lessonStructure() there.
+  // No lesson content is here. A lesson runs in a world of its own — a separate
+  // World object built from js/world/lessonpath.js — so the overworld carries no
+  // work plots and nothing that only makes sense mid-lesson.
 
   // Procedural towns (js/world/settlements.js) are discovered chunk by chunk long
   // after this runs, and their PEOPLE and map markers are not blocks, so they

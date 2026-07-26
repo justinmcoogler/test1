@@ -80,15 +80,26 @@ field, so seam-perfection matters less than legibility at arm's length.
   three families are one typeface in three colours — a row of them spells a
   sentence (`3+2=5`), so the glyphs must sit on a shared baseline and optical size.
 - **Lesson props — 6**:
-  - `nest_egg` — a speckled egg in a scrape of straw. Hunted for in long grass, so
-    it has to be findable against green at a distance and unmistakably an *egg*.
+  - `nest_egg` — a speckled egg in a scrape of straw. Placed one to a nest and
+    counted from across a farmyard, so it has to read against both green grass and
+    a straw pad, and be unmistakably an *egg* at a distance.
   - `apple_red`, `apple_green` — one apple each, stem and leaf, on a leafy ground.
     The pair is sorted by colour, so the two must differ in **value** as well as
     hue (a colour-blind child sorts them too).
   - `lantern_lit`, `lantern_dark` — the same lamp, lit and out. The lit one is
-    emissive in-game; the difference has to read in a dim meadow at dusk.
+    emissive in-game and is used as a farmyard lamp; the difference between the two
+    has to read at a glance even in full daylight.
   - `work_mat` — squared paper you can stand on. Faint grid, low contrast: it sits
     *under* the child's work and must never compete with it.
+
+### Nan Willow — the lesson guide
+
+One character skin (or a hand-drawn portrait for the dialogue box, if the box ever
+gets one). She is the farm keeper at Honeywood: elderly, grey hair in a bun, a work
+apron over a long dress, boots. Procedurally built from the shared humanoid rig
+today (`NPC_DEFS.nan` in [`js/game/npcs.js`](../js/game/npcs.js)), so she reads as
+a person but not as a *particular* person. She stands at every stop of the lesson
+and is the one face a five-year-old sees for half an hour — worth a real skin.
 
 ## NICE-TO-HAVE
 - **Fantasy Frontier exile:** a mode toggle/badge; **retain** the existing

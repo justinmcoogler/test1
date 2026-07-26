@@ -27,8 +27,8 @@ try {
   await page.click('#learning-mode-btn');
   await page.waitForSelector('#hud:not(.hidden)', { timeout: 60000 });
   await page.waitForTimeout(1200);
-  await page.waitForSelector('[data-start="k_count"]', { timeout: 15000 });
-  await page.click('[data-start="k_count"]');
+  await page.waitForSelector('[data-start="farm_morning"]', { timeout: 15000 });
+  await page.click('[data-start="farm_morning"]');
   await page.waitForTimeout(1500);
 
   const m = await page.evaluate(() => {

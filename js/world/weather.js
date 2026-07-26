@@ -39,7 +39,15 @@ export class Weather {
     this.current = 'clear';
     this.intensity = 0;                        // eases so weather fades in/out
     this.climate = { temp: 0.5, moist: 0.4 };  // smoothed local biome climate
+    // Hold one archetype and stop the front moving at all. A LESSON WORLD uses
+    // this: weather is atmosphere in the world you play in and pure distraction in
+    // the middle of a maths lesson, and "get to the bell before the sun clears the
+    // hill" cannot be told in a blizzard. It also takes the season with it — there
+    // is no January on a lesson farm to make a five-year-old cold.
+    this.pinned = null;
   }
+
+  pin(kind = 'clear') { this.pinned = kind; this.current = kind; this.intensity = 0; }
 
   yearPhase() { return (this.worldTime / YEAR_LEN) % 1; }
   seasonIndex() { return Math.floor(this.yearPhase() * 4) % 4; }
@@ -68,6 +76,7 @@ export class Weather {
 
   update(dt, worldTime, climate) {
     this.worldTime = worldTime;
+    if (this.pinned) { this.current = this.pinned; this.intensity = 0; return; }
     if (climate) {
       // ease local climate so crossing a biome edge doesn't snap the weather
       this.climate.temp += (climate.temp - this.climate.temp) * Math.min(1, dt * 0.5);
@@ -85,7 +94,10 @@ export class Weather {
   def() { return WEATHER[this.current]; }
 
   // felt-temperature contribution (0–1 units) for the body-temperature system
-  tempOffset() { return this.seasonTempOffset() + this.def().tempOff * this.intensity; }
+  tempOffset() {
+    if (this.pinned) return 0;
+    return this.seasonTempOffset() + this.def().tempOff * this.intensity;
+  }
 
   // render hints consumed by renderer.draw({ weather })
   renderState() {

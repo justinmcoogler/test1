@@ -1,58 +1,50 @@
-// The whole K-8 curriculum, assembled.
+// ONE lesson, made properly.
 //
-// Ninety lessons: ten for each grade band, each one a story told in five steps,
-// each step a thing to build. Every lesson is read aloud (js/game/speech.js),
-// because the children this is for are still learning to read — and four of the
-// ten lessons in every band are the reading lessons themselves.
+// There were ninety of these, ten per grade from Kindergarten to Grade 8. They are
+// gone, and deliberately: every one of them was the same activity wearing a
+// different hat. "Put N things in a rectangle", ninety times, with a story wrapped
+// round it. The story was decoration and the child could tell.
 //
-// Grade files hold ONLY what is different about a lesson: its id, its title, its
-// story, its steps and what it pays. Everything mechanical — which room it uses,
-// which lesson follows it, how long it takes, which events re-check it — is
-// filled in here, once, so that adding a lesson is an act of writing rather than
-// an act of plumbing.
-import { GRADE_K } from './grade-k.js';
-import { GRADE_1 } from './grade-1.js';
-import { GRADE_2 } from './grade-2.js';
-import { GRADE_3 } from './grade-3.js';
-import { GRADE_4 } from './grade-4.js';
-import { GRADE_5 } from './grade-5.js';
-import { GRADE_6 } from './grade-6.js';
-import { GRADE_7 } from './grade-7.js';
-import { GRADE_8 } from './grade-8.js';
+// This is the replacement, and the thing it does differently is that THE NUMBER
+// COMES OFF THE WORLD. Nobody says "count to four" — there are four cows in the
+// byre, and they each want an apple, so you count the cows. Nobody says "sort by
+// colour" — the feed for the cows and the feed for the pigs got tipped into one
+// heap, and there are two bins. Every stop is a job somebody needs doing, the
+// maths is how you do it, and the farm visibly changes when you have.
+//
+// The six stops use six different verbs, on purpose:
+//
+//   1. henhouse   one egg on EACH nest        one-to-one correspondence
+//   2. byre       one apple for EACH cow      count a set, then match it
+//   3. gate       mend the rail               make a row of eight (and it opens)
+//   4. feedstore  reds here, greens there     sort by one attribute
+//   5. topfield   find the lost lamb          search a real place
+//   6. bell       write what you did          3 + 4 = 7, in number blocks
+//
+// The maths is Kindergarten: one-to-one matching, counting to five, sorting,
+// and one addition inside ten. The reading is nil — it is all spoken.
+import { BEFORE_THE_BELL } from './before-the-bell.js';
 
-// Thirty minutes is the floor the whole curriculum was written to: five steps of
-// story, instruction, building and celebration, at roughly six minutes each. It
-// is what a lesson BANKS as play time, so it is also the deal being offered —
-// half an hour of work for half an hour of Sproutlands.
+// Thirty minutes is what a lesson BANKS as play time, so it is also the deal
+// being offered: a morning's work for a morning's play.
 export const LESSON_MINUTES = 30;
 
+// One band, one lesson. The menu still groups by band (js/ui/ui.js) because there
+// will be more of these — but they will be built one at a time, each as good as
+// this one, rather than generated ninety at a go.
 export const GRADES = [
-  { key: 'grade_k', label: 'Kindergarten', age: '5-6', lessons: GRADE_K },
-  { key: 'grade_1', label: 'Grade 1', age: '6-7', lessons: GRADE_1 },
-  { key: 'grade_2', label: 'Grade 2', age: '7-8', lessons: GRADE_2 },
-  { key: 'grade_3', label: 'Grade 3', age: '8-9', lessons: GRADE_3 },
-  { key: 'grade_4', label: 'Grade 4', age: '9-10', lessons: GRADE_4 },
-  { key: 'grade_5', label: 'Grade 5', age: '10-11', lessons: GRADE_5 },
-  { key: 'grade_6', label: 'Grade 6', age: '11-12', lessons: GRADE_6 },
-  { key: 'grade_7', label: 'Grade 7', age: '12-13', lessons: GRADE_7 },
-  { key: 'grade_8', label: 'Grade 8', age: '13-14', lessons: GRADE_8 },
+  { key: 'farm', label: 'Honeywood Farm', age: '5-7', lessons: BEFORE_THE_BELL },
 ];
 
-// One flat list, in teaching order: every lesson of Kindergarten, then every
-// lesson of Grade 1, and so on. Position in this list is a lesson's room number
-// (js/world/classroom.js), so the order is load-bearing — append, don't insert.
 export const CURRICULUM = [];
 for (const g of GRADES) {
   g.lessons.forEach((l, i) => {
     CURRICULUM.push({
       minutes: LESSON_MINUTES,
-      guide: 'pip',
+      guide: 'nan',
       ...l,
       area: g.key,
       grade: g.label,
-      // A band is a chain: finishing one lesson walks straight into the next
-      // room. The last of a band ends the chain rather than crossing into the
-      // next year — moving up a grade is a decision, not a side effect.
       next: g.lessons[i + 1]?.id ?? null,
       watch: ['blockPlaced', 'blockBroken'],
     });

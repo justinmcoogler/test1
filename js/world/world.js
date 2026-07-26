@@ -2,7 +2,6 @@
 // node lifecycle (deplete/respawn), chest storage, raycasting, persistence.
 import { B, BLOCKS, isSolid, SHAPE_COLLISION } from './blocks.js';
 import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, LEARN_MEADOW, BIOMES, WorldGen, newBlend, ringAt, undergroundNodeCandidates } from './worldgen.js';
-import { lessonStructure } from './classroom.js';
 import { pathStructure } from './lessonpath.js';
 import { buildStarterStructures, indexEditsByChunk, stampChunkStructures, structureClaims } from './structures.js';
 import { carveRoads } from './roads.js';
@@ -42,20 +41,16 @@ export const cellKey = (x, y, z) => `${x},${y},${z}`;
 const lidx = (lx, y, lz) => (y * CHUNK + lz) * CHUNK + lx;
 
 export class World {
-  // `opts.lessonRoom` or `opts.lessonPath` makes a LESSON WORLD: an empty void
-  // containing exactly one lesson's content and nothing else. Not a far corner of
-  // the overworld — a different World object, with its own chunks, its own edits
-  // and its own clock, so a child doing a counting exercise cannot touch the
-  // world they play in and nothing from that world can reach them. js/main.js
-  // swaps `game.world` for one of these while a lesson runs and swaps the real
-  // one back afterwards.
+  // `opts.lessonPath` makes a LESSON WORLD: an empty void containing exactly one
+  // lesson's farm and nothing else. Not a far corner of the overworld — a different
+  // World object, with its own chunks, its own edits and its own clock, so a child
+  // doing a counting exercise cannot touch the world they play in and nothing from
+  // that world can reach them. js/main.js swaps `game.world` for one of these while
+  // a lesson runs and swaps the real one back afterwards.
   //
-  // A lessonPath is a walked lesson: a meadow trail with a station per beat of
-  // the story (js/world/lessonpath.js). A lessonRoom is the older single sealed
-  // classroom. The plan comes in as data because the world layer has no business
-  // importing the curriculum.
+  // The plan comes in as data (js/world/lessonpath.js lays it out) because the
+  // world layer has no business importing the curriculum.
   constructor(seed, opts = {}) {
-    this.lessonRoom = opts.lessonRoom ?? null;
     this.lessonPath = opts.lessonPath ?? null;
     this.seed = seed >>> 0;
     this.gen = new WorldGen(this.seed);
@@ -75,8 +70,7 @@ export class World {
     this.time = 0;                    // world-time seconds, persisted
     this.dirtyChunks = new Set();     // chunk keys needing remesh
 
-    const s = this.lessonPath ? pathStructure(this.lessonPath)
-      : this.lessonRoom == null ? buildStarterStructures() : lessonStructure(this.lessonRoom);
+    const s = this.lessonPath ? pathStructure(this.lessonPath) : buildStarterStructures();
     this.structure = s;
     this.structEditsByChunk = indexEditsByChunk(s.edits, CHUNK);
     this.markers = s.markers;
@@ -96,11 +90,10 @@ export class World {
     return c;
   }
 
-  // True for either flavour of lesson world. Everything that must not happen in
-  // one — terrain, creatures, weather, night — checks this rather than a
-  // particular field, so adding a third flavour later cannot leak the overworld
-  // into it by omission.
-  isLessonWorld() { return this.lessonRoom != null || this.lessonPath != null; }
+  // Everything that must not happen in a lesson world — terrain, wild creatures,
+  // weather, night, combat — checks this rather than a particular field, so another
+  // flavour of lesson later cannot leak the overworld into it by omission.
+  isLessonWorld() { return this.lessonPath != null; }
 
   hasChunk(cx, cz) { return this.chunks.has(chunkKey(cx, cz)); }
   getChunk(cx, cz) { return this.chunks.get(chunkKey(cx, cz)); }
@@ -108,7 +101,7 @@ export class World {
   generateChunk(cx, cz) {
     const blocks = new Uint16Array(CHUNK * CHUNK * WORLD_H); // 16-bit: >256 block ids (colored families, shapes)
     const chunk = { cx, cz, blocks, nodes: [], spawns: [], surfaceH: new Int16Array(CHUNK * CHUNK) };
-    // A lesson world is VOID plus one room. Skipping the whole pipeline is the
+    // A lesson world is VOID plus one farm lane. Skipping the whole pipeline is the
     // point rather than an optimisation: no terrain, no caves, no roads, no
     // settlements, no ore, no creatures — there is nothing in this world to
     // find, break or be frightened by except the exercise.
@@ -119,6 +112,17 @@ export class World {
         for (const [x, y, z, id] of structOnly) {
           blocks[lidx(x - cx * CHUNK, y, z - cz * CHUNK)] = id;
           if (id !== B.air && y + 1 > top) top = y + 1;
+        }
+      }
+      // The livestock, and the ONLY thing a lesson world spawns. Several of its
+      // activities are "count the animals, that is your answer", so the cows have
+      // to actually be standing in the byre — a prompt saying there are four is not
+      // the same exercise. Declared `fixed` like every other hand-placed creature
+      // and delivered down the same channel (chunk.spawns → enemyMgr.refresh), so
+      // nothing here is a special case except the list they come from.
+      for (const sp of this.structure.spawns) {
+        if (Math.floor(sp.x / CHUNK) === cx && Math.floor(sp.z / CHUNK) === cz) {
+          chunk.spawns.push({ fixed: true, ...sp });
         }
       }
       chunk.contentTop = top;
@@ -196,7 +200,7 @@ export class World {
         if (d0 < 38) continue;
         if (Math.hypot(wx - FROST_CAMP.x, wz - FROST_CAMP.z) < 26) continue; // camp stays hand-built
         if (Math.hypot(wx - MANOR_PAD.x, wz - MANOR_PAD.z) < 26) continue; // manor pad stays hand-built
-        if (Math.hypot(wx - LEARN_MEADOW.x, wz - LEARN_MEADOW.z) < 26) continue; // Numbers Meadow stays hand-built & combat-free
+        if (Math.hypot(wx - LEARN_MEADOW.x, wz - LEARN_MEADOW.z) < 26) continue; // the Honeywood gate stays hand-built & combat-free
         if (gen.pathSet && gen.pathSet.has(wx + ',' + wz)) continue; // keep the road corridor clear & walkable
         if (structureClaims(gen, wx, wz)) continue; // a mineshaft head / dungeon stair owns this column
         const h = chunk.surfaceH[lz * CHUNK + lx];

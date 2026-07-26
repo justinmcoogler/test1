@@ -439,7 +439,7 @@ export class UI {
       el.id = 'lesson-panel';
       document.body.appendChild(el);
     }
-    const guide = NPC_DEFS[view.guide]?.label || 'Pip';
+    const guide = NPC_DEFS[view.guide]?.label || 'Your guide';
     el.innerHTML = `<button class="lesson-fold" title="Fold this away">▲</button>
       ${view.story ? '<div class="lesson-story"></div>' : ''}
       <div class="lesson-guide"></div>
@@ -798,13 +798,11 @@ export class UI {
 
   // ---- lessons ----
   // The whole of Learning Mode's navigation. Pick a lesson and you are IN it —
-  // its own world, straight away. Nothing here asks the child to walk anywhere,
-  // find anybody or remember where the classroom was.
+  // its own world, straight away. Nothing here asks the child to go and find
+  // anybody first, or to remember where a lesson was.
   renderLessons(body) {
     const g = this.game;
     const runner = g.lessons;
-    // `!!lessonRoom` was wrong: room 0 is falsy, so the very first lesson — the
-    // one every new child starts on — never got a way out of the room.
     const inLesson = !!g.world?.isLessonWorld?.();
     const mins = g.education.balanceMinutes();
 
@@ -822,14 +820,16 @@ export class UI {
       </div>`;
     }
 
-    // Ninety lessons is far too many to scroll past, so they come folded up by
-    // grade band with the band you are working in open. `open` on a <details>
-    // is the whole of the state — no tab bookkeeping to get out of step.
+    // Lessons come grouped by band, folded up, with the band you are working in
+    // open. `open` on a <details> is the whole of the state — no tab bookkeeping
+    // to get out of step. A single band is always open: there is nothing to
+    // scroll past, so folding it would only hide the one thing on the page.
     const activeArea = Object.keys(runner.current)[0];
     for (const g of GRADES) {
       const list = g.lessons.map((l) => runner.byId.get(l.id)).filter(Boolean);
       const done = list.filter((l) => runner.isPassed(l.id)).length;
-      const isOpen = activeArea === g.key || (!activeArea && done < list.length && g === GRADES[0]);
+      const isOpen = GRADES.length === 1 || activeArea === g.key
+        || (!activeArea && done < list.length && g === GRADES[0]);
       html += `<details ${isOpen ? 'open' : ''} style="margin-bottom:10px">
         <summary style="cursor:pointer;color:var(--gold);font-weight:700;padding:6px 0">
           ${g.label} <span style="color:var(--ink-dim);font-weight:400;font-size:11px">· ages ${g.age} · ${done}/${list.length} done</span>
@@ -846,8 +846,9 @@ export class UI {
             <div style="font-weight:700">${passed ? '✓ ' : ''}${l.title}</div>
             <button class="link-btn" data-start="${l.id}">${active ? 'Resume' : passed ? 'Again' : 'Start'}</button>
           </div>
-          <div style="color:var(--ink-dim);font-size:11px;margin-top:4px">${l.subject === 'math' ? 'Maths' : 'Reading'} · ${l.steps.length} steps · read aloud</div>
-          <div style="color:var(--ink-dim);font-size:11px;margin-top:2px">Earns ${pay.join(' · ')}</div>
+          <div style="color:var(--ink-dim);font-size:11px;margin-top:4px">${l.subject === 'math' ? 'Maths' : 'Reading'} · ${l.steps.length} stops · read aloud</div>
+          ${l.story ? `<div style="color:var(--ink-dim);font-size:11px;margin-top:6px;line-height:1.45">${l.story}</div>` : ''}
+          <div style="color:var(--ink-dim);font-size:11px;margin-top:6px">Earns ${pay.join(' · ')}</div>
         </div>`;
       }
       html += '</details>';
@@ -1778,9 +1779,9 @@ export class UI {
       // immediately turn-in-able (and fresh offers are one click away) — no need
       // to re-walk the dialogue tree to reach the quest hub.
       //
-      // Never inside a lesson, though. Pip is standing in a meadow in a world of
-      // its own: there is no camp to fetch logs for and no Maren to report to, so
-      // offering a survival quest there is offering something that cannot be
+      // Never inside a lesson, though. The guide is standing on a farm in a world
+      // of its own: there is no camp to fetch logs for and no Maren to report to,
+      // so offering a survival quest there is offering something that cannot be
       // done, in the middle of a maths lesson, to a five-year-old.
       if (nodeId === npc.dialogue && !g.world?.isLessonWorld?.()) {
         const extra = [];

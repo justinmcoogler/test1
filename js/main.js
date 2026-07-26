@@ -2,7 +2,7 @@
 import { buildAtlas } from './gfx/textures.js';
 import { Renderer } from './gfx/renderer.js';
 import { World, initSlabSet, DAY_LEN } from './world/world.js';
-import { LESSON_SEED } from './world/classroom.js';
+import { LESSON_SEED } from './world/lessonpath.js';
 import { Weather } from './world/weather.js';
 import { CHUNK, WORLD_H, SEA } from './world/worldgen.js';
 import { B, BLOCKS } from './world/blocks.js';
@@ -304,10 +304,10 @@ class Game {
     on('rightClick', (pos) => this.onSecondary(pos));
     on('interactKey', () => this.tryInteract());
     // education-mode gates (invisible until a save switches to education mode)
-    // A lesson has its own room out in the Schoolhouse (js/world/classroom.js).
-    // Bank where they were standing only on the FIRST enter of a series — three
-    // lessons in a row would otherwise overwrite the way home with the previous
-    // classroom, and "back to the world" would mean "back to room two".
+    // A lesson has a farm of its own (js/world/lessonpath.js). Bank where they
+    // were standing only on the FIRST enter of a series — three lessons in a row
+    // would otherwise overwrite the way home with the previous lesson's farm,
+    // and "back to the world" would mean "back to the second lesson".
     on('lessonEnter', ({ dest }) => { if (dest) this.enterLessonWorld(dest); });
     on('lessonExit', ({ finished }) => this.exitLessonWorld(finished));
     on('playtimeExhausted', () => {
@@ -1177,7 +1177,10 @@ class Game {
     this.pendingInteract = null;
     if (!pi) return;
     if (pi.kind === 'enemy') {
-      if (this.enemyMgr.entities.has(pi.entity.id)) this.startCombat(pi.entity);
+      // Not in a lesson. The animals in the pens are there to be counted and fed;
+      // a child who clicks a cow must not find themselves in a fight with it.
+      if (this.world.isLessonWorld()) this.ui.toast('The animals are here to be looked after, not fought.', '');
+      else if (this.enemyMgr.entities.has(pi.entity.id)) this.startCombat(pi.entity);
     } else if (pi.kind === 'npc') {
       this.talkTo(pi.npc.id);
     } else if (pi.kind === 'node') {
@@ -1267,7 +1270,10 @@ class Game {
   updateQuestTrail(dt) {
     this._trailT = (this._trailT || 0) - dt;
     if (this.settings.questTrail === false) { this.trailDots = null; return; }
-    const dest = this.travelDest || this.quests.trackedMarker(this.world.markers)?.pos || null;
+    // A lesson's next stop counts as a destination: the child follows the same gold
+    // dots a quest uses, which is an instruction that needs no reading.
+    const dest = this.travelDest || this.lessonDest
+      || this.quests.trackedMarker(this.world.markers)?.pos || null;
     if (!dest) { this.trailDots = null; return; }
     const p = this.player;
     if (Math.hypot(dest[0] - p.x, dest[2] - p.z) < 6) { this.trailDots = null; return; }
@@ -2325,10 +2331,10 @@ class Game {
   // Reachable for testing via window.__game.enterLearningMode() (or
   // window.__learn()); the character-creation mode picker arrives in Phase 2.
   //
-  // It used to teleport the child to Numbers Meadow to go and find Pip. Lessons
-  // are PICKED FROM A MENU now — a child should not have to remember where the
-  // classroom was, or walk there, or spend banked play time getting to the
-  // thing that earns them more of it.
+  // It used to teleport the child out to a meadow to go and find the guide.
+  // Lessons are PICKED FROM A MENU now — a child should not have to remember
+  // where anybody was standing, or walk there, or spend banked play time getting
+  // to the thing that earns them more of it.
   enterLearningMode(config = {}) {
     if (!this.education.isEducation) this.education.setMode('education', config);
     // A brand-new learner (no lessons finished, empty bank) gets a few starter
@@ -2340,20 +2346,20 @@ class Game {
     this.ui.openWindow('lessons');
   }
 
-  // Talk to somebody. Pip inside a lesson is a special case: she re-reads the
-  // step out loud instead of opening a dialogue box. She is the guide, the child
-  // is mid-task, and the one thing they might want from her is to hear the
-  // instruction again — not a menu, and certainly not the quest offers that a
-  // first dialogue box otherwise carries.
+  // Talk to somebody. The lesson guide inside a lesson is a special case: she
+  // re-reads the step out loud instead of opening a dialogue box. She is the
+  // guide, the child is mid-task, and the one thing they might want from her is
+  // to hear the instruction again — not a menu, and certainly not the quest
+  // offers that a first dialogue box otherwise carries.
   talkTo(npcId) {
-    if (npcId === 'pip' && this.world.isLessonWorld()) { this.lessons.resume(); return; }
+    if (npcId === 'nan' && this.world.isLessonWorld()) { this.lessons.resume(); return; }
     this.quests.talkedTo(npcId);
     this.ui.showDialogue(NPC_DEFS[npcId].dialogue);
     emit('talkedTo', { npc: npcId });
   }
 
   // Put the player down somewhere else, generating and meshing the destination
-  // chunks first so they never drop into unloaded void — which for a classroom
+  // chunks first so they never drop into unloaded void — which for a lesson farm
   // 420 blocks up is not a stutter, it is a fall.
   warpTo(x, y, z, yaw = null) {
     const pcx = Math.floor(x / CHUNK), pcz = Math.floor(z / CHUNK);
@@ -2370,7 +2376,7 @@ class Game {
 
   // ---- Lesson worlds ------------------------------------------------------
   // A lesson does NOT happen in a corner of the player's world. It happens in a
-  // DIFFERENT WORLD: a separate World object holding one classroom in an
+  // DIFFERENT WORLD: a separate World object holding one farm lane in an
   // otherwise empty void, with its own chunks, its own edits and its own clock.
   // Nothing a child does in there can touch the world they play in, and nothing
   // from that world — no creature, no weather, no night — can reach them.
@@ -2393,18 +2399,24 @@ class Game {
     // coordinates, so leaving them would have the lesson world rendering the
     // overworld's geometry at the same coordinates.
     for (const key of [...this.renderer.chunkMeshes.keys()]) this.renderer.dropChunk(key);
-    // A walked lesson gets a meadow path (js/world/lessonpath.js); the older
-    // single-room lessons get their numbered classroom. The runner decides which
-    // and hands the plan over as data — main.js only builds what it is given.
-    this.world = new World(LESSON_SEED + dest.index,
-      dest.plan ? { lessonPath: dest.plan } : { lessonRoom: dest.index });
+    // The lane, the stops and everything on them come from the runner as DATA
+    // (js/world/lessonpath.js lays the plan out) — main.js only builds what it
+    // is given, so a new lesson never means a new branch in here.
+    this.world = new World(LESSON_SEED + dest.index, { lessonPath: dest.plan });
     this.world.time = 8 * 3600;               // permanent mid-morning: no night in a lesson
+    // A fresh, PINNED sky. The overworld's own weather object is set aside above
+    // and put back untouched on the way home, so a lesson cannot leave the child's
+    // world stuck in a season — and no lesson is ever rained off.
+    this.weather = new Weather(LESSON_SEED);
+    this.weather.pin('clear');
     this.enemyMgr.world = this.world;
     this.enemyMgr.entities.clear();
     this.enemyMgr.killed.clear();
     this.petEntity = null;
     this.warpTo(dest.entry[0] + 0.5, dest.entry[1], dest.entry[2] + 0.5, dest.yaw);
     if (dest.yaw != null && this.camYaw !== undefined) this.camYaw = dest.yaw;
+    // Nothing in a lesson may pick a fight, animals included.
+    this.disableAggro = true;
     this.grantLessonKit();
     // The tracker only redraws when a quest changes, so entering a lesson would
     // otherwise leave "talk to Maren at the camp" sitting on screen in a world
@@ -2423,6 +2435,8 @@ class Game {
     this.enemyMgr.entities.clear();
     this.enemyMgr.deserialize?.(o.enemies);
     this.warpTo(o.pos.x, o.pos.y, o.pos.z, o.pos.yaw);
+    this.disableAggro = false;
+    this.lessonDest = null;
     this.ui.renderQuestTracker();        // and it comes back when you do
     this.ui.toast(finished ? 'Lessons all done — back to your world!' : 'Back to your world.', 'gold');
     this.saveGame();
@@ -2871,7 +2885,7 @@ class Game {
     // A lesson world is scratch: it is regenerated from its index every time and
     // holds nothing worth keeping. Saving while inside one must write the
     // OVERWORLD that was set aside, or finishing a lesson would overwrite a
-    // child's real world with an empty classroom.
+    // child's real world with an empty lesson farm.
     const saveWorld = this._overworld ? this._overworld.world : this.world;
     const savePos = this._overworld ? this._overworld.pos : null;
     const saveEnemies = this._overworld ? this._overworld.enemies : this.enemyMgr.serialize();

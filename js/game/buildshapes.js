@@ -20,8 +20,8 @@
 // plays every step's own solution through the real runner, and a shape that
 // cannot fit fails validation before anyone reads a word of it.
 //
-// The mat (js/world/classroom.js) is 13 wide, 5 deep and 7 tall, split down the
-// middle by a plank line at `div`. Nothing here may exceed that.
+// A work plot (js/world/lessonpath.js) is 13 wide, 5 deep and 7 tall, split down
+// the middle by a plank line at `div`. Nothing here may exceed that.
 import { B } from '../world/blocks.js';
 
 export const MAT = { width: 13, rows: 5, height: 7, half: 6 };
@@ -410,6 +410,28 @@ const KINDS = {
     },
   },
 
+  // Go THERE. No building at all: the answer is a place, and the child has to walk
+  // to it. The lost-lamb stop is a real field with a real corner to look in, which
+  // is a different verb from every other activity here and the only one where
+  // looking around is the skill.
+  //
+  // The spot lives on the STATION (js/world/lessonpath.js `find`), not in the
+  // shape: a lesson says "eleven along and eleven back from this stop", never a
+  // world coordinate.
+  reach: {
+    check: (s, ctx) => {
+      const t = ctx.station?.find;
+      const p = ctx.player;
+      if (!t || !p) return false;
+      return Math.hypot(p.x - (t[0] + 0.5), p.z - (t[2] + 0.5)) <= (ctx.station.findR ?? 3);
+    },
+    solve: (s, mat, station) => (station?.find
+      ? [{ op: 'walk', x: station.find[0] + 0.5, y: station.find[1], z: station.find[2] + 0.5 }]
+      : []),
+    needs: () => ({}),
+    validate: () => null,   // the station owns the spot, and pathFor keeps it inside the farm
+  },
+
   // Go and FIND n of something and pick it up. The only activity here that is
   // not about the plot at all — it is about walking around a place and looking,
   // which is half of what a child is doing on a lesson path.
@@ -468,12 +490,16 @@ export function beginShape(shape, ctx) {
   k?.begin?.(shape, ctx);
 }
 
-// The moves a child would make to get this right, in order. The test suite
-// plays these through the real runner, which is the only reason ninety lessons
-// can be trusted to be finishable.
-export function solveShape(shape, mat) {
+// The moves a child would make to get this right, in order. The test suite plays
+// these through the real runner, which is the only reason a lesson can be trusted
+// to be finishable at all.
+//
+// `station` is only needed by the activities whose answer is a PLACE rather than a
+// build (`reach`); every other kind ignores it. Prefer LessonRunner.solveStep(),
+// which knows both the plot and the stop.
+export function solveShape(shape, mat, station = null) {
   const k = KINDS[shape?.kind];
-  return k ? k.solve(shape, mat) : [];
+  return k ? k.solve(shape, mat, station) : [];
 }
 
 // { blockName: howMany } — what has to be in the pack for the answer to be

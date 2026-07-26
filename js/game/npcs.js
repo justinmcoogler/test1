@@ -53,21 +53,25 @@ NPC_DEFS.sylla = {
   dialogue: 'sylla_root',
 };
 
-// Pip — the friendly guide of Numbers Meadow (kids' Learning Mode, Phase 1).
-// A small, brightly dressed helper who hands the child their math lessons.
-NPC_DEFS.pip = {
-  label: 'Pip',
-  role: 'Meadow Guide',
+// Nan Willow — the keeper of Honeywood Farm, and the guide of Learning Mode.
+//
+// She replaced a small brightly-dressed sprite called Pip. A sprite is a mascot;
+// Nan is somebody with a farm to run and a bad knee, which is why she needs the
+// help and why a five-year-old is doing something that matters. Grey bun, apron
+// over a work dress, boots.
+NPC_DEFS.nan = {
+  label: 'Nan Willow',
+  role: 'Farm Keeper',
   model: humanoid(
-    { skin: [0.95, 0.8, 0.62], top: [0.35, 0.72, 0.42], sleeves: [0.95, 0.82, 0.3], bottom: [0.4, 0.5, 0.85] },
+    { skin: [0.94, 0.79, 0.66], top: [0.44, 0.3, 0.36], sleeves: [0.36, 0.24, 0.29], bottom: [0.3, 0.28, 0.34] },
     [
-      hb(-4.6, 31.5, -4.6, 9.2, 3, 9.2, [0.9, 0.35, 0.45]),    // 6 round red cap
-      hb(-1, 34.5, -1, 2, 2, 2, [0.98, 0.86, 0.35]),           // 7 gold cap bobble
-      hb(-4.4, 13, -2.4, 8.8, 5, 1, [0.98, 0.98, 0.95]),       // 8 bright collar
+      hb(-4.4, 31.4, -4.4, 8.8, 3.2, 8.8, [0.82, 0.8, 0.78]),   // 6 grey hair, gathered
+      hb(-2, 33.6, 1.6, 4, 3, 3, [0.78, 0.76, 0.74]),           // 7 the bun at the back
+      hb(-4.2, 13, -2.6, 8.4, 10, 1.2, [0.9, 0.88, 0.82]),      // 8 apron front
     ]
   ),
   headExtra: [6, 7],
-  dialogue: 'pip_root',
+  dialogue: 'nan_root',
 };
 
 // ---- the deep holds --------------------------------------------------------
@@ -204,21 +208,21 @@ export const DIALOGUES = {
     ],
   },
 
-  pip_root: {
-    speaker: 'pip',
-    text: () => `Hi hi! I'm Pip, and I teach in the Schoolhouse! Every lesson is a story, and we do it by BUILDING — you put the blocks down and I'll read it all out to you. Finish one and you've earned yourself half an hour of playing. Shall we?`,
+  nan_root: {
+    speaker: 'nan',
+    text: () => `Oh — hello. You have caught me sitting down, which I never do. It is my knee: it has finally said no, and the whole farm is awake and shouting and not one of them has been seen to. Would you take the morning round for me? I will walk it with you and tell you what each one needs.`,
     options: [
-      { label: 'Yes! Give me a lesson.', action: 'startLesson:grade_k', cls: 'quest-offer' },
-      { label: 'How does it work?', next: 'pip_how' },
-      { label: 'Maybe later.', action: 'close' },
+      { label: 'Yes — I can do the round.', action: 'startLesson:farm', cls: 'quest-offer' },
+      { label: 'What would I have to do?', next: 'nan_how' },
+      { label: 'Not just now.', action: 'close' },
     ],
   },
-  pip_how: {
-    speaker: 'pip',
-    text: () => `Easy peasy! Each lesson has its own room, and I take you straight there. I tell you a bit of the story, then ask for something — like "place seven red blocks" — and you build it on the mat. Five little steps and the lesson's done. Wrong guess? No worries, nothing bad happens, just try again.`,
+  nan_how: {
+    speaker: 'nan',
+    text: () => `Nothing you cannot manage. There are six stops up the lane and every one wants something different — the hens want their eggs put back, the cows want an apple each, the gate wants mending. Little gold lights will show you the way to each one, and I will read out what to do when we get there. You count, you put things where they go, and the farm wakes up. Half a morning's work, and then the rest of the day is yours.`,
     options: [
-      { label: "Okay, let's go!", action: 'startLesson:grade_k', cls: 'quest-offer' },
-      { label: 'Got it.', action: 'close' },
+      { label: "Right — let's go.", action: 'startLesson:farm', cls: 'quest-offer' },
+      { label: 'I see.', action: 'close' },
     ],
   },
   maren_root: {
