@@ -20,18 +20,19 @@
 //   This is a game for one family on one wifi network; rewinding and replaying
 //   inputs to catch a cheat would be a great deal of work to stop a child from
 //   walking quickly in their own living room. Positions are still bounds-checked
-//   (js/net/protocol.mjs) so a bad value cannot hurt the SERVER — the line is
+//   (js/net/protocol.js) so a bad value cannot hurt the SERVER — the line is
 //   drawn at "cannot break other people", not "cannot advantage yourself".
 import { World, initSlabSet } from '../js/world/world.js';
 import { EnemyManager, ENEMY_TYPES } from '../js/game/enemies.js';
 import { CombatRS } from '../js/game/combatrs.js';
 import { Inventory } from '../js/game/inventory.js';
 import { Skills } from '../js/game/skills.js';
+import { Player } from '../js/player/player.js';
 import { BLOCKS, isSolid } from '../js/world/blocks.js';
 import {
   C, S, PROTOCOL_VERSION, encode, decode,
   cleanName, cleanChat, cleanEdit, cleanInput, cleanId,
-} from '../js/net/protocol.mjs';
+} from '../js/net/protocol.js';
 
 const CHUNK = 16;
 
@@ -74,14 +75,24 @@ export class Room {
 
   // ---- membership -----------------------------------------------------------
   join(conn, id) {
-    const p = {
-      id, conn, name: 'Player', joined: false,
-      x: 0, y: 80, z: 0, yaw: 0, pitch: 0, anim: 'idle', sneak: false,
-      hp: 20, maxHp: 20, energy: 100, mana: 0,
-      inventory: new Inventory(),
-      skills: new Skills(),
-      combat: null,
-    };
+    // A REAL Player, not a lookalike. The first version of this was a plain
+    // object with the handful of fields the snapshot needed, and it worked right
+    // up until a creature swung back: CombatRS calls player.damage(), which a
+    // plain object does not have, so the exception aborted the whole simulation
+    // step — every tick, for everyone — and no fight ever resolved. It also has
+    // heal, applyBleed, stopBleeding, eye, energy and mana, all of which combat
+    // reaches for. Using the real class is both simpler and the same decision
+    // taken everywhere else here: run the game's own code.
+    const p = new Player();
+    p.id = id;
+    p.conn = conn;
+    p.name = 'Player';
+    p.joined = false;
+    p.anim = 'idle';
+    p.sneak = false;
+    p.inventory = new Inventory();
+    p.skills = new Skills();
+    p.combat = null;
     // Each player fights in their own CombatRS against the SHARED enemy manager,
     // with an emitter scoped to them (see js/game/combatrs.js) so one child's
     // hitsplats do not land on everybody's screen.
@@ -249,9 +260,17 @@ export class Room {
 
     for (const p of active) {
       // Aggressive creatures pick their own fights, per player.
-      const aggro = this.enemyMgr.checkAggro(p);
-      if (aggro) p.combat.engage(aggro, false);
-      p.combat.update?.(dt);
+      // EACH PLAYER'S COMBAT IS ISOLATED. One bad state must not stop the room:
+      // an exception here used to abort the whole tick, which meant every other
+      // player's creatures froze because of something that happened in one
+      // person's fight.
+      try {
+        const aggro = this.enemyMgr.checkAggro(p);
+        if (aggro) p.combat.engage(aggro, false);
+        p.combat.update(dt);
+      } catch (err) {
+        this.onLog(`combat step failed for ${p.name}: ${err.message}`);
+      }
     }
   }
 

@@ -17,6 +17,34 @@ npm run serve        # then open http://localhost:8080
 Any static file server works — the game is plain ES modules with no build step.
 Works on desktop, tablet and phone browsers (WebGL2 required).
 
+### Play together on your wifi
+
+```bash
+npm run server          # prints the address to read out to a tablet
+```
+
+The game and the game socket are served on **one port**, so the address on the
+screen is the only address there is — open it on any device on the same wifi,
+type a name, and press **Play together**. There is nothing to configure.
+
+One world, shared: the same seed, the same blocks, the same creatures. A goblin
+one child kills is dead for everyone.
+
+What the server owns, and what it doesn't:
+
+- **The world.** Terrain is deterministic from the seed, so nothing streams
+  terrain — every device generates identical ground from one number and only the
+  *edits* travel.
+- **The creatures.** One wander, one health pool, one fight.
+- **Not your movement.** Clients say where they are and the server believes them.
+  Positions are bounds-checked so a bad value can't hurt the server, but there is
+  no anti-cheat: the line is "can't break other people", not "can't advantage
+  yourself". For a family in one house that is the right trade.
+
+`--seed` picks the world (`npm run server -- --seed honeywood`). No accounts, no
+passwords, no save on the server — it is a room, not a service. Don't
+port-forward it.
+
 ### Install it as an app
 
 Sproutlands is a PWA: a web app manifest, maskable icons and a service worker

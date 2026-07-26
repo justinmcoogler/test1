@@ -32,6 +32,7 @@ import { buildPlayerSkinCanvas, partBoxUV, swatchUV, preloadPlayerSkins } from '
 import { MOB_REMAKES } from './game/mobremakes/index.js';
 import { registerRemadeMob, preloadMobSkins, mobSkinOverride } from './game/mobremake.js';
 import { registerImportedMobs } from './game/mobpack.js';
+import { NetClient } from './net/client.js';
 import { registerProps } from './game/proppack.js';
 import { EducationManager } from './game/education.js';
 import { LessonRunner, lessonNeeds } from './game/lessons.js';
@@ -649,8 +650,23 @@ class Game {
     // enemyMgr.refresh() rescans every spawn in every loaded chunk (allocating a
     // Set + two array spreads); it's idempotent, so ~2.5 Hz is plenty. New
     // spawns/despawns appear within 0.4s — chunks stream in over seconds anyway.
+    // MULTIPLAYER TAKES OVER THE CREATURES ENTIRELY. Not "as well as" — the
+    // local spawner has to stop, or every client invents its own goblins from
+    // its own chunks and four children each fight a different one standing in
+    // the same spot.
+    const mp = !!this.net?.live;
+    if (mp) {
+      this.net.update(dt);
+      this.net.sendInput({
+        x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch,
+        anim: p.dead ? 'dead' : (this.controls.worldMove || p.moving ? 'walk' : 'idle'),
+        sneak: !!p.sneaking,
+      }, performance.now());
+      this.syncNetMobs();
+      this.updateMounts();
+    }
     this._refreshAccum = (this._refreshAccum ?? 1) + dt;
-    if (this._refreshAccum >= 0.4) { this._refreshAccum = 0; this.enemyMgr.refresh(); this.updateMounts(); }
+    if (!mp && this._refreshAccum >= 0.4) { this._refreshAccum = 0; this.enemyMgr.refresh(); this.updateMounts(); }
     this.updatePet();
     // Time in the saddle is Handling practice. Flying pays more because getting
     // into the air was the hard part; both are a trickle, so riding keeps the
@@ -668,9 +684,13 @@ class Game {
         this.skills.addXp('handling', whole);
       }
     }
-    this.enemyMgr.update(dt, p, this.combat.active);
-    this.combat.update(dt);
-    this.combatRS.update(dt);
+    // The server owns where creatures are and how much health they have, so the
+    // local wander and the local swing timers would both be fighting it.
+    if (!mp) {
+      this.enemyMgr.update(dt, p, this.combat.active);
+      this.combat.update(dt);
+      this.combatRS.update(dt);
+    }
     this.playerAttackT = Math.max(0, (this.playerAttackT || 0) - dt);
     // age out hitsplats
     for (let i = this.hitsplats.length - 1; i >= 0; i--) {
@@ -682,8 +702,8 @@ class Game {
       this.ui.refreshRSCooldowns();
     }
 
-    // aggro check
-    if (!this.combat.active && !p.dead && !this.dialogueOpen && !this.ui.currentWindow && !this.disableAggro) {
+    // aggro check — the server does this for everyone when connected
+    if (!mp && !this.combat.active && !p.dead && !this.dialogueOpen && !this.ui.currentWindow && !this.disableAggro) {
       if (this.settings.tacticalCombat) {
         const aggro = this.enemyMgr.checkAggro(p);
         if (aggro) this.startCombat(aggro);
@@ -2164,6 +2184,14 @@ class Game {
 
   // ---------------------------------------------------------------- combat glue
   startCombat(enemyEntity) {
+    // Online, a swing is a REQUEST. The server owns the creature's health, so it
+    // runs the fight and tells us what happened; resolving it locally as well
+    // would mean two sets of dice deciding the same blow, and a rat that dies on
+    // one screen while it is still biting on another.
+    if (this.net?.live) {
+      this.net.sendAttack(enemyEntity.id);
+      return;
+    }
     if (!this.settings.tacticalCombat) {
       this.combatRS.engage(enemyEntity, true);
       return;
@@ -2687,6 +2715,80 @@ class Game {
   }
 
   // ---------------------------------------------------------------- rendering glue
+  // ---- multiplayer ---------------------------------------------------------
+  // Attaching a live connection turns three things over to the server: who else
+  // is here, what the creatures are doing, and what the world looks like. The
+  // rest of the game does not change at all, and that is on purpose — the less
+  // multiplayer knows about the game, the less there is to keep in step.
+  attachNet(net) {
+    this.net = net;
+
+    // EVERY LOCAL EDIT GOES ON THE WIRE, from one seam. There are a dozen call
+    // sites that change a block — breaking, placing, tilling, doors, beds, the
+    // dungeon grate — and patching each would guarantee missing one and then
+    // wondering for an hour why a door is a door on only one screen. Wrapping
+    // setBlock catches all of them, including any added later.
+    const original = this.world.setBlock.bind(this.world);
+    this.world.setBlock = (x, y, z, id, record = true, fromWater = false) => {
+      original(x, y, z, id, record, fromWater);
+      // `record` false is worldgen, and `fromWater` is the flow simulation. Both
+      // are deterministic from the seed and run identically on every client, so
+      // putting them on the wire would be pure noise.
+      if (record && !fromWater && !this._applyingNetEdit && net.live) net.sendEdit(x, y, z, id);
+    };
+
+    net.on.edits = (list) => {
+      this._applyingNetEdit = true;
+      try { for (const [x, y, z, id] of list) this.world.setBlock(x, y, z, id, true); }
+      finally { this._applyingNetEdit = false; }
+    };
+    net.on.combat = (events) => this.onNetCombat(events);
+    net.on.chat = (c) => this.ui.toast(c.system ? c.text : `${c.from}: ${c.text}`, c.system ? 'gold' : 'white');
+    net.on.denied = (reason) => { if (reason) this.ui.toast(reason, 'red'); };
+    net.on.close = () => this.ui.toast('Lost the connection to the server.', 'red');
+    net.on.roster = () => {};
+  }
+
+  // Mirror the server's creatures into the local manager. Doing it this way
+  // rather than teaching the renderer about a second kind of entity means
+  // targeting, click-to-attack, poses, the map and the bestiary all keep working
+  // untouched: as far as the rest of the game is concerned these are simply the
+  // mobs, they just happen to be told to us rather than simulated here.
+  syncNetMobs() {
+    const mgr = this.enemyMgr;
+    const seen = new Set();
+    for (const m of this.net.mobs.values()) {
+      const def = ENEMY_TYPES[m.type];
+      if (!def) continue;                     // a creature this build does not have
+      seen.add(m.id);
+      let e = mgr.entities.get(m.id);
+      if (!e) {
+        e = { id: m.id, type: m.type, def, homeX: m.x, homeZ: m.z, wanderT: 0 };
+        mgr.entities.set(m.id, e);
+      }
+      e.x = m.x; e.y = m.y; e.z = m.z; e.yaw = m.yaw;
+      e.hp = m.hp; e.shiny = m.shiny; e.boss = m.boss;
+      e.movingT = m.moving ? 0.25 : 0;
+    }
+    for (const id of [...mgr.entities.keys()]) {
+      // Pets are ours, follow local rules and are never in a snapshot.
+      if (!seen.has(id) && !mgr.entities.get(id)?.pet) mgr.entities.delete(id);
+    }
+  }
+
+  onNetCombat(events) {
+    for (const ev of events) {
+      if (ev.k === 'splat') this.addHitsplat(ev.x, ev.y, ev.z, ev.text, ev.color);
+      else if (ev.k === 'log') this.ui.rsLog?.(ev.text);
+      else if (ev.k === 'banner') this.ui.toast(ev.text, 'gold');
+      else if (ev.k === 'died' && ev.by) this.ui.toast(`${ev.by} defeated something.`, 'gold');
+      else if (ev.k === 'loot') {
+        for (const l of ev.loot || []) this.inventory.add(l.item, l.qty ?? 1);
+        if (ev.coins) this.inventory.coins += ev.coins;
+      }
+    }
+  }
+
   collectEntities(dt) {
     const out = [];
     if (this.combat.active) {
@@ -2736,6 +2838,24 @@ class Game {
         });
       }
     }
+    // The other people. Drawn with the ordinary player model, so they look like
+    // what they are rather than like a special network entity — and so a child
+    // recognises their sibling immediately.
+    if (this.net?.live) {
+      const model = this.renderer.modelCache.get(this.playerModelName);
+      for (const rp of this.net.players.values()) {
+        out.push({
+          model: this.playerModelName,
+          x: rp.x, y: rp.y, z: rp.z, yaw: rp.yaw,
+          tint: [0, 0, 0],
+          pose: model?.animated
+            ? evaluatePose(model, rp.anim === 'walk' ? 'walk' : 'idle', this.world.time)
+            : null,
+          label: rp.name,
+        });
+      }
+    }
+
     for (const npc of this.world.structure.npcs) {
       const model = this.renderer.modelCache.get(`npc_${npc.id}`);
       out.push({
@@ -3142,8 +3262,27 @@ function renderCharacters() {
   };
 }
 
+// Join the server this page came from. The address is never typed: the game and
+// the socket are served on one port (server/server.mjs), so wherever the page
+// came from is where the game is. A child reads one URL off a screen and that is
+// the whole of the setup.
+async function joinMultiplayer(name) {
+  const hint = $('title-hint');
+  const net = new NetClient({ name });
+  if (hint) hint.textContent = 'Connecting…';
+  try {
+    await net.connect();
+  } catch (err) {
+    if (hint) hint.textContent = err.message;
+    return;
+  }
+  // The seed is the server's, not this browser's — that is what makes it the
+  // same world rather than two worlds that happen to look alike.
+  await startGame(0, true, { net, seedText: net.seed, name: net.name });
+}
+
 async function startGame(slot, isNew, opts = {}) {
-  const seedInput = $('seed-input').value.trim();
+  const seedInput = opts.seedText || $('seed-input').value.trim();
   let world = null;
   // A character picked on the character screen wins over the world's own last
   // occupant — that is how you take someone into a seed they have never seen.
@@ -3187,7 +3326,19 @@ async function startGame(slot, isNew, opts = {}) {
   for (const f of mobFiles) {
     try { await registerMob(game, f); } catch (e) { console.error('[mobs]', e.message); }
   }
+  // Attach the connection BEFORE the first frame, so no local creature is ever
+  // spawned and no local edit is ever made that the server did not agree to.
+  if (opts.net) {
+    game.attachNet(opts.net);
+    opts.net.on.edits(opts.net._welcomeEdits || []);
+    if (opts.net.spawn) {
+      game.player.x = opts.net.spawn.x;
+      game.player.y = opts.net.spawn.y;
+      game.player.z = opts.net.spawn.z;
+    }
+  }
   window.__game = game; // for automated tests & debugging
+  window.__net = opts.net || null;
   window.__learn = () => game.enterLearningMode(); // Phase-1 shortcut into Numbers Meadow
   const crafting = await import('./game/crafting.js');
   window.__crafting = crafting;
@@ -3249,6 +3400,31 @@ function startLearningMode() {
 initAudio(loadSettings());
 renderTitle();
 window.addEventListener('error', (e) => console.error('[sproutlands]', e.message));
+
+// ---- multiplayer: only offer it when there is something to join -------------
+// The game server injects <meta name="sproutlands-server"> into the page it
+// serves (server/server.mjs). Anywhere else — a static host, the single-file
+// build, the test harness — the tag is absent and the button stays hidden.
+//
+// This used to be a fetch('/__mp') probe, which 404s on every host that is not
+// a game server, and a 404 is written to the browser console however carefully
+// the JavaScript handles it. A marker in the page costs no request and cannot
+// fail.
+if (document.querySelector('meta[name="sproutlands-server"]')) {
+  $('mp-row')?.classList.remove('hidden');
+  const nameField = $('mp-name');
+  if (nameField) {
+    try { nameField.value = localStorage.getItem('sproutlands.mpname') || ''; }
+    catch { /* private mode */ }
+  }
+  const go = () => {
+    const name = nameField?.value?.trim() || 'Player';
+    try { localStorage.setItem('sproutlands.mpname', name); } catch { /* private mode */ }
+    joinMultiplayer(name);
+  };
+  $('mp-join')?.addEventListener('click', go);
+  nameField?.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+}
 
 // ---- PWA: installable + auto-updating (hosted builds only) -----------------
 // The browser fires beforeinstallprompt when the app qualifies to install;

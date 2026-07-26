@@ -102,11 +102,16 @@ try {
 
   // --- they see each other move -------------------------------------------
   const spawn = welcome.spawn;
-  ada.send({ t: 'input', x: spawn.x + 3, y: spawn.y, z: spawn.z + 1, yaw: 1, anim: 'walk' });
-  const sawAda = await bea.wait('snapshot', (m) => m.players?.some((p) => p.name === 'Ada'));
-  ok(!!sawAda, 'Bea sees Ada in a snapshot');
+  const adaX = spawn.x + 3;
+  ada.send({ t: 'input', x: adaX, y: spawn.y, z: spawn.z + 1, yaw: 1, anim: 'walk' });
+  // Wait for a snapshot that REFLECTS the move, not merely one that mentions
+  // Ada: Bea has been receiving snapshots since she joined, so the first one
+  // naming Ada is an old one describing her at the spawn point.
+  const sawAda = await bea.wait('snapshot',
+    (m) => m.players?.some((p) => p.name === 'Ada' && Math.abs(p.x - adaX) < 0.5));
+  ok(!!sawAda, 'Bea sees Ada move to where Ada said she was');
   const adaSeen = sawAda?.players?.find((p) => p.name === 'Ada');
-  ok(Math.abs((adaSeen?.x ?? 0) - (spawn.x + 3)) < 0.5, 'at the position Ada reported');
+  ok(adaSeen?.anim === 'walk', 'with the animation she reported');
   ok(!sawAda?.players?.some((p) => p.name === 'Bea'), 'and is not sent her own position back');
 
   // --- a block one places, the other sees ---------------------------------

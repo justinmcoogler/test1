@@ -33,6 +33,12 @@
       <input id="seed-input" type="text" placeholder="World seed (optional)" autocomplete="off">
     </div>
     <button id="characters-btn" class="link-btn">Characters…</button>
+    <!-- Only shown when this page came from a game server (server/server.mjs),
+         because there is nothing to join otherwise. -->
+    <div id="mp-row" class="title-row hidden">
+      <input id="mp-name" type="text" placeholder="Your name" maxlength="16" autocomplete="off">
+      <button id="mp-join" class="slot-btn">Play together</button>
+    </div>
   </div>
 </div>
 

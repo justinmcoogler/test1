@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Room } from '../../server/room.mjs';
-import { C, S, PROTOCOL_VERSION, encode, decode, MAX_NAME } from '../../js/net/protocol.mjs';
+import { C, S, PROTOCOL_VERSION, encode, decode, MAX_NAME } from '../../js/net/protocol.js';
 
 // A connection that remembers what it was told instead of writing to a socket.
 const stubConn = () => ({

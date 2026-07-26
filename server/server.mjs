@@ -31,6 +31,10 @@ const MIME = {
   '.webmanifest': 'application/manifest+json',
 };
 
+// A seed is operator-supplied, but it still ends up inside an HTML attribute.
+const escapeAttr = (s) => String(s).replace(/[&<>"']/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 function arg(name, dflt) {
   const i = process.argv.indexOf(`--${name}`);
   return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : dflt;
@@ -63,11 +67,34 @@ const room = new Room({ seed, onLog: log });
 const handler = async (req, res) => {
   try {
     let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    // A status endpoint for tooling and tests — "is a server up, what seed, how
+    // many people". The GAME does not use it: see the marker injected into
+    // index.html below for how the title screen decides.
+    if (path === '/__mp') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify({ ok: true, seed, players: room.players.size }));
+      return;
+    }
     if (path === '/') path = '/index.html';
     const file = normalize(join(root, path));
     // Path traversal guard: everything served must live under the repo root.
     if (!file.startsWith(root)) { res.writeHead(403); res.end('forbidden'); return; }
-    const data = await readFile(file);
+    let data = await readFile(file);
+    // HOW THE TITLE SCREEN KNOWS THERE IS ANYTHING TO JOIN. The same files are
+    // served by tests/server.mjs and by any static host, where "Play together"
+    // would be a button that leads nowhere — so the page has to be told.
+    //
+    // This was a fetch('/__mp') probe first, and that was wrong for a reason
+    // worth remembering: on every host that is NOT a game server the probe 404s,
+    // and a 404 is logged to the browser console no matter how carefully the
+    // JavaScript handles it. The smoke test asserts a clean console and was
+    // quite right to fail. A marker in the page costs no request and cannot fail.
+    if (file.endsWith('index.html')) {
+      data = Buffer.from(String(data).replace(
+        '</head>',
+        `<meta name="sproutlands-server" content="${escapeAttr(seed)}">\n</head>`,
+      ));
+    }
     res.writeHead(200, {
       'Content-Type': MIME[extname(file)] || 'application/octet-stream',
       // The whole point of this server is testing a build you are editing, so

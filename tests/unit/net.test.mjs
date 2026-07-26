@@ -11,7 +11,7 @@ import { encodeFrame, decodeFrame, acceptKey } from '../../server/ws.mjs';
 import {
   cleanName, cleanChat, cleanEdit, cleanInput, cleanId, decode, encode,
   MAX_NAME, MAX_CHAT, Y_MAX,
-} from '../../js/net/protocol.mjs';
+} from '../../js/net/protocol.js';
 
 // Build a client->server frame, which unlike a server frame MUST be masked.
 function clientFrame(op, payload, { fin = true, mask = [1, 2, 3, 4] } = {}) {
