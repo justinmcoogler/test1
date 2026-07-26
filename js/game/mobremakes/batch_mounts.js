@@ -87,62 +87,67 @@ export function horseParts(d) {
   const back = legH + bh;               // top of the barrel
   const zF = bd / 2;
   // The neck climbs in three steps from the withers; the head hangs off the top.
-  // FOUR SMALL STEPS, not three big ones. Three chunky blocks read as a staircase
-  // — you see the steps, not the arch. Each of these rises 3 and moves forward 2
-  // while narrowing by a pixel, which at 16 texels to the block is a diagonal.
-  const RISE = 3, RUN = 2;
-  const NECK = [[6, 5], [6, 5], [5, 5], [4, 5]];          // [width, height] per step
-  const neckY = (i) => back - 2 + i * RISE;
-  const neckZ = (i) => zF - 6 + i * RUN;
-  const poll = neckY(NECK.length - 1) + 1;                // where the head joins
-  const hz = neckZ(NECK.length - 1) + 5;                  // and how far out in front
-  const headH = Math.max(6, R(bh * 0.7)), headL = Math.max(9, R(bd * 0.5));
+  // STRAIGHT OFF THE REFERENCE (mcmodel.js MC_REF.horse: head 5x8x10, body
+  // 10x10x22, limb 4x16x4). Two numbers there are doing all the work and both
+  // previous attempts missed them:
+  //
+  //   THE NECK IS 4x4 IN CROSS-SECTION against a ten-wide body. That contrast —
+  //   slender column off a heavy barrel — is most of what says "horse". Mine was
+  //   6x6, nearly as thick as the chest, which is a llama's neck.
+  //   THE HEAD IS 5 WIDE AND 10 LONG. Narrow and long, not square.
+  //
+  // And vanilla builds the neck as ONE straight column, rotated forward as a
+  // rigid group, with the head hung off the top of it. Two goes at approximating
+  // that with a staircase of stacked boxes both read as a staircase, because at 16
+  // texels to the block you see the steps. So this rotates, the way the reference
+  // does. `rotation` is a rest pose the animation adds to (js/game/mobloader.js),
+  // and +X pitches +Y toward +Z — forward.
+  const NECK_DEG = 40;                  // off vertical, leaning forward
+  const nTop = back + neck;             // top of the UNROTATED column
+  const hy = nTop - 5;                  // where the head hangs on it
+  const headL = Math.max(9, R(bd * 0.46));
+  const thigh = Math.max(4, R(legH * 0.42));            // how much of the leg is muscle
+  const LEGS = [['leg0', -legW - 1, zF - 5], ['leg1', 1, zF - 5],
+    ['leg2', -legW - 1, -bd / 2 + 1], ['leg3', 1, -bd / 2 + 1]];
   return [
     part('body', [0, legH, 0], [
       b([-bw / 2, legH, -bd / 2], [bw, bh, bd], { all: H_UV.flank, up: H_UV.top }),
       // A horse is not a brick. The chest is deeper through than the barrel and
       // the croup rounds up over the hips. Both stay FLUSH with the flank in x —
       // widening them by a pixel a side put a shelf down the animal's ribs.
-      b([-bw / 2, legH + 1, zF - R(bd * 0.32)], [bw, bh, R(bd * 0.32)], H_UV.chest),
-      b([-bw / 2 + 1, legH + 2, -bd / 2], [bw - 2, bh - 1, R(bd * 0.3)], H_UV.rump),
-      // the neck, climbing forward out of the withers and tapering as it goes
-      ...NECK.map(([w, h], i) => b([-R(w / 2), neckY(i), neckZ(i)], [w, h, 6], H_UV.neck)),
-      // the mane, one hank per step, hung a pixel BEHIND the neck rather than on
-      // top of it — on top read as a mohawk
-      ...NECK.map(([, h], i) => b([-1, neckY(i), neckZ(i) - 1], [2, h + 1, 2], H_UV.mane)),
+      // Both sit one pixel INSIDE the barrel's top rather than one above it. Set
+      // proud, they ran a ledge the length of the animal and the whole body read
+      // as a stack of crates.
+      b([-bw / 2, legH, zF - R(bd * 0.32)], [bw, bh - 1, R(bd * 0.32)], H_UV.chest),
+      b([-bw / 2 + 1, legH + 1, -bd / 2], [bw - 2, bh - 2, R(bd * 0.3)], H_UV.rump),
     ]),
-    // The head: LONG, and bigger than the neck is thick. A horse's head is the
-    // heaviest thing on the front of it — undersize it and the animal reads as a
-    // llama however good the neck is.
-    part('head', [0, poll, hz], [
-      b([-3, poll - headH, hz], [6, headH, headL], { all: H_UV.headSide, south: H_UV.headFace }),
-      b([-2, poll - headH - 2, hz], [5, 3, 6], H_UV.headSide),            // cheek/jaw
-      b([-2, poll - headH + 1, hz + headL], [4, 4, 3], H_UV.muzzle),      // the muzzle
-      b([-3, poll, hz + 1], [2, 3, 1], H_UV.ear),
-      b([1, poll, hz + 1], [2, 3, 1], H_UV.ear),
-      b([-1, poll - 1, hz + 3], [2, 4, 2], H_UV.forelock),
-    ]),
-    part('leg0', [-3, legH, zF - 3], [
-      b([-5, 2, zF - 5], [legW, legH - 2, legW], H_UV.leg),
-      b([-5, 0, zF - 5], [legW, 2, legW], H_UV.hoof),
-    ]),
-    part('leg1', [3, legH, zF - 3], [
-      b([1, 2, zF - 5], [legW, legH - 2, legW], H_UV.leg),
-      b([1, 0, zF - 5], [legW, 2, legW], H_UV.hoof),
-    ]),
-    part('leg2', [-3, legH, -bd / 2 + 3], [
-      b([-5, 2, -bd / 2 + 1], [legW, legH - 2, legW], H_UV.leg),
-      b([-5, 0, -bd / 2 + 1], [legW, 2, legW], H_UV.hoof),
-    ]),
-    part('leg3', [3, legH, -bd / 2 + 3], [
-      b([1, 2, -bd / 2 + 1], [legW, legH - 2, legW], H_UV.leg),
-      b([1, 0, -bd / 2 + 1], [legW, 2, legW], H_UV.hoof),
-    ]),
+    // The neck: one slender column off the withers, leaning forward as a unit.
+    part('neck', [0, back - 2, zF - 4], [
+      b([-2, back - 2, zF - 6], [4, neck + 2, 5], H_UV.neck),
+      b([-1, back - 1, zF - 7], [2, neck + 3, 2], H_UV.mane),     // the mane behind it
+    ], { rotation: [NECK_DEG, 0, 0] }),
+    // The head hangs off the top of that column, and carries its own counter-angle
+    // so the face ends up nearly level instead of pointing at the ground.
+    part('head', [0, hy + 4, zF - 3], [
+      b([-2, hy, zF - 3], [5, 8, headL], { all: H_UV.headSide, south: H_UV.headFace }),
+      b([-2, hy + 1, zF - 3 + headL], [4, 4, 3], H_UV.muzzle),
+      b([-3, hy + 8, zF - 2], [2, 3, 2], H_UV.ear),
+      b([1, hy + 8, zF - 2], [2, 3, 2], H_UV.ear),
+      b([-1, hy + 6, zF], [2, 4, 2], H_UV.forelock),
+    ], { parent: 'neck', rotation: [-NECK_DEG + 12, 0, 0] }),
+    // A horse's leg TAPERS: a heavy muscled thigh at the top, a thin cannon bone
+    // below it, and a hoof wider than the bone. Four identical posts read as four
+    // sticks however good the body is, and that is what these were.
+    ...LEGS.map(([id, sx, sz]) => part(id, [sx > 0 ? 3 : -3, legH, sz + legW / 2], [
+      b([sx - 1, legH - thigh, sz - 1], [legW + 2, thigh, legW + 2], H_UV.leg),  // thigh
+      b([sx, 2, sz], [legW, legH - thigh - 2, legW], H_UV.leg),                  // cannon
+      b([sx, 0, sz], [legW, 2, legW], H_UV.hoof),                                // hoof
+    ])),
     // A dock at the top and the switch hanging off it — a 2x12x2 stick was
     // reading as a rope tied to the animal.
     part('tail', [0, back - 1, -bd / 2], [
-      b([-2, back - 4, -bd / 2 - 2], [4, 4, 3], H_UV.dock),
-      b([-1, back - 14, -bd / 2 - 3], [3, 11, 3], H_UV.tail),
+      b([-2, back - 4, -bd / 2 - 3], [4, 4, 3], H_UV.dock),
+      b([-1, back - 15, -bd / 2 - 4], [3, 13, 3], H_UV.tail),
     ]),
   ];
 }
