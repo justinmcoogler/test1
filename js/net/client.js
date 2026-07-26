@@ -42,6 +42,11 @@ export class NetClient {
     this.spawn = null;
     this.status = 'idle';     // idle | connecting | live | closed | error
     this.error = null;
+    // The room's world clock, in seconds, as of the last snapshot. NaN until the
+    // first one lands. The game eases its own clock toward this rather than
+    // running a private one, because a private one drifts apart on frame timing
+    // alone and comes apart completely the moment somebody sleeps.
+    this.serverTime = NaN;
 
     // Remote state, smoothed. `t*` is where the server last said the thing was;
     // the un-prefixed fields are where it is being drawn this frame.
@@ -57,6 +62,7 @@ export class NetClient {
       roster: opts.onRoster || (() => {}),
       denied: opts.onDenied || (() => {}),
       close: opts.onClose || (() => {}),
+      slept: opts.onSlept || (() => {}),
     };
     // -Infinity, not 0: the first sendInput must always go out, or a player who
     // joins is invisible to everyone until the throttle window happens to pass.
@@ -161,6 +167,8 @@ export class NetClient {
   sendAttack(id) { return this._send({ t: C.ATTACK, id }); }
   sendDisengage() { return this._send({ t: C.DISENGAGE }); }
   sendChat(text) { return this._send({ t: C.CHAT, text }); }
+  // Asks; does not tell. Whether the night actually passes is the room's call.
+  sendSleep() { return this._send({ t: C.SLEEP }); }
 
   // ---- inbound --------------------------------------------------------------
   _onWelcome(m) {
@@ -170,6 +178,7 @@ export class NetClient {
     this.seed = m.seed;
     this.spawn = m.spawn;
     this.snapHz = m.snapHz || 10;
+    if (Number.isFinite(m.time)) this.serverTime = m.time;
     // Held rather than delivered, because the game does not exist yet: the seed
     // in this same message is what it will be built from, and the edits have to
     // be applied to that world once it does.
@@ -182,6 +191,7 @@ export class NetClient {
   _onMessage(m) {
     switch (m.t) {
       case S.SNAPSHOT: {
+        if (Number.isFinite(m.time)) this.serverTime = m.time;
         for (const p of m.players || []) this._putPlayer(p, false);
         // Anyone absent from a snapshot has gone; the server sends the full
         // roster every time, so a missing id is authoritative rather than a
@@ -211,6 +221,12 @@ export class NetClient {
       case S.COMBAT:
         this.on.combat(m.events || []);
         break;
+      case S.SLEPT:
+        // The clock moves through serverTime like any other correction; this is
+        // only so the sunrise has a name attached to it.
+        if (Number.isFinite(m.time)) this.serverTime = m.time;
+        this.on.slept(m.by || '');
+        break;
       case S.DENIED:
         this.on.denied(m.reason || '');
         break;
@@ -226,10 +242,19 @@ export class NetClient {
         id: p.id, name: p.name, anim: p.anim, hp: p.hp,
         x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch,
         tx: p.x, ty: p.y, tz: p.z, tyaw: p.yaw,
+        // When this body last changed what it was doing. A one-shot clip (the
+        // attack swing) is played from here; without it the renderer has no
+        // start time and freezes the swing on its last frame forever.
+        animAt: clock(),
+        // A fixed per-body offset into the looping clips, so two children
+        // walking side by side do not march in perfect lockstep like one
+        // animation drawn twice.
+        phase: phaseFor(p.id),
       });
       return;
     }
     cur.name = p.name ?? cur.name;
+    if (p.anim !== undefined && p.anim !== cur.anim) cur.animAt = clock();
     cur.anim = p.anim ?? cur.anim;
     cur.hp = p.hp ?? cur.hp;
     cur.pitch = p.pitch ?? cur.pitch;
@@ -286,3 +311,16 @@ function ease(c, k) {
 }
 
 const round2 = (n) => Math.round(n * 100) / 100;
+
+// Seconds, monotonic where the browser offers it. Only ever used as a
+// difference, so the epoch does not matter.
+export const clock = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+
+// A stable pseudo-random offset in [0, 2) derived from the player id, so the
+// same body always animates on the same beat rather than jumping when a
+// snapshot re-creates it.
+function phaseFor(id) {
+  let h = 0;
+  for (let i = 0; i < String(id).length; i++) h = (h * 31 + String(id).charCodeAt(i)) | 0;
+  return Math.abs(h % 2000) / 1000;
+}

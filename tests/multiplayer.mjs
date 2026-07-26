@@ -14,7 +14,12 @@ import { spawn } from 'node:child_process';
 
 const PORT = 8795;
 const URL = `ws://127.0.0.1:${PORT}/ws`;
-const PROTOCOL_VERSION = 1;
+// Imported, not restated. This was a literal `1`, which meant that the day the
+// protocol was bumped every assertion in this file failed at once with "no
+// welcome" — the server was correctly turning away a client claiming a version
+// it no longer speaks. The independence that matters here is from NetClient and
+// from any WebSocket library, not from the one constant both ends agree on.
+import { PROTOCOL_VERSION } from '../js/net/protocol.js';
 
 let failures = 0;
 const ok = (cond, label) => {

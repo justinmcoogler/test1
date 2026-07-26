@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { encodeFrame, decodeFrame, acceptKey } from '../../server/ws.mjs';
 import {
   cleanName, cleanChat, cleanEdit, cleanInput, cleanId, decode, encode,
-  MAX_NAME, MAX_CHAT, Y_MAX,
+  MAX_NAME, MAX_CHAT, Y_MAX, C, S, PROTOCOL_VERSION,
 } from '../../js/net/protocol.js';
 
 // Build a client->server frame, which unlike a server frame MUST be masked.
@@ -159,4 +159,12 @@ test('decode never throws, whatever it is handed', () => {
   assert.equal(cleanId(''), null);
   assert.equal(cleanId('sp:1,2'), 'sp:1,2');
   assert.equal(cleanId(7), null);
+});
+
+test('the sleep handshake is on both sides of the protocol', () => {
+  // A message type that exists on one side only is a message that is silently
+  // dropped, which for sleep would look exactly like "the bed does nothing".
+  assert.equal(C.SLEEP, 'sleep');
+  assert.equal(S.SLEPT, 'slept');
+  assert.ok(PROTOCOL_VERSION >= 2, 'and the version was bumped, so stale tabs are told to reload');
 });

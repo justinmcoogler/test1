@@ -22,7 +22,7 @@
 //   walking quickly in their own living room. Positions are still bounds-checked
 //   (js/net/protocol.js) so a bad value cannot hurt the SERVER — the line is
 //   drawn at "cannot break other people", not "cannot advantage yourself".
-import { World, initSlabSet } from '../js/world/world.js';
+import { World, initSlabSet, DAY_LEN, DAWN } from '../js/world/world.js';
 import { EnemyManager, ENEMY_TYPES } from '../js/game/enemies.js';
 import { CombatRS } from '../js/game/combatrs.js';
 import { Inventory } from '../js/game/inventory.js';
@@ -183,6 +183,7 @@ export class Room {
       case C.ATTACK: return this._onAttack(p, m);
       case C.DISENGAGE: return this._onDisengage(p);
       case C.CHAT: return this._onChat(p, m);
+      case C.SLEEP: return this._onSleep(p);
     }
   }
 
@@ -286,6 +287,29 @@ export class Room {
     this.onLog(`<${p.name}> ${text}`);
   }
 
+  // SLEEPING IS A DECISION THE ROOM MAKES, not one a client makes for itself.
+  // The clock is shared, so a child who advanced their own night privately would
+  // be standing in the morning while everyone else was still in the dark — same
+  // world, different time of day, which is exactly what used to happen.
+  //
+  // ONE SLEEPER IS ENOUGH. Minecraft asks for a majority in bed, which is a good
+  // rule among strangers and a miserable one for a family: it means four children
+  // have to find four beds before anybody gets a morning. Here the first one to
+  // lie down carries the night for everyone, and the others are told who did it
+  // so a sudden sunrise is explained rather than mysterious.
+  _onSleep(p) {
+    if (!this.world.isNight()) {
+      p.conn.send(encode({ t: S.DENIED, reason: 'It is not dark yet.' }));
+      return;
+    }
+    const skip = ((DAWN - this.world.dayPhase() + 1) % 1) * DAY_LEN;
+    if (skip < 1) return;                      // dawn is already breaking
+    this.world.time += skip;
+    this.dirty = true;
+    this.broadcast({ t: S.SLEPT, by: p.name, time: Math.round(this.world.time) });
+    this.onLog(`${p.name} slept the night away`);
+  }
+
   // ---- simulation -----------------------------------------------------------
   tick(dt) {
     this.tickCount++;
@@ -294,7 +318,12 @@ export class Room {
     // Keep the world resident around everyone, so mobs exist where people are.
     this._stream(active);
 
-    this.world.tick?.(dt);
+    // World.update, NOT World.tick. There is no tick() on World, so the optional
+    // call this used to make swallowed itself silently and the server's clock sat
+    // at zero forever — permanent noon, crops that never ripened, nodes that
+    // never came back. Nothing failed loudly because `?.` on a missing method is
+    // a no-op, which is the whole hazard of reaching for it.
+    this.world.update(dt);
     // Refresh spawn bookkeeping a few times a second rather than every step:
     // it walks every loaded chunk and nothing it does needs 20Hz.
     if (this.tickCount % 6 === 0) this.enemyMgr.refresh();

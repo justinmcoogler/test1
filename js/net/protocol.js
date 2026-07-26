@@ -13,7 +13,8 @@
 // certainty, and a NaN position or a 40MB chat message should bounce off the
 // server rather than take the world down for everyone else.
 
-export const PROTOCOL_VERSION = 1;
+// 2 added SLEEP/SLEPT and made the world clock the server's.
+export const PROTOCOL_VERSION = 2;
 
 // client -> server
 export const C = {
@@ -23,6 +24,7 @@ export const C = {
   ATTACK: 'attack',     // engage a mob
   DISENGAGE: 'disengage',
   CHAT: 'chat',
+  SLEEP: 'sleep',       // "I got into a bed" — the ROOM decides whether night ends
 };
 
 // server -> client
@@ -35,6 +37,7 @@ export const S = {
   CHAT: 'chat',
   COMBAT: 'combat',     // hitsplats, deaths, loot — things that need a one-off
   DENIED: 'denied',     // your action was refused, with a reason to show
+  SLEPT: 'slept',       // somebody's night passed, and it is everybody's night
 };
 
 export const MAX_NAME = 16;

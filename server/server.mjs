@@ -111,6 +111,15 @@ const log = (msg) => console.log(`[${stamp()}] ${msg}`);
 
 const room = new Room({ seed, onLog: log });
 
+// Start the world clock somewhere other than morning. A full day is DAY_LEN
+// (480) seconds, so --time 300 opens the session in the middle of the night.
+// Mostly this exists so the tests can reach nightfall without waiting four
+// minutes for it, but it is also the answer for a host who wants the kids to
+// start in daylight after they left the world at midnight. Applied before the
+// save loads, so a save's own clock still wins.
+const startTime = parseFloat(arg('time', ''));
+if (Number.isFinite(startTime)) room.world.time = startTime;
+
 // LOAD BEFORE THE FIRST TICK. Edits are replayed as chunks are generated
 // (js/world/world.js ensureChunk reads editedBlocks), so a chunk built before
 // the load would come from bare terrain and never be revisited — the base would

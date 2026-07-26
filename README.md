@@ -80,6 +80,14 @@ What the server owns, and what it doesn't:
   terrain — every device generates identical ground from one number and only the
   *edits* travel.
 - **The creatures.** One wander, one health pool, one fight.
+- **The clock.** One time of day for the whole house. Each browser runs the sun
+  smoothly at its own frame rate and is eased back onto the server's time as
+  snapshots arrive, so nobody is standing in the morning while their sister is
+  still in the dark.
+- **The night.** Any one child getting into a bed carries the night for
+  everyone, and the others are told who did it. Minecraft asks for a majority in
+  bed, which is a sensible rule among strangers and a miserable one for a family
+  — it means four children have to find four beds before anybody gets a morning.
 - **Not your movement.** Clients say where they are and the server believes them.
   Positions are bounds-checked so a bad value can't hurt the server, but there is
   no anti-cheat: the line is "can't break other people", not "can't advantage
@@ -101,7 +109,11 @@ gives you doors in cliffsides, and the save is somebody's afternoon.
 npm run server -- --seed honeywood     # pick the world (and its save file)
 npm run server -- --save my/world.json # put the save somewhere else
 npm run server -- --no-save            # run it in memory only
+npm run server -- --time 300           # start the clock partway through the day
 ```
+
+A day is 480 seconds, so `--time 300` opens in the middle of the night. A save's
+own clock always wins over this.
 
 No accounts and no passwords — a name is the whole identity. Characters
 (inventory, skills) still live in each device's own browser storage; the server
@@ -245,6 +257,15 @@ npm run test:e2e   # Playwright: smoke, gameplay loop, boss fight, mobile touch,
 `tests/pwa.mjs` is the one that proves the install story: it registers the
 service worker, pulls the network, reloads, and asserts the game — modules and
 all, not just the HTML shell — still comes up.
+
+`tests/coop.mjs` proves the *world* is shared; `tests/mpbody.mjs` proves the
+*people* in it. The second exists because all three of the ways remote players
+were wrong — drawn facing backwards, never animating, and each browser keeping
+its own time of day — were values that looked plausible and had nothing to check
+them against. Each is now checked against the thing it is supposed to match: the
+drawn facing against the direction that player is actually looking, the walk
+pose against whether the legs move between frames, the clock against the other
+browser's.
 
 Automated browsers do **not** get a service worker unless the page is opened with
 `?sw=1`. Without that the whole e2e suite would race a worker busy caching the

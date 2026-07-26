@@ -17,6 +17,20 @@ const DAY_FOG = [0.62, 0.76, 0.88];
 const NIGHT_FOG = [0.045, 0.06, 0.12];
 const CAVE_FOG = [0.05, 0.06, 0.08];
 
+// TWO YAW CONVENTIONS LIVE IN THIS GAME AND THEY ARE 180 DEGREES APART.
+//
+//   A LOOK yaw (player.yaw, what the camera and js/player/player.js use) points
+//   at (-sin y, -cos y). Yaw 0 looks down -Z.
+//   A MODEL yaw (drawEntities below) turns the model's local +Z to (sin y,
+//   cos y). Yaw 0 faces +Z.
+//
+// Every entity the game draws from a movement direction gets its yaw from
+// atan2(dx, dz), which is already the model convention, so the difference stays
+// invisible until something draws a body from a LOOK yaw instead. Multiplayer
+// does exactly that — the wire carries each player's camera yaw — and without
+// this every remote player was drawn facing precisely backwards.
+export const modelYawFromLook = (yaw) => yaw + Math.PI;
+
 // The 12 edges of a unit cube (index pairs into an 8-corner list) — the
 // selection wireframe. Module const so it isn't rebuilt each targeted frame.
 const SELECTION_EDGES = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];

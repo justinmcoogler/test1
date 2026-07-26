@@ -27,6 +27,14 @@ export function initSlabSet() {
 
 export const DAY_LEN = 480; // seconds per full day/night cycle
 
+// The day phase the sun comes up at, matching daylight()'s curve below. Sleeping
+// advances to the next occurrence of this, so you always wake at the same hour.
+//
+// Beside DAY_LEN rather than in the game, because since multiplayer the SERVER
+// decides when a night has passed (server/room.mjs) — and two copies of "when is
+// dawn" is one copy too many.
+export const DAWN = 0.05;
+
 // Global wildlife-spawn multiplier applied to every biome's per-block enemy
 // density. Lower = sparser, more realistic wildlife. Tune here in one place.
 const MOB_SPAWN_RATE = 0.4;

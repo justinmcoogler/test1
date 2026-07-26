@@ -1,7 +1,7 @@
 // Sproutlands — main orchestration: boot, game loop, interactions, camera, save.
 import { buildAtlas } from './gfx/textures.js';
-import { Renderer } from './gfx/renderer.js';
-import { World, initSlabSet, DAY_LEN } from './world/world.js';
+import { Renderer, modelYawFromLook } from './gfx/renderer.js';
+import { World, initSlabSet, DAY_LEN, DAWN } from './world/world.js';
 import { LESSON_SEED } from './world/lessonpath.js';
 import { Weather } from './world/weather.js';
 import { CHUNK, WORLD_H, SEA } from './world/worldgen.js';
@@ -32,7 +32,7 @@ import { buildPlayerSkinCanvas, partBoxUV, swatchUV, preloadPlayerSkins } from '
 import { MOB_REMAKES } from './game/mobremakes/index.js';
 import { registerRemadeMob, preloadMobSkins, mobSkinOverride } from './game/mobremake.js';
 import { registerImportedMobs } from './game/mobpack.js';
-import { NetClient } from './net/client.js';
+import { NetClient, clock as netClock } from './net/client.js';
 import { registerProps } from './game/proppack.js';
 import { EducationManager } from './game/education.js';
 import { LessonRunner, lessonNeeds } from './game/lessons.js';
@@ -657,9 +657,10 @@ class Game {
     const mp = !!this.net?.live;
     if (mp) {
       this.net.update(dt);
+      this.syncNetClock(dt);
       this.net.sendInput({
         x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch,
-        anim: p.dead ? 'dead' : (this.controls.worldMove || p.moving ? 'walk' : 'idle'),
+        anim: this.netAnim(),
         sneak: !!p.sneaking,
       }, performance.now());
       this.syncNetMobs();
@@ -2580,6 +2581,19 @@ class Game {
   // clicking a bed at noon does not silently burn a day.
   trySleep(x, y, z) {
     this.bedSpawn = [x + 0.5, y, z + 0.5];
+    // IN A SHARED WORLD THE NIGHT IS NOT YOURS TO SKIP. Ask the room and let the
+    // server move the clock for everyone; it arrives back through syncNetClock
+    // like any other correction, so there is nothing to apply here. Advancing it
+    // locally is what put one child in the morning while their sister was still
+    // in the dark, in what is supposed to be one world.
+    if (this.net?.live) {
+      // The clock is the server's now, so the daylight case can still be
+      // answered here rather than bouncing off the room for a refusal.
+      if (this.world.isNight()) this.net.sendSleep();
+      else this.ui.toast('You set your things down. You will wake here.', 'gold');
+      this.saveGame();
+      return;
+    }
     // Time until the day phase next equals DAWN — never a fixed jump, which
     // would wake you at a different hour every night and eventually stop being
     // dawn at all.
@@ -2675,6 +2689,58 @@ class Game {
     return evaluatePose(model, 'idle', t);
   }
 
+  // What the other tablets should draw this body doing, as a clip name.
+  //
+  // DERIVED FROM THE SAME STATE playerPose() USES — actual velocity, actual
+  // swing timer — and NOT from controls.worldMove, which only exists in classic
+  // camera mode. Reading that meant every first-person player, which is the
+  // default and therefore most of them, reported "idle" while sprinting across
+  // the map: the animations were not broken, they were never asked for.
+  netAnim() {
+    const p = this.player;
+    if (p.dead) return 'dead';
+    if ((this.playerAttackT || 0) > 0 || this.gather || this.breaking) return 'attack';
+    const speed = Math.hypot(p.vx, p.vz);
+    if (p.inWater && speed > 0.5) return 'swim';
+    return speed > 0.7 ? 'walk' : 'idle';
+  }
+
+  // A remote player's pose. The local character picks its clip from state we
+  // have in hand (playerPose); a remote one arrives as a tag over the wire, so
+  // the two differences are handled here: an unknown tag falls back to idle
+  // rather than blanking the body, and a one-shot clip is played from the moment
+  // that body last changed what it was doing instead of from world time, which
+  // would leave the swing frozen on its final frame.
+  remotePose(model, rp) {
+    if (!model?.animated) return null;
+    const clip = model.animations[rp.anim] ? rp.anim : 'idle';
+    const def = model.animations[clip];
+    if (def.loop === false) {
+      // Repeated while the tag persists, so a child chopping a tree swings again
+      // and again. evaluatePose CLAMPS a non-looping clip, so feeding it world
+      // time would leave the body standing there frozen mid-swing forever.
+      return evaluatePose(model, clip, (netClock() - (rp.animAt || 0)) % def.length);
+    }
+    return evaluatePose(model, clip, this.world.time + (rp.phase || 0));
+  }
+
+  // THE CLOCK BELONGS TO THE SERVER when there is one. Every browser used to run
+  // its own, which drifts apart on frame timing alone and comes apart completely
+  // the moment somebody sleeps — one child in the morning while the rest of the
+  // family is still in the middle of the night, in the same world.
+  //
+  // Corrected rather than assigned: setting it outright ten times a second would
+  // make the sun stutter. Small differences are eased away over about half a
+  // second; a real jump — a night skipped — is taken at once, because easing four
+  // minutes would be a sunrise in slow motion.
+  syncNetClock(dt) {
+    const t = this.net.serverTime;
+    if (!Number.isFinite(t)) return;
+    const d = t - this.world.time;
+    if (Math.abs(d) > 5) this.world.time = t;
+    else this.world.time += d * Math.min(1, dt * 2);
+  }
+
   // animation state → pose matrices for animated (imported) models
   poseFor(e, model, dt) {
     if (!model?.animated) return null;
@@ -2747,6 +2813,13 @@ class Game {
     net.on.denied = (reason) => { if (reason) this.ui.toast(reason, 'red'); };
     net.on.close = () => this.ui.toast('Lost the connection to the server.', 'red');
     net.on.roster = () => {};
+    // A sunrise that arrives out of nowhere reads as a bug. Say who caused it.
+    net.on.slept = (by) => {
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + Math.ceil(this.player.maxHp * 0.4));
+      this.player.energy = 100;
+      this.ui.toast(by && by !== this.net.name ? `${by} slept. It is dawn.` : 'You sleep until dawn.', 'gold');
+      SFX.questDone();
+    };
   }
 
   // Mirror the server's creatures into the local manager. Doing it this way
@@ -2846,11 +2919,12 @@ class Game {
       for (const rp of this.net.players.values()) {
         out.push({
           model: this.playerModelName,
-          x: rp.x, y: rp.y, z: rp.z, yaw: rp.yaw,
+          x: rp.x, y: rp.y, z: rp.z,
+          // The wire carries a LOOK yaw (see modelYawFromLook). Drawn raw, every
+          // remote player faced exactly backwards.
+          yaw: modelYawFromLook(rp.yaw),
           tint: [0, 0, 0],
-          pose: model?.animated
-            ? evaluatePose(model, rp.anim === 'walk' ? 'walk' : 'idle', this.world.time)
-            : null,
+          pose: this.remotePose(model, rp),
           label: rp.name,
         });
       }
@@ -2996,6 +3070,19 @@ class Game {
           color: e.shiny ? '#ffd76a' : e.def.boss ? '#e2b13c' : e.def.behavior === 'aggressive' || e.rsEngaged ? '#ff9a8a' : '#d8e2c8',
         });
       }
+      // The other children, by name. collectEntities has been attaching a label
+      // to every remote body since multiplayer landed, but nothing ever read it,
+      // so four identical characters ran around with nothing to tell them apart.
+      // Named further out than creatures: knowing which sibling is on the far
+      // ridge is the whole point.
+      const others = this.net?.live ? this.net.players.values() : [];
+      for (const rp of others) {
+        if (Math.hypot(rp.x - this.player.x, rp.z - this.player.z) > 48) continue;
+        labels.push({
+          x: rp.x, y: rp.y + 2.1, z: rp.z,
+          name: rp.name, color: '#bfe6ff',
+        });
+      }
     }
     this.ui.updateLabels(labels);
   }
@@ -3090,10 +3177,6 @@ const PET_LEASH = 14;
 // FRONT_N (js/gfx/shapes.js): 0=+Z 1=+X 2=-Z 3=-X. If these two ever disagree
 // the headboard is drawn on the wrong end of the bed.
 const BED_DIR = [[0, 1], [1, 0], [0, -1], [-1, 0]];
-
-// The day phase the sun comes up at, matching world.daylight()'s curve. Sleeping
-// advances to the next occurrence of this, so you always wake at the same hour.
-const DAWN = 0.05;
 
 // World-state consequences of the two HAND-BUILT boss kills.
 //

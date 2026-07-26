@@ -211,3 +211,77 @@ test('a drop after joining tells the game, so it can say so', async () => {
   assert.equal(closed, true);
   assert.equal(net.live, false);
 });
+
+// ---- the clock, and what a remote body is doing ------------------------------
+
+test('the server clock is taken from the welcome and every snapshot after it', async () => {
+  const { net, sock } = await joined({ time: 412 });
+  assert.equal(net.serverTime, 412, 'the room says what time it is on the way in');
+  sock.deliver({ t: S.SNAPSHOT, time: 480, players: [], mobs: [] });
+  assert.equal(net.serverTime, 480);
+  // A snapshot with no clock in it must not blank the one we have; the game
+  // eases toward this value every frame and NaN would stop the sun dead.
+  sock.deliver({ t: S.SNAPSHOT, players: [], mobs: [] });
+  assert.equal(net.serverTime, 480);
+});
+
+test('a skipped night arrives as an announcement with a name on it', async () => {
+  const { net, sock } = await joined();
+  let heard = null;
+  net.on.slept = (by) => { heard = by; };
+  sock.deliver({ t: S.SLEPT, by: 'Bea', time: 505 });
+  assert.equal(heard, 'Bea', 'so a sudden sunrise is explained rather than mysterious');
+  assert.equal(net.serverTime, 505);
+});
+
+test('going to bed asks the room rather than telling it', async () => {
+  const { net, sock } = await joined();
+  net.sendSleep();
+  assert.equal(sock.msgs(C.SLEEP).length, 1);
+  // Nothing local changed: whether the night passes is the server's call, and
+  // acting first is what put one child in the morning and their sister in the
+  // dark in the same world.
+  assert.ok(Number.isNaN(net.serverTime) || net.serverTime === 0);
+});
+
+test('a remote body records when it changed what it was doing', async () => {
+  const { net, sock } = await joined();
+  const send = (anim) => sock.deliver({
+    t: S.SNAPSHOT, time: 1, mobs: [],
+    players: [{ id: 'b', name: 'Bea', x: 0, y: 80, z: 0, yaw: 0, pitch: 0, anim, hp: 20 }],
+  });
+  send('idle');
+  const rp = net.players.get('b');
+  const first = rp.animAt;
+  assert.ok(Number.isFinite(first), 'a new body is stamped');
+
+  send('idle');
+  assert.equal(rp.animAt, first, 'an unchanged tag does not restart the clip');
+
+  send('attack');
+  assert.ok(rp.animAt >= first, 'a changed tag does');
+  assert.equal(rp.anim, 'attack');
+});
+
+test('two bodies animate on different beats', async () => {
+  const { net, sock } = await joined();
+  sock.deliver({
+    t: S.SNAPSHOT, time: 1, mobs: [],
+    players: [
+      { id: 'b', name: 'Bea', x: 0, y: 80, z: 0, yaw: 0, pitch: 0, anim: 'walk', hp: 20 },
+      { id: 'c', name: 'Cal', x: 1, y: 80, z: 0, yaw: 0, pitch: 0, anim: 'walk', hp: 20 },
+    ],
+  });
+  const b = net.players.get('b').phase, c = net.players.get('c').phase;
+  assert.ok(b >= 0 && b < 2 && c >= 0 && c < 2, 'both offsets are in range');
+  assert.notEqual(b, c, 'so siblings do not march in lockstep like one body drawn twice');
+});
+
+test('a body’s beat is stable across reconnects, not re-rolled', async () => {
+  const a = await joined();
+  const b = await joined();
+  const one = { t: S.SNAPSHOT, time: 1, mobs: [], players: [{ id: 'zed', name: 'Zed', x: 0, y: 80, z: 0, yaw: 0, pitch: 0, anim: 'idle', hp: 20 }] };
+  a.sock.deliver(one);
+  b.sock.deliver(one);
+  assert.equal(a.net.players.get('zed').phase, b.net.players.get('zed').phase);
+});

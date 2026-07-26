@@ -252,3 +252,68 @@ test('the sim runs, and mobs live where the players are', () => {
     assert.ok(cx > 100, 'and what is resident is where the player now is');
   }
 });
+
+// ---- the clock, and whose night it is ---------------------------------------
+
+test('the server world clock actually advances', () => {
+  const room = newRoom();
+  seat(room, 'a', 'Ada');
+  const t0 = room.world.time;
+  for (let i = 0; i < 20; i++) room.tick(0.05);
+  // This was `world.tick?.(dt)` and World has no tick(), so the optional call
+  // silently did nothing and the room sat at permanent noon forever. Nothing
+  // failed loudly, which is exactly why it went unnoticed.
+  assert.ok(room.world.time >= t0 + 0.9, `a second of ticks moved the clock (${t0} -> ${room.world.time})`);
+});
+
+test('one child in a bed carries the night for everyone', () => {
+  const room = newRoom();
+  room.world.time = 300;                       // the middle of the night
+  assert.ok(room.world.isNight(), 'precondition: it is dark');
+  const a = seat(room, 'a', 'Ada');
+  const b = seat(room, 'b', 'Bea');
+  room.handle('a', encode({ t: C.SLEEP }));
+
+  assert.ok(!room.world.isNight(), 'the room is in daylight');
+  assert.ok(room.world.time > 300, 'because the ROOM clock moved, not one client’s');
+  // Bea did not touch a bed and still gets the morning — waiting for four
+  // children to each find a bed is how nobody ever sees a sunrise.
+  const told = b.conn.last(S.SLEPT);
+  assert.ok(told, 'and she is told about it');
+  assert.equal(told.by, 'Ada', 'with a name attached, so dawn is explained');
+  assert.equal(told.time, Math.round(room.world.time));
+  assert.ok(a.conn.last(S.SLEPT), 'the sleeper hears it too — that is her confirmation');
+});
+
+test('sleeping in broad daylight moves nobody’s clock', () => {
+  const room = newRoom();
+  room.world.time = 100;                       // late morning
+  assert.ok(!room.world.isNight(), 'precondition: it is light');
+  const a = seat(room, 'a', 'Ada');
+  room.handle('a', encode({ t: C.SLEEP }));
+  assert.equal(room.world.time, 100, 'the clock did not move');
+  assert.equal(a.conn.last(S.SLEPT), null, 'and nothing was announced');
+  assert.match(a.conn.last(S.DENIED)?.reason || '', /not dark/, 'she is told why');
+});
+
+test('a client cannot skip the night twice by asking twice', () => {
+  const room = newRoom();
+  room.world.time = 300;
+  const a = seat(room, 'a', 'Ada');
+  room.handle('a', encode({ t: C.SLEEP }));
+  const afterFirst = room.world.time;
+  room.handle('a', encode({ t: C.SLEEP }));
+  assert.equal(room.world.time, afterFirst, 'the second ask is refused — it is morning now');
+});
+
+test('the world clock survives a save and reload', () => {
+  const room = newRoom();
+  room.world.time = 371.5;
+  const data = JSON.parse(JSON.stringify(room.serialize()));
+  const fresh = newRoom();
+  fresh.deserialize(data);
+  // Otherwise stopping the server for lunch resets everyone to morning and every
+  // absolute deadline in the save — crops, node regrowth, mob respawns — is
+  // suddenly hundreds of seconds in the future.
+  assert.equal(Math.round(fresh.world.time), 372);
+});

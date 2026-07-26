@@ -16,7 +16,11 @@ import { join } from 'node:path';
 const PORT = 8799;
 const DIR = 'tests/.tmp-saves';
 const SAVE = join(DIR, 'persist-test.json');
-const PROTOCOL_VERSION = 1;
+// The WIRE version, imported so a bump does not silently turn every assertion
+// below into "never joined". Distinct from the SAVE format version, which is
+// checked as a literal further down precisely because a change there SHOULD
+// fail this test.
+import { PROTOCOL_VERSION } from '../js/net/protocol.js';
 
 let failures = 0;
 const ok = (cond, label) => {
