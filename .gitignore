@@ -13,3 +13,9 @@ scratchpad/
 # multiplayer world saves (server/persist.mjs)
 saves/
 tests/.tmp-saves/
+
+# packaged server executables and their build scratch (node tools/package.mjs).
+# ~90-124MB each and rebuildable from source; CI publishes them as release
+# artifacts instead.
+build/
+dist/Sproutlands-Server-*

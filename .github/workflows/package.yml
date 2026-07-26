@@ -1,0 +1,78 @@
+# Build the server executable on each platform's own machine.
+#
+# tools/package.mjs can cross-build — appending a runtime to a blob is just
+# editing a file — but cross-building cannot RUN the result, and macOS binaries
+# additionally need a code signature that only macOS tooling can apply. So each
+# one is built and started on a real runner of its own kind, and the artifact you
+# download is one that has been seen to work.
+#
+# Run it from the Actions tab (workflow_dispatch), or push a v* tag.
+name: Package server
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: win-x64
+            exe: Sproutlands-Server-win-x64.exe
+          - os: macos-latest
+            target: darwin-arm64
+            exe: Sproutlands-Server-darwin-arm64
+          - os: ubuntu-latest
+            target: linux-x64
+            exe: Sproutlands-Server-linux-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Only postject and esbuild are needed to package; the browser the e2e
+      # suite uses is a large download this job has no use for.
+      - run: npm ci --ignore-scripts
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - run: node tools/package.mjs --target ${{ matrix.target }}
+
+      # THE SMOKE TEST IS THE POINT OF RUNNING THIS ON A REAL RUNNER. Start the
+      # binary somewhere that is not the repo, and ask it for two files that can
+      # only come from inside it. A server that starts is not a server that has
+      # its assets.
+      - name: Run it and check it serves the game
+        shell: bash
+        run: |
+          set -e
+          mkdir -p "$RUNNER_TEMP/exetest"
+          cp "dist/${{ matrix.exe }}" "$RUNNER_TEMP/exetest/"
+          cd "$RUNNER_TEMP/exetest"
+          chmod +x "${{ matrix.exe }}" || true
+          ./"${{ matrix.exe }}" --port 8899 --no-save > run.log 2>&1 &
+          for i in $(seq 1 60); do
+            grep -q "On this machine" run.log && break
+            sleep 1
+          done
+          cat run.log
+          grep -q "On this machine" run.log || { echo "server never started"; exit 1; }
+          curl -fsS http://127.0.0.1:8899/ -o page.html
+          grep -q "sproutlands-server" page.html || { echo "join marker missing"; exit 1; }
+          curl -fsS http://127.0.0.1:8899/js/main.js -o main.js
+          test -s main.js || { echo "js/main.js was not embedded"; exit 1; }
+          curl -fsS http://127.0.0.1:8899/mobs/manifest.json -o mobs.json
+          test -s mobs.json || { echo "mob files were not embedded"; exit 1; }
+          echo "OK — it starts and serves the game from inside the binary"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.exe }}
+          path: dist/${{ matrix.exe }}
+          if-no-files-found: error

@@ -20,7 +20,19 @@ Works on desktop, tablet and phone browsers (WebGL2 required).
 ### Play together on your wifi
 
 Run this **on a computer in the house** — the one on the same wifi as everyone
-else's devices. It needs Node 18 or newer and nothing else: no `npm install`, no
+else's devices.
+
+**The easy way: one file, nothing installed.** Grab
+`Sproutlands-Server-win-x64.exe` from the Actions tab (or build it yourself,
+below) and double-click it. That is the whole setup — no Node, no clone, no
+folder to keep beside it. The entire game is inside the binary. A console window
+opens showing the address to read out; closing it stops the server and saves.
+
+> Windows will warn that it is from an unknown publisher, because it is not code
+> signed. **More info → Run anyway.** Signing needs a certificate that costs
+> money; on your own machine, for your own kids, it buys nothing.
+
+**Or from source**, which needs Node 18+ and nothing else — no `npm install`, no
 build step, no dependencies. (`npm install` is only for running the tests.)
 
 ```bash
@@ -28,6 +40,20 @@ git clone <this repo>
 cd test1
 npm run server          # or: node server/server.mjs
 ```
+
+**Building the executable yourself:**
+
+```bash
+npm install                                  # postject + esbuild, dev only
+npm run package                              # for this machine
+node tools/package.mjs --target win-x64      # or another platform
+```
+
+Cross-building works — appending a runtime to a blob is just editing a file — but
+it cannot *run* the result, and macOS binaries need a signature only macOS
+tooling can apply. `.github/workflows/package.yml` builds each platform on a
+runner of its own kind and starts it there, so the artifacts you download have
+been seen to work.
 
 The game and the game socket are served on **one port**, so the address on the
 screen is the only address there is — open it on any device on the same wifi,

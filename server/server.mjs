@@ -22,7 +22,17 @@ import { attachWebSocket, newId } from './ws.mjs';
 import { Room, SIM_HZ, SNAP_HZ } from './room.mjs';
 import { loadRoom, saveRoom, savePathFor, saveSize } from './persist.mjs';
 
-const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
+// Where the game files live ON DISK. Only used when running from a clone: a
+// packaged executable serves everything out of itself and never touches this.
+//
+// The try/catch is not defensive padding. Bundled to CommonJS for packaging,
+// `import.meta.url` is not a URL any more — esbuild leaves it as ".", and
+// `new URL(".")` throws before the server has printed a single line. The
+// executable died on its first run for exactly this.
+const root = (() => {
+  try { return join(fileURLToPath(new URL('.', import.meta.url)), '..'); }
+  catch { return process.cwd(); }
+})();
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -31,6 +41,34 @@ const MIME = {
   '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.ico': 'image/x-icon',
   '.webmanifest': 'application/manifest+json',
 };
+
+// ---- assets, when this is an executable -------------------------------------
+// Node's single-executable format can carry arbitrary files alongside the code
+// (node:sea getAsset). tools/package.mjs puts the whole served tree in, so the
+// .exe a parent double-clicks is one file with no folder to keep beside it.
+//
+// Running normally there is no SEA at all, the require fails, and every lookup
+// returns null — which is why this is wrapped rather than imported at the top.
+// `typeof require` rather than a bare require: this file is ESM when run from a
+// clone (where require does not exist and referencing it would throw) and
+// CommonJS once esbuild has bundled it for packaging (where it does). typeof on
+// an undeclared identifier is the one form that is safe in both.
+let sea = null;
+try {
+  if (typeof require === 'function') {
+    const mod = require('node:sea');
+    if (mod?.isSea?.()) sea = mod;
+  }
+} catch { /* not packaged, which is the normal case */ }
+
+function bundled(path) {
+  if (!sea) return null;
+  const key = path.replace(/^\//, '');
+  try {
+    const buf = sea.getAsset(key);
+    return buf ? Buffer.from(buf) : null;
+  } catch { return null; }   // getAsset throws on an unknown key
+}
 
 // A seed is operator-supplied, but it still ends up inside an HTML attribute.
 const escapeAttr = (s) => String(s).replace(/[&<>"']/g, (c) => (
@@ -77,8 +115,13 @@ const room = new Room({ seed, onLog: log });
 // (js/world/world.js ensureChunk reads editedBlocks), so a chunk built before
 // the load would come from bare terrain and never be revisited — the base would
 // be missing until someone walked far enough away and back.
-let loaded = null;
-if (saving) {
+//
+// This is a function rather than top-level await for a packaging reason: Node's
+// single-executable format only accepts CommonJS, and CommonJS has no top-level
+// await. See tools/package.mjs.
+async function loadSave() {
+  if (!saving) return;
+  let loaded = null;
   try {
     loaded = await loadRoom(savePath, { seed, onLog: log });
   } catch (err) {
@@ -137,10 +180,23 @@ const handler = async (req, res) => {
       return;
     }
     if (path === '/') path = '/index.html';
-    const file = normalize(join(root, path));
-    // Path traversal guard: everything served must live under the repo root.
-    if (!file.startsWith(root)) { res.writeHead(403); res.end('forbidden'); return; }
-    let data = await readFile(file);
+
+    // PACKAGED OR NOT. Run from a clone, the game is read off disk. Run from the
+    // single-file executable (tools/package.mjs) there is no clone — the whole
+    // asset tree is inside the binary, and there is no repo root to resolve
+    // against. `bundled` returns the file in that case and null otherwise, so
+    // the two paths differ in exactly one branch.
+    const packed = bundled(path);
+    let file = path;
+    let data;
+    if (packed) {
+      data = packed;
+    } else {
+      file = normalize(join(root, path));
+      // Path traversal guard: everything served must live under the repo root.
+      if (!file.startsWith(root)) { res.writeHead(403); res.end('forbidden'); return; }
+      data = await readFile(file);
+    }
     // HOW THE TITLE SCREEN KNOWS THERE IS ANYTHING TO JOIN. The same files are
     // served by tests/server.mjs and by any static host, where "Play together"
     // would be a button that leads nowhere — so the page has to be told.
@@ -258,33 +314,36 @@ function lanAddresses() {
   return out;
 }
 
-http.listen(port, '0.0.0.0', () => {
-  const scheme = tls ? 'https' : 'http';
-  const urls = lanAddresses().map((ip) => `${scheme}://${ip}:${port}`);
-  console.log('');
-  console.log('  Sproutlands multiplayer');
-  console.log(`  seed "${seed}"  ·  ${SIM_HZ}Hz sim  ·  ${SNAP_HZ}Hz snapshots${tls ? '  ·  TLS' : ''}`);
-  console.log('');
-  console.log(`  On this machine:  ${scheme}://localhost:${port}`);
+function listen() {
+  http.listen(port, '0.0.0.0', () => {
+    const scheme = tls ? 'https' : 'http';
+    const urls = lanAddresses().map((ip) => `${scheme}://${ip}:${port}`);
+    console.log('');
+    console.log('  Sproutlands multiplayer');
+    console.log(`  seed "${seed}"  ·  ${SIM_HZ}Hz sim  ·  ${SNAP_HZ}Hz snapshots${tls ? '  ·  TLS' : ''}`);
+    console.log('');
+    console.log(`  On this machine:  ${scheme}://localhost:${port}`);
   if (urls.length) {
     console.log('  On the wifi:');
     for (const u of urls) console.log(`      ${u}`);
-  } else {
+    } else {
     console.log('  No LAN address found — other devices will not be able to reach this.');
-  }
-  console.log('');
-  if (tls) {
+    }
+    console.log('');
+    if (tls) {
     console.log('  Certificate is self-signed: each device will warn once. Accept it,');
     console.log('  and the game becomes installable to the home screen.');
-  } else {
+    } else {
     console.log('  Playing works from any of these. INSTALLING to a home screen works');
     console.log('  only on this machine (localhost counts as secure) — for the tablets,');
     console.log('  run `node tools/make-cert.mjs` then `npm run server -- --tls`.');
-  }
-  console.log('');
-  console.log('  Ctrl-C to stop.');
-  console.log('');
-});
+    }
+    console.log('');
+    console.log('  Ctrl-C to stop.');
+    console.log('');
+  });
+}
+
 
 let stopping = false;
 const shutdown = async () => {
@@ -304,3 +363,17 @@ const shutdown = async () => {
 };
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+
+// The world is read from disk BEFORE the port opens, so nobody can join a world
+// that is still half-loaded. An ordinary function rather than top-level await,
+// because the packaged executable is CommonJS and CommonJS has none.
+async function main() {
+  await loadSave();
+  listen();
+}
+
+main().catch((err) => {
+  console.error('\n  The server could not start:\n');
+  console.error(`  ${err.stack || err}\n`);
+  process.exit(1);
+});
