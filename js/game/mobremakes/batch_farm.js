@@ -154,26 +154,43 @@ export const FARM = {
       P.panel(34, 32, 10, 10, pink, { light: 0.14 });
       P.strokes(34, 33, 10, 8, 8, P.tone(pdk, -0.1), 3);
     },
-    // vanilla pig: body 10x8x16, head 8x8x8, legs 4x6x4 — low and stocky
-
-    anims: { graze: GRAZE(46) }, ambient: { clip: 'graze', every: [8, 19] },
+    // A PIG IS NOT A CRATE. The first version was one 10x8x16 box with an 8x8x8
+    // cube stuck on the front of it, and that is exactly what it looked like.
+    //
+    // Three things make a pig read. It has NO NECK — the head runs straight into
+    // the shoulders, lower than the back, so the top line goes shoulder-hump →
+    // slope → snout in one unbroken run. It is WIDEST AND TALLEST AT THE SHOULDER
+    // and tapers to a narrow rump. And the head is a WEDGE ending in that flat
+    // disc of a snout, which is the one feature nobody mistakes for another animal.
+    anims: { graze: GRAZE(38) }, ambient: { clip: 'graze', every: [8, 19] },
     parts: [
-      part('body', [0, 6, 0], [
-        b([-5, 6, -8], [10, 8, 16], { all: [0, 0, 26, 16], up: [0, 17, 26, 10] }),
+      part('body', [0, 5, 0], [
+        b([-5, 5, -8], [10, 7, 15], { all: [0, 0, 26, 16], up: [0, 17, 26, 10] }),
+        // the shoulder hump: a pig's high point, and where its bulk is
+        b([-5, 5, 1], [11, 9, 7], { all: [0, 0, 26, 16], up: [0, 17, 26, 10] }),
+        // and the rump, narrower and lower, so the barrel tapers to the tail
+        b([-4, 5, -9], [8, 6, 5], { all: [0, 0, 26, 16], up: [0, 17, 26, 10] }),
       ]),
-      part('head', [0, 9, 8], [
-        b([-4, 5, 8], [8, 8, 8], { all: [28, 0, 12, 12], south: [42, 0, 12, 12] }),
-        b([-2, 7, 16], [4, 3, 1], [0, 32, 10, 8]),      // snout
-        b([-4, 13, 9], [3, 2, 1], [12, 32, 8, 8]),      // ear L
-        b([1, 13, 9], [3, 2, 1], [12, 32, 8, 8]),       // ear R
+      // The head sits LOW and forward, its top below the shoulder hump — that
+      // stepped-down top line is the whole silhouette.
+      part('head', [0, 9, 7], [
+        b([-3, 5, 7], [7, 7, 5], { all: [28, 0, 12, 12], south: [42, 0, 12, 12] }),
+        b([-2, 5, 12], [5, 5, 3], { all: [28, 0, 12, 12], south: [42, 0, 12, 12] }),
+        b([-2, 6, 15], [4, 3, 2], [0, 32, 10, 8]),      // the snout disc
+        // ears, flopping FORWARD in two steps rather than standing up as tabs
+        b([-4, 11, 8], [3, 2, 2], [12, 32, 8, 8]),
+        b([1, 11, 8], [3, 2, 2], [12, 32, 8, 8]),
+        b([-4, 10, 10], [3, 2, 1], [12, 32, 8, 8]),
+        b([1, 10, 10], [3, 2, 1], [12, 32, 8, 8]),
       ]),
-      part('leg0', [-3, 6, 6], [b([-5, 0, 4], [4, 6, 4], [22, 32, 10, 14])]),
-      part('leg1', [3, 6, 6], [b([1, 0, 4], [4, 6, 4], [22, 32, 10, 14])]),
-      part('leg2', [-3, 6, -6], [b([-5, 0, -8], [4, 6, 4], [22, 32, 10, 14])]),
-      part('leg3', [3, 6, -6], [b([1, 0, -8], [4, 6, 4], [22, 32, 10, 14])]),
-      part('tail', [0, 13, -8], [
-        b([-1, 11, -9], [2, 3, 1], [34, 32, 10, 10]),
-        b([0, 13, -10], [2, 2, 1], [34, 32, 10, 10]),   // curl
+      part('leg0', [-3, 5, 5], [b([-4, 0, 4], [4, 5, 4], [22, 32, 10, 14])]),
+      part('leg1', [3, 5, 5], [b([0, 0, 4], [4, 5, 4], [22, 32, 10, 14])]),
+      part('leg2', [-3, 5, -6], [b([-4, 0, -8], [4, 5, 4], [22, 32, 10, 14])]),
+      part('leg3', [3, 5, -6], [b([0, 0, -8], [4, 5, 4], [22, 32, 10, 14])]),
+      part('tail', [0, 10, -9], [
+        b([-1, 9, -10], [2, 3, 1], [34, 32, 10, 10]),
+        b([0, 11, -11], [2, 2, 1], [34, 32, 10, 10]),   // the curl
+        b([-1, 12, -10], [2, 1, 1], [34, 32, 10, 10]),
       ]),
     ],
   },

@@ -92,54 +92,121 @@ function goblinParts(d, kit = {}) {
 // The one paint routine, driven by a palette. `pal.eye` is doing most of the
 // communication work: yellow reads as ordinary malice, orange as fire, pale
 // blue as cold, and huge washed-out white as "this thing lives in the dark".
+// THE FACE. Every hostile creature in the world is a goblin, so this one island
+// is the face of the entire opposition — and it used to be four marks on a flat
+// fill: a dark band, two 2x2 dots and a black letterbox with four tooth pixels.
+// At sixteen by fourteen there is room for an actual skull.
+//
+// What is here, and why each piece earns its pixels:
+//
+//   BROW      a heavy shelf, lit along its top edge and throwing a hard shadow
+//             into the sockets, coming to a point in the middle. This single band
+//             does more for the expression than the eyes do — it is the scowl.
+//   SOCKETS   recessed, so an eye sits IN the skull instead of on it.
+//   EYES      sclera, iris, pupil, glint. Four values is what makes an eye look
+//             wet; two makes it look like a hole.
+//   NOSE      a broad bridge with a lit side and a flared base. A goblin is all
+//             nose and jaw, and the old face had no nose at all.
+//   CHEEKS    a lit bone ridge under each socket with a crease beneath it, which
+//             is what makes the face gaunt rather than round.
+//   MOUTH     an underbite: tusks coming UP from the lower jaw, smaller teeth
+//             coming down, uneven, over a gum line and under a lit lower lip.
+//   DAMAGE    a wart over one eye and a scar through the other cheek — placed,
+//             not scattered, and asymmetric, because a perfectly mirrored face
+//             reads as a mask.
+function goblinFace(P, pal, X, Y, W, H) {
+  const { skin, dark, eye } = pal;
+  // Shadow is keyed to the SKIN, not to the livery's `dark`. On the Frost
+  // Goblin's blue-white hide `dark` is barely a step down, so a socket built from
+  // it vanished and the eyes floated on a flat face. A proportional darkening of
+  // the skin gives the same depth on a green goblin and a white one.
+  const shadow = P.tone(skin, -0.46), socket = P.tone(skin, -0.3);
+  const lit = P.tone(skin, 0.18);
+  const maw = '#170f07', tooth = '#e8dcbc', gum = '#6b3a34';
+
+  P.panel(X, Y, W, H, skin, { light: 0.13, vary: 0.03, seam: 0.12 });
+
+  // brow
+  P.rect(X + 1, Y + 1, W - 2, 2, P.mix(skin, dark, 0.6));
+  P.rect(X + 1, Y + 1, W - 2, 1, P.tone(skin, 0.22));
+  P.rect(X + 1, Y + 3, W - 2, 2, shadow);
+  P.rect(X + 6, Y + 3, 4, 3, shadow);                       // the scowl's point
+
+  // sockets, then the eyes in them
+  for (const sx of [X + 2, X + 9]) {
+    P.rect(sx, Y + 4, 5, 4, socket);
+    P.rect(sx, Y + 4, 5, 1, shadow);
+  }
+  for (const ex of [X + 3, X + 10]) {
+    P.rect(ex, Y + 5, 3, 2, P.tone(eye, -0.22));            // sclera, in shadow
+    P.rect(ex + 1, Y + 5, 2, 2, eye);                       // iris
+    P.px(ex + 1, Y + 6, '#12100a');                         // pupil
+    P.px(ex + 2, Y + 5, P.tone(eye, 0.5));                  // glint
+  }
+
+  // nose
+  P.rect(X + 7, Y + 5, 2, 4, P.tone(skin, -0.1));
+  P.rect(X + 7, Y + 5, 1, 4, lit);
+  P.rect(X + 6, Y + 8, 4, 2, P.tone(skin, -0.24));
+  P.px(X + 6, Y + 9, maw); P.px(X + 9, Y + 9, maw);
+
+  // cheekbones and the hollows under them
+  P.rect(X + 2, Y + 8, 4, 1, lit);
+  P.rect(X + 10, Y + 8, 4, 1, lit);
+  P.crease(X + 1, Y + 10, X + 5, Y + 9, P.tone(skin, -0.34));
+  P.crease(X + 14, Y + 10, X + 10, Y + 9, P.tone(skin, -0.34));
+
+  // the mouth
+  P.rect(X + 2, Y + 10, 12, 3, maw);
+  P.rect(X + 2, Y + 10, 12, 1, gum);
+  for (const [tx, th] of [[3, 3], [5, 2], [8, 2], [11, 3], [12, 1]]) {
+    P.rect(X + tx, Y + 13 - th, 1, th, tooth);              // lower tusks, uneven
+    P.px(X + tx, Y + 13 - th, P.tone(tooth, 0.4));
+  }
+  for (const tx of [4, 7, 10, 13]) P.px(X + tx, Y + 11, P.tone(tooth, -0.25));
+  P.rect(X + 2, Y + 13, 12, 1, P.tone(skin, 0.12));         // lower lip
+
+  // and the damage
+  P.px(X + 4, Y + 2, P.tone(skin, -0.28)); P.px(X + 4, Y + 1, lit);
+  P.crease(X + 13, Y + 2, X + 12, Y + 8, P.tone(skin, -0.3));
+  P.px(X + 13, Y + 3, lit);
+}
+
 function paintGoblin(P, pal) {
   const { skin, dark, ear, eye, cloth, metal, mdk, rust } = pal;
-  const tooth = '#e8dcbc', maw = '#1c1208';
 
-  // head sides — warty hide, flecked with the darker tone
-  P.noise(0, 0, 16, 14, skin, 0.08, { chance: 0.12, color: dark });
-  P.strokes(0, 0, 16, 14, 10, dark, 3);
-  P.spots(0, 0, 16, 14, 5, P.shade(skin, 0.06));
-  // face — heavy brow, eyes, a mouth of bad teeth
-  P.noise(18, 0, 16, 14, skin, 0.07);
-  P.rect(18, 0, 16, 3, dark);
-  P.eye(21, 5, '#12100a', eye);
-  P.eye(29, 5, '#12100a', eye);
-  P.rect(21, 10, 12, 2, maw);
-  P.px(23, 10, tooth); P.px(26, 10, tooth); P.px(29, 10, tooth); P.px(31, 11, tooth);
-  // ears — thinner skin, so a lighter tone with a dark inner ridge
-  P.noise(36, 0, 12, 6, ear, 0.07);
-  P.rect(37, 1, 10, 2, dark);
-  // headgear tile — beaten metal, dented and rusted
-  P.noise(36, 8, 16, 8, metal, 0.08, { chance: 0.2, color: rust });
-  P.bands(36, 8, 16, 8, 3, mdk);
-  P.spots(36, 8, 16, 8, 6, P.shade(metal, 0.1));
-  // torso + belly
-  P.noise(0, 18, 16, 18, skin, 0.07);
-  P.strokes(0, 18, 16, 18, 12, dark, 4);
-  P.noise(18, 18, 14, 18, P.shade(skin, 0.04), 0.06);
-  P.strokes(18, 18, 14, 18, 8, dark, 3);
-  // chest plate tile — scavenged armour over stolen cloth
-  P.noise(34, 18, 16, 10, metal, 0.08, { chance: 0.2, color: rust });
-  P.bands(34, 18, 16, 10, 3, mdk);
-  P.outline(34, 18, 16, 10, '#241f18');
-  // pauldron tile
-  P.noise(34, 30, 14, 10, metal, 0.08, { chance: 0.18, color: rust });
-  P.outline(34, 30, 14, 10, mdk);
-  // belt tile — leather with a brass buckle
-  P.noise(0, 38, 16, 6, rust, 0.08);
+  // head sides — warty hide, with the jaw and the temple picked out so the skull
+  // has some shape from the side too
+  P.hide(0, 0, 16, 14, skin, dark, { speck: { chance: 0.08, color: dark } });
+  P.crease(2, 10, 13, 8, P.tone(dark, -0.2), P.tone(skin, 0.14));   // the jaw line
+  P.rect(2, 3, 5, 2, P.tone(dark, -0.1));                           // the temple hollow
+  P.spots(1, 1, 14, 6, 5, P.tone(skin, 0.14));                      // warts
+  goblinFace(P, pal, 18, 0, 16, 14);
+  // ears — thin skin held up to the light: pale at the rim, dark cartilage
+  // ridges running out along it
+  P.panel(36, 0, 12, 6, ear, { light: 0.2, seam: 0.16 });
+  P.rect(37, 1, 10, 1, P.tone(ear, 0.24));
+  for (let i = 37; i < 47; i += 3) P.crease(i, 2, i + 2, 4, P.tone(dark, -0.06));
+  // headgear tile — beaten metal, dented, riveted and rusting from the rim
+  P.plate(36, 8, 16, 8, metal, { rust });
+  // torso + belly — a lean, ribby hide
+  P.hide(0, 18, 16, 18, skin, dark);
+  for (let j = 22; j < 32; j += 3) P.crease(2, j, 13, j + 1, P.tone(dark, -0.16));  // ribs
+  P.hide(18, 18, 14, 18, P.tone(skin, 0.05), dark);
+  P.crease(20, 26, 29, 26, P.tone(dark, -0.14));                    // the sternum
+  // scavenged armour, a pauldron, and a leather belt with a brass buckle
+  P.plate(34, 18, 16, 10, metal, { rust });
+  P.plate(34, 30, 14, 10, P.tone(metal, -0.06), { rust });
+  P.cloth(0, 38, 16, 6, rust, { folds: 1, fray: false });
   P.rect(6, 39, 4, 4, '#c8b23a');
-  // arms + legs, with wrappings at wrist and ankle
-  P.noise(50, 18, 8, 20, skin, 0.07);
-  P.strokes(50, 18, 8, 20, 10, dark, 4);
-  P.rect(50, 34, 8, 3, cloth);
-  P.noise(50, 40, 8, 18, skin, 0.07);
-  P.strokes(50, 40, 8, 18, 8, dark, 4);
-  P.rect(50, 54, 8, 4, cloth);
+  P.rect(6, 39, 4, 1, '#e8d878');
+  // arms + legs, with rag wrappings at wrist and ankle
+  P.hide(50, 18, 8, 20, skin, dark);
+  P.cloth(50, 33, 8, 4, cloth, { folds: 1 });
+  P.hide(50, 40, 8, 18, skin, dark);
+  P.cloth(50, 53, 8, 5, cloth, { folds: 1 });
   // kit tile — the rag-and-timber bundle every accessory box shares
-  P.noise(0, 46, 24, 14, cloth, 0.09, { chance: 0.16, color: rust });
-  P.strokes(0, 46, 24, 14, 20, P.shade(cloth, -0.08), 5);
-  P.bands(0, 46, 24, 14, 5, mdk);
+  P.cloth(0, 46, 24, 14, cloth, { folds: 3, dk: P.tone(rust, -0.1) });
 }
 
 // A livery is a palette, a size class and a handful of accessory boxes.

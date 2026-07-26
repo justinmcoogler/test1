@@ -87,35 +87,37 @@ export function horseParts(d) {
   const back = legH + bh;               // top of the barrel
   const zF = bd / 2;
   // The neck climbs in three steps from the withers; the head hangs off the top.
-  const n = Math.max(4, R(neck * 0.42));
-  const crest = back + 3 * n - 1;       // the actual top of the neck stack
-  const poll = crest - 2;               // where the head joins it
-  const hz = zF + 4;                    // how far in front of the chest the head is
+  // FOUR SMALL STEPS, not three big ones. Three chunky blocks read as a staircase
+  // — you see the steps, not the arch. Each of these rises 3 and moves forward 2
+  // while narrowing by a pixel, which at 16 texels to the block is a diagonal.
+  const RISE = 3, RUN = 2;
+  const NECK = [[6, 5], [6, 5], [5, 5], [4, 5]];          // [width, height] per step
+  const neckY = (i) => back - 2 + i * RISE;
+  const neckZ = (i) => zF - 6 + i * RUN;
+  const poll = neckY(NECK.length - 1) + 1;                // where the head joins
+  const hz = neckZ(NECK.length - 1) + 5;                  // and how far out in front
+  const headH = Math.max(6, R(bh * 0.7)), headL = Math.max(9, R(bd * 0.5));
   return [
     part('body', [0, legH, 0], [
       b([-bw / 2, legH, -bd / 2], [bw, bh, bd], { all: H_UV.flank, up: H_UV.top }),
-      // A horse is not a brick. The chest is deeper than the barrel and the rump
-      // is higher and rounder than either — those two boxes are most of what makes
-      // the outline read as a horse rather than as a table.
-      b([-bw / 2 - 1, legH + 1, zF - R(bd * 0.3)], [bw + 2, bh - 1, R(bd * 0.3)], H_UV.chest),
-      b([-bw / 2 - 1, legH + 2, -bd / 2], [bw + 2, bh - 1, R(bd * 0.28)], H_UV.rump),
-      // the neck: three steps forward and up out of the withers, narrowing
-      b([-3, back - 3, zF - 5], [6, n + 2, 6], H_UV.neck),
-      b([-3, back + n - 2, zF - 3], [5, n + 1, 6], H_UV.neck),
-      b([-2, back + n * 2 - 3, zF - 1], [4, n + 2, 5], H_UV.neck),
-      // The mane hangs down the BACK of the neck, one hank per segment, set a pixel
-      // behind it. It used to be given the segment's height and placed on top,
-      // which stood three dark blocks up off the crest like a mohawk.
-      b([-1, back - 2, zF - 6], [2, n + 1, 2], H_UV.mane),
-      b([-1, back + n - 1, zF - 4], [2, n + 1, 2], H_UV.mane),
-      b([-1, back + n * 2 - 2, zF - 2], [2, n + 1, 2], H_UV.mane),
+      // A horse is not a brick. The chest is deeper through than the barrel and
+      // the croup rounds up over the hips. Both stay FLUSH with the flank in x —
+      // widening them by a pixel a side put a shelf down the animal's ribs.
+      b([-bw / 2, legH + 1, zF - R(bd * 0.32)], [bw, bh, R(bd * 0.32)], H_UV.chest),
+      b([-bw / 2 + 1, legH + 2, -bd / 2], [bw - 2, bh - 1, R(bd * 0.3)], H_UV.rump),
+      // the neck, climbing forward out of the withers and tapering as it goes
+      ...NECK.map(([w, h], i) => b([-R(w / 2), neckY(i), neckZ(i)], [w, h, 6], H_UV.neck)),
+      // the mane, one hank per step, hung a pixel BEHIND the neck rather than on
+      // top of it — on top read as a mohawk
+      ...NECK.map(([, h], i) => b([-1, neckY(i), neckZ(i) - 1], [2, h + 1, 2], H_UV.mane)),
     ]),
-    // The head: LONGER THAN IT IS TALL, carried out in front, with a jaw beneath
-    // the back of it and the muzzle tapering off the front.
+    // The head: LONG, and bigger than the neck is thick. A horse's head is the
+    // heaviest thing on the front of it — undersize it and the animal reads as a
+    // llama however good the neck is.
     part('head', [0, poll, hz], [
-      b([-2, poll - 5, hz], [5, 6, 10], { all: H_UV.headSide, south: H_UV.headFace }),
-      b([-2, poll - 7, hz - 1], [5, 3, 5], H_UV.headSide),        // the cheek/jaw
-      b([-2, poll - 5, hz + 10], [4, 4, 3], H_UV.muzzle),         // the muzzle
+      b([-3, poll - headH, hz], [6, headH, headL], { all: H_UV.headSide, south: H_UV.headFace }),
+      b([-2, poll - headH - 2, hz], [5, 3, 6], H_UV.headSide),            // cheek/jaw
+      b([-2, poll - headH + 1, hz + headL], [4, 4, 3], H_UV.muzzle),      // the muzzle
       b([-3, poll, hz + 1], [2, 3, 1], H_UV.ear),
       b([1, poll, hz + 1], [2, 3, 1], H_UV.ear),
       b([-1, poll - 1, hz + 3], [2, 4, 2], H_UV.forelock),
