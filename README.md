@@ -22,11 +22,21 @@ Works on desktop, tablet and phone browsers (WebGL2 required).
 Run this **on a computer in the house** — the one on the same wifi as everyone
 else's devices.
 
-**The easy way: one file, nothing installed.** Grab
-`Sproutlands-Server-win-x64.exe` from the Actions tab (or build it yourself,
-below) and double-click it. That is the whole setup — no Node, no clone, no
-folder to keep beside it. The entire game is inside the binary. A console window
-opens showing the address to read out; closing it stops the server and saves.
+**The easy way: one file, nothing installed.**
+
+#### ⬇ [Download the Windows server](https://github.com/justinmcoogler/test1/releases/download/server-latest/Sproutlands-Server-win-x64.exe)
+
+That link is the file itself — it starts downloading, no GitHub account and no
+signing in. It lands in your **Downloads** folder as
+`Sproutlands-Server-win-x64.exe`. Double-click it there. That is the whole
+setup: no Node, no clone, no folder to keep beside it, nothing to unzip. The
+entire game is inside the binary. A console window opens showing the address to
+read out; closing it stops the server and saves.
+
+([macOS](https://github.com/justinmcoogler/test1/releases/download/server-latest/Sproutlands-Server-darwin-arm64)
+· [Linux](https://github.com/justinmcoogler/test1/releases/download/server-latest/Sproutlands-Server-linux-x64)
+· [all builds](https://github.com/justinmcoogler/test1/releases/tag/server-latest)
+— on those two, `chmod +x` the file first.)
 
 > Windows will warn that it is from an unknown publisher, because it is not code
 > signed. **More info → Run anyway.** Signing needs a certificate that costs
@@ -52,8 +62,10 @@ node tools/package.mjs --target win-x64      # or another platform
 Cross-building works — appending a runtime to a blob is just editing a file — but
 it cannot *run* the result, and macOS binaries need a signature only macOS
 tooling can apply. `.github/workflows/package.yml` builds each platform on a
-runner of its own kind and starts it there, so the artifacts you download have
-been seen to work.
+runner of its own kind, starts the result there and asks it for a file that can
+only have come from inside it, then publishes the three binaries to the
+`server-latest` release. So the file behind the link above is one that has been
+seen to serve the game.
 
 The game and the game socket are served on **one port**, so the address on the
 screen is the only address there is — open it on any device on the same wifi,
