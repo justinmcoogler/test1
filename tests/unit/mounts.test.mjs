@@ -135,9 +135,9 @@ test('the stable survives a save round trip, and a corrupt save cannot strand yo
   empty.deserialize(undefined);
   assert.equal(empty.riding(), null);
   const bad = new Stable();
-  bad.deserialize({ tamed: ['pegasus', 'riftdrake'], active: 'pegasus', progress: 'nonsense' });
+  bad.deserialize({ tamed: ['hippogriff', 'riftdrake'], active: 'hippogriff', progress: 'nonsense' });
   assert.equal(bad.has('riftdrake'), true, 'the real one survives');
-  assert.equal(bad.has('pegasus'), false, 'the invented one is dropped');
+  assert.equal(bad.has('hippogriff'), false, 'the invented one is dropped');
   assert.equal(bad.riding(), null, 'and you are not left riding something that does not exist');
   // Riding a mount you no longer own is cleared rather than kept.
   const lost = new Stable();

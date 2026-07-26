@@ -19,6 +19,7 @@ const RIGS = {
   // mounts + the whelp — horses and dragons both walk on four legs
   courser: 'quadruped', destrier: 'quadruped', steppe_runner: 'quadruped',
   crag_drake: 'quadruped', storm_wyrm: 'quadruped', riftdrake: 'quadruped',
+  pegasus: 'quadruped',
   dragon_whelp: 'quadruped',
 };
 

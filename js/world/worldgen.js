@@ -174,7 +174,7 @@ export const BIOMES = {
     trees: grove(['pine', 0.006], ['ash', 0.006], ['hickory', 0.004]),
     plants: [{ block: 'tall_grass', d: 0.008 }],
     nodes: [{ type: 'ore_iron', d: 0.005 }, { type: 'ore_copper', d: 0.004 }, { type: 'ore_tin', d: 0.004 }, { type: 'deposit_coal', d: 0.003 }, { type: 'dig_trench', d: 0.002 }],
-    enemies: [{ type: 'goat', d: 0.0022 }, { type: 'rat', d: 0.002, pack: [1, 2] }, { type: 'scrap_goblin', d: 0.002, pack: [1, 3], ring: 1 }, { type: 'cave_goblin', d: 0.0016, ring: 1 }, { type: 'goblin_slinger', d: 0.0014, ring: 2 }, { type: 'crag_drake', d: 0.0011, ring: 1 }],
+    enemies: [{ type: 'goat', d: 0.0022 }, { type: 'rat', d: 0.002, pack: [1, 2] }, { type: 'scrap_goblin', d: 0.002, pack: [1, 3], ring: 1 }, { type: 'cave_goblin', d: 0.0016, ring: 1 }, { type: 'goblin_slinger', d: 0.0014, ring: 2 }, { type: 'crag_drake', d: 0.0011, ring: 1 }, { type: 'pegasus', d: 0.0008, ring: 2 }],
   },
   savanna: {
     label: 'Savanna', ring: 1, climate: 'tropical grassland / savanna',
@@ -232,7 +232,7 @@ export const BIOMES = {
     trees: [],
     plants: [{ block: 'tall_grass', d: 0.05 }, { block: 'wildflower', d: 0.02 }],
     nodes: [{ type: 'ore_copper', d: 0.003 }, { type: 'ore_tin', d: 0.003 }, { type: 'herb_patch', d: 0.006 }, { type: 'deposit_coal', d: 0.002 }, { type: 'dig_bog', d: 0.0016 }],
-    enemies: [{ type: 'goat', d: 0.0024 }, { type: 'rabbit', d: 0.0018 }, { type: 'rat', d: 0.0016 }, { type: 'scrap_goblin', d: 0.0014, ring: 1 }, { type: 'frost_goblin', d: 0.0016, ring: 1 }, { type: 'storm_wyrm', d: 0.0007, ring: 2 }],
+    enemies: [{ type: 'pegasus', d: 0.0012, ring: 2 }, { type: 'goat', d: 0.0024 }, { type: 'rabbit', d: 0.0018 }, { type: 'rat', d: 0.0016 }, { type: 'scrap_goblin', d: 0.0014, ring: 1 }, { type: 'frost_goblin', d: 0.0016, ring: 1 }, { type: 'storm_wyrm', d: 0.0007, ring: 2 }],
   },
   sunbaked_badlands: {
     label: 'Desert', ring: 2, climate: 'hot desert',

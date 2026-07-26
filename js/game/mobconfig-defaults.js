@@ -41,6 +41,7 @@ export const MOB_DEFAULTS = {
   "destrier": { active: true },
   "steppe_runner": { active: true },
   "crag_drake": { active: true },
+  "pegasus": { active: true },
   "storm_wyrm": { active: true },
   "riftdrake": { active: true },
   "dragon_whelp": { active: true },

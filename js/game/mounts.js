@@ -64,6 +64,18 @@ export const MOUNTS = {
     tame: 'boar_haunch', tameCount: 4, level: 25,
     desc: 'A broad-winged cliff dragon, patient and slow to climb. It will carry you to the low shelf and no further — past about a hundred and sixty blocks it simply stops rising, and banks.',
   },
+  // The Pegasus sits between the first two dragons on purpose. It is the fastest
+  // climber in the game and the only flyer that clears the ENTIRE low shelf —
+  // a Crag Drake stops at 162, which leaves the tallest ring-1 crowns out of
+  // reach — and then it stops dead a long way short of the middle band. So it is
+  // never the mount that unlocks a band; it is the mount that makes the band you
+  // already have pleasant to work, and the reason to keep a Crag Drake around is
+  // nothing at all once you have one. That is deliberate: it retires a dragon.
+  pegasus: {
+    label: 'Pegasus', flying: true, ceiling: 190, speed: 17, climb: 8, ring: 2,
+    tame: 'grainsheaf', tameCount: 12, level: 40,
+    desc: 'A white horse with a wingspan wider than it is long, and no visible opinion about dragons. Climbs faster than anything else alive and gives out early — the whole low shelf, and not one foot of the middle band.',
+  },
   storm_wyrm: {
     label: 'Storm Wyrm', flying: true, ceiling: 266, speed: 15, climb: 7, ring: 2,
     tame: 'silverfin', tameCount: 6, level: 50,

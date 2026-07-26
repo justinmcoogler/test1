@@ -23,7 +23,8 @@ const GOBLINS = [
 // The mounts and the whelp (js/game/mounts.js). Separate from the bestiary
 // above on purpose: these are things you tame, not things you fight, and they
 // are the only reason the sky archipelago is reachable at all.
-const MOUNTS_ROSTER = ['courser', 'destrier', 'steppe_runner', 'crag_drake', 'storm_wyrm', 'riftdrake', 'dragon_whelp'];
+const MOUNTS_ROSTER = ['courser', 'destrier', 'steppe_runner', 'pegasus',
+  'crag_drake', 'storm_wyrm', 'riftdrake', 'dragon_whelp'];
 const BESTIARY = [...LIVESTOCK, 'practice_dummy', 'rat', ...GOBLINS];
 const ROSTER = [...BESTIARY, ...MOUNTS_ROSTER];
 
@@ -37,10 +38,10 @@ for (const biome of Object.values(BIOMES)) {
 for (const sp of buildStarterStructures().spawns) spawnedTypes.add(sp.type);
 
 test('the roster is exactly the creatures the world is built from', () => {
-  // Eighteen in the bestiary, seven mounts. Written out rather than counted, so
+  // Eighteen in the bestiary, eight mounts. Written out rather than counted, so
   // that adding a creature is a deliberate edit here and never a side effect.
   assert.equal(BESTIARY.length, 18);
-  assert.equal(MOUNTS_ROSTER.length, 7);
+  assert.equal(MOUNTS_ROSTER.length, 8);
   const actual = Object.keys(ENEMY_TYPES).sort();
   assert.deepEqual(actual, [...ROSTER].sort());
 });

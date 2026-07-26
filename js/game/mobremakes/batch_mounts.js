@@ -238,6 +238,92 @@ const horse = (pal, d) => ({
   parts: horseParts(d),
 });
 
+// ---- the pegasus -------------------------------------------------------------
+// The horse skeleton with a pair of wings on it, which is the whole idea: it must
+// read as a HORSE first and a flying thing second, or it is a griffin. So nothing
+// about the frame changes — same builder, same skin, slightly longer in the leg
+// because it is an athlete — and the wings are additive.
+//
+// Three free islands were left on the horse sheet between the crown and the legs.
+const PG_UV = {
+  wingA: [12, 42, 14, 10],    // coverts, over the shoulder
+  wingB: [12, 53, 26, 11],    // secondaries
+  wingC: [26, 42, 12, 10],    // primaries, sweeping back past the flank
+};
+
+// HALF-SPREAD, NOT FOLDED — and this is where a pegasus parts company with the
+// dragons. Their wings are authored shut because a dragon is a thing you find
+// dozing on a ledge and the folded pose is the only one anyone sees. Tried the
+// same here and it failed for a reason specific to this animal: a wing folded
+// flat along a horse's ribs is a one-pixel plane lying against the flank, which
+// at this scale is not a shape at all, it is a decal. It read as a horse with
+// luggage. And the whole job of the silhouette is to say FLYING MOUNT across a
+// meadow, because that is the only thing separating this from the other four
+// horses in the paddock.
+//
+// So the wing is a fan of three panels sweeping out and back from the shoulder,
+// thin in Y and wide in X, carried at a rest roll of about thirty-five degrees —
+// a bird mantling rather than a bird in flight. The clip works from there.
+function pegasusWings(d) {
+  const { bw, bh, bd, legH } = d;
+  const back = legH + bh, zF = bd / 2;
+  const plane = (s) => {
+    const x1 = s > 0 ? bw / 2 : -bw / 2 - 5;
+    const x2 = s > 0 ? bw / 2 + 5 : -bw / 2 - 9;
+    const x3 = s > 0 ? bw / 2 + 9 : -bw / 2 - 12;
+    // ALL THREE SHARE A LEADING EDGE and rake only at the back. Stepping both
+    // edges outboard is the obvious way to draw a swept wing and it staircases:
+    // three panels offset front and back read as stacked plates, the same failure
+    // the horse's neck had. One straight front edge and a raked trailing edge is
+    // a wing. TWO pixels thick,
+    // not one: a single-pixel panel carried at an angle presents an edge to the
+    // side view and the animal loses its wings in profile, which is the one view
+    // you see most of a mount you are standing next to.
+    return [
+      b([x1, back - 2, zF - 12], [5, 2, 11], PG_UV.wingA),
+      b([x2, back - 2, zF - 11], [4, 2, 10], PG_UV.wingB),
+      b([x3, back - 2, zF - 9], [3, 2, 8], PG_UV.wingC),
+    ];
+  };
+  return [
+    // Sign check, because it is not the dragons'. Their wings are vertical fans;
+    // these extend OUTWARD in x, and a +Z roll carries +x toward +y — so the
+    // right wing lifts on positive and the left on negative. Backwards, both
+    // wings hang under the belly like dropped oars.
+    part('wingL', [-bw / 2, back - 2, zF - 7], plane(-1), { rotation: [0, 0, -55] }),
+    part('wingR', [bw / 2, back - 2, zF - 7], plane(1), { rotation: [0, 0, 55] }),
+  ];
+}
+
+// It shrugs its wings open and settles them again — the only wing behaviour you
+// ever see from the ground, and the tell that separates it from a horse at range.
+const MANTLE = {
+  length: 4.6, loop: false,
+  parts: {
+    // These ADD to the rest roll of fifty-five (js/game/mobloader.js evaluatePose),
+    // so they are how much further the wing opens from mantled, not a pose.
+    wingL: { rotate: [[0, [0, 0, 0]], [1.2, [0, 0, -24]], [2.2, [0, 0, -6]], [3.2, [0, 0, -15]], [4.6, [0, 0, 0]]] },
+    wingR: { rotate: [[0, [0, 0, 0]], [1.2, [0, 0, 24]], [2.2, [0, 0, 6]], [3.2, [0, 0, 15]], [4.6, [0, 0, 0]]] },
+    head: { rotate: [[0, [0, 0, 0]], [1.2, [-8, 0, 0]], [3.2, [-4, 0, 0]], [4.6, [0, 0, 0]]] },
+  },
+};
+
+export function paintPegasusSkin(P, pal) {
+  paintHorseSkin(P, pal);
+  // THE WING GETS ITS OWN COLOUR, not a shade of the coat. Painted in the hide
+  // palette it vanished: a white wing on a white horse is a set of faint lines
+  // across the barrel, and the animal read as a horse with something strapped to
+  // it. A cool grey against the warm white separates the two masses at any size.
+  //
+  // Feathers, not hide, and the courses coarsen toward the tip: the primaries are
+  // a dozen big flight feathers and the coverts are a hundred small ones, and
+  // stepping the course spacing is the only way to say that at this scale.
+  const w = pal.wing, wd = pal.wingDk;
+  P.feather(12, 42, 14, 10, w, wd, P.tone(w, 0.4), 3);
+  P.feather(12, 53, 26, 11, P.tone(w, -0.07), wd, P.tone(w, 0.3), 4);
+  P.feather(26, 42, 12, 10, P.tone(w, -0.14), P.tone(wd, -0.12), P.tone(w, 0.22), 5);
+}
+
 // ---- dragons ----------------------------------------------------------------
 // One skeleton: a deep chest tapering to narrow hips, an arched neck of two
 // segments, a wedge head with a jaw and horns, four legs (fore shorter than
@@ -479,6 +565,24 @@ export const MOUNTS_BATCH = {
     coat: '#c2a068', cdk: '#8a6c3c', shine: '#dcc08c', mane: '#2c2016',
     blaze: '#e8dcc4', hoof: '#241c14', muz: '#5a4428', eye: '#d8b070',
   }, { bw: 9, bh: 9, bd: 21, legH: 12, legW: 4, neck: 12 }),
+
+  // pegasus — white, long in the leg, and the only horse in the paddock that
+  // leaves the ground. Wings folded: this is what one looks like standing.
+  pegasus: (() => {
+    const pal = {
+      coat: '#e8e6e0', cdk: '#a6a29a', shine: '#ffffff', mane: '#cfd6e0',
+      blaze: null, hoof: '#3a3a42', muz: '#6a6670', eye: '#7fa8d8',
+      wing: '#c2c8d6', wingDk: '#6e7488',
+    };
+    const d = { bw: 10, bh: 10, bd: 22, legH: 13, legW: 4, neck: 12 };
+    return {
+      texW: 64, texH: 64, rig: 'quadruped',
+      paint(ctx, P) { paintPegasusSkin(P, pal); },
+      anims: { graze: GRAZE(56), mantle: MANTLE },
+      ambient: { clip: 'mantle', every: [9, 20] },
+      parts: [...horseParts(d), ...pegasusWings(d)],
+    };
+  })(),
 
   // --------------------------------------------------------------------------
   // The dragons. One skeleton at three scales, plus the whelp. Wingspan is the

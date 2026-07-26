@@ -503,6 +503,25 @@ export const ENEMY_TYPES = {
       box(0, 1.3, 0.52, 0.24, 0.24, 0.44, [0.76, 0.66, 0.44]),
     ]),
   },
+  pegasus: {
+    label: 'Pegasus', behavior: 'defensive', tier: 2,
+    hp: 58, atk: 9, acc: 68, evasion: 26, armor: 2, speed: 13, moveRange: 6,
+    abilities: [], element: null, weak: [], resist: [],
+    xp: 118, huntXp: 82, respawn: 300,  aggroRange: 0,
+    drops: [
+      { item: 'cured_hide', qty: [1, 2], chance: 0.8 },
+      { item: 'sinew', qty: [2, 4], chance: 0.8 },
+      { item: 'rough_gem', qty: [1, 1], chance: 0.2 },
+    ],
+    desc: 'White to the point of glare, standing in meadow grass above the treeline with its wings shut along its ribs like a folded sail. It watches you arrive and does not move.',
+    recommend: 'It leaves before a second swing lands. Bring grain, not a spear.',
+    model: M([
+      box(0, 0.72, 0, 0.44, 0.46, 1.18, [0.9, 0.9, 0.88]),
+      box(0, 1.28, 0.5, 0.24, 0.24, 0.42, [0.92, 0.92, 0.9]),
+      box(-0.42, 1.0, -0.12, 0.12, 0.62, 0.9, [0.86, 0.87, 0.9]),
+      box(0.42, 1.0, -0.12, 0.12, 0.62, 0.9, [0.86, 0.87, 0.9]),
+    ]),
+  },
   crag_drake: {
     label: 'Crag Drake', behavior: 'defensive', tier: 2,
     hp: 70, atk: 12, acc: 64, evasion: 10, armor: 5, speed: 7, moveRange: 4,

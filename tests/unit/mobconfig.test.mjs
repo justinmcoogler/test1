@@ -36,9 +36,9 @@ test('the shipped roster is active; everything else defaults OFF', () => {
     // …and the mounts, which ship active for a structural reason: the dragons
     // are the only way up to the sky archipelago, so switching them off leaves
     // a whole vertical axis in the world that nothing can reach.
-    'courser', 'destrier', 'steppe_runner',
+    'courser', 'destrier', 'steppe_runner', 'pegasus',
     'crag_drake', 'storm_wyrm', 'riftdrake', 'dragon_whelp'];
-  assert.equal(ROSTER.length, 25);
+  assert.equal(ROSTER.length, 26);
   for (const t of ROSTER) {
     assert.ok(ENEMY_TYPES[t], `${t} should exist in the registry`);
     assert.equal(mc.mobActive(t), true, `${t} should ship active`);
