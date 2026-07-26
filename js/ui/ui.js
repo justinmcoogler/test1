@@ -1,5 +1,6 @@
 // All DOM UI: HUD, windows, dialogue, shop, chest, combat interface, labels.
 import { ITEMS } from '../game/items.js';
+import { LESSONS_DATA } from '../game/lessons.js';
 import { ENEMY_TYPES } from '../game/enemies.js';
 import { BIOMES } from '../world/worldgen.js';
 import { mobActive, mobRate, mobBiomes, mobDropsFor, setMobConfig, resetMobConfig, saveMobConfig, allMobTypes, exportMobDefaults, mobDeleted, setMobDeleted, setAllMobsActive, deletedMobTypes } from '../game/mobconfig.js';
@@ -682,6 +683,9 @@ export class UI {
       ['inventory', 'bag', 'Inventory'], ['skills', 'chart', 'Skills'], ['crafting', 'hammer', 'Crafting'],
       ['quests', 'scroll', 'Quests'], ['map', 'mapicon', 'Map'], ['settings', 'gear', 'Settings'],
     ];
+    // Lessons are picked from here, not walked to. Only in Learning Mode: a tab
+    // that does nothing for most players is worse than no tab.
+    if (this.game.education?.isEducation) tabs.splice(3, 0, ['lessons', 'lessons', 'Lessons']);
     $('window-tabs').innerHTML = tabs.map(([id, ic, label]) =>
       `<button class="win-tab ${this.currentWindow === id ? 'active' : ''}" data-tab="${id}">${icon(ic, 14)} ${label}</button>`).join('');
     $('window-tabs').querySelectorAll('.win-tab').forEach((b) => {
@@ -699,8 +703,63 @@ export class UI {
       case 'crafting': return this.renderCrafting(body);
       case 'quests': return this.renderQuests(body);
       case 'map': return this.renderMap(body);
+      case 'lessons': return this.renderLessons(body);
       case 'settings': return this.renderSettings(body);
     }
+  }
+
+  // ---- lessons ----
+  // The whole of Learning Mode's navigation. Pick a lesson and you are IN it —
+  // its own world, straight away. Nothing here asks the child to walk anywhere,
+  // find anybody or remember where the classroom was.
+  renderLessons(body) {
+    const g = this.game;
+    const runner = g.lessons;
+    const inLesson = !!g.world?.lessonRoom && g.world.lessonRoom !== null;
+    const mins = g.education.balanceMinutes();
+
+    let html = `<h3 style="color:var(--gold);margin-bottom:4px">Lessons</h3>
+      <div style="color:var(--ink-dim);font-size:12px;margin-bottom:12px">
+        You have <b style="color:var(--gold)">${mins} minutes</b> of play banked.
+        Finishing a lesson earns more, plus coins and supplies that stay with you.
+      </div>`;
+
+    if (inLesson) {
+      html += `<div class="lesson-here" style="border:1px solid var(--gold);border-radius:6px;padding:10px;margin-bottom:14px">
+        <div style="color:var(--gold);font-weight:700;margin-bottom:6px">You are in a lesson</div>
+        <div style="color:var(--ink-dim);font-size:12px;margin-bottom:8px">Leaving keeps your place — you can come straight back to it.</div>
+        <button class="link-btn" data-leave="1">Leave the lesson</button>
+      </div>`;
+    }
+
+    for (const l of LESSONS_DATA) {
+      const done = runner.isPassed(l.id);
+      const active = runner.current[l.area] === l.id;
+      const r = l.reward || {};
+      const pay = [`${l.minutes} min`];
+      if (r.coins) pay.push(`${r.coins} coins`);
+      for (const [item, qty] of r.items || []) pay.push(`${qty} × ${ITEMS[item]?.name || item}`);
+      html += `<div class="lesson-row" style="border:1px solid var(--line);border-radius:6px;padding:10px;margin-bottom:8px;${active ? 'border-color:var(--gold)' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div style="font-weight:700">${done ? '✓ ' : ''}${l.prompt}</div>
+          <button class="link-btn" data-start="${l.id}">${active ? 'Resume' : done ? 'Again' : 'Start'}</button>
+        </div>
+        <div style="color:var(--ink-dim);font-size:11px;margin-top:4px">Earns ${pay.join(' · ')}</div>
+      </div>`;
+    }
+    body.innerHTML = html;
+
+    body.querySelectorAll('[data-start]').forEach((b) => b.addEventListener('click', () => {
+      const id = b.dataset.start;
+      const lesson = runner.byId.get(id);
+      if (!lesson) return;
+      this.closeWindow();                 // you are going somewhere; the menu is done
+      runner.setLesson(lesson.area, id);
+    }));
+    body.querySelectorAll('[data-leave]').forEach((b) => b.addEventListener('click', () => {
+      this.closeWindow();
+      for (const area of Object.keys(runner.current)) runner.leave(area);
+    }));
   }
 
   // ---- inventory ----

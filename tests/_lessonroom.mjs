@@ -38,10 +38,26 @@ try {
     return { x: g.player.x, y: g.player.y, z: g.player.z, coins: g.inventory.count('coin'), bank: g.education.balanceSec };
   });
 
-  // ---- into the room -----------------------------------------------------
+  // ---- into the room, THROUGH THE MENU ------------------------------------
+  // Clicked, not called: the point of this change is that a child picks a
+  // lesson from a list and is there. Driving runner.setLesson directly would
+  // pass even if the menu did not exist.
+  await page.evaluate(() => window.__game.enterLearningMode());
+  await page.waitForSelector('#window-root:not(.hidden)', { timeout: 10000 });
+  const menu = await page.evaluate(() => ({
+    tab: !!document.querySelector('.win-tab[data-tab="lessons"]'),
+    rows: document.querySelectorAll('[data-start]').length,
+    open: window.__game.ui.currentWindow,
+  }));
+  check(menu.tab, 'Learning Mode puts a Lessons tab in the menu');
+  check(menu.open === 'lessons', `and opens straight onto it (${menu.open})`);
+  check(menu.rows === 3, `listing every lesson (${menu.rows})`);
+
+  await page.click('[data-start="nm_count"]');
+  await page.waitForTimeout(900);
+
   const entered = await page.evaluate(() => {
     const g = window.__game;
-    g.lessons.startArea('numbers_meadow');
     const room = g.lessons.room(g.lessons.current.numbers_meadow);
     return {
       lesson: g.lessons.current.numbers_meadow,
@@ -98,10 +114,13 @@ try {
   check(done.blue >= 12, `and the blue wool the NEXT lesson needs (${done.blue})`);
   check(done.at[0] > 29000, 'the next lesson moved you to ITS room, not back to the world');
 
-  // ---- and home again ----------------------------------------------------
+  // ---- and home again, also through the menu ------------------------------
+  await page.evaluate(() => window.__game.ui.openWindow('lessons'));
+  await page.waitForSelector('[data-leave]', { timeout: 10000 });
+  await page.click('[data-leave]');
+  await page.waitForTimeout(900);
   const home = await page.evaluate(() => {
     const g = window.__game;
-    g.lessons.leave('numbers_meadow');
     return {
       x: g.player.x, z: g.player.z, still: g.lessons.current.numbers_meadow,
       backInWorld: g.world.lessonRoom,

@@ -2317,18 +2317,23 @@ class Game {
   }
 
   // ------------------------------------------------- kids' Learning Mode entry
-  // Switch into education (play-time-bank) mode and drop the child into Numbers
-  // Meadow. Reachable for testing via window.__game.enterLearningMode() (or
+  // Switch into education (play-time-bank) mode and open the Lessons menu.
+  // Reachable for testing via window.__game.enterLearningMode() (or
   // window.__learn()); the character-creation mode picker arrives in Phase 2.
+  //
+  // It used to teleport the child to Numbers Meadow to go and find Pip. Lessons
+  // are PICKED FROM A MENU now — a child should not have to remember where the
+  // classroom was, or walk there, or spend banked play time getting to the
+  // thing that earns them more of it.
   enterLearningMode(config = {}) {
     if (!this.education.isEducation) this.education.setMode('education', config);
     // A brand-new learner (no lessons finished, empty bank) gets a few starter
-    // minutes so they can walk to Pip before play time runs out; after the first
-    // lesson the bank is earned, never given.
+    // minutes; after the first lesson the bank is earned, never given.
     if (this.education.balanceSec <= 0 && Object.keys(this.education.lessonsDone).length === 0) {
       this.education.grantMinutes(10, 'welcome');
     }
-    this.goToLearningMeadow();
+    this.grantLessonKit();
+    this.ui.openWindow('lessons');
   }
 
   // Put the player down somewhere else, generating and meshing the destination
@@ -2397,18 +2402,6 @@ class Game {
     this.saveGame();
   }
 
-  // Teleport to the Numbers Meadow classroom pad. The meadow is now the lobby —
-  // Pip stands here and hands out the lessons, and each lesson takes the child
-  // to a room of its own (js/world/classroom.js).
-  goToLearningMeadow() {
-    const m = this.world.markers.learnMeadow;
-    if (!m) return;
-    const [x, y, z] = m;
-    this.warpTo(x + 0.5, y, z + 0.5);
-    this.grantLessonKit();
-    this.ui.toast('Welcome to Numbers Meadow! Talk to Pip to start a lesson.', 'gold');
-    this.saveGame();
-  }
 
   // Stock the child with the coloured blocks the Numbers Meadow lessons use.
   grantLessonKit() {
@@ -2418,15 +2411,15 @@ class Game {
     }
   }
 
-  // "Go to Lessons" from the play-time lock screen: lift the lock enough to walk
+  // "Go to Lessons" from the play-time lock screen: lift the lock enough to move
   // and build (the bank is empty, so nothing drains until a lesson is completed)
-  // and drop the child at the meadow to earn more time.
+  // and open the menu to pick one.
   goToLessons() {
     document.getElementById('playtime-lock')?.remove();
     this.playtimeLocked = false;
     if (!this.player.dead) this.controls.enabled = true;
     this.touch?.show();
-    this.goToLearningMeadow();
+    this.ui.openWindow('lessons');
   }
 
   // Full-screen gate shown when the play-time bank runs dry (education mode).

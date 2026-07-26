@@ -467,6 +467,7 @@ const SHAPES = {
 const DEFS = {
   // UI
   bag: ['bag'], chart: ['chart'], hammer: ['hammer'], scroll: ['scroll'],
+  lessons: ['brain', '#8fd3a8'],   // the Lessons tab, in Learning Mode
   mapicon: ['mapicon'], gear: ['gear'], trash: ['trash'], disk: ['disk'],
   house: ['house'], arrowup: ['arrowup'], chevrons: ['chevrons'],
   handstar: ['handstar'], blockicon: ['blockicon'], coin: ['coin'],
