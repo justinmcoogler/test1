@@ -76,3 +76,45 @@ jobs:
           name: ${{ matrix.exe }}
           path: dist/${{ matrix.exe }}
           if-no-files-found: error
+
+  # PUBLISH AS A RELEASE, not just as artifacts. An Actions artifact cannot be
+  # downloaded without signing in to GitHub, and the download control is buried
+  # at the bottom of a build log — which is a poor way to hand somebody a file
+  # they just want to double-click. A release asset is a plain link that works
+  # signed out, and does not expire after ninety days.
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish the binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          mkdir -p out
+          find artifacts -type f -exec cp {} out/ \;
+          ls -la out
+          TAG=server-latest
+          # Replaced each run, so the link in the README is always the newest
+          # build rather than a growing list of near-identical releases.
+          gh release delete "$TAG" --yes --cleanup-tag || true
+          gh release create "$TAG" out/* \
+            --title "Sproutlands server" \
+            --notes "Double-click to run. One file — the whole game is inside it, no install needed.
+
+          **Windows:** \`Sproutlands-Server-win-x64.exe\`
+          **macOS (Apple Silicon):** \`Sproutlands-Server-darwin-arm64\`
+          **Linux:** \`Sproutlands-Server-linux-x64\`
+
+          Windows will warn about an unknown publisher (it is unsigned) — More info, then Run anyway. Allow it through the firewall when asked, or other devices cannot reach it.
+
+          A console window opens showing the address to open on the kids' tablets. Closing it stops the server and saves the world beside the executable.
+
+          Built and started on a runner of each platform. Commit \`${GITHUB_SHA:0:7}\`."
