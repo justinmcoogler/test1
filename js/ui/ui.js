@@ -70,12 +70,25 @@ export class UI {
   // fill the static HUD buttons with pixel icons
   paintStaticIcons() {
     const menuIcons = { inventory: 'bag', skills: 'chart', crafting: 'hammer', quests: 'scroll', map: 'mapicon', settings: 'gear' };
-    document.querySelectorAll('.menu-btn').forEach((b) => { b.innerHTML = icon(menuIcons[b.dataset.win], 22); });
+    document.querySelectorAll('.menu-btn[data-win]').forEach((b) => { b.innerHTML = icon(menuIcons[b.dataset.win], 22); });
+    this.paintCameraButton();
     const touchIcons = { 'btn-jump': 'arrowup', 'btn-sprint': 'chevrons', 'btn-action': 'handstar', 'btn-place': 'blockicon' };
     for (const [id, name] of Object.entries(touchIcons)) {
       const el = $(id);
       if (el) el.innerHTML = icon(name, id === 'btn-action' ? 30 : 22);
     }
+  }
+
+  // The camera button shows the view you would GET by pressing it, not the one
+  // you are in — a toggle that pictures the current state reads as "you are
+  // here" and gives you no idea what it does.
+  paintCameraButton() {
+    const b = $('btn-camera');
+    if (!b) return;
+    const classic = !!this.game.settings.classicCamera;
+    b.innerHTML = icon(classic ? 'eye' : 'camera', 22);
+    b.title = classic ? 'Switch to first-person view (V)' : 'Switch to classic overhead view (V)';
+    b.setAttribute('aria-label', b.title);
   }
 
   // ------------------------------------------------------------ boot & events
@@ -87,8 +100,15 @@ export class UI {
     $('minimap').addEventListener('click', () => {
       if (!g.combat.active && !g.player.dead) this.toggleWindow('map');
     });
-    document.querySelectorAll('.menu-btn').forEach((b) => {
+    document.querySelectorAll('.menu-btn[data-win]').forEach((b) => {
       b.addEventListener('click', () => { this.toggleWindow(b.dataset.win); });
+    });
+    // The camera button is an ACTION, not a window, so it is wired on its own
+    // rather than through the data-win loop. Until now the only way to change
+    // view was the V key, which a phone does not have.
+    $('btn-camera')?.addEventListener('click', () => {
+      if (g.combat.active || g.player.dead) return;   // not mid-fight, not mid-death
+      emit('toggleCamera');
     });
     on('toggleWindow', (w) => this.toggleWindow(w));
     on('escapePressed', () => {

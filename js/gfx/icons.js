@@ -468,6 +468,10 @@ const DEFS = {
   // UI
   bag: ['bag'], chart: ['chart'], hammer: ['hammer'], scroll: ['scroll'],
   lessons: ['brain', '#8fd3a8'],   // the Lessons tab, in Learning Mode
+  // The camera-view toggle. `camera` and `eye` were painters with no DEFS entry,
+  // so icon('camera') drew nothing at all — a real glyph is not the same as a
+  // reachable one, and the toolbar button would have been a blank square.
+  camera: ['camera', '#cfd6dd'], eye: ['eye', '#cfd6dd'],
   mapicon: ['mapicon'], gear: ['gear'], trash: ['trash'], disk: ['disk'],
   house: ['house'], arrowup: ['arrowup'], chevrons: ['chevrons'],
   handstar: ['handstar'], blockicon: ['blockicon'], coin: ['coin'],

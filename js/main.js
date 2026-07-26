@@ -360,6 +360,7 @@ class Game {
         this.camYaw = this.player.yaw;
         document.exitPointerLock?.();
       }
+      this.ui.paintCameraButton?.();   // the toolbar glyph shows what you'd get next
       this.ui.toast(this.settings.classicCamera ? 'Classic view — click to move, double-click to mine' : 'First-person view', 'gold');
     });
     on('wheelScroll', (dir) => {
