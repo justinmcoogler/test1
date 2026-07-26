@@ -496,7 +496,7 @@ export class UI {
     for (const [item, qty] of paid || []) earned.push(`${qty} × ${ITEMS[item]?.name || item}`);
     if (earned.length) this.toast(`You earned ${earned.join(', ')}!`, 'gold');
     // a burst of gold sparkles over the work mat
-    const m = this.game.lessons?.room?.(lesson.id)?.mat;
+    const m = this.game.lessons?.matFor?.(lesson.area);
     if (m && this.game.renderer?.spawnParticles) {
       const cx = (m.x0 + m.x1) / 2 + 0.5, cz = (m.z0 + m.z1) / 2 + 0.5;
       this.game.renderer.spawnParticles(cx, m.y0 + 0.6, cz, [1, 0.85, 0.3], 30, 3, 1.0, 0.12);
@@ -784,7 +784,9 @@ export class UI {
   renderLessons(body) {
     const g = this.game;
     const runner = g.lessons;
-    const inLesson = !!g.world?.lessonRoom && g.world.lessonRoom !== null;
+    // `!!lessonRoom` was wrong: room 0 is falsy, so the very first lesson — the
+    // one every new child starts on — never got a way out of the room.
+    const inLesson = !!g.world?.isLessonWorld?.();
     const mins = g.education.balanceMinutes();
 
     let html = `<h3 style="color:var(--gold);margin-bottom:4px">Lessons</h3>

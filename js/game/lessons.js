@@ -17,11 +17,26 @@
 // only be understood by reading it is a locked door. js/ui/ui.js speaks the
 // story, the step, the hint and the cheer through js/game/speech.js.
 //
-// EACH LESSON HAS ITS OWN ROOM in its own world (js/world/classroom.js), and
-// starting one puts the child inside it. A lesson performed in the overworld is
-// performed in the world they play in — the blocks placed for a counting
-// exercise would be real edits to their real save. Leaving a lesson, or
-// finishing a series, puts them back on the exact block they left from.
+// EACH LESSON HAS ITS OWN WORLD, and starting one puts the child inside it. A
+// lesson performed in the overworld is performed in the world they play in — the
+// blocks placed for a counting exercise would be real edits to their real save.
+// Leaving a lesson, or finishing a series, puts them back on the exact block they
+// left from.
+//
+// There are two shapes of lesson world:
+//
+//   WALKED (`walk: true`) — a meadow path with a stop for every beat of the
+//   story (js/world/lessonpath.js). You start at the bottom of the trail and
+//   walk it: eggs hidden in the long grass to hunt for, a broken gate to mend, a
+//   stream to lay stepping stones across, apples to sort into baskets, lanterns
+//   to hang outside Pip's cottage. Two of the stops BAR THE WAY until the work is
+//   done, so the story has real obstacles rather than a next button. Each step
+//   has two halves — get there, then do the job — and nothing is checked while
+//   the child is still walking.
+//
+//   ROOM — one sealed classroom with a single work mat
+//   (js/world/classroom.js). The original shape, still used by most of the
+//   curriculum; the Kindergarten egg hunt is the first that walks.
 //
 // FINISHING A LESSON PAYS THE CHARACTER, not the world: banked play minutes,
 // plus coins and materials. Both live on the character side of the save
@@ -45,8 +60,21 @@ import { on, emit } from '../core/events.js';
 import { registerLesson, LESSONS } from './education.js';
 import { B, BLOCKS } from '../world/blocks.js';
 import { ROOM_COUNT, classroomFor } from '../world/classroom.js';
+import { pathFor } from '../world/lessonpath.js';
 import { CURRICULUM, GRADES } from './curriculum/index.js';
-import { checkShape, setupShape, shapeNeeds } from './buildshapes.js';
+import { checkShape, setupShape, beginShape, shapeNeeds } from './buildshapes.js';
+
+// A WALKED lesson happens on a meadow path with a stop for every beat of the
+// story, instead of in one sealed room. `walk: true` on the lesson is the whole
+// switch; each step then names the kind of place its activity happens in.
+export function isWalked(lesson) { return !!lesson?.walk; }
+
+// What the world layer needs to lay the path out. Deliberately thin: a list of
+// station kinds, what to scatter at each, and which ones bar the way — no
+// arithmetic, no prompts, nothing js/world/ has any business reading.
+export function pathPlan(lesson) {
+  return { id: lesson.id, stations: (lesson.steps || []).map((s) => s.station || { kind: 'nest' }) };
+}
 
 export const LESSONS_DATA = CURRICULUM;
 export { GRADES };
@@ -83,6 +111,12 @@ export class LessonRunner {
     this.game = game;
     this.current = {};                 // area → active lessonId
     this.step = {};                    // area → index into that lesson's steps
+    // area → 'travel' | 'work'. A walked lesson's step has two halves: get to
+    // the station, then do the job there. Nothing is checked while travelling —
+    // the child is walking, and a half-built plot from two stops ago must not
+    // complete the step they have not arrived at yet.
+    this.phase = {};
+    this._paths = new Map();           // lessonId → laid-out path (pure geometry)
     this.byId = new Map();
     this.byArea = new Map();           // area → [lessons in authored order]
     for (const l of LESSONS_DATA) {
@@ -139,19 +173,51 @@ export class LessonRunner {
     return i < 0 ? 0 : i % ROOM_COUNT;
   }
 
-  // Computed, not looked up in the world: the room has to be known BEFORE the
+  // Computed, not looked up in the world: the place has to be known BEFORE the
   // swap into the lesson world happens, and it is pure geometry either way.
   room(id) { return classroomFor(this.roomIndex(id)); }
+
+  // The laid-out path of a walked lesson. Computed from the lesson, not read off
+  // the world, so the runner knows where every station is before the world that
+  // contains them exists — and so a test can drive a lesson with no world at all.
+  pathOf(id) {
+    if (!this._paths.has(id)) {
+      const lesson = this.byId.get(id);
+      this._paths.set(id, isWalked(lesson) ? pathFor(pathPlan(lesson)) : null);
+    }
+    return this._paths.get(id);
+  }
+
+  // Where a lesson is, and how to arrive there. main.js builds the world from
+  // this: a `plan` means lay out a path, no plan means the numbered classroom.
+  destFor(id) {
+    const path = this.pathOf(id);
+    if (path) {
+      // Facing +X, straight down the trail. Forward is (-sin yaw, -cos yaw)
+      // (js/main.js), so +X is MINUS a quarter turn — the other sign walks the
+      // child away from the whole lesson.
+      return { index: this.roomIndex(id), plan: pathPlan(this.byId.get(id)),
+        entry: path.spawn, yaw: -Math.PI / 2 };
+    }
+    const r = this.room(id);
+    return { index: r.index, entry: r.entry, yaw: Math.PI };  // facing +Z, at the mat
+  }
+
+  // The station the current step happens at, or null for a room lesson.
+  stationFor(area) {
+    const id = this.current[area];
+    const path = id ? this.pathOf(id) : null;
+    return path ? path.stations[this.step[area] | 0] || null : null;
+  }
 
   setLesson(area, id, step = 0) {
     this.current[area] = id;
     this.step[area] = step;
-    // Into its own room. `lessonEnter` carries the arrival cell; main.js banks
+    // Into its own world. `lessonEnter` carries the arrival cell; main.js banks
     // where the child was standing the FIRST time (not on every advance within a
     // series, or three lessons in a row would overwrite the way home with the
     // previous classroom).
-    const room = this.room(id);
-    if (room) emit('lessonEnter', { area, id, room });
+    emit('lessonEnter', { area, id, dest: this.destFor(id) });
     emit('lessonStarted', { area, id, lesson: this.byId.get(id) });
     this.beginStep(area);
   }
@@ -167,10 +233,35 @@ export class LessonRunner {
     const lesson = this.activeLessonFor(area);
     const step = this.activeStep(area);
     if (!lesson || !step) return;
+    // A walked step starts as a WALK. Pip says where to go, and nothing is
+    // checked until the child is standing there — the story is the journey, and a
+    // step that completed itself from forty blocks away would delete the journey.
+    if (this.stationFor(area) && !this.atStation(area)) {
+      this.phase[area] = 'travel';
+      this.announce(area);
+      return;
+    }
+    this.startWork(area);
+  }
+
+  // The child is at the station (or the lesson has no stations): lay the work out
+  // and set them going.
+  startWork(area) {
+    const lesson = this.activeLessonFor(area);
+    const step = this.activeStep(area);
+    if (!lesson || !step) return;
+    this.phase[area] = 'work';
+    const mat = this.matFor(area);
+    // The plot has to EXIST before anything is written into it. World.setBlock
+    // drops writes into chunks that are not loaded, silently and without an
+    // error — so a station whose plot straddles a chunk boundary the child has
+    // not walked into yet would lay out half its lanterns and count the other
+    // half as missing. Thirteen blocks wide is nearly a whole chunk; this is not
+    // a corner case, it is most stations.
+    this.ensureRegion(mat);
     this.clearMat(area);
     this._scratch ||= {};
     this._scratch[this.scratchKey(area)] = {};
-    const mat = this.matFor(area);
     const ctx = this.makeCtx(lesson, area);
     if (step.setup) { try { step.setup(ctx); } catch (e) { console.error('[lesson] setup', e); } }
     if (mat && this.game.world) {
@@ -178,11 +269,79 @@ export class LessonRunner {
         this.game.world.setBlock(op.x, op.y, op.z, B[op.block] ?? B.air, true);
       }
     }
+    // Shapes that must remember how things were before the child touched
+    // anything get their snapshot now — `gather` counts what was FOUND, which is
+    // only knowable against what was already in the pack.
+    beginShape(step.build, ctx);
+    // Turn them to face the work. A five-year-old who arrives at a stop looking
+    // down the trail cannot see the plot at all, and "it is behind you" is not a
+    // thing this game should ever need to say.
+    this.faceTheWork(area);
     this.announce(area);
   }
 
-  // Sweep the buildable volume of the mat back to air. The mat SURFACE is one
-  // block lower (it is laid into the floor), so this never eats the room.
+  faceTheWork(area) {
+    const st = this.stationFor(area);
+    const p = this.game.player;
+    if (!st || !p) return;
+    p.yaw = Math.PI;                        // +Z, square on to the plot
+    if (this.game.camYaw !== undefined) this.game.camYaw = Math.PI;
+  }
+
+  // Is the child standing at this step's station? Generous box: arriving anywhere
+  // in the clearing counts, because "walk to the exact block" is not the lesson.
+  atStation(area) {
+    const st = this.stationFor(area);
+    if (!st) return true;
+    const p = this.game.player;
+    if (!p) return true;                    // nothing to walk (unit-driven steps)
+    return Math.abs(p.x - (st.sx + 0.5)) <= 4 && Math.abs(p.z - (st.cz + 0.5)) <= 5;
+  }
+
+  // Called every frame while a lesson runs (js/main.js). The only thing it does
+  // is notice arrivals — which is the whole of walking, mechanically.
+  update() {
+    for (const area of Object.keys(this.current)) {
+      if (this.phase[area] !== 'travel') continue;
+      if (this.atStation(area)) this.startWork(area);
+    }
+  }
+
+  // The gate swings open; the stepping stones land in the water. A station that
+  // bars the way carries the cells that unbar it, so finishing the work IS the
+  // way through rather than a message saying it is.
+  applyUnlock(area) {
+    const st = this.stationFor(area);
+    const world = this.game.world;
+    if (!st?.unlock?.length || !world) return false;
+    // Same reason as the plot: a gate spans the whole meadow and a stream sits
+    // past the station, either of which can reach into a chunk the child has not
+    // been in yet. An unlock that half-happens is a wall with a hole in it.
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const [x, , z] of st.unlock) {
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x);
+      z0 = Math.min(z0, z); z1 = Math.max(z1, z);
+    }
+    this.ensureRegion({ x0, x1, z0, z1 });
+    for (const [x, y, z, name] of st.unlock) world.setBlock(x, y, z, B[name] ?? B.air, true);
+    return true;
+  }
+
+  // Generate (and mark for remesh) every chunk a region touches. A fake world in
+  // a test has no chunks at all, which is fine — nothing to ensure.
+  ensureRegion(m) {
+    const world = this.game.world;
+    if (!m || !world?.ensureChunk) return;
+    for (let cx = m.x0 >> 4; cx <= m.x1 >> 4; cx++) {
+      for (let cz = m.z0 >> 4; cz <= m.z1 >> 4; cz++) {
+        world.ensureChunk(cx, cz);
+        this.game.renderer?.remeshChunk?.(world, cx, cz);
+      }
+    }
+  }
+
+  // Sweep the buildable volume of the plot back to air. The plot SURFACE is one
+  // block lower (it is laid into the ground), so this never eats the floor.
   clearMat(area) {
     const m = this.matFor(area);
     const world = this.game.world;
@@ -213,11 +372,17 @@ export class LessonRunner {
     const step = this.activeStep(area);
     if (!lesson || !step) return null;
     const i = this.step[area] | 0;
+    const travelling = this.phase[area] === 'travel';
     return {
       area, lesson, step, index: i, total: lesson.steps.length,
-      title: lesson.title, guide: lesson.guide,
+      title: lesson.title, guide: lesson.guide, travelling,
       story: i === 0 ? lesson.story : null,
-      say: step.say, prompt: step.prompt, hint: step.hint,
+      // While walking, the panel is only the direction — the job at the far end
+      // is told on arrival, so a child is never holding an instruction they
+      // cannot act on yet.
+      say: travelling ? null : step.say,
+      prompt: travelling ? (step.travel || 'Follow the path to the next stop.') : step.prompt,
+      hint: travelling ? (step.travel || 'Keep following the gravel path.') : step.hint,
     };
   }
 
@@ -237,6 +402,7 @@ export class LessonRunner {
       const lesson = this.activeLessonFor(area);
       const step = this.activeStep(area);
       if (!lesson || !step || !(lesson.watch || []).includes(ev)) continue;
+      if (this.phase[area] === 'travel') continue;   // still walking; nothing to judge
       let ok = false;
       const ctx = this.makeCtx(lesson, area);
       try { ok = step.check ? !!step.check(ctx) : checkShape(step.build, ctx); }
@@ -252,6 +418,9 @@ export class LessonRunner {
     const step = this.activeStep(area);
     const i = this.step[area] | 0;
     if (!lesson || !step) return;
+    // Unbar the way first, so the cheer and the opening gate land together.
+    const opened = this.applyUnlock(area);
+    if (opened) emit('lessonUnlocked', { area, id: lesson.id, index: i });
     if (i + 1 < lesson.steps.length) {
       this.game.ui?.showStepSuccess?.(this.view(area));
       emit('lessonStep', { area, id: lesson.id, index: i, step });
@@ -288,6 +457,7 @@ export class LessonRunner {
     } else {
       delete this.current[area];
       delete this.step[area];
+      delete this.phase[area];
       this.game.ui?.showLessonPrompt?.(null); // band finished — clear the prompt
       emit('lessonExit', { area, id: lesson.id, finished: true });
     }
@@ -295,12 +465,14 @@ export class LessonRunner {
 
   // ---- context passed to setup()/check() ---------------------------------
   matFor(area) {
-    // The mat is the one in THIS lesson's room. markers.learnMat — the old
-    // shared yard at (200,200) — is still built and still readable, but no
-    // lesson counts blocks there any more: two children's leftovers on one mat
-    // is exactly the mess the rooms exist to end.
+    // The work surface for THIS step: the plot at the station the child is
+    // standing in on a walked lesson, or the single mat in this lesson's
+    // classroom otherwise. A station may have no plot at all (a hunt through the
+    // long grass has nothing to build on) — that is a null, not an error.
     const id = this.current[area];
-    const m = (id && this.room(id)?.mat) || this.game.world?.markers?.learnMat;
+    if (!id) return null;
+    const st = this.stationFor(area);
+    const m = st ? st.plot : this.room(id)?.mat;
     if (!m) return null;
     // `div` comes through too: the mirror lesson measures across it, and a
     // region that quietly dropped it made every distance from the centre NaN.
@@ -418,8 +590,12 @@ export class LessonRunner {
       .map((run) => run.map((n) => (/^letter_[a-z]$/.test(n) ? n.slice(-1).toUpperCase() : ' ')).join(''))
       .filter((w) => w && !w.includes(' '));
 
+    // What is in the child's pack. The hunt activities are about the bag, not
+    // the plot: you cannot see three found eggs by looking at the ground.
+    const held = (item) => this.game.inventory?.count?.(item) || 0;
+
     return { game: this.game, world, mat, lesson, scratch,
-      countPlaced, blocksIn, stackAt, tallest, rowAt, runs, words, nameAt };
+      countPlaced, blocksIn, stackAt, tallest, rowAt, runs, words, nameAt, held };
   }
 
   // Re-show the prompt for any in-progress lesson (called after a save loads).
@@ -431,6 +607,7 @@ export class LessonRunner {
   deserialize(d) {
     this.current = {};
     this.step = {};
+    this.phase = {};
     if (d?.current) for (const [area, id] of Object.entries(d.current)) {
       const lesson = this.byId.get(id);
       if (!lesson) continue;

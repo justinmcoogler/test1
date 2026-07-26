@@ -24,11 +24,22 @@ aloud** end to end.
   about learning to read — a prompt that only exists on screen is a prompt half
   of them cannot use. Settings → *Read lessons aloud* turns it off; a platform
   with no voices degrades to a silent game, never a broken one.
-- **A lesson has a room of its own**, in a world of its own
-  ([`js/world/classroom.js`](../js/world/classroom.js)): a sealed classroom at
-  (30000, 30000, 420), reached by picking the lesson from the menu and left by
-  finishing it or asking to go. Nothing a child builds in there touches the
-  world they play in, and nothing from that world can reach them.
+- **A lesson has a world of its own**, reached by picking it from the menu and
+  left by finishing it or asking to go. Nothing a child builds in there touches
+  the world they play in, and nothing from that world can reach them. Two shapes:
+  - **Walked** ([`js/world/lessonpath.js`](../js/world/lessonpath.js)) — a hedged
+    meadow trail with a stop for every beat of the story, and a different job at
+    each: eggs to hunt for in the long grass, a broken gate to mend, a stream to
+    lay stepping stones across, apples to sort into baskets, lanterns to hang
+    outside Pip's cottage. **Two stops bar the trail** until the work is done, so
+    the story has real obstacles instead of a next button — mend the rail and the
+    gate is *gone*; lay five stones and they land across the water. A step has two
+    halves, travel then work, and nothing is judged while the child is walking.
+    `walk: true` on the lesson is the whole switch; each step then names the kind
+    of place its activity happens in.
+  - **Room** ([`js/world/classroom.js`](../js/world/classroom.js)) — one sealed
+    classroom at (30000, 30000, 420) with a single work mat. The original shape,
+    still used by most of the curriculum.
 - **Finishing pays the character**, not the world: banked minutes *plus* coins
   and materials, all on the character side of the save
   ([`js/game/characters.js`](../js/game/characters.js)), so starting a new world
@@ -54,13 +65,18 @@ From `build` alone the engine gets the **check** (is the mat right?), the
 in the pack for those moves to be possible), and **validation** (does the answer
 even fit on a 13 × 5 × 7 mat?).
 
+One activity is not about the plot at all: `gather` sends the child out to FIND
+things and pick them up, counted as a delta from what they were holding when the
+step began — the kit hands out blocks by the dozen, so "do you have three eggs"
+would be true before the hunt started.
+
 That last pair is why ninety lessons can be trusted. The test suite plays every
 step's own solution through the real runner
 ([`tests/unit/lessons.test.mjs`](../tests/unit/lessons.test.mjs)), so a lesson
 that cannot be finished cannot reach a child — and a shape that cannot fit fails
 before anyone reads a word of it. The sixteen kinds are `count`, `sort`,
 `subtract`, `bond`, `tower`, `compare`, `pattern`, `array`, `groups`, `word`,
-`words`, `fraction`, `mirror`, `stack`, `box`, `frame` and `cells`.
+`words`, `fraction`, `mirror`, `stack`, `box`, `frame`, `cells` and `gather`.
 
 Adding a lesson means writing one object in a grade file. Everything mechanical
 — its room, the lesson that follows it, its minutes, which events re-check it —
@@ -100,9 +116,12 @@ ed.completeLesson('demo_math_1', { score: 1 });   // banks minutes, unlocks
 ## What a later phase could add
 
 1. **Guardian settings surface** — mode switch + config, ideally PIN-guarded.
-2. **Grade placement** — the menu currently shows all nine bands and lets the
+2. **Walk the rest of them** — `k_count` is the first walked lesson and the
+   pattern for the other eighty-nine. Each needs a route: what the stops are,
+   what is different to do at each, and which of them bar the way.
+3. **Grade placement** — the menu currently shows all nine bands and lets the
    child pick; a first-run "how old are you?" would open the right one.
-3. **Server sync (optional)** — because all state flows through
+4. **Server sync (optional)** — because all state flows through
    `serialize()`/`deserialize()` and the events above, a backend adapter can
    mirror state to an account, deliver lesson packs, and power a
    parent/teacher dashboard without changes to game code.

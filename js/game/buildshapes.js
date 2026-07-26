@@ -386,6 +386,27 @@ const KINDS = {
       ? null : `a ${s.w}x${s.d} frame does not fit`),
   },
 
+  // Go and FIND n of something and pick it up. The only activity here that is
+  // not about the plot at all — it is about walking around a place and looking,
+  // which is half of what a child is doing on a lesson path.
+  //
+  // Counted as a DELTA from what they were holding when the step began, never as
+  // a total: the lesson kit hands out blocks by the dozen, so "do you have three
+  // eggs" would already be true before the hunt started. What is being checked is
+  // that three were found, and the only honest way to ask that is to remember.
+  gather: {
+    begin: (s, ctx) => { ctx.scratch.had = ctx.held(s.block); },
+    check: (s, ctx) => {
+      if (ctx.scratch.had == null) ctx.scratch.had = ctx.held(s.block);
+      return ctx.held(s.block) - ctx.scratch.had >= s.n;
+    },
+    // The answer is out in the world, not in the pack — `give` is how a test
+    // harness says "the child walked over and picked it up".
+    solve: (s) => [{ op: 'give', block: s.block, n: s.n }],
+    needs: () => ({}),              // nothing to hand out; that is the point
+    validate: (s) => (s.n >= 1 && s.n <= 64 ? null : `cannot hunt for ${s.n}`),
+  },
+
   // Named cells, exactly: coordinates, a right triangle's legs, a number line
   // with a marked point. The escape hatch for a shape the others cannot say.
   cells: {
@@ -413,6 +434,14 @@ export function checkShape(shape, ctx) {
 export function setupShape(shape, mat) {
   const k = KINDS[shape?.kind];
   return k?.setup ? k.setup(shape, mat) : [];
+}
+
+// Called once when a step starts, for shapes that have to remember how things
+// were before the child touched anything (`gather` does). Safe to call for any
+// shape; most have nothing to remember.
+export function beginShape(shape, ctx) {
+  const k = KINDS[shape?.kind];
+  k?.begin?.(shape, ctx);
 }
 
 // The moves a child would make to get this right, in order. The test suite

@@ -1,4 +1,8 @@
-// A lesson takes you somewhere else and pays you for finishing it.
+// A single-ROOM lesson takes you somewhere else and pays you for finishing it.
+//
+// Most of the curriculum still happens in one sealed classroom; the Kindergarten
+// egg hunt is the first that happens on a walked path (tests/_lessonwalk.mjs
+// covers that one). This keeps the room flavour honest.
 //
 // The unit tests prove the runner's bookkeeping against a fake world. This
 // drives the real game: start a lesson, check you are actually STANDING in the
@@ -54,7 +58,7 @@ try {
   const lessonCount = await page.evaluate(() => window.__game.lessons.byId.size);
   check(menu.rows === lessonCount, `listing every lesson (${menu.rows} of ${lessonCount})`);
 
-  await page.click('[data-start="k_count"]');
+  await page.click('[data-start="k_more"]');
   await page.waitForTimeout(900);
 
   const entered = await page.evaluate(() => {
@@ -81,11 +85,11 @@ try {
       })(),
     };
   });
-  check(entered.lesson === 'k_count', `the first lesson started (${entered.lesson})`);
+  check(entered.lesson === 'k_more', `the room lesson started (${entered.lesson})`);
   check(entered.at[0] > 29000, `and it took you out of the world entirely (x=${entered.at[0]})`);
   check(Math.abs(entered.at[0] - entered.roomAt[0]) <= 1 && Math.abs(entered.at[2] - entered.roomAt[2]) <= 6,
     'you are standing in this lesson\'s own room');
-  check(entered.isLessonWorld === 0, `and it is a separate world, not a corner of yours (lessonRoom=${entered.isLessonWorld})`);
+  check(entered.isLessonWorld === 1, `and it is a separate world, not a corner of yours (lessonRoom=${entered.isLessonWorld})`);
   check(entered.campfireHere === 0, 'your camp does not exist in it');
   check(entered.groundHere === 0, 'nor does the ground your world is made of');
   check(entered.floor !== 0, 'on a floor');
@@ -121,7 +125,7 @@ try {
     };
   });
   check(done.steps.join(',') === '0,1,2,3,4', `it ran as five steps, in order (${done.steps.join(',')})`);
-  check(done.next === 'k_more', `finishing every step moved you on (${done.next})`);
+  check(done.next === 'k_sort', `finishing every step moved you on (${done.next})`);
   check(done.bank - before.bank >= 29 * 60, `and banked the half-hour (${Math.round((done.bank - before.bank) / 60)} min)`);
   check(done.coins - before.coins === 30, `paid 30 coins onto the character (${done.coins - before.coins})`);
   check(done.kit >= 8, `and stocked the blocks the NEXT lesson needs (${done.kit} red)`);
@@ -142,7 +146,7 @@ try {
   });
   check(Math.hypot(home.x - before.x, home.z - before.z) < 2,
     `leaving puts you back where you started (${Math.hypot(home.x - before.x, home.z - before.z).toFixed(1)} blocks off)`);
-  check(home.still === 'k_more', 'and keeps your place in the series');
+  check(home.still === 'k_sort', 'and keeps your place in the series');
   check(home.backInWorld === null, 'you are back in your own world');
   check(home.campfire !== 0, 'with your camp still standing in it');
 

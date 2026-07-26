@@ -9,7 +9,8 @@
 // runner. A lesson that cannot be finished cannot reach a child.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LessonRunner, LESSONS_DATA, lessonNeeds } from '../../js/game/lessons.js';
+import { LessonRunner, LESSONS_DATA, lessonNeeds, pathPlan, isWalked } from '../../js/game/lessons.js';
+import { pathStructure } from '../../js/world/lessonpath.js';
 import { GRADES } from '../../js/game/curriculum/index.js';
 import { solveShape, validateShape, shapeNeeds, SHAPE_KINDS } from '../../js/game/buildshapes.js';
 import { EducationManager } from '../../js/game/education.js';
@@ -21,7 +22,7 @@ import { clearAllListeners, emit } from '../../js/core/events.js';
 // A minimal fake game: a Map-backed world + a real EducationManager, enough for
 // the runner to read blocks and bank play-time. Firing put()/clear() mirrors the
 // game emitting blockPlaced/blockBroken when the child edits the world.
-function scenario() {
+function scenario(lessonId = null) {
   clearAllListeners(); // isolate the bus before the runner subscribes
   const placed = new Map();
   const world = {
@@ -41,10 +42,28 @@ function scenario() {
   const bag = new Map();
   const inventory = { add: (item, qty) => { bag.set(item, (bag.get(item) || 0) + qty); return true; },
     count: (item) => bag.get(item) || 0 };
-  const game = { world, education, ui, inventory, renderer: { spawnParticles() {} } };
+  // A body to walk. A walked lesson's steps are gated on being at the station,
+  // so a runner with no player would be testing a different game.
+  const player = { x: 0, y: 0, z: 0, yaw: 0 };
+  const game = { world, education, ui, inventory, player, renderer: { spawnParticles() {} } };
   const lessons = new LessonRunner(game);
   game.lessons = lessons;
-  return { game, world, education, lessons, put, clear, inventory };
+  // Stamp the real path geometry for a walked lesson, so the gate across the
+  // trail and the stream in it are actually there to be opened and bridged.
+  if (lessonId) {
+    const lesson = lessons.byId.get(lessonId);
+    if (isWalked(lesson)) {
+      for (const [key, id] of pathStructure(pathPlan(lesson)).edits) placed.set(key, id);
+    }
+  }
+  // Walk to the station the current step happens at (or stay put if the lesson
+  // has no stations), then let the runner notice the arrival.
+  const walkToStep = (area) => {
+    const st = lessons.stationFor(area);
+    if (st) { player.x = st.sx + 0.5; player.y = st.stand; player.z = st.cz + 0.5; }
+    lessons.update();
+  };
+  return { game, world, education, lessons, put, clear, inventory, player, walkToStep };
 }
 
 // Play a shape's own worked solution onto the mat, through the same events the
@@ -56,22 +75,135 @@ function build(ops, put, clear) {
   }
 }
 
-const FIRST = LESSONS_DATA[0];
+// The same, plus `give` — how a hunt is solved. Breaking a block in the real game
+// puts it in the pack; here we say so directly.
+function playSolution(step, lessons, { put, clear, inventory }, area) {
+  const ops = solveShape(step.build, lessons.matFor(area));
+  for (const op of ops) {
+    if (op.op === 'give') { inventory.add(op.block, op.n); lessons.onWatch('blockPlaced'); }
+    else if (op.op === 'break') clear(op.x, op.y, op.z);
+    else put(op.x, op.y, op.z, op.block);
+  }
+  return ops;
+}
 
-test('a lesson starts at step one and shows its story', () => {
-  const { lessons } = scenario();
+const FIRST = LESSONS_DATA[0];        // k_count — the walked one
+const ROOM_LESSON = 'k_more';         // still a single-room lesson
+
+// ---- a lesson you walk -------------------------------------------------------
+test('a walked lesson starts you on the trail, not at the work', () => {
+  const { lessons } = scenario(FIRST.id);
   lessons.startArea('grade_k');
   assert.equal(lessons.current.grade_k, FIRST.id, 'starts at the first lesson of the band');
+  assert.equal(lessons.phase.grade_k, 'travel', 'the first thing to do is walk');
   const v = lessons.view('grade_k');
+  assert.ok(v.travelling);
   assert.equal(v.index, 0);
   assert.equal(v.total, FIRST.steps.length);
-  assert.ok(v.story && v.story.length > 40, 'the story is told on the first step');
-  assert.equal(lessons.view('grade_k').say, FIRST.steps[0].say);
+  assert.ok(v.story.length > 80, 'the story is told as you set off');
+  assert.equal(v.prompt, FIRST.steps[0].travel, 'and the prompt is where to go');
+  assert.notEqual(v.prompt, FIRST.steps[0].prompt, 'not the job at the far end of it');
 });
 
+test('nothing is judged while you are still walking', () => {
+  const { lessons, walkToStep, inventory } = scenario(FIRST.id);
+  lessons.setLesson('grade_k', 'k_more');    // a room lesson: no travel to do
+  assert.equal(lessons.phase.grade_k, 'work');
+
+  const b = scenario(FIRST.id);
+  b.lessons.startArea('grade_k');
+  // Hand over the eggs while the child is still forty blocks down the path. The
+  // step must not complete: it has not begun.
+  b.inventory.add('white_wool', 20);
+  b.lessons.onWatch('blockPlaced');
+  assert.equal(b.lessons.step.grade_k, 0, 'a step you have not reached cannot be finished');
+  assert.equal(b.lessons.phase.grade_k, 'travel');
+  void walkToStep; void inventory;
+});
+
+test('arriving at a station starts its activity and turns you to face it', () => {
+  const { lessons, walkToStep, player } = scenario(FIRST.id);
+  lessons.startArea('grade_k');
+  walkToStep('grade_k');
+  assert.equal(lessons.phase.grade_k, 'work', 'arriving begins the job');
+  const v = lessons.view('grade_k');
+  assert.equal(v.travelling, false);
+  assert.equal(v.prompt, FIRST.steps[0].prompt, 'and now the prompt is the job');
+  assert.equal(v.say, FIRST.steps[0].say);
+  assert.equal(Math.round(player.yaw * 100), Math.round(Math.PI * 100), 'facing the work, not the trail');
+});
+
+test('the hunt counts what you FOUND, not what the kit already gave you', () => {
+  const { lessons, walkToStep, inventory } = scenario(FIRST.id);
+  // The kit hands out white wool for a later step, so the bag is not empty when
+  // the hunt starts. Finding three still has to mean finding three.
+  inventory.add('white_wool', 9);
+  lessons.startArea('grade_k');
+  walkToStep('grade_k');
+  assert.equal(lessons.step.grade_k, 0, 'nine in the bag is not three found');
+  inventory.add('white_wool', 2);
+  lessons.onWatch('blockPlaced');
+  assert.equal(lessons.step.grade_k, 0, 'two found is not three either');
+  inventory.add('white_wool', 1);
+  lessons.onWatch('blockPlaced');
+  assert.equal(lessons.step.grade_k, 1, 'the third egg finishes the hunt');
+});
+
+test('the gate across the trail stays shut until the rail is mended, then opens', () => {
+  const { lessons, world, walkToStep, put, clear } = scenario(FIRST.id);
+  lessons.setLesson('grade_k', FIRST.id, 2);        // the gate step
+  walkToStep('grade_k');
+  const st = lessons.stationFor('grade_k');
+  assert.equal(st.kind, 'gate');
+  const [gx, gy, gz] = st.barrier.cells[0];
+  assert.notEqual(world.getBlock(gx, gy, gz), B.air, 'the gate is really there, blocking the way');
+  assert.ok(st.barrier.cells.length > 20, 'and it spans the whole meadow, not just the trail');
+
+  build(solveShape(lessons.activeStep('grade_k').build, lessons.matFor('grade_k')), put, clear);
+  assert.equal(lessons.step.grade_k, 3, 'eight planks in a row mends it');
+  assert.equal(world.getBlock(gx, gy, gz), B.air, 'and the gate is gone — the way through is real');
+});
+
+test('the stream gets stepping stones laid across it, at walking height', () => {
+  const { lessons, world, walkToStep, put, clear } = scenario(FIRST.id);
+  lessons.setLesson('grade_k', FIRST.id, 3);        // the stream step
+  walkToStep('grade_k');
+  const st = lessons.stationFor('grade_k');
+  assert.equal(st.kind, 'stream');
+  const mid = st.cz;
+  assert.equal(world.getBlock(st.barrier.x0, st.floor, mid), B.air, 'the trail really is cut by a ditch');
+  assert.equal(world.getBlock(st.barrier.x0, st.floor - 1, st.cz + 4), B.water, 'with water in it');
+  assert.ok(st.barrier.x1 - st.barrier.x0 >= 3, 'four wide — too far to jump');
+  // A lesson must never be able to trap anybody: there is a step at each end
+  // INSIDE the ditch, so a child who falls in can always climb straight out.
+  assert.equal(world.getBlock(st.barrier.x0, st.floor - 1, mid), B.stone_stairs, 'a way out at the near end');
+  assert.equal(world.getBlock(st.barrier.x1, st.floor - 1, mid), B.stone_stairs, 'and at the far end');
+
+  build(solveShape(lessons.activeStep('grade_k').build, lessons.matFor('grade_k')), put, clear);
+  assert.equal(lessons.step.grade_k, 4, 'five stones in a row finishes it');
+  for (let x = st.barrier.x0; x <= st.barrier.x1; x++) {
+    assert.equal(world.getBlock(x, st.floor, mid), B.cobble, `a stone landed at x=${x}`);
+  }
+});
+
+test('each station has its own plot, so work does not pile up down the path', () => {
+  const { lessons, walkToStep } = scenario(FIRST.id);
+  lessons.setLesson('grade_k', FIRST.id, 1);
+  walkToStep('grade_k');
+  const a = lessons.matFor('grade_k');
+  lessons.setLesson('grade_k', FIRST.id, 4);
+  walkToStep('grade_k');
+  const b = lessons.matFor('grade_k');
+  assert.ok(b.x0 > a.x1, `station five's plot is further down the trail (${a.x1} then ${b.x0})`);
+  // And the halves are still labelled from the child's point of view, which is
+  // the whole reason every station faces the same way.
+  assert.ok(b.left.x0 > b.div && b.right.x1 < b.div);
+});
+
+// ---- the loop, on a single-room lesson ---------------------------------------
 test('finishing step one advances to step two without ending the lesson', () => {
   const { lessons, education, put, clear } = scenario();
-  lessons.startArea('grade_k');
+  lessons.setLesson('grade_k', ROOM_LESSON);
   const lesson = lessons.activeLessonFor('grade_k');
   build(solveShape(lesson.steps[0].build, lessons.matFor('grade_k')), put, clear);
   assert.equal(lessons.step.grade_k, 1, 'moved to the second step');
@@ -89,13 +221,13 @@ const matBlocks = (world, m) => {
   return n;
 };
 
-test('the mat is wiped between steps, so step two starts on a clean page', () => {
+test('the plot is wiped between steps, so the next one starts on a clean page', () => {
   const { lessons, world, put, clear } = scenario();
-  lessons.startArea('grade_k');
+  lessons.setLesson('grade_k', ROOM_LESSON);
   const lesson = lessons.activeLessonFor('grade_k');
   const m = lessons.matFor('grade_k');
   build(solveShape(lesson.steps[0].build, m), put, clear);
-  assert.equal(matBlocks(world, m), 0, 'step one\'s three eggs were swept away before step two');
+  assert.equal(matBlocks(world, m), 0, 'step one\'s towers were swept away before step two');
 });
 
 test('a step that lays blocks out for the child does so after the wipe', () => {
@@ -113,27 +245,31 @@ test('a step that lays blocks out for the child does so after the wipe', () => {
 
 test('a wrong build never completes, never penalises, and can be corrected', () => {
   const { lessons, world, education, clear } = scenario();
-  lessons.startArea('grade_k');
+  lessons.setLesson('grade_k', 'k_ten');
   const m = lessons.matFor('grade_k');
-  // The egg hunt asks for three. Five land at once — written straight into the
-  // world, as a bucket-fill or a resumed save would, so the mat is already wrong
-  // by the time the runner looks. (Placing them one at a time would pass through
-  // three on the way up, and passing through the answer IS the answer.)
-  for (let i = 0; i < 5; i++) world.setBlock(m.x0 + i, m.y0, m.z0, B.white_wool);
+  // Six lanterns are lit and four more are wanted. Six land at once — written
+  // straight into the world, as a bucket-fill or a resumed save would, so the mat
+  // is already wrong by the time the runner looks. (Placing them one at a time
+  // would pass through four on the way up, and passing through the answer IS the
+  // answer.)
+  for (let i = 0; i < 6; i++) world.setBlock(m.x0 + 6 + i, m.y0, m.z0, B.blue_wool);
   lessons.onWatch('blockPlaced');
-  assert.equal(lessons.step.grade_k, 0, 'five is not three — no advance');
+  assert.equal(lessons.step.grade_k, 0, 'six is not four — no advance');
   assert.equal(education.locked, false, 'a wrong build never locks the child out');
-  clear(m.x0 + 4, m.y0, m.z0);              // breaking re-checks
-  assert.equal(lessons.step.grade_k, 0, 'four is still not three');
-  clear(m.x0 + 3, m.y0, m.z0);
-  assert.equal(lessons.step.grade_k, 1, 'correcting to three completes the step');
+  clear(m.x0 + 11, m.y0, m.z0);              // breaking re-checks
+  assert.equal(lessons.step.grade_k, 0, 'five is still not four');
+  clear(m.x0 + 10, m.y0, m.z0);
+  assert.equal(lessons.step.grade_k, 1, 'correcting to four completes the step');
 });
 
 test('finishing the last step banks the lesson\'s minutes and pays the character', () => {
-  const { lessons, education, inventory, put, clear } = scenario();
+  const { lessons, education, inventory, put, clear, walkToStep } = scenario(FIRST.id);
   lessons.startArea('grade_k');
   const lesson = lessons.activeLessonFor('grade_k');
-  for (const step of lesson.steps) build(solveShape(step.build, lessons.matFor('grade_k')), put, clear);
+  for (const step of lesson.steps) {
+    walkToStep('grade_k');
+    playSolution(step, lessons, { put, clear, inventory }, 'grade_k');
+  }
   assert.ok(lessons.isPassed(lesson.id), 'the lesson is recorded as passed');
   assert.equal(Math.round(education.balanceSec / 60), lesson.minutes, 'banked the lesson\'s full minutes');
   assert.equal(inventory.count('coin'), lesson.reward.coins, 'paid the coins into the pack');
@@ -228,14 +364,19 @@ test('the kit a lesson hands out covers every block it asks for', () => {
 // ---- the one that matters ----------------------------------------------------
 test('every step of every lesson can actually be finished by building its answer', () => {
   for (const lesson of LESSONS_DATA) {
-    const { lessons, put, clear } = scenario();
+    const s = scenario(lesson.id);
+    const { lessons, put, clear, inventory, walkToStep } = s;
     lessons.setLesson(lesson.area, lesson.id);
     for (const [i, step] of lesson.steps.entries()) {
       assert.equal(lessons.step[lesson.area], i,
         `${lesson.id}: expected to be on step ${i + 1} — a previous step did not complete`);
-      const ops = solveShape(step.build, lessons.matFor(lesson.area));
+      // Walk to this step's station first. On a walked lesson that is half the
+      // step, and a solution played from the wrong end of the path is no proof.
+      walkToStep(lesson.area);
+      assert.equal(lessons.phase[lesson.area], 'work',
+        `${lesson.id} step ${i + 1}: arriving at the station did not start the work`);
+      const ops = playSolution(step, lessons, { put, clear, inventory }, lesson.area);
       assert.ok(ops.length, `${lesson.id} step ${i + 1}: no solution for a ${step.build.kind}`);
-      build(ops, put, clear);
       const advanced = i + 1 < lesson.steps.length
         ? lessons.step[lesson.area] === i + 1
         : lessons.isPassed(lesson.id);
@@ -248,8 +389,9 @@ test('an empty mat completes nothing, in any lesson', () => {
   // The mirror steps are the ones at real risk: "both sides match" is trivially
   // true of a mat with nothing on it.
   for (const lesson of LESSONS_DATA) {
-    const { lessons } = scenario();
+    const { lessons, walkToStep } = scenario(lesson.id);
     lessons.setLesson(lesson.area, lesson.id);
+    walkToStep(lesson.area);
     lessons.onWatch('blockPlaced');
     assert.equal(lessons.step[lesson.area], 0, `${lesson.id}: an empty mat passed its first step`);
   }

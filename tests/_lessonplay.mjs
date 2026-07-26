@@ -52,16 +52,41 @@ try {
       g.lessons.setLesson(grade.key, id);
 
       // In the room, in its own world.
-      if (g.world.lessonRoom !== g.lessons.roomIndex(id)) bad.push(`${id}: not in its own lesson world`);
+      if (!g.world.isLessonWorld()) bad.push(`${id}: not in a lesson world at all`);
 
       for (let i = 0; i < lesson.steps.length; i++) {
+        // A walked lesson's step starts by getting there. Teleport to the stop
+        // and load its chunks, which is what walking does for you.
+        const st = g.lessons.stationFor(grade.key);
+        if (st) {
+          g.player.respawnAt(st.sx + 0.5, st.stand, st.cz + 0.5);
+          for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+            g.world.ensureChunk((st.sx >> 4) + dx, (st.cz >> 4) + dz);
+          }
+          g.lessons.update();
+        }
         const step = g.lessons.activeStep(grade.key);
         const mat = g.lessons.matFor(grade.key);
         if (!step) { bad.push(`${id}: ran out of steps at ${i + 1}`); break; }
         // Every block the step asks for must be IN THE PACK — a child cannot
         // build an answer they were not handed the pieces for.
         for (const op of solveShape(step.build, mat)) {
-          if (op.op === 'break') { g.world.setBlock(op.x, op.y, op.z, B.air, true); g.lessons.onWatch('blockBroken'); }
+          if (op.op === 'give') {
+            // A hunt: the answer is out in the meadow. Breaking the scattered
+            // blocks is how a child picks them up.
+            let got = 0;
+            for (let x = st.sx - 8; x <= st.sx + 8 && got < op.n; x++) {
+              for (let z = st.cz - 5; z <= st.cz + 16 && got < op.n; z++) {
+                if (g.world.getBlock(x, st.stand, z) === B[op.block]) {
+                  g.world.setBlock(x, st.stand, z, B.air, true);
+                  g.inventory.add(op.block, 1);
+                  got++;
+                  g.lessons.onWatch('blockBroken');
+                }
+              }
+            }
+            if (got < op.n) bad.push(`${id} step ${i + 1}: only ${got} of ${op.n} were findable`);
+          } else if (op.op === 'break') { g.world.setBlock(op.x, op.y, op.z, B.air, true); g.lessons.onWatch('blockBroken'); }
           else {
             if (g.inventory.count(op.block) <= 0) { bad.push(`${id} step ${i + 1}: no ${op.block} in the pack`); break; }
             g.world.setBlock(op.x, op.y, op.z, B[op.block], true);
@@ -84,14 +109,14 @@ try {
       // picking a second lesson from the menu would.
       g.lessons.leave(grade.key);
     }
-    return { log, bad, backHome: g.world.lessonRoom, bank: g.education.balanceMinutes() };
+    return { log, bad, backHome: g.world.isLessonWorld(), bank: g.education.balanceMinutes() };
   });
 
   for (const line of result.log) console.log(`       ${line}`);
   for (const b of result.bad) console.log(`  !!   ${b}`);
   check(result.log.length === 9, `one lesson from each of the nine bands (${result.log.length})`);
   check(result.bad.length === 0, `every step of every one of them completed (${result.bad.length} problems)`);
-  check(result.backHome === null, 'and leaving the last one put you back in your own world');
+  check(result.backHome === false, 'and leaving the last one put you back in your own world');
   check(result.bank >= 9 * 30, `nine half-hours banked (${result.bank} min)`);
   check(errors.length === 0, `no console errors${errors.length ? `: ${errors[0]}` : ''}`);
 } catch (e) {

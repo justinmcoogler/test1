@@ -308,7 +308,7 @@ class Game {
     // Bank where they were standing only on the FIRST enter of a series — three
     // lessons in a row would otherwise overwrite the way home with the previous
     // classroom, and "back to the world" would mean "back to room two".
-    on('lessonEnter', ({ room }) => { if (room) this.enterLessonWorld(room); });
+    on('lessonEnter', ({ dest }) => { if (dest) this.enterLessonWorld(dest); });
     on('lessonExit', ({ finished }) => this.exitLessonWorld(finished));
     on('playtimeExhausted', () => {
       this.playtimeLocked = true;
@@ -722,6 +722,9 @@ class Game {
 
     // education/playtime clock (no-op in free play)
     this.education.update(dt, !p.dead && !this.ui.currentWindow && !this.dialogueOpen && !this.playtimeLocked);
+    // A walked lesson notices when the child reaches the next stop on the path.
+    // Only inside a lesson world: there is nothing to arrive at anywhere else.
+    if (this.world.lessonPath) this.lessons.update();
 
     // autosave (never mid-battle or on the death screen)
     this.autosaveTimer -= dt;
@@ -2368,7 +2371,7 @@ class Game {
   // pack, their skills and the education ledger are NOT part of the swap: those
   // belong to the character, which is why the minutes and coins a lesson pays
   // survive the trip home (js/game/characters.js).
-  enterLessonWorld(room) {
+  enterLessonWorld(dest) {
     if (!this._overworld) {
       const p = this.player;
       this._overworld = {
@@ -2382,13 +2385,18 @@ class Game {
     // coordinates, so leaving them would have the lesson world rendering the
     // overworld's geometry at the same coordinates.
     for (const key of [...this.renderer.chunkMeshes.keys()]) this.renderer.dropChunk(key);
-    this.world = new World(LESSON_SEED + room.index, { lessonRoom: room.index });
+    // A walked lesson gets a meadow path (js/world/lessonpath.js); the older
+    // single-room lessons get their numbered classroom. The runner decides which
+    // and hands the plan over as data — main.js only builds what it is given.
+    this.world = new World(LESSON_SEED + dest.index,
+      dest.plan ? { lessonPath: dest.plan } : { lessonRoom: dest.index });
     this.world.time = 8 * 3600;               // permanent mid-morning: no night in a lesson
     this.enemyMgr.world = this.world;
     this.enemyMgr.entities.clear();
     this.enemyMgr.killed.clear();
     this.petEntity = null;
-    this.warpTo(room.entry[0] + 0.5, room.entry[1], room.entry[2] + 0.5);
+    this.warpTo(dest.entry[0] + 0.5, dest.entry[1], dest.entry[2] + 0.5, dest.yaw);
+    if (dest.yaw != null && this.camYaw !== undefined) this.camYaw = dest.yaw;
     this.grantLessonKit();
   }
 

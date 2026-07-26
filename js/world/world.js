@@ -3,6 +3,7 @@
 import { B, BLOCKS, isSolid, SHAPE_COLLISION } from './blocks.js';
 import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, LEARN_MEADOW, BIOMES, WorldGen, newBlend, ringAt, undergroundNodeCandidates } from './worldgen.js';
 import { lessonStructure } from './classroom.js';
+import { pathStructure } from './lessonpath.js';
 import { buildStarterStructures, indexEditsByChunk, stampChunkStructures, structureClaims } from './structures.js';
 import { carveRoads } from './roads.js';
 import { NODE_TYPES, PROP_NODE_TYPES, nodeBlocks, nodeCells } from '../game/nodes.js';
@@ -41,14 +42,21 @@ export const cellKey = (x, y, z) => `${x},${y},${z}`;
 const lidx = (lx, y, lz) => (y * CHUNK + lz) * CHUNK + lx;
 
 export class World {
-  // `opts.lessonRoom` makes a LESSON WORLD: an empty void containing exactly one
-  // classroom and nothing else. Not a far corner of the overworld — a different
-  // World object, with its own chunks, its own edits and its own clock, so a
-  // child doing a counting exercise cannot touch the world they play in and
-  // nothing from that world can reach them. js/main.js swaps `game.world` for
-  // one of these while a lesson runs and swaps the real one back afterwards.
+  // `opts.lessonRoom` or `opts.lessonPath` makes a LESSON WORLD: an empty void
+  // containing exactly one lesson's content and nothing else. Not a far corner of
+  // the overworld — a different World object, with its own chunks, its own edits
+  // and its own clock, so a child doing a counting exercise cannot touch the
+  // world they play in and nothing from that world can reach them. js/main.js
+  // swaps `game.world` for one of these while a lesson runs and swaps the real
+  // one back afterwards.
+  //
+  // A lessonPath is a walked lesson: a meadow trail with a station per beat of
+  // the story (js/world/lessonpath.js). A lessonRoom is the older single sealed
+  // classroom. The plan comes in as data because the world layer has no business
+  // importing the curriculum.
   constructor(seed, opts = {}) {
     this.lessonRoom = opts.lessonRoom ?? null;
+    this.lessonPath = opts.lessonPath ?? null;
     this.seed = seed >>> 0;
     this.gen = new WorldGen(this.seed);
     this.chunks = new Map();          // key → chunk
@@ -67,7 +75,8 @@ export class World {
     this.time = 0;                    // world-time seconds, persisted
     this.dirtyChunks = new Set();     // chunk keys needing remesh
 
-    const s = this.lessonRoom == null ? buildStarterStructures() : lessonStructure(this.lessonRoom);
+    const s = this.lessonPath ? pathStructure(this.lessonPath)
+      : this.lessonRoom == null ? buildStarterStructures() : lessonStructure(this.lessonRoom);
     this.structure = s;
     this.structEditsByChunk = indexEditsByChunk(s.edits, CHUNK);
     this.markers = s.markers;
@@ -87,6 +96,12 @@ export class World {
     return c;
   }
 
+  // True for either flavour of lesson world. Everything that must not happen in
+  // one — terrain, creatures, weather, night — checks this rather than a
+  // particular field, so adding a third flavour later cannot leak the overworld
+  // into it by omission.
+  isLessonWorld() { return this.lessonRoom != null || this.lessonPath != null; }
+
   hasChunk(cx, cz) { return this.chunks.has(chunkKey(cx, cz)); }
   getChunk(cx, cz) { return this.chunks.get(chunkKey(cx, cz)); }
 
@@ -97,7 +112,7 @@ export class World {
     // point rather than an optimisation: no terrain, no caves, no roads, no
     // settlements, no ore, no creatures — there is nothing in this world to
     // find, break or be frightened by except the exercise.
-    if (this.lessonRoom != null) {
+    if (this.isLessonWorld()) {
       const structOnly = this.structEditsByChunk.get(chunkKey(cx, cz));
       let top = 1;
       if (structOnly) {

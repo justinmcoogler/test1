@@ -6,37 +6,65 @@
 // only shown, and no clause a five-year-old has to hold in their head while
 // doing something else with their hands.
 export const GRADE_K = [
+  // The walked one. `walk: true` puts this lesson on a MEADOW PATH instead of in
+  // a single room: six stops along a trail, a different job at each, and two of
+  // them barring the way until the work is done. Every step names the kind of
+  // place it happens in; js/world/lessonpath.js builds it.
   {
     id: 'k_count', subject: 'math', standard: 'K.CC.B.5', title: 'The Egg Hunt',
-    story: 'Pip the meadow sprite has lost her hen\'s eggs in the long grass. '
-      + 'Every time you find some, she needs you to put them safe in the nest on the mat — '
-      + 'and to count them out loud, so she knows none are left behind.',
+    walk: true,
+    story: 'Pip\'s hen Nutmeg got out of her coop last night and has laid her eggs all the way '
+      + 'along the meadow path. Walk the path with Pip and help at every stop — mend what is broken, '
+      + 'cross what is in the way, and get every last egg home to the nest before the sun goes down.',
     steps: [
-      { say: 'Here come the first eggs, rolling out of the grass. Three of them!',
-        prompt: 'Put 3 white blocks on the mat.',
-        hint: 'Take a white block from your bag and put it down. Then another. Then one more. One, two, three!',
-        success: 'Three eggs, safe in the nest. Well counted!',
-        build: { kind: 'count', block: 'white_wool', n: 3 } },
-      { say: 'Now Pip finds a whole clutch under the hedge. Clear the nest and start again — five this time.',
-        prompt: 'Put 5 white blocks on the mat.',
-        hint: 'Count as you place them: one, two, three, four, five. Then stop.',
-        success: 'Five! Your counting is getting quick.',
+      { station: { kind: 'grass', plot: false, scatter: { block: 'white_wool', n: 7 } },
+        travel: 'Off we go! Follow the gravel path until you come to the long grass.',
+        say: 'Somewhere in this long grass are three of Nutmeg\'s eggs. Have a good look around — '
+          + 'they are white, and they are hiding.',
+        prompt: 'Find and pick up 3 eggs.',
+        hint: 'Walk about in the grass and break the white blocks you find — each one goes straight into your bag. One, two, three.',
+        success: 'Three eggs found! Well hunted.',
+        build: { kind: 'gather', block: 'white_wool', n: 3 } },
+      { station: { kind: 'nest' },
+        travel: 'Now follow the path along to the hen house.',
+        say: 'Here is Nutmeg\'s nest — and look, she has laid two MORE while we were hunting. '
+          + 'Three that you found, and two more.',
+        prompt: 'Put 5 eggs on the straw nest.',
+        hint: 'Place them one at a time and count out loud: one, two, three, four, five.',
+        success: 'Five eggs, safe on the straw. Three and two more make five!',
         build: { kind: 'count', block: 'white_wool', n: 5 } },
-      { say: 'The hen is very pleased. She lays three more on top of the five you have.',
-        prompt: 'Put 8 white blocks on the mat.',
-        hint: 'Five, then keep counting: six, seven, eight.',
-        success: 'Eight eggs! That is five and three more.',
-        build: { kind: 'count', block: 'white_wool', n: 8 } },
-      { say: 'One last search. Under the gate, behind the water butt… there they are.',
-        prompt: 'Put 10 white blocks on the mat.',
-        hint: 'Keep counting up: eight, nine, ten. Ten is one for every finger.',
-        success: 'TEN eggs. That is the whole clutch!',
-        build: { kind: 'count', block: 'white_wool', n: 10 } },
-      { say: 'The hen wants two nests, so the eggs do not roll into each other. Same ten eggs — just split up.',
-        prompt: 'Make two nests with 5 eggs in each, and a gap between them.',
-        hint: 'Put five in a row. Then leave an empty square, and put five more.',
-        success: 'Five and five make ten. You split them perfectly!',
-        build: { kind: 'groups', block: 'white_wool', sizes: [5, 5] } },
+      { station: { kind: 'gate', barrier: 'gate' },
+        travel: 'On we go — the path runs down to the old gate.',
+        say: 'Oh no. The gate has lost its top rail and it is stuck fast. Nothing gets through until '
+          + 'it is mended, and a rail takes eight planks in a row.',
+        prompt: 'Lay a row of 8 planks on the mending patch — all touching, no gaps.',
+        hint: 'Eight in one straight line, each plank against the last. Count them as you lay them.',
+        success: 'Eight planks and the rail is mended — the gate swings open! Walk through.',
+        build: { kind: 'groups', block: 'planks', sizes: [8] } },
+      { station: { kind: 'stream', barrier: 'stream' },
+        travel: 'Through the gate and along to the stream.',
+        say: 'The stream is far too wide to jump. We shall have to lay stepping stones — '
+          + 'and it takes five to reach the other bank.',
+        prompt: 'Lay a row of 5 stones on the bank.',
+        hint: 'Five stones in a line, all touching. One, two, three, four, five.',
+        success: 'Five stones — and away they go, straight across the water. Walk over!',
+        build: { kind: 'groups', block: 'cobble', sizes: [5] } },
+      { station: { kind: 'orchard' },
+        travel: 'Over the stream, and on into the apple trees.',
+        say: 'The wind knocked the apples down and mixed them all up. There are two baskets: '
+          + 'red apples in one, yellow in the other.',
+        prompt: 'Put 4 red apples on one side of the plank line and 4 yellow on the other.',
+        hint: 'All the reds together on one side. All the yellows together on the other. None may cross the line!',
+        success: 'Sorted — reds one side, yellows the other, and not one in the wrong basket.',
+        build: { kind: 'sort', a: 'red_wool', b: 'yellow_wool', n: 4 } },
+      { station: { kind: 'cottage' },
+        travel: 'Nearly home. Pip\'s cottage is right at the end of the path.',
+        say: 'It is getting dark. Pip has hung six lit lanterns already, but the path needs TEN '
+          + 'before bedtime.',
+        prompt: 'Hang more lanterns until there are 10 altogether.',
+        hint: 'Count the ones already there: six. Now count on — seven, eight, nine, ten. That is four more.',
+        success: 'Ten lanterns, and the whole path is lit! Every egg home and every job done. Thank you.',
+        build: { kind: 'bond', have: { block: 'yellow_wool', n: 6 }, add: { block: 'white_wool', n: 4 } } },
     ],
     reward: { coins: 30, items: [['red_wool', 8], ['blue_wool', 8]] },
   },
