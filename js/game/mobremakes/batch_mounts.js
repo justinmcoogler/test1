@@ -64,6 +64,7 @@ const H_UV = {
   flank: [0, 0, 26, 16], top: [0, 17, 26, 10], neck: [28, 0, 12, 16],
   chest: [40, 0, 12, 10], rump: [0, 28, 14, 12],
   headSide: [16, 28, 10, 12], headFace: [28, 28, 10, 12], muzzle: [40, 28, 10, 8],
+  headTop: [0, 42, 12, 8],
   ear: [52, 28, 8, 6], mane: [52, 0, 6, 22], forelock: [58, 12, 6, 10],
   leg: [40, 42, 8, 20], hoof: [50, 42, 8, 4], tail: [56, 42, 8, 22], dock: [50, 48, 6, 8],
 };
@@ -102,9 +103,21 @@ export function horseParts(d) {
   const nPivY = back - 3, nPivZ = zF - 5;   // the withers
   const nLo = R(neck * 0.6), nHi = neck - nLo + 1;
   const nTop = nPivY + nLo - 1 + nHi;       // crest of the UNROTATED column
-  const hy = nTop - 7;                      // where the head hangs on it
   const maneH = Math.max(3, R(neck * 0.36));
+  // THE HEAD IS ONE BLOCK WITH A NOSE ON IT. Splitting it into a skull and a
+  // separate muzzle of its own size — which is how the reference is actually built
+  // — does not survive being rebuilt from scratch here: the two boxes read as two
+  // boxes stuck end to end, and every attempt to disguise the join (matching the
+  // height band, matching the paint, tapering only on width) still left a seam
+  // across the middle of the animal's face. One block reads as a head.
+  //
+  // WHERE IT SITS is the part that was wrong. Hung seven pixels down the column the
+  // head swallowed the neck whole: everything above the barrel was head, and the
+  // only "neck" left was the stub below the jaw. Five is enough to join them.
   const headL = Math.max(9, R(bd * 0.46));
+  const headH = 8;
+  const hy = nTop - 5;
+  const hPivY = nTop - 1, hPivZ = nPivZ + 2;
   const LEGS = [['leg0', -legW - 1, zF - 5], ['leg1', 1, zF - 5],
     ['leg2', -legW - 1, -bd / 2 + 1], ['leg3', 1, -bd / 2 + 1]];
   return [
@@ -136,16 +149,19 @@ export function horseParts(d) {
       // one of its two pixels of depth stands proud.
       b([-2, nTop - maneH, nPivZ - 3], [4, maneH, 2], H_UV.mane),
     ], { rotation: [NECK_DEG, 0, 0] }),
-    // The head hangs off the top of that column, overlapping it so there is no
-    // seam at the throat, and carries its own counter-angle so the face ends up
-    // nearly level instead of pointing at the ground.
-    part('head', [0, nTop - 2, nPivZ + 2], [
-      b([-2, hy, nPivZ], [5, 8, headL], { all: H_UV.headSide, south: H_UV.headFace }),
+    // The head sits ON the crest and overlaps it by two, so the neck stays visible
+    // underneath. It carries a counter-angle against the neck's lean that leaves it
+    // just five degrees off level — the reference keeps its head rigid with the
+    // neck and so points the muzzle a full thirty degrees at the ground, which on
+    // a head this size reads as an animal nodding rather than an animal standing.
+    part('head', [0, hPivY, hPivZ], [
+      b([-2, hy, nPivZ], [5, headH, headL],
+        { all: H_UV.headSide, south: H_UV.headFace, up: H_UV.headTop }),
       b([-2, hy + 1, nPivZ + headL], [4, 4, 3], H_UV.muzzle),
-      b([-3, hy + 8, nPivZ + 1], [2, 3, 2], H_UV.ear),
-      b([1, hy + 8, nPivZ + 1], [2, 3, 2], H_UV.ear),
-      b([-1, hy + 6, nPivZ + 3], [2, 4, 2], H_UV.forelock),
-    ], { parent: 'neck', rotation: [-NECK_DEG + 10, 0, 0] }),
+      b([-3, hy + headH, nPivZ + 1], [2, 3, 2], H_UV.ear),
+      b([1, hy + headH, nPivZ + 1], [2, 3, 2], H_UV.ear),
+      b([-1, hy + headH - 2, nPivZ + 3], [2, 4, 2], H_UV.forelock),
+    ], { parent: 'neck', rotation: [-NECK_DEG + 5, 0, 0] }),
     // ONE WIDTH ALL THE WAY DOWN. A tapered leg — muscled thigh, thin cannon,
     // flared hoof — is anatomically the right story and it read badly here: at
     // four pixels of leg the step in and out just looks like a knuckle, and four
@@ -196,17 +212,33 @@ export function paintHorseSkin(P, pal) {
   P.hide(40, 0, 12, 10, P.tone(coat, 0.04), cdk);      // chest catches the light
   P.hide(0, 28, 14, 12, coat, cdk);
   P.crease(1, 34, 12, 32, P.tone(cdk, -0.16));         // the point of the hip
-  // head — sides, then the face with its blaze and eyes
+  // Head. The EYE GOES ON THE SIDE ISLAND, because that is where a horse's eyes
+  // are and the side of the skull is the whole of what you see in profile. It used
+  // to sit on the face-front island with its twin, which was survivable while the
+  // head was a tall block seen three-quarter-on; now that the head is a long
+  // shallow wedge with a muzzle across most of its front, that face is barely
+  // visible and the animal had no eye from the side at all.
   P.hide(16, 28, 10, 12, coat, cdk, { seam: 0.13 });
-  P.panel(28, 28, 10, 12, coat, { light: 0.13, vary: 0.025 });
-  if (blaze) { P.ramp(31, 28, 3, 12, blaze, P.tone(blaze, -0.1), 'v'); }
+  P.eye(18, 31, '#0d0906', eye);
+  // The crown gets an island of its own so the eye does not also land on top of
+  // the skull — every other face of this box shares the side island.
+  P.hide(0, 42, 12, 8, coat, cdk, { light: 0.06, seam: 0.1 });
+  // The face front is mostly behind the muzzle now — only a one-pixel border of it
+  // shows, all the way round. So it is painted to EXACTLY the value of the side
+  // island: lit a shade brighter, as a face front reasonably would be, that border
+  // read as a bright gap between the skull and the muzzle rather than as the front
+  // of the head. For the same reason the blaze stops short of the bottom edge,
+  // where it was showing under the muzzle as a white notch.
+  P.hide(28, 28, 10, 12, coat, cdk, { seam: 0.13 });
+  if (blaze) { P.ramp(32, 28, 2, 7, blaze, P.tone(blaze, -0.1), 'v'); }
   P.rect(28, 28, 10, 2, P.tone(cdk, -0.1));            // the forehead in shadow
-  P.eye(29, 32, '#0d0906', eye);
-  P.eye(35, 32, '#0d0906', eye);
-  // muzzle — soft, with nostrils and a lit lip
-  P.panel(40, 28, 10, 8, muz, { light: 0.16 });
-  P.px(43, 32, '#100a06'); P.px(47, 32, '#100a06');
-  P.rect(41, 34, 8, 1, P.tone(muz, 0.12));
+  // Muzzle — the SAME HIDE as the rest of the head, going dark only at the lip.
+  // Flooding the whole island with `muz` (a near-black on every breed) turned the
+  // nose into a black brick stuck to the front of the face, and once the head was
+  // rebuilt long and shallow that brick was half of it.
+  P.hide(40, 28, 10, 8, coat, cdk, { seam: 0.12 });
+  P.ramp(40, 32, 10, 3, P.tone(coat, -0.16), muz, 'v');   // shading down into the lip
+  P.rect(40, 35, 10, 1, muz);
   // ears — coat outside, dark inside
   P.panel(52, 28, 8, 6, coat, { light: 0.1 });
   P.rect(53, 29, 2, 4, P.tone(cdk, -0.18)); P.rect(57, 29, 2, 4, P.tone(cdk, -0.18));
