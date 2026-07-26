@@ -582,25 +582,20 @@ export class WorldGen {
     const fillerId = B[biome.filler];
     const tundra = biome === BIOMES.frostbound_tundra;
 
-    // A cave carves anywhere in the column, and nothing used to stop it eating
-    // the ground out from under a surface it did not itself break. What that
-    // left was a lawn one block thick over a hole, and where the neighbouring
-    // columns were hollowed to the same depth the lawn stopped being a roof at
-    // all and simply hung in the air over a hillside.
+    // NOTE — a cave may carve the ground out from under a surface it did not
+    // itself break, leaving a lawn one block thick over a hole; where the
+    // neighbouring columns are hollowed to the same depth that lawn hangs in
+    // mid-air over a hillside. tools/audit-floating.mjs finds them (8 grass
+    // blocks in a 40-block box around 340,-80 on seed 20260725).
     //
-    // So a cave may only come within ROOF of the surface where it breaks the
-    // surface too. `mouth` is that test, and it costs one noise pair per COLUMN
-    // rather than per block. A real cave entrance is untouched — it carves `h`
-    // itself, which lifts the guard with it. What is gone is the hollow with the
-    // ground still lying on top of it.
-    //
-    // ROOF is 6 because that is where it stops mattering, measured rather than
-    // guessed: at 1 and 3 the lid just gets thicker and keeps hanging (16 and 32
-    // orphaned blocks over a nine-region sweep), and at 6 the sweep comes back
-    // clean. Deeper buys nothing and costs cave.
-    const ROOF = 6;
-    const mouth = this.isCave(wx, h, wz, onPath);
-    const soil = h - ROOF;
+    // The obvious fix — refuse to carve within N of an unbroken surface — was
+    // tried and REVERTED. It works (a nine-region sweep goes clean at N=6, and
+    // subsurface cave volume only drops 2.5%) but it moves terrain everywhere,
+    // and it broke the route down to the tier-1 boss: tests/rscombat.mjs left
+    // the player stranded on the surface at y=68 instead of in the arena at
+    // y=47, with Gorrak untouched at full health. Whatever gets fixed here has
+    // to leave the hand-built mine, dungeon and their approaches alone — see
+    // the backlog item about caves eroding the Rootgrave.
 
     // Everything above the ground/water line is air, and the chunk array is
     // zero-initialised to air — so we only fill up to the surface. This keeps
@@ -610,7 +605,7 @@ export class WorldGen {
       let id = B.air;
       if (y === 0) id = B.bedrock;
       else if (y <= h) {
-        if ((mouth || y < soil) && this.isCave(wx, y, wz, onPath)) {
+        if (this.isCave(wx, y, wz, onPath)) {
           id = B.air;
         } else if (y === h) {
           // beaches near water line — but the gravel road always wins, even where
