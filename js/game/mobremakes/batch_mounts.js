@@ -102,9 +102,25 @@ export function horseParts(d) {
   // texels to the block you see the steps. So this rotates, the way the reference
   // does. `rotation` is a rest pose the animation adds to (js/game/mobloader.js),
   // and +X pitches +Y toward +Z — forward.
-  const NECK_DEG = 40;                  // off vertical, leaning forward
-  const nTop = back + neck;             // top of the UNROTATED column
-  const hy = nTop - 5;                  // where the head hangs on it
+  // THE NECK, third time. Two things were wrong and both were about the MANE and
+  // the LENGTH rather than about the rotation:
+  //
+  //   The mane box was taller than the neck box and started a pixel higher, so
+  //   once the group rotated it overshot the crest at both ends. All you saw from
+  //   the side was a long black diagonal spike with a head on it — the neck's own
+  //   pale flesh was hidden behind its own hair.
+  //   And the column was `neck + 2` = fourteen pixels on a barrel ten deep. Swung
+  //   out forty degrees that throws the head a long way off the chest, which is a
+  //   giraffe. A horse carries its head close.
+  //
+  // So: a shorter column in two boxes (thick at the throat, thinner at the crest,
+  // both inside one rotated bone so they cannot staircase), a mane that stops
+  // exactly where the neck stops, and thirty degrees instead of forty.
+  const NECK_DEG = 30;
+  const nPivY = back - 3, nPivZ = zF - 5;   // the withers
+  const nLo = R(neck * 0.6), nHi = neck - nLo + 1;
+  const nTop = nPivY + nLo - 1 + nHi;       // crest of the UNROTATED column
+  const hy = nTop - 7;                      // where the head hangs on it
   const headL = Math.max(9, R(bd * 0.46));
   const thigh = Math.max(4, R(legH * 0.42));            // how much of the leg is muscle
   const LEGS = [['leg0', -legW - 1, zF - 5], ['leg1', 1, zF - 5],
@@ -121,20 +137,24 @@ export function horseParts(d) {
       b([-bw / 2, legH, zF - R(bd * 0.32)], [bw, bh - 1, R(bd * 0.32)], H_UV.chest),
       b([-bw / 2 + 1, legH + 1, -bd / 2], [bw - 2, bh - 2, R(bd * 0.3)], H_UV.rump),
     ]),
-    // The neck: one slender column off the withers, leaning forward as a unit.
-    part('neck', [0, back - 2, zF - 4], [
-      b([-2, back - 2, zF - 6], [4, neck + 2, 5], H_UV.neck),
-      b([-1, back - 1, zF - 7], [2, neck + 3, 2], H_UV.mane),     // the mane behind it
+    // The neck: a slender column off the withers, leaning forward as one unit —
+    // deeper through the throat, narrower at the crest.
+    part('neck', [0, nPivY, nPivZ], [
+      b([-2, nPivY, nPivZ - 2], [4, nLo, 6], H_UV.neck),
+      b([-2, nPivY + nLo - 1, nPivZ - 1], [4, nHi, 5], H_UV.neck),
+      // the mane, flush along the back edge and stopping exactly at the crest
+      b([-1, nPivY + 1, nPivZ - 3], [2, nTop - nPivY - 1, 2], H_UV.mane),
     ], { rotation: [NECK_DEG, 0, 0] }),
-    // The head hangs off the top of that column, and carries its own counter-angle
-    // so the face ends up nearly level instead of pointing at the ground.
-    part('head', [0, hy + 4, zF - 3], [
-      b([-2, hy, zF - 3], [5, 8, headL], { all: H_UV.headSide, south: H_UV.headFace }),
-      b([-2, hy + 1, zF - 3 + headL], [4, 4, 3], H_UV.muzzle),
-      b([-3, hy + 8, zF - 2], [2, 3, 2], H_UV.ear),
-      b([1, hy + 8, zF - 2], [2, 3, 2], H_UV.ear),
-      b([-1, hy + 6, zF], [2, 4, 2], H_UV.forelock),
-    ], { parent: 'neck', rotation: [-NECK_DEG + 12, 0, 0] }),
+    // The head hangs off the top of that column, overlapping it so there is no
+    // seam at the throat, and carries its own counter-angle so the face ends up
+    // nearly level instead of pointing at the ground.
+    part('head', [0, nTop - 2, nPivZ + 2], [
+      b([-2, hy, nPivZ], [5, 8, headL], { all: H_UV.headSide, south: H_UV.headFace }),
+      b([-2, hy + 1, nPivZ + headL], [4, 4, 3], H_UV.muzzle),
+      b([-3, hy + 8, nPivZ + 1], [2, 3, 2], H_UV.ear),
+      b([1, hy + 8, nPivZ + 1], [2, 3, 2], H_UV.ear),
+      b([-1, hy + 6, nPivZ + 3], [2, 4, 2], H_UV.forelock),
+    ], { parent: 'neck', rotation: [-NECK_DEG + 10, 0, 0] }),
     // A horse's leg TAPERS: a heavy muscled thigh at the top, a thin cannon bone
     // below it, and a hoof wider than the bone. Four identical posts read as four
     // sticks however good the body is, and that is what these were.
