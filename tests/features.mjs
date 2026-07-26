@@ -232,13 +232,19 @@ try {
   const qol = await g(() => {
     const game = window.__game;
     // The camp's one chest — the only storage in the world you did not build.
-    const chest = game.world.getChestAt(7, 65, 1);
+    // Looked up by ID and then checked to be a real chest AT those coordinates,
+    // rather than by a hard-coded position: the camp gets rearranged, and a test
+    // that pins the footlocker to a literal breaks every time a tent moves
+    // without ever telling you anything about whether the chest works.
+    const meta = game.world.chestMeta.get('camp_stash');
+    const found = meta ? game.world.getChestAt(meta.x, meta.y, meta.z) : null;
     return {
-      townStorage: chest?.id === 'camp_stash',
+      townStorage: found?.id === 'camp_stash',
+      nearCamp: !!meta && Math.hypot(meta.x - 4, meta.z - 4) < 16,
       xpToastsDefault: game.settings.xpToasts === true,
     };
   });
-  check('the camp footlocker is where the camp put it', qol.townStorage);
+  check('the camp footlocker is where the camp put it', qol.townStorage && qol.nearCamp);
   check('xp toast toggle defaults on', qol.xpToastsDefault);
 
   await page.screenshot({ path: 'tests/screenshots/features.png' });

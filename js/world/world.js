@@ -65,7 +65,7 @@ export class World {
     this.markers = s.markers;
     for (const ch of s.chests) this.chestMeta.set(ch.id, ch);
     for (const [x, y, z, f] of s.facings || []) this.blockFacing.set(`${x},${y},${z}`, f & 15);
-    // The hand-built village of Brookhollow (js/world/structures.js) is the
+    // The hand-built starting camp (js/world/structures.js) is the
     // starting point; markers.spawn already seats the player on its plaza.
   }
 

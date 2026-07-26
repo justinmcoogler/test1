@@ -4,7 +4,7 @@
 // a station is a place to LOOK, and a handful of placements are tried around it
 // before the ground is given up on — sized and themed by the difficulty ring it
 // stands in. The building vocabulary
-// is Brookhollow's (js/world/town.js): burgage plots at right angles to a high
+// is the deleted town's (js/world/town.js): burgage plots at right angles to a high
 // street, houses hard on the frontage line with party walls between them, timber
 // framing over a stone plinth, jettied upper storeys, deep eaves, a funnel market
 // rather than a plaza, and nuisance trades pushed out to the town edge.
@@ -989,7 +989,7 @@ function placePeople(gen, town, rand, WX, WZ, geo) {
     // quest compass (js/game/quests.js `trackedMarker`) matches unmarked stages
     // against the hand-built landmarks by npc id, enemy type or item, and a
     // generated stage matches none of them — a `talk` stage fell through to the
-    // Brookhollow market stall, so the arrow sent you home. Done here rather than
+    // the old town's market stall, so the arrow sent you home. Done here rather than
     // on each stage so a new quest shape cannot forget it.
     const here = `town_${town.d}_${town.n}`;   // the key registerTown publishes
     for (const st of q.stages) if (!st.marker) st.marker = here;

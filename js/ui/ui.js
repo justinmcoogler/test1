@@ -372,7 +372,7 @@ export class UI {
   renderQuestTracker() {
     const el = $('quest-tracker');
     const act = this.game.quests.active();
-    if (!act.length) { el.innerHTML = '<div class="qt-name">No active quest</div><div class="qt-progress">Talk to Elder Maren in Brookhollow</div>'; return; }
+    if (!act.length) { el.innerHTML = '<div class="qt-name">No active quest</div><div class="qt-progress">Talk to Maren at the camp</div>'; return; }
     const q = act[0];
     const stage = this.game.quests.currentStage(q);
     const prog = this.game.quests.stageProgressText(q);
@@ -931,7 +931,7 @@ export class UI {
     const active = ql.active();
     const done = ql.completed();
     let html = '<h3 style="color:var(--gold);margin-bottom:10px">Active Quests</h3>';
-    if (!active.length) html += '<div style="color:var(--ink-dim);margin-bottom:12px">Nothing right now — talk to the villagers of Brookhollow.</div>';
+    if (!active.length) html += '<div style="color:var(--ink-dim);margin-bottom:12px">Nothing right now — talk to Maren at the camp.</div>';
     for (const q of active) {
       const st = ql.state[q.id];
       html += `<div class="quest-entry"><h4>${q.name}</h4>
@@ -954,7 +954,7 @@ export class UI {
     body.innerHTML = `<canvas id="map-canvas"></canvas>
       ${this.waystonePanelHTML()}
       <div style="color:var(--ink-dim);font-size:12px;margin-top:6px">
-        Click an explored spot to walk there. Gold diamond: Brookhollow · gold dot: quest objective · gold cross: travel mark · blue diamond: waystone · white arrow: you.
+        Click an explored spot to walk there. Gold diamond: your camp · gold dot: quest objective · gold cross: travel mark · blue diamond: waystone · white arrow: you.
       </div>`;
     this.bindWaystonePanel();
     const canvas = $('map-canvas');
@@ -991,7 +991,7 @@ export class UI {
       ctx.closePath(); ctx.fill();
       ctx.strokeStyle = '#000'; ctx.stroke();
     };
-    diamond(ox, oz, 6, '#e2b13c'); // Brookhollow (world origin)
+    diamond(ox, oz, 6, '#e2b13c'); // the camp (world origin)
     // every discovered waystone, with the one you're standing at ringed
     const standing = this.game.departureWaystone();
     for (const ws of this.game.waystones.list()) {
@@ -1052,7 +1052,7 @@ export class UI {
     const here = g.departureWaystone();
     let note;
     if (!list.length) {
-      note = 'None yet — a lit standing stone marks the miles along every main road out of Brookhollow. Walk up to one.';
+      note = 'None yet — a lit standing stone marks the miles along every main road out of the camp. Walk up to one.';
     } else if (!here) {
       note = 'Stand at a waystone to travel instantly between two of them; from anywhere else, picking one walks you to it.';
     } else if (list.length < 2) {
@@ -1666,7 +1666,7 @@ export class UI {
     const ql = this.game.quests;
     const options = [];
     // quests offered here, plus any quest whose final report is to this NPC
-    // (chains can start in Brookhollow and end at the frontier)
+    // (chains can start at the camp and end at the frontier)
     for (const q of QUESTS) {
       if (ql.readyToTurnIn(q, npcId)) {
         options.push({ label: `${q.name} (turn in!)`, action: `turnIn:${q.id}`, cls: 'quest-ready' });

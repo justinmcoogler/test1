@@ -1,6 +1,6 @@
 // Endless arterial roads and their waystones (docs/WORLD_PLAN.md, phase 5).
 //
-// Eight arterials leave Brookhollow on the compass points and run forever. The
+// Eight arterials leave the origin on the compass points and run forever. The
 // hard constraint is chunk-LOCALITY: a chunk must be generatable on its own, in
 // any order, with no global state and no memory of whether its neighbours exist
 // yet. So nothing here marches a route outward from spawn the way the
@@ -51,7 +51,7 @@ import { mineshaftClaims } from './mineshaft.js';
 import { dungeonClaims } from './dungeon.js';
 
 // ---- Geometry --------------------------------------------------------------
-// 8 primary arterials radiate from Brookhollow; 8 secondary LANES fork off them
+// 8 primary arterials radiate from the origin; 8 secondary LANES fork off them
 // further out and also run forever. A fork is not a ray from spawn — its frame's
 // origin sits on its parent arterial — so it reads as a road leaving a road.
 export const ARTERIALS = 16;
@@ -77,7 +77,7 @@ for (let d = PRIMARIES; d < ARTERIALS; d++) {
   U[d * 2] = Math.cos(th); U[d * 2 + 1] = Math.sin(th);
 }
 
-// Paving starts clear of everything Brookhollow builds on the surface (its
+// Paving starts clear of everything the camp builds on the surface (its
 // outermost surface edit is 55 blocks out) with room to spare. The starter
 // plateau stays flat to 150 blocks, so the arterials still begin on level,
 // town-height ground and the plaza walks straight onto them.

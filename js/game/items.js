@@ -25,7 +25,7 @@ it('relic_fragment', 'Relic Fragment', { desc: 'A piece of something ancient. En
 // dungeon's boss room (js/world/dungeon.js `theme.mini`) and spent turning that
 // dungeon's grate — see js/game/dungeonlock.js for why the lock needed an item
 // of its own instead of borrowing the relic fragment above.
-it('warden_key', "Warden's Key", { stack: 5, type: 'quest', desc: 'Cold iron, black with age, far too big for any door in Brookhollow. It turns the grate on a dungeon boss room once, then stays in the lock.' });
+it('warden_key', "Warden's Key", { stack: 5, type: 'quest', desc: 'Cold iron, black with age, far too big for any door you have ever stood in front of. It turns the grate on a dungeon boss room once, then stays in the lock.' });
 it('waterlogged_cache', 'Waterlogged Cache', { stack: 5, type: 'usable', desc: 'A sealed box fished from the depths. Open it!' });
 
 // ---- raw materials ----

@@ -129,7 +129,20 @@ export function buildTree(sp, x, y, z, h, emit) {
   const offX = (i) => x + Math.round(hx * sp.lean * i);
   const offZ = (i) => z + Math.round(hz * sp.lean * i);
 
-  for (let i = 0; i < h; i++) log(offX(i), y + i, offZ(i));
+  // A lean does not drift the trunk smoothly — it shifts it a whole column at
+  // the height where the rounding tips over. The log above that shift touches
+  // the one below it only at a corner, so on every leaning species tall enough
+  // to reach the tipping point (yew, teak, ebony, lignum vitae) the ENTIRE upper
+  // trunk and its crown hung in the air with a gap under them. Fill the elbow:
+  // where the column changes, the bend also gets a log in the old column at the
+  // new height, which is what a real trunk does at a kink anyway.
+  let px = x, pz = z;
+  for (let i = 0; i < h; i++) {
+    const nx = offX(i), nz = offZ(i);
+    if (i && (nx !== px || nz !== pz)) log(px, y + i, pz);
+    log(nx, y + i, nz);
+    px = nx; pz = nz;
+  }
   // The trunk top and the crown centre are NOT the same column on a leaning
   // tree: the crown is pulled back inside the envelope, the trunk is not. The
   // canopies need both — the centre to build around, the trunk top to leave a
@@ -146,8 +159,18 @@ export function buildTree(sp, x, y, z, h, emit) {
     const [ox, oz] = HEADINGS[(b + head) & 3];
     // Clamped, not dropped: a limb that would reach past the envelope is worth
     // more shortened by a column than deleted, which is what the raw guard did.
-    log(clampEnv(offX(i) + ox, x, 0), y + i, clampEnv(offZ(i) + oz, z, 0));
-    if (f > 0.4) log(clampEnv(offX(i) + ox * 2, x, 0), y + i + 1, clampEnv(offZ(i) + oz * 2, z, 0));
+    const lx = (n) => clampEnv(offX(i) + ox * n, x, 0);
+    const lz = (n) => clampEnv(offZ(i) + oz * n, z, 0);
+    log(lx(1), y + i, lz(1));
+    // The upper limbs reach a second column and only THEN turn up. Stepping out
+    // and up in ONE move is what this used to do, and it leaves the tip touching
+    // the limb along a diagonal only — a voxel joined at a corner touches
+    // nothing, so every branched tree in the world wore a log hanging in mid-air
+    // wherever the canopy did not happen to cover it.
+    if (f > 0.4) {
+      log(lx(2), y + i, lz(2));
+      log(lx(2), y + i + 1, lz(2));
+    }
   }
 
   // Crown size grows with the trunk, so the same species reads as a sapling at

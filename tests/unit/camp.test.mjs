@@ -101,6 +101,15 @@ test('the camp puts everything the opening hour needs on the ground', () => {
   }
 });
 
+// You have got to a block if you can stand in it, on it, or next to it. The
+// exact cell is the wrong question for furniture: a bed has a collision height,
+// so world.groundNear — which is what the real pathfinder walks on — will never
+// stand you INSIDE one, and you sleep by clicking the bed anyway (main.js
+// tryInteract). Asking for the cell itself passed only by accident while the
+// tent's ridge was low enough to deny the headroom to stand on the bedroll.
+const gotTo = (seen, [x, y, z]) => seen.has(`${x},${y},${z}`) || seen.has(`${x},${y + 1},${z}`)
+  || [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => seen.has(`${x + dx},${y},${z + dz}`));
+
 test('you can walk into the tent and reach the bedroll', () => {
   const w = campWorld();
   const s = buildStarterStructures();
@@ -118,8 +127,58 @@ test('you can walk into the tent and reach the bedroll', () => {
 
   const seen = reachFrom(w, start[0], start[1], start[2]);
   assert.ok(seen.size > 200, `the sweep actually went somewhere (${seen.size} cells)`);
-  assert.ok(seen.has(`${bed[0]},${bed[1]},${bed[2]}`),
-    'the bedroll is inside a tent you cannot walk into');
+  assert.ok(gotTo(seen, bed), 'the bedroll is inside a tent you cannot walk into');
+});
+
+test('every tent in the camp is one you can get inside', () => {
+  const w = campWorld();
+  const s = buildStarterStructures();
+  const seen = reachFrom(w, ...approach(w));
+
+  // A tent is canvas over a plank floor, so find them by their floors: each
+  // connected patch of authored planks at ground level is one tent's footprint.
+  // Deriving them rather than hard-coding three means adding a fourth tent is
+  // covered the day it is added, and a tent that stops being enterable fails
+  // here even if nobody remembers to update this file.
+  // Scoped to the camp's own ground: the Frostwatch hut two hundred blocks east
+  // also has a plank floor, and it is not walkable-to from here by design.
+  const [camx, , camz] = s.markers.camp;
+  const floors = new Map();
+  for (const [k, id] of s.edits) {
+    if (id !== B.planks) continue;
+    const [x, y, z] = k.split(',').map(Number);
+    if (Math.hypot(x - camx, z - camz) > 24) continue;
+    floors.set(`${x},${z}`, y);
+  }
+  const groups = [];
+  const taken = new Set();
+  for (const k of floors.keys()) {
+    if (taken.has(k)) continue;
+    const group = [];
+    const q = [k];
+    taken.add(k);
+    while (q.length) {
+      const cur = q.pop();
+      const [cx, cz] = cur.split(',').map(Number);
+      group.push([cx, floors.get(cur), cz]);
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nk = `${cx + dx},${cz + dz}`;
+        if (floors.has(nk) && !taken.has(nk)) { taken.add(nk); q.push(nk); }
+      }
+    }
+    groups.push(group);
+  }
+  assert.ok(groups.length >= 3, `the camp has at least three tents (found ${groups.length})`);
+
+  for (const group of groups) {
+    // The middle of a tent is the cell you have to be able to stand in — the
+    // edges are under the canvas where the roof comes down to the floor.
+    const mx = Math.round(group.reduce((a, g) => a + g[0], 0) / group.length);
+    const mz = Math.round(group.reduce((a, g) => a + g[2], 0) / group.length);
+    const y = group[0][1] + 1;
+    assert.ok(gotTo(seen, [mx, y, mz]),
+      `the tent floored around ${mx},${mz} is one you cannot get into`);
+  }
 });
 
 test('the fire, the bench and the footlocker are all reachable too', () => {

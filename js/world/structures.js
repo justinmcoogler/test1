@@ -135,30 +135,58 @@ export function buildStarterStructures() {
   set(CX - 2, F, CZ, B.fernwood_log);
   set(CX + 2, F, CZ + 1, B.fernwood_log);
 
-  // The tent: a canvas A-frame on a timber frame, open to the south so you can
-  // see the fire from the bedroll. Wool for the canvas because wool is the one
-  // cloth this world has, and it is also what a bed is made of — the tent and
-  // the bed are the same lesson.
-  const TX = CX - 5, TZ = CZ + 3;            // tent centre
-  for (let x = TX - 2; x <= TX + 2; x++) {
-    for (let z = TZ - 2; z <= TZ + 2; z++) set(x, GROUND, z, B.planks);
-  }
-  for (let z = TZ - 2; z <= TZ + 2; z++) {
-    // ridge pole and the two canvas slopes
-    set(TX, F + 2, z, B.fernwood_log);
-    setF(TX - 1, F + 1, z, B.white_wool, 1);
-    setF(TX + 1, F + 1, z, B.white_wool, 3);
-    set(TX - 2, F, z, B.white_wool);
-    set(TX + 2, F, z, B.white_wool);
-  }
-  // the closed north end, and the guy-ropes as fence posts at the corners
-  for (let x = TX - 2; x <= TX + 2; x++) set(x, F, TZ - 2, B.white_wool);
-  for (let x = TX - 1; x <= TX + 1; x++) set(x, F + 1, TZ - 2, B.white_wool);
-  set(TX - 3, F, TZ - 3, B.planks_fence);
-  set(TX + 3, F, TZ - 3, B.planks_fence);
-  set(TX - 3, F, TZ + 3, B.planks_fence);
-  set(TX + 3, F, TZ + 3, B.planks_fence);
-  set(TX + 3, F, TZ, B.torch_post);
+  // ---- Tents -------------------------------------------------------------
+  // A canvas A-frame on a ridge pole, built to a size. Wool for the canvas
+  // because wool is the one cloth this world has, and it is also what a bed is
+  // made of — the tent and the bed are the same lesson.
+  //
+  // `half` is BOTH the half-width and the ridge height, so the pitch is always
+  // 45° — the only slope that tiles cleanly on a voxel grid. That makes the
+  // usable floor `2*(half-2)+1` wide, because a cell needs two blocks of
+  // headroom to stand in and the canvas closes in one block per column:
+  //
+  //     half 2  →  5 wide outside, ONE walkable column   (the old tent)
+  //     half 3  →  7 wide outside, THREE walkable columns
+  //
+  // which is the difference between a tent you can lie down in and a tent you
+  // can stand up and turn around in. `halfL` sets the length along Z; the tent
+  // is closed at the north end and open to the south, so from the bedroll you
+  // are looking out at the fire.
+  const tent = (tx, tz, opts = {}) => {
+    const { half = 3, halfL = 3, canvas = B.white_wool, floor = B.planks, ridge = B.fernwood_log, guys = true } = opts;
+    for (let x = tx - half; x <= tx + half; x++) {
+      for (let z = tz - halfL; z <= tz + halfL; z++) set(x, GROUND, z, floor);
+    }
+    // The canvas falls one block per column out from the ridge. Each course is
+    // laid TWO blocks tall so consecutive courses meet along a face rather than
+    // at a corner — a voxel joined only at a corner touches nothing, and the
+    // extra block sits above the slope where it costs no headroom at all.
+    for (let z = tz - halfL; z <= tz + halfL; z++) {
+      set(tx, F + half, z, ridge);
+      for (let k = 1; k <= half; k++) {
+        const y = F + half - k;
+        for (const s of [-1, 1]) {
+          setF(tx + s * k, y, z, canvas, s < 0 ? 1 : 3);
+          if (k > 1) set(tx + s * k, y + 1, z, canvas);
+        }
+      }
+    }
+    // The closed north end: the same triangle, filled solid.
+    for (let k = 0; k <= half; k++) {
+      const y = F + half - k;
+      for (let x = tx - k; x <= tx + k; x++) for (let yy = F; yy <= y; yy++) set(x, yy, tz - halfL, canvas);
+    }
+    // Guy-ropes, as fence posts pegged out past each corner.
+    if (guys) for (const [gx, gz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      set(tx + gx * (half + 1), F, tz + gz * (halfL + 1), B.planks_fence);
+    }
+    return { tx, tz, half, halfL };
+  };
+
+  // Yours: the big one, pitched west of the fire with its mouth toward it.
+  const TX = CX - 6, TZ = CZ + 3;
+  tent(TX, TZ, { half: 3, halfL: 3 });
+  set(TX + 4, F, TZ, B.torch_post);
 
   // The bedroll. Two cells like every bed, laid along +Z so its head is at the
   // closed end of the tent and you look out at the fire — the facing is the
@@ -167,14 +195,26 @@ export function buildStarterStructures() {
   setF(TX, F, TZ - 1, B.bed_head, 2);
   setF(TX, F, TZ, B.bed, 2);
 
-  // One footlocker, and it is the only storage in the world you did not build.
-  set(CX + 3, F, CZ - 3, B.chest_block);
-  chests.push({ id: 'camp_stash', x: CX + 3, y: F, z: CZ - 3, loot: [] });
+  // Maren's, north of the fire — shorter than yours but the same width, because
+  // a `half` of 2 leaves a single walkable column and her bedding would then be
+  // laid down the middle of the only way in. Her bedding is loose wool rather
+  // than a bed block: there is exactly one bed in this camp and it is yours.
+  const MX = CX - 3, MZ = CZ - 6;
+  tent(MX, MZ, { half: 3, halfL: 2 });
+  set(MX - 1, F, MZ, B.white_wool);
+  set(MX - 1, F, MZ + 1, B.white_wool);
 
-  // A workbench under a lean-to. No furnace, no anvil, no loom — those you build.
-  set(CX + 4, F, CZ + 2, B.workbench);
-  setF(CX + 4, F + 2, CZ + 2, B.planks_stairs, 1);
-  set(CX + 5, F, CZ + 2, B.torch_post);
+  // The stores tent, north-east of the fire: the footlocker in one back corner
+  // and the workbench in the other, with the middle left clear to walk between
+  // them. It is a full-size tent so that there IS a middle — this is the
+  // lean-to the bench used to have, which was a single stair block hung two
+  // above it with nothing underneath, in plain sight from the moment you woke.
+  const SX = CX + 5, SZ = CZ - 4;
+  tent(SX, SZ, { half: 3, halfL: 2, guys: false });
+  set(SX - 1, F, SZ - 1, B.chest_block);
+  chests.push({ id: 'camp_stash', x: SX - 1, y: F, z: SZ - 1, loot: [] });
+  set(SX + 1, F, SZ - 1, B.workbench);
+  set(SX + 4, F, SZ + 2, B.torch_post);
 
   // The straw dummy, lashed to a post at the edge of the firelight. The quest
   // chain's first swing is at this, so it comes with you out of the old town.
@@ -561,7 +601,7 @@ export function buildStarterStructures() {
 //   chest(c)            chest metadata ({id, x, y, z, loot})
 // Call it from chunk generation AFTER the terrain columns are written and the
 // hand-built structure edits are applied, so a site carves through raw terrain
-// but never through Brookhollow (which `nearHandBuilt` keeps it away from anyway).
+// but never through the camp (which `nearHandBuilt` keeps it away from anyway).
 export function stampChunkStructures(gen, cx, cz, sink) {
   // The sky archipelago first. It lives 150-370 blocks up, so it cannot
   // collide with anything below and the ground passes keep their own order.

@@ -54,10 +54,10 @@ export function cachedLayout(store, cap, key, build) {
 
 // ---- siting rules ----------------------------------------------------------
 // Columns the hand-authored world already owns (js/world/structures.js). A
-// procedural site that lands here would carve through Brookhollow, its mine and
+// procedural site that lands here would carve through the camp, its mine and
 // the Rootgrave, or one of the pinned flat pads.
 export function nearHandBuilt(x, z) {
-  if (Math.hypot(x, z) < 170) return true;                                   // Brookhollow + its mine/dungeon
+  if (Math.hypot(x, z) < 170) return true;                                   // the camp + its mine/dungeon
   if (Math.hypot(x - MANOR_PAD.x, z - MANOR_PAD.z) < 60) return true;
   if (Math.hypot(x - LEARN_MEADOW.x, z - LEARN_MEADOW.z) < 60) return true;
   if (Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z) < 110) return true;

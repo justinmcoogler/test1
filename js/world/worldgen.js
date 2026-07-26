@@ -32,7 +32,7 @@ export function ringAt(x, z) {
 // exists on every seed.
 export const FROST_CAMP = { x: 560, z: -120, ground: 67 };
 
-// A flat shelf just west of Brookhollow for the converted starter manor. Pinned
+// A flat shelf just west of the camp for the converted starter manor. Pinned
 // to the settlement surface (64) so the manor's terrace sits flush and the lane
 // from town stays level. Kept clear of procedural trees/mobs by world.js.
 export const MANOR_PAD = { x: -60, z: 0, ground: 64 };
@@ -50,7 +50,7 @@ const PATH_SALT = 63601;
 // pinned pad own their own flat ground, so a road stops at their edge and lets
 // that flat surface carry the traveller the rest of the way in.
 function skipPathColumn(x, z) {
-  if (Math.hypot(x, z) < 60) return true;                                          // Brookhollow settlement
+  if (Math.hypot(x, z) < 60) return true;                                          // the starting camp's bowl
   if (Math.hypot(x - MANOR_PAD.x, z - MANOR_PAD.z) < 30) return true;              // manor pad
   if (Math.hypot(x - LEARN_MEADOW.x, z - LEARN_MEADOW.z) < 30) return true;        // Numbers Meadow pad
   if (Math.hypot(x - FROST_CAMP.x, z - FROST_CAMP.z) < 72) return true;            // Frostwatch pad
@@ -96,7 +96,12 @@ export const BIOMES = {
     // Wild grain stands are where farming starts — the thin plot is the only
     // soil tier a level-1 farmer can work, and the meadow is full of it.
     nodes: [{ type: 'herb_patch', d: 0.004 }, { type: 'berry_bush', d: 0.003 }, { type: 'farm_plot', d: 0.002 }, { type: 'deposit_saltpeter', d: 0.0016 }],
-    enemies: [{ type: 'cow', d: 0.0022 }, { type: 'pig', d: 0.002 }, { type: 'sheep', d: 0.0022 }, { type: 'chicken', d: 0.0024, pack: [2, 3] }, { type: 'horse', d: 0.0016 }, { type: 'rabbit', d: 0.0026 }, { type: 'practice_dummy', d: 0.0009 }, { type: 'rat', d: 0.0022, pack: [1, 2] }, { type: 'scrap_goblin', d: 0.0016, pack: [1, 3] }, { type: 'goblin_slinger', d: 0.0011, ring: 1 }],
+    // No practice_dummy here. It used to be `bob`, a real wandering creature,
+    // and the de-duplication pass that cut bob rewrote this row to point at the
+    // prop bob was a duplicate of — so straw training dummies grew wild in the
+    // meadows, lashed to nothing, all over the starting bowl. The dummy is camp
+    // furniture; its one placement is `dummy1` in js/world/structures.js.
+    enemies: [{ type: 'cow', d: 0.0022 }, { type: 'pig', d: 0.002 }, { type: 'sheep', d: 0.0022 }, { type: 'chicken', d: 0.0024, pack: [2, 3] }, { type: 'horse', d: 0.0016 }, { type: 'rabbit', d: 0.0026 }, { type: 'rat', d: 0.0022, pack: [1, 2] }, { type: 'scrap_goblin', d: 0.0016, pack: [1, 3] }, { type: 'goblin_slinger', d: 0.0011, ring: 1 }],
   },
   ancient_forest: {
     label: 'Temperate Forest', ring: 0, climate: 'temperate deciduous forest',
@@ -577,6 +582,26 @@ export class WorldGen {
     const fillerId = B[biome.filler];
     const tundra = biome === BIOMES.frostbound_tundra;
 
+    // A cave carves anywhere in the column, and nothing used to stop it eating
+    // the ground out from under a surface it did not itself break. What that
+    // left was a lawn one block thick over a hole, and where the neighbouring
+    // columns were hollowed to the same depth the lawn stopped being a roof at
+    // all and simply hung in the air over a hillside.
+    //
+    // So a cave may only come within ROOF of the surface where it breaks the
+    // surface too. `mouth` is that test, and it costs one noise pair per COLUMN
+    // rather than per block. A real cave entrance is untouched — it carves `h`
+    // itself, which lifts the guard with it. What is gone is the hollow with the
+    // ground still lying on top of it.
+    //
+    // ROOF is 6 because that is where it stops mattering, measured rather than
+    // guessed: at 1 and 3 the lid just gets thicker and keeps hanging (16 and 32
+    // orphaned blocks over a nine-region sweep), and at 6 the sweep comes back
+    // clean. Deeper buys nothing and costs cave.
+    const ROOF = 6;
+    const mouth = this.isCave(wx, h, wz, onPath);
+    const soil = h - ROOF;
+
     // Everything above the ground/water line is air, and the chunk array is
     // zero-initialised to air — so we only fill up to the surface. This keeps
     // column generation cost tied to terrain height, not the (tall) world height.
@@ -585,7 +610,7 @@ export class WorldGen {
       let id = B.air;
       if (y === 0) id = B.bedrock;
       else if (y <= h) {
-        if (this.isCave(wx, y, wz, onPath)) {
+        if ((mouth || y < soil) && this.isCave(wx, y, wz, onPath)) {
           id = B.air;
         } else if (y === h) {
           // beaches near water line — but the gravel road always wins, even where
