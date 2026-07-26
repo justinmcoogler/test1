@@ -63,15 +63,17 @@ try {
       campfire: g.world.getBlock(4, 65, 4),
       prompt: document.querySelector('#lesson-panel .lesson-prompt')?.textContent || '',
       stepLine: document.querySelector('#lesson-panel .lesson-step')?.textContent || '',
+      tracker: !document.getElementById('quest-tracker').classList.contains('hidden'),
     };
   });
   check(arrived.lesson === 'k_count', `the egg hunt started (${arrived.lesson})`);
   check(arrived.onPath, 'and it built a PATH, not a classroom');
-  check(arrived.stations === 6, `six stops along it (${arrived.stations})`);
+  check(arrived.stations === 7, `seven stops along it (${arrived.stations})`);
   check(arrived.phase === 'travel', `you begin by walking, not working (phase=${arrived.phase})`);
   check(arrived.under !== 0, 'standing on the trail');
   check(arrived.sky === 0, 'in the open air — no ceiling');
   check(arrived.campfire === 0, 'and your camp does not exist in this world');
+  check(arrived.tracker === false, 'and the quest tracker is gone — there is no Maren to talk to here');
   check(/path|grass/i.test(arrived.prompt), `the panel points you down the path ("${arrived.prompt.slice(0, 48)}…")`);
   check(arrived.at[0] < arrived.firstStation[0], 'you start short of the first stop, not on it');
   await page.screenshot({ path: 'tests/screenshots/walk-1-start.png' });
@@ -103,7 +105,7 @@ try {
       const st = g.lessons.stationFor('grade_k');
       let n = 0;
       for (let x = st.sx - 8; x <= st.sx + 8; x++) {
-        for (let z = st.cz - 5; z <= st.cz + 9; z++) if (g.world.getBlock(x, st.stand, z) === B.white_wool) n++;
+        for (let z = st.cz - 5; z <= st.cz + 16; z++) if (g.world.getBlock(x, st.stand, z) === B.nest_egg) n++;
       }
       return n;
     })(),
@@ -144,7 +146,7 @@ try {
           // A hunt: break the scattered eggs, which is how a child picks them up.
           let got = 0;
           for (let x = st.sx - 8; x <= st.sx + 8 && got < op.n; x++) {
-            for (let z = st.cz - 5; z <= st.cz + 9 && got < op.n; z++) {
+            for (let z = st.cz - 5; z <= st.cz + 16 && got < op.n; z++) {
               if (g.world.getBlock(x, st.stand, z) === B[op.block]) {
                 g.world.setBlock(x, st.stand, z, B.air, true);
                 g.inventory.add(op.block, 1);
@@ -169,16 +171,17 @@ try {
           : g.world.getBlock(st.barrier.x0, st.floor, st.cz) === B.cobble;
         barriers.push({ kind: st.barrier.kind, barred, open });
       }
-      const shown = Object.entries({ white_wool: 0, yellow_wool: 0, red_wool: 0, planks: 0, cobble: 0 })
+      const shown = Object.entries({ nest_egg: 0, apple_red: 0, apple_green: 0, lantern_lit: 0,
+        lantern_dark: 0, digit_3: 0, sym_plus: 0, planks: 0, cobble: 0 })
         .map(([b]) => {
           let n = 0;
           if (mat) for (let x = mat.x0; x <= mat.x1; x++) for (let y = mat.y0; y <= mat.y1; y++) {
             for (let z = mat.z0; z <= mat.z1; z++) if (g.world.getBlock(x, y, z) === B[b]) n++;
           }
-          return n ? `${b.replace('_wool', '')}=${n}` : null;
+          return n ? `${b}=${n}` : null;
         }).filter(Boolean).join(' ');
       log.push(`${String(i + 1)}. ${st.kind.padEnd(8)} ${step.build.kind.padEnd(7)} on plot: ${shown || '(none)'} → step=${g.lessons.step.grade_k}`);
-      if (i < 5 && g.lessons.step.grade_k !== i + 1) { bad.push(`${st.kind}: step did not complete`); break; }
+      if (i < 6 && g.lessons.step.grade_k !== i + 1) { bad.push(`${st.kind}: step did not complete`); break; }
     }
     return {
       log, bad, barriers,
@@ -219,16 +222,16 @@ try {
     });
     console.log(`  shot tests/screenshots/walk-${tag}.png`);
   };
-  for (const kind of ['nest', 'gate', 'stream', 'orchard', 'cottage']) await shoot(kind, kind);
+  for (const kind of ['nest', 'book', 'gate', 'stream', 'orchard', 'cottage']) await shoot(kind, kind);
   // And one down the length of the trail, so the shape of the whole lesson reads.
   await shoot('gate', 'trail', { up: 16, back: 26, pitch: -0.5, dx: -6 });
   await page.evaluate(() => { window.__game.player.debug = false; });
 
   // ---- now do the work ----------------------------------------------------
-  const run = await doStations(0, 5);
+  const run = await doStations(0, 6);
   for (const line of run.log) console.log(`       ${line}`);
   for (const b of run.bad) console.log(`  !!   ${b}`);
-  check(run.log.length === 5, `the first five stations were reached and worked (${run.log.length})`);
+  check(run.log.length === 6, `the first six stations were reached and worked (${run.log.length})`);
   check(run.bad.length === 0, `with nothing going wrong on the way (${run.bad.length} problems)`);
   for (const b of run.barriers) {
     check(b.barred === true, `the ${b.kind} really blocked the trail before the work`);
@@ -241,13 +244,28 @@ try {
   await page.evaluate(() => { window.__game.player.debug = false; });
 
   // ---- and the last stop, which finishes it -------------------------------
-  const last = await doStations(5, 6);
+  const last = await doStations(6, 7);
   for (const line of last.log) console.log(`       ${line}`);
   for (const b of last.bad) console.log(`  !!   ${b}`);
   check(last.log.length === 1, 'the cottage was reached and worked');
   check(last.passed, 'the lesson completed');
   check(last.bank >= 30, `banking the half hour (${last.bank} min)`);
   check(last.coins >= 30, `and paying the coins (${last.coins})`);
+
+  // ---- talking to Pip, and getting out of a dialogue -----------------------
+  // In a lesson Pip re-reads the step instead of opening a box with survival
+  // quests in it. And every dialogue anywhere has a close button now: Escape and
+  // a "Thank you." option were the only ways out, and a phone has neither.
+  const talk = await page.evaluate(() => {
+    const g = window.__game;
+    g.talkTo('pip');
+    const inLesson = { box: !document.getElementById('dialogue').classList.contains('hidden'),
+      panel: !!document.getElementById('lesson-panel') };
+    return { inLesson, hasCloseButton: !!document.getElementById('dialogue-close') };
+  });
+  check(talk.inLesson.box === false, 'talking to Pip in a lesson opens no dialogue box');
+  check(talk.inLesson.panel, 'it re-reads the step on the lesson panel instead');
+  check(talk.hasCloseButton, 'and every dialogue has a close button');
 
   // ---- and home again -----------------------------------------------------
   await page.evaluate(() => { window.__game.ui.openWindow('lessons'); });
@@ -263,6 +281,21 @@ try {
   check(back.campfire !== 0, 'with your camp still standing');
   check(Math.hypot(back.x - home.x, back.z - home.z) < 2,
     `on the block you left from (${Math.hypot(back.x - home.x, back.z - home.z).toFixed(1)} off)`);
+
+  // Back in the overworld: a real dialogue, closed with the button.
+  const closed = await page.evaluate(() => {
+    const g = window.__game;
+    g.ui.closeWindow();
+    g.ui.showDialogue('maren_root');
+    const opened = !document.getElementById('dialogue').classList.contains('hidden');
+    document.getElementById('dialogue-close').click();
+    return { opened, shut: document.getElementById('dialogue').classList.contains('hidden'),
+      free: g.dialogueOpen === false };
+  });
+  const trackerBack = await page.evaluate(() => !document.getElementById('quest-tracker').classList.contains('hidden'));
+  check(trackerBack, 'the quest tracker comes back in your own world');
+  check(closed.opened, 'a dialogue in your own world still opens');
+  check(closed.shut && closed.free, 'and the close button shuts it and gives you back control');
 
   check(errors.length === 0, `no console errors${errors.length ? `: ${errors[0]}` : ''}`);
 } catch (e) {

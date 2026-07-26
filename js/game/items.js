@@ -2,7 +2,7 @@
 // (block items render their atlas tile via tileIcon).
 import { METALS, WOODS, GEMS, FIREARMS, toolMetals, jewelryMetals } from './materials.js';
 import { COLORS } from '../core/colors.js';
-import { BLOCKS } from '../world/blocks.js';
+import { BLOCKS, EDUCATION_BLOCKS } from '../world/blocks.js';
 
 export const ITEMS = {};
 
@@ -286,10 +286,15 @@ const SHAPE_RE = /_(slab|stairs|wall|fence|gate|pane|carpet|door)$/;
 // or placed — it would be a block that exists only if worldgen puts one there,
 // which for Learning Mode's whole point (a child spelling a word) is useless.
 const LETTER_RE = /^letter_[a-z]$/;
+// …and the rest of the education set: numerals, signs, and the lesson props
+// (eggs, apples, lanterns, the work mat). Same reason as the letters — a block a
+// child cannot be handed is no use to a lesson that asks them to place one.
+const EDU_BLOCK = new Set(EDUCATION_BLOCKS);
 for (const d of BLOCKS) {
   if (!d || d.name in ITEMS) continue;
   const isShape = SHAPE_RE.test(d.name) && d.name !== 'timber_wall';
-  if (!isShape && !NATURAL_BLOCK.has(d.name) && !COLOR_BLOCK.has(d.name) && !LETTER_RE.test(d.name)) continue;
+  if (!isShape && !NATURAL_BLOCK.has(d.name) && !COLOR_BLOCK.has(d.name)
+    && !LETTER_RE.test(d.name) && !EDU_BLOCK.has(d.name)) continue;
   const tile = d.tiles.all || d.tiles.side || d.tiles.top;
   it(d.name, d.label, { block: d.name, tileIcon: tile, type: 'block' });
 }

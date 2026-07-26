@@ -1,4 +1,5 @@
-// Photograph the alphabet.
+// Photograph the education block set: the alphabet, the numerals, the signs and
+// the lesson props.
 //
 // A block whose tile has no atlas slot renders as STONE — silently, with no
 // error anywhere. So "the painter exists" and "the letter is on the block" are
@@ -88,6 +89,47 @@ try {
   check(drew, 'the atlas canvas was readable');
   await page.screenshot({ path: 'tests/screenshots/letters.png' });
   console.log('  shot tests/screenshots/letters.png');
+
+  // ---- and the rest of the set ------------------------------------------
+  // Numerals, signs and props. Same silent-failure risk as the letters: a tile
+  // with no atlas slot renders as stone and nothing anywhere complains.
+  const edu = await page.evaluate(async () => {
+    const t = await import('/js/gfx/textures.js');
+    const { EDUCATION_BLOCKS } = await import('/js/world/blocks.js');
+    const stone = JSON.stringify(t.tileUV.stone);
+    const missing = [], sameAsStone = [];
+    for (const name of EDUCATION_BLOCKS) {
+      const r = t.tileUV[name];
+      if (!r) { missing.push(name); continue; }
+      if (JSON.stringify(r) === stone) sameAsStone.push(name);
+    }
+    // Draw them all out and photograph THAT — 23 tiles, in curriculum order.
+    const atlas = t.getAtlasCanvas();
+    const S = 96, COLS = 8;
+    const o = document.createElement('canvas');
+    o.width = COLS * S; o.height = Math.ceil(EDUCATION_BLOCKS.length / COLS) * S;
+    o.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9999;'
+      + 'image-rendering:pixelated;background:#1b1b22;border:4px solid #e2b13c;border-radius:8px';
+    const c = o.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.fillStyle = '#1b1b22'; c.fillRect(0, 0, o.width, o.height);
+    const AW = atlas.width, AH = atlas.height;
+    EDUCATION_BLOCKS.forEach((name, i) => {
+      const r = t.tileUV[name];
+      if (!r) return;
+      const sx = r.u0 * AW, sy = r.v0 * AH, sw = (r.u1 - r.u0) * AW, sh = (r.v1 - r.v0) * AH;
+      c.drawImage(atlas, sx, sy, sw, sh, (i % COLS) * S + 4, Math.floor(i / COLS) * S + 4, S - 8, S - 8);
+    });
+    document.getElementById('lesson-panel')?.remove();
+    document.querySelectorAll('canvas').forEach((el) => { if (el !== o && el.id !== 'game-canvas') el.remove(); });
+    document.body.appendChild(o);
+    return { missing, sameAsStone, count: EDUCATION_BLOCKS.length };
+  });
+  check(edu.missing.length === 0, `every education block has an atlas slot${edu.missing.length ? `: missing ${edu.missing.join(', ')}` : ` (${edu.count})`}`);
+  check(edu.sameAsStone.length === 0, `and none of them fell back to stone${edu.sameAsStone.length ? `: ${edu.sameAsStone.join(', ')}` : ''}`);
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: 'tests/screenshots/edublocks.png' });
+  console.log('  shot tests/screenshots/edublocks.png');
 
   check(errors.length === 0, `no console errors${errors.length ? `: ${errors[0]}` : ''}`);
 } catch (e) {

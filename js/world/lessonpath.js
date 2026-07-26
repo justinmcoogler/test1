@@ -154,7 +154,10 @@ export function buildPath(put, npcs, plan) {
 
   // ---- the stations -----------------------------------------------------
   for (const st of stations) {
-    if (st.plot) plotFloor(put, st, st.kind === 'nest' ? B.thatch : B.light_gray_wool);
+    // The nest is straw; everywhere else the work surface is a purpose-made work
+    // mat — squared paper you can stand on, so "make a row of five" starts with
+    // the row already drawn instead of on a blank square of felt.
+    if (st.plot) plotFloor(put, st, st.kind === 'nest' ? B.thatch : B.work_mat);
     STATIONS[st.kind]?.(put, st, rnd);
     // Pip is at every stop. Her real id, not an invented one: every NPC lookup
     // in this game is NPC_DEFS[npc.id] with no fallback, so a guide with a
@@ -255,6 +258,18 @@ const STATIONS = {
     for (const x of [hx, hx + 6]) put(x, st.stand, hz - 1, B.torch_post);
     signpost(put, st.sx - 7, st.stand, st.cz - 2);
   },
+  // Pip's writing desk, out under the trees: this is where the sum gets written
+  // down. A lectern, a bench and a lantern to see by.
+  book: (put, st) => {
+    const dx = st.sx - 1, dz = st.plot.z1 + 2;
+    put(dx, st.stand, dz, B.planks);
+    put(dx + 1, st.stand, dz, B.planks);
+    put(dx, st.stand + 1, dz, B.oak_log);                    // the lectern
+    put(dx + 2, st.stand, dz, B.lantern_lit);
+    for (let x = st.sx - 4; x <= st.sx - 2; x++) put(x, st.stand, dz, B.planks_slab);   // bench
+    signpost(put, st.sx + 6, st.stand, st.cz - 2);
+  },
+
   // The mended gate's station: a woodpile and a bench, so the place looks like
   // somewhere a repair happens.
   gate: (put, st) => {

@@ -62,7 +62,7 @@ import { B, BLOCKS } from '../world/blocks.js';
 import { ROOM_COUNT, classroomFor } from '../world/classroom.js';
 import { pathFor } from '../world/lessonpath.js';
 import { CURRICULUM, GRADES } from './curriculum/index.js';
-import { checkShape, setupShape, beginShape, shapeNeeds } from './buildshapes.js';
+import { checkShape, setupShape, beginShape, shapeNeeds, GLYPH_OF } from './buildshapes.js';
 
 // A WALKED lesson happens on a meadow path with a stop for every beat of the
 // story, instead of in one sealed room. `walk: true` on the lesson is the whole
@@ -583,12 +583,14 @@ export class LessonRunner {
     this._scratch ||= {};
     const scratch = (this._scratch[this.scratchKey(area)] ||= {});
 
-    // Unbroken runs of LETTER blocks on the mat, read out as words. This is the
-    // whole of what a spelling check needs, and it keeps the shapes readable:
-    // `words().includes('CAT')` says what it means.
+    // Unbroken runs of WRITING blocks on the mat, read out as strings. Letters
+    // give CAT; numerals and signs give 3+2=5. One reader for both, so a spelling
+    // check and a sums check are the same question asked of different blocks:
+    // `words().includes('CAT')` and `words().includes('3+2=5')`. A run with
+    // anything else in it (a stray wool block) reads as a gap and is discarded.
     const words = (region = mat) => runs(region)
-      .map((run) => run.map((n) => (/^letter_[a-z]$/.test(n) ? n.slice(-1).toUpperCase() : ' ')).join(''))
-      .filter((w) => w && !w.includes(' '));
+      .map((run) => run.map((n) => GLYPH_OF[n] || ' ').join(''))
+      .filter((w) => w && !w.includes(' '));
 
     // What is in the child's pack. The hunt activities are about the bag, not
     // the plot: you cannot see three found eggs by looking at the ground.

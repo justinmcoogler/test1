@@ -111,6 +111,7 @@ export class UI {
       if (g.combat.active || g.player.dead) return;   // not mid-fight, not mid-death
       emit('toggleCamera');
     });
+    $('dialogue-close')?.addEventListener('click', () => { SFX.uiClick(); this.hideDialogue(); });
     on('toggleWindow', (w) => this.toggleWindow(w));
     on('escapePressed', () => {
       if (g.dialogueOpen) this.hideDialogue();
@@ -393,6 +394,11 @@ export class UI {
 
   renderQuestTracker() {
     const el = $('quest-tracker');
+    // No quests in a lesson world. "Talk to Maren at the camp" is advice a child
+    // cannot take from inside a sealed meadow, and the tracker is screen space
+    // the lesson needs.
+    if (this.game.world?.isLessonWorld?.()) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
     const act = this.game.quests.active();
     if (!act.length) { el.innerHTML = '<div class="qt-name">No active quest</div><div class="qt-progress">Talk to Maren at the camp</div>'; return; }
     const q = act[0];
@@ -1758,7 +1764,12 @@ export class UI {
       // Quest fast-path: on the FIRST box of a conversation, a finished quest is
       // immediately turn-in-able (and fresh offers are one click away) — no need
       // to re-walk the dialogue tree to reach the quest hub.
-      if (nodeId === npc.dialogue) {
+      //
+      // Never inside a lesson, though. Pip is standing in a meadow in a world of
+      // its own: there is no camp to fetch logs for and no Maren to report to, so
+      // offering a survival quest there is offering something that cannot be
+      // done, in the middle of a maths lesson, to a five-year-old.
+      if (nodeId === npc.dialogue && !g.world?.isLessonWorld?.()) {
         const extra = [];
         for (const q of QUESTS) {
           if (g.quests.readyToTurnIn(q, npcId)) extra.push({ label: `${q.name} (turn in!)`, action: `turnIn:${q.id}`, cls: 'quest-ready' });

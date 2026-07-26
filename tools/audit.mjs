@@ -16,6 +16,7 @@ import { BIOMES, WorldGen } from '../js/world/worldgen.js';
 import { buildStarterStructures } from '../js/world/structures.js';
 import { QUESTS } from '../js/game/quests.js';
 import { NPC_DEFS } from '../js/game/npcs.js';
+import { LESSONS_DATA, lessonNeeds, pathPlan, isWalked } from '../js/game/lessons.js';
 
 export function runAudit() {
 const struct = buildStarterStructures();
@@ -69,6 +70,19 @@ for (const npc of Object.values(NPC_DEFS)) for (const s of (npc.shop && npc.shop
 addRoot('warden_key');
 // basic terrain blocks you can just dig
 ['dirt', 'rough_stone', 'sand', 'gravel'].forEach(addRoot);
+// ── lesson props ────────────────────────────────────────────────────────────
+// Some education blocks have no survival recipe on purpose: an egg is not
+// something you make at a workbench. They are obtained INSIDE a lesson — the kit
+// hands out whatever the steps ask for (js/main.js grantLessonKit), and a walked
+// station scatters things to find in the grass. That is a real path to the
+// player, so this derives it from the curriculum rather than exempting a list by
+// name: a prop block that no lesson hands out or scatters is still unreachable,
+// and should still be reported.
+for (const lesson of LESSONS_DATA) {
+  for (const item of Object.keys(lessonNeeds(lesson))) addRoot(item);
+  if (!isWalked(lesson)) continue;
+  for (const st of pathPlan(lesson).stations) if (st.scatter?.block) addRoot(st.scatter.block);
+}
 // every block that appears in the world drops its item when broken
 const worldBlocks = new Set();
 for (const [k] of struct.edits) worldBlocks.add(Number(k.split(',')[3] !== undefined ? 0 : 0)); // (edits store ids; handled below)

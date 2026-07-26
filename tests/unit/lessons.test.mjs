@@ -135,23 +135,27 @@ test('arriving at a station starts its activity and turns you to face it', () =>
 
 test('the hunt counts what you FOUND, not what the kit already gave you', () => {
   const { lessons, walkToStep, inventory } = scenario(FIRST.id);
-  // The kit hands out white wool for a later step, so the bag is not empty when
-  // the hunt starts. Finding three still has to mean finding three.
-  inventory.add('white_wool', 9);
+  // The kit hands out eggs for a later step, so the bag is not empty when the
+  // hunt starts. Finding three still has to mean finding three.
+  inventory.add('nest_egg', 9);
   lessons.startArea('grade_k');
   walkToStep('grade_k');
   assert.equal(lessons.step.grade_k, 0, 'nine in the bag is not three found');
-  inventory.add('white_wool', 2);
+  inventory.add('nest_egg', 2);
   lessons.onWatch('blockPlaced');
   assert.equal(lessons.step.grade_k, 0, 'two found is not three either');
-  inventory.add('white_wool', 1);
+  inventory.add('nest_egg', 1);
   lessons.onWatch('blockPlaced');
   assert.equal(lessons.step.grade_k, 1, 'the third egg finishes the hunt');
 });
 
+// Find a step by the KIND of place it happens at, not by its number: inserting a
+// stop into the story should not silently re-point these tests at the wrong one.
+const stepAt = (lesson, kind) => lesson.steps.findIndex((st) => st.station?.kind === kind);
+
 test('the gate across the trail stays shut until the rail is mended, then opens', () => {
   const { lessons, world, walkToStep, put, clear } = scenario(FIRST.id);
-  lessons.setLesson('grade_k', FIRST.id, 2);        // the gate step
+  lessons.setLesson('grade_k', FIRST.id, stepAt(FIRST, 'gate'));
   walkToStep('grade_k');
   const st = lessons.stationFor('grade_k');
   assert.equal(st.kind, 'gate');
@@ -160,13 +164,13 @@ test('the gate across the trail stays shut until the rail is mended, then opens'
   assert.ok(st.barrier.cells.length > 20, 'and it spans the whole meadow, not just the trail');
 
   build(solveShape(lessons.activeStep('grade_k').build, lessons.matFor('grade_k')), put, clear);
-  assert.equal(lessons.step.grade_k, 3, 'eight planks in a row mends it');
+  assert.equal(lessons.step.grade_k, stepAt(FIRST, 'gate') + 1, 'eight planks in a row mends it');
   assert.equal(world.getBlock(gx, gy, gz), B.air, 'and the gate is gone — the way through is real');
 });
 
 test('the stream gets stepping stones laid across it, at walking height', () => {
   const { lessons, world, walkToStep, put, clear } = scenario(FIRST.id);
-  lessons.setLesson('grade_k', FIRST.id, 3);        // the stream step
+  lessons.setLesson('grade_k', FIRST.id, stepAt(FIRST, 'stream'));
   walkToStep('grade_k');
   const st = lessons.stationFor('grade_k');
   assert.equal(st.kind, 'stream');
@@ -180,7 +184,7 @@ test('the stream gets stepping stones laid across it, at walking height', () => 
   assert.equal(world.getBlock(st.barrier.x1, st.floor - 1, mid), B.stone_stairs, 'and at the far end');
 
   build(solveShape(lessons.activeStep('grade_k').build, lessons.matFor('grade_k')), put, clear);
-  assert.equal(lessons.step.grade_k, 4, 'five stones in a row finishes it');
+  assert.equal(lessons.step.grade_k, stepAt(FIRST, 'stream') + 1, 'five stones in a row finishes it');
   for (let x = st.barrier.x0; x <= st.barrier.x1; x++) {
     assert.equal(world.getBlock(x, st.floor, mid), B.cobble, `a stone landed at x=${x}`);
   }
@@ -191,7 +195,7 @@ test('each station has its own plot, so work does not pile up down the path', ()
   lessons.setLesson('grade_k', FIRST.id, 1);
   walkToStep('grade_k');
   const a = lessons.matFor('grade_k');
-  lessons.setLesson('grade_k', FIRST.id, 4);
+  lessons.setLesson('grade_k', FIRST.id, stepAt(FIRST, 'orchard'));
   walkToStep('grade_k');
   const b = lessons.matFor('grade_k');
   assert.ok(b.x0 > a.x1, `station five's plot is further down the trail (${a.x1} then ${b.x0})`);

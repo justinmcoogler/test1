@@ -1179,9 +1179,7 @@ class Game {
     if (pi.kind === 'enemy') {
       if (this.enemyMgr.entities.has(pi.entity.id)) this.startCombat(pi.entity);
     } else if (pi.kind === 'npc') {
-      this.quests.talkedTo(pi.npc.id);
-      this.ui.showDialogue(NPC_DEFS[pi.npc.id].dialogue);
-      emit('talkedTo', { npc: pi.npc.id });
+      this.talkTo(pi.npc.id);
     } else if (pi.kind === 'node') {
       this.autoGatherNode = pi.node;
     } else if (pi.kind === 'station') {
@@ -2064,9 +2062,7 @@ class Game {
     if (this.nearMount && this.tryMount(this.nearMount)) return true;
     const npc = this.npcInFront();
     if (npc) {
-      this.quests.talkedTo(npc.id);
-      this.ui.showDialogue(NPC_DEFS[npc.id].dialogue);
-      emit('talkedTo', { npc: npc.id });
+      this.talkTo(npc.id);
       return true;
     }
     const hit = this.facingRay();
@@ -2344,6 +2340,18 @@ class Game {
     this.ui.openWindow('lessons');
   }
 
+  // Talk to somebody. Pip inside a lesson is a special case: she re-reads the
+  // step out loud instead of opening a dialogue box. She is the guide, the child
+  // is mid-task, and the one thing they might want from her is to hear the
+  // instruction again — not a menu, and certainly not the quest offers that a
+  // first dialogue box otherwise carries.
+  talkTo(npcId) {
+    if (npcId === 'pip' && this.world.isLessonWorld()) { this.lessons.resume(); return; }
+    this.quests.talkedTo(npcId);
+    this.ui.showDialogue(NPC_DEFS[npcId].dialogue);
+    emit('talkedTo', { npc: npcId });
+  }
+
   // Put the player down somewhere else, generating and meshing the destination
   // chunks first so they never drop into unloaded void — which for a classroom
   // 420 blocks up is not a stutter, it is a fall.
@@ -2398,6 +2406,10 @@ class Game {
     this.warpTo(dest.entry[0] + 0.5, dest.entry[1], dest.entry[2] + 0.5, dest.yaw);
     if (dest.yaw != null && this.camYaw !== undefined) this.camYaw = dest.yaw;
     this.grantLessonKit();
+    // The tracker only redraws when a quest changes, so entering a lesson would
+    // otherwise leave "talk to Maren at the camp" sitting on screen in a world
+    // that has no Maren and no camp.
+    this.ui.renderQuestTracker();
   }
 
   exitLessonWorld(finished) {
@@ -2411,6 +2423,7 @@ class Game {
     this.enemyMgr.entities.clear();
     this.enemyMgr.deserialize?.(o.enemies);
     this.warpTo(o.pos.x, o.pos.y, o.pos.z, o.pos.yaw);
+    this.ui.renderQuestTracker();        // and it comes back when you do
     this.ui.toast(finished ? 'Lessons all done — back to your world!' : 'Back to your world.', 'gold');
     this.saveGame();
   }

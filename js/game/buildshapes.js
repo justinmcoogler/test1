@@ -52,8 +52,17 @@ function fill(region, n, block, from = 0) {
 }
 
 const add = (need, block, n) => { need[block] = Math.max(need[block] || 0, 0) + n; return need; };
-const letters = (text) => [...text].map((ch) => `letter_${ch.toLowerCase()}`);
+const letters = (text) => [...text].map((ch) => GLYPH_BLOCK[ch]);
 const desc = (a) => [...a].sort((p, q) => q - p);
+
+// Every block a child can write WITH, and the character it reads as. Letters
+// spell words; digits and signs write sums. One table, used in both directions:
+// js/game/lessons.js reads a row of blocks into a string with it, and the shapes
+// below turn a wanted string back into blocks to place.
+export const GLYPH_BLOCK = { '+': 'sym_plus', '-': 'sym_minus', x: 'sym_times', '/': 'sym_divide', '=': 'sym_equals', '<': 'sym_less', '>': 'sym_greater' };
+for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') GLYPH_BLOCK[ch] = `letter_${ch.toLowerCase()}`;
+for (let d = 0; d <= 9; d++) GLYPH_BLOCK[String(d)] = `digit_${d}`;
+export const GLYPH_OF = Object.fromEntries(Object.entries(GLYPH_BLOCK).map(([ch, b]) => [b, ch]));
 const sameMultiset = (a, b) => a.length === b.length && desc(a).every((v, i) => v === desc(b)[i]);
 
 // Column heights across a region: how many blocks are stacked on each square,
@@ -384,6 +393,21 @@ const KINDS = {
     needs: (s) => add({}, s.block, 2 * s.w + 2 * s.d - 4),
     validate: (s) => (s.w >= 2 && s.d >= 2 && s.w <= MAT.width && s.d <= MAT.rows
       ? null : `a ${s.w}x${s.d} frame does not fit`),
+  },
+
+  // A whole number sentence, written out in blocks: 3+2=5, or 7>4. Same unbroken
+  // row as a spelled word — the digits and the signs are just more letters — and
+  // the payoff for having numeral blocks at all: the child writes the arithmetic
+  // down instead of only building the answer.
+  sentence: {
+    check: (s, ctx) => ctx.words().includes(s.text),
+    solve: (s, mat) => letters(s.text).map((b, i) => place(mat.x0 + i, mat.y0, mat.z0, b)),
+    needs: (s) => { const n = {}; for (const b of letters(s.text)) add(n, b, 1); return n; },
+    validate: (s) => {
+      if (!s.text || s.text.length > MAT.width) return `"${s.text}" does not fit a row`;
+      for (const ch of s.text) if (!GLYPH_BLOCK[ch]) return `there is no block for "${ch}"`;
+      return null;
+    },
   },
 
   // Go and FIND n of something and pick it up. The only activity here that is

@@ -187,6 +187,20 @@ for (const ch of 'abcdefghijklmnopqrstuvwxyz') {
   push(`letter_${ch}`, 4, 'workbench', 'woodworking', 1, 4, [['planks', 1], ['black_dye', 1]]);
 }
 
+// The numerals and the signs, on exactly the same terms as the letters: a plank
+// and a spot of ink. A child who can spell CAT out of blocks should be able to
+// write 3 + 2 = 5 out of blocks without a different economy behind it.
+for (let d = 0; d <= 9; d++) push(`digit_${d}`, 4, 'workbench', 'woodworking', 1, 4, [['planks', 1], ['black_dye', 1]]);
+for (const k of ['plus', 'minus', 'times', 'divide', 'equals', 'less', 'greater']) {
+  push(`sym_${k}`, 4, 'workbench', 'woodworking', 1, 4, [['planks', 1], ['black_dye', 1]]);
+}
+// A work mat is squared paper: planks and a bolt of white wool.
+push('work_mat', 4, 'workbench', 'woodworking', 1, 4, [['planks', 1], ['white_wool', 1]]);
+// Lanterns are a real building block as well as a lesson prop — a glass belly in
+// an iron frame, and a coal to light it.
+push('lantern_dark', 2, 'workbench', 'smithing', 2, 8, [['iron_bar', 1], ['glasspane', 2]]);
+push('lantern_lit', 1, 'workbench', 'smithing', 2, 6, [['lantern_dark', 1], ['coal', 1]]);
+
 // black-powder line (Smithing) — a barrel is a forged tube and a lock is a
 // spring-and-sear mechanism, so firearms train the same skill that made them.
 // Every recipe is flagged educationLocked so the UI can hide the whole chain

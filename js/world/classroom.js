@@ -103,7 +103,7 @@ export function buildOneClassroom(put, npcs, i) {
     // The work mat, laid into the floor so it is flush to stand on.
     for (let x = r.mat.x0; x <= r.mat.x1; x++) {
       for (let z = r.mat.z0; z <= r.mat.z1; z++) {
-        put(x, floor, z, x === r.mat.div ? B.planks : B.light_gray_wool);
+        put(x, floor, z, x === r.mat.div ? B.planks : B.work_mat);
       }
     }
     // Torch posts flanking the divider, and the guide's stand facing the mat.

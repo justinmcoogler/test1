@@ -7,8 +7,9 @@
 // must be rejected, and the checks that must not be fooled.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkShape, solveShape, setupShape, shapeNeeds, validateShape, MAT } from '../../js/game/buildshapes.js';
-import { B, BLOCKS } from '../../js/world/blocks.js';
+import { checkShape, solveShape, setupShape, shapeNeeds, validateShape, MAT, GLYPH_BLOCK, GLYPH_OF } from '../../js/game/buildshapes.js';
+import { B, BLOCKS, EDUCATION_BLOCKS } from '../../js/world/blocks.js';
+import { ITEMS } from '../../js/game/items.js';
 
 // A stand-in mat with the real geometry: 13 wide, 5 deep, 7 tall, split at the
 // middle column — same numbers as js/world/classroom.js.
@@ -57,8 +58,10 @@ function ctxOver(m) {
     }
     return out;
   };
+  // Same reader as the runner: letters, numerals and signs all read as their
+  // character, anything else reads as a gap.
   const words = (region = m) => runs(region)
-    .map((r) => r.map((n) => (/^letter_[a-z]$/.test(n) ? n.slice(-1).toUpperCase() : ' ')).join(''))
+    .map((r) => r.map((n) => GLYPH_OF[n] || ' ').join(''))
     .filter((w) => w && !w.includes(' '));
   const play = (ops) => {
     for (const op of ops) {
@@ -97,6 +100,7 @@ const SHAPES = [
   { kind: 'box', block: 'brown_wool', w: 3, d: 2, h: 2 },
   { kind: 'frame', block: 'brown_wool', w: 5, d: 3 },
   { kind: 'cells', block: 'yellow_wool', at: [[0, 0, 0], [2, 0, 1], [4, 0, 3]] },
+  { kind: 'sentence', text: '3+2=5' },
 ];
 
 test('every kind: its own solution passes its own check', () => {
@@ -208,4 +212,38 @@ test('sort accepts either side, and rejects a colour that straddles the line', (
   straddle.play(solveShape(s, m));
   straddle.play([{ op: 'place', x: m.right.x0 + 5, y: m.y0, z: m.z0, block: 'red_wool' }]);
   assert.equal(checkShape(s, straddle.ctx), false, 'one red on the wrong side is not sorted');
+});
+
+// ---- the education blocks ----------------------------------------------------
+test('every education block can be held, and none of them is a wool block in a hat', () => {
+  for (const name of EDUCATION_BLOCKS) {
+    assert.ok(BLOCKS[B[name]], `${name} is not a block`);
+    assert.ok(ITEMS[name], `${name} has no item, so a child can never be handed one`);
+    assert.equal(BLOCKS[B[name]].tiles.all, name, `${name} should paint its own tile`);
+  }
+});
+
+test('the writing blocks round-trip: every glyph has a block and every block a glyph', () => {
+  for (const [ch, block] of Object.entries(GLYPH_BLOCK)) {
+    assert.ok(BLOCKS[B[block]], `"${ch}" maps to ${block}, which is not a block`);
+    assert.equal(GLYPH_OF[block], ch, `${block} does not read back as "${ch}"`);
+  }
+  // 26 letters + 10 digits + 7 signs, and no duplicates in either direction.
+  assert.equal(Object.keys(GLYPH_BLOCK).length, 43);
+  assert.equal(Object.keys(GLYPH_OF).length, 43);
+});
+
+test('a sentence is read back exactly, and a near miss is not accepted', () => {
+  const m = mat();
+  const want = { kind: 'sentence', text: '3+2=5' };
+  const right = ctxOver(m);
+  assert.ok(right.feed(want, solveShape(want, m)), '3+2=5 built is 3+2=5 read');
+  // The same digits, the wrong sum.
+  const wrong = ctxOver(m);
+  wrong.play(solveShape({ kind: 'sentence', text: '3+2=6' }, m));
+  assert.equal(checkShape(want, wrong.ctx), false, '3+2=6 does not pass as 3+2=5');
+  // A word question is not answered by a sum, and vice versa.
+  const letters = ctxOver(m);
+  letters.play(solveShape({ kind: 'word', text: 'CAT' }, m));
+  assert.equal(checkShape(want, letters.ctx), false, 'CAT is not a number sentence');
 });

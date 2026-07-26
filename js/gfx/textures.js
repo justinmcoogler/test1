@@ -993,15 +993,50 @@ const LETTER_ROWS = {
 };
 export const LETTERS = Object.keys(LETTER_ROWS);
 
-// One tile: a pale card with a bevel, and the capital inked on it three pixels
+// The digits, and the signs you put between them. Same 5x7 grid as the letters,
+// so the same painter draws all of them — and so a row of blocks spelling
+// "3 + 2 = 5" lines up with a row spelling CAT.
+const DIGIT_ROWS = {
+  // A plain oval, not a slashed zero: the slash is a programmer's habit and this
+  // block is for children who are being taught to write it round. The pale blue
+  // card is what tells a 0 from an O, not a diagonal through the middle.
+  0: '01110,10001,10001,10001,10001,10001,01110',
+  1: '00100,01100,00100,00100,00100,00100,01110',
+  2: '01110,10001,00001,00010,00100,01000,11111',
+  3: '11110,00001,00001,01110,00001,00001,11110',
+  4: '00010,00110,01010,10010,11111,00010,00010',
+  5: '11111,10000,10000,11110,00001,00001,11110',
+  6: '00110,01000,10000,11110,10001,10001,01110',
+  7: '11111,00001,00010,00100,01000,01000,01000',
+  8: '01110,10001,10001,01110,10001,10001,01110',
+  9: '01110,10001,10001,01111,00001,00010,01100',
+};
+// name → [glyph character, 5x7 rows]. The character is what a child's row of
+// blocks reads AS, which is how js/game/lessons.js turns a build into a string.
+const SYMBOL_ROWS = {
+  plus: ['+', '00000,00100,00100,11111,00100,00100,00000'],
+  minus: ['-', '00000,00000,00000,11111,00000,00000,00000'],
+  times: ['x', '00000,10001,01010,00100,01010,10001,00000'],
+  divide: ['/', '00000,00100,00000,11111,00000,00100,00000'],
+  equals: ['=', '00000,00000,11111,00000,11111,00000,00000'],
+  less: ['<', '00010,00100,01000,10000,01000,00100,00010'],
+  greater: ['>', '01000,00100,00010,00001,00010,00100,01000'],
+};
+export const DIGITS = Object.keys(DIGIT_ROWS);
+export const SYMBOLS = Object.keys(SYMBOL_ROWS);
+
+// One tile: a pale card with a bevel, and the glyph inked on it three pixels
 // thick so it survives being seen from across a room at mip level 2.
-function letterTile(ctx, x0, y0, rand, ch) {
-  noisyFill(ctx, x0, y0, rand, '#e8dcc0', 0.03);
+//
+// The card colour is the block's KIND, not decoration: letters are bone, digits
+// are pale blue, signs are pale green. A child hunting for the 7 among a pack of
+// letter blocks can see which shelf it is on before they read anything.
+function glyphTile(ctx, x0, y0, rand, rows, card = '#e8dcc0', lit = '#f6eeda', dark = '#b9ab8c', ink = '#2f2a22') {
+  noisyFill(ctx, x0, y0, rand, card, 0.03);
   for (let i = 0; i < LP; i++) {                      // bevel: lit top-left, shaded bottom-right
-    px(ctx, x0, y0, i, 0, '#f6eeda'); px(ctx, x0, y0, 0, i, '#f6eeda');
-    px(ctx, x0, y0, i, LP - 1, '#b9ab8c'); px(ctx, x0, y0, LP - 1, i, '#b9ab8c');
+    px(ctx, x0, y0, i, 0, lit); px(ctx, x0, y0, 0, i, lit);
+    px(ctx, x0, y0, i, LP - 1, dark); px(ctx, x0, y0, LP - 1, i, dark);
   }
-  const rows = LETTER_ROWS[ch];
   if (!rows) return;
   const grid = rows.split(',');
   const S = 4;                                        // each font pixel is 4x4 tile pixels
@@ -1010,16 +1045,105 @@ function letterTile(ctx, x0, y0, rand, ch) {
     for (let gx = 0; gx < 5; gx++) {
       if (grid[gy][gx] !== '1') continue;
       for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++) {
-        px(ctx, x0, y0, ox + gx * S + dx, oy + gy * S + dy, '#2f2a22');
+        px(ctx, x0, y0, ox + gx * S + dx, oy + gy * S + dy, ink);
       }
     }
   }
 }
 
-// Register a painter per letter: letter_a … letter_z.
+// Register a painter per letter (letter_a … letter_z), per digit (digit_0 …
+// digit_9) and per sign (sym_plus … sym_greater).
 for (const ch of LETTERS) {
-  PAINTERS[`letter_${ch.toLowerCase()}`] = (c, x, y, r) => letterTile(c, x, y, r, ch);
+  PAINTERS[`letter_${ch.toLowerCase()}`] = (c, x, y, r) => glyphTile(c, x, y, r, LETTER_ROWS[ch]);
 }
+for (const d of DIGITS) {
+  PAINTERS[`digit_${d}`] = (c, x, y, r) => glyphTile(c, x, y, r, DIGIT_ROWS[d], '#cfe0f0', '#e6f1fb', '#93a8bd', '#1e3a5a');
+}
+for (const k of SYMBOLS) {
+  PAINTERS[`sym_${k}`] = (c, x, y, r) => glyphTile(c, x, y, r, SYMBOL_ROWS[k][1], '#cfe8cf', '#e4f5e4', '#93bd93', '#1e3a1e');
+}
+
+// ---- lesson props ----------------------------------------------------------
+// Things that should look like what they ARE. The walked lessons used to make a
+// child hunt for "eggs" that were white wool cubes and sort "apples" that were
+// yellow wool; a five-year-old is being asked to pretend, on top of doing the
+// maths. These are the same blocks with the pretending taken out.
+
+// A speckled egg, sitting in a scrape of straw.
+PAINTERS.nest_egg = (ctx, x0, y0, rand) => {
+  noisyFill(ctx, x0, y0, rand, '#b79a63', 0.06);            // straw
+  const cx = LP / 2 - 0.5, cy = LP / 2 + 1;
+  for (let y = 0; y < LP; y++) {
+    for (let x = 0; x < LP; x++) {
+      const ex = (x - cx) / 9.5, ey = (y - cy) / 12;         // egg is taller than wide
+      const d = ex * ex + ey * ey;
+      if (d > 1) continue;
+      let c = '#f4ecdc';
+      if (ey < -0.35 && ex < 0.1) c = '#fffaf0';             // highlight, up and to the left
+      else if (d > 0.72) c = '#ddd0b8';                      // rim shading
+      if (rand() < 0.06) c = '#a58b6a';                      // speckles
+      px(ctx, x0, y0, x, y, c);
+    }
+  }
+};
+
+// An apple: round body, a stub of stem, one leaf.
+const appleTile = (body, dark, lit) => (ctx, x0, y0, rand) => {
+  noisyFill(ctx, x0, y0, rand, '#6b8f4a', 0.05);            // leaves behind it
+  const cx = LP / 2 - 0.5, cy = LP / 2 + 2;
+  for (let y = 0; y < LP; y++) {
+    for (let x = 0; x < LP; x++) {
+      const ex = (x - cx) / 11, ey = (y - cy) / 10.5;
+      const d = ex * ex + ey * ey;
+      if (d > 1) continue;
+      let c = body;
+      if (d > 0.74) c = dark;
+      if (ex < -0.25 && ey < -0.2 && d < 0.5) c = lit;       // gloss
+      if (rand() < 0.05) c = shade(body, -0.05);
+      px(ctx, x0, y0, x, y, c);
+    }
+  }
+  for (let i = 0; i < 5; i++) px(ctx, x0, y0, LP / 2, 6 + i, '#5a3f22');   // stem
+  for (const [dx, dy] of [[1, 6], [2, 6], [2, 7], [3, 7]]) px(ctx, x0, y0, LP / 2 + dx, dy, '#4f8a3a');
+};
+PAINTERS.apple_red = appleTile('#c8352c', '#8e211b', '#f06a5c');
+PAINTERS.apple_green = appleTile('#7bb03a', '#4c7522', '#b6e072');
+
+// A lantern: iron frame, glass belly, a ring on top. Two versions — the lit one
+// glows (the block def sets emissive), the dark one is the same lamp gone out,
+// so "six are lit, hang four more" reads at a glance.
+const lanternTile = (glass, glow, hot) => (ctx, x0, y0, rand) => {
+  noisyFill(ctx, x0, y0, rand, '#3b3b42', 0.05);            // dark frame
+  for (let y = 5; y < LP - 5; y++) {
+    for (let x = 5; x < LP - 5; x++) {
+      const edge = x === 5 || y === 5 || x === LP - 6 || y === LP - 6;
+      px(ctx, x0, y0, x, y, edge ? '#6e6a5c' : shade(glass, (rand() - 0.5) * 0.06));
+    }
+  }
+  if (hot) {                                                 // the flame inside
+    for (let y = 12; y < 21; y++) for (let x = 13; x < 19; x++) {
+      const c = (y > 14 && y < 19 && x > 14 && x < 18) ? hot : glow;
+      px(ctx, x0, y0, x, y, c);
+    }
+  }
+  for (let x = 12; x < 20; x++) { px(ctx, x0, y0, x, 2, '#8b8578'); px(ctx, x0, y0, x, 3, '#6e6a5c'); }
+  for (let x = 12; x < 20; x++) { px(ctx, x0, y0, x, LP - 3, '#6e6a5c'); }
+};
+PAINTERS.lantern_lit = lanternTile('#f6d98a', '#f2b23c', '#fff3c4');
+PAINTERS.lantern_dark = lanternTile('#8f95a0', '#7c828c', null);
+
+// The work mat: squared paper you can stand on. A grid rather than a plain
+// colour, because "put five in a row" is easier when the row is already drawn.
+PAINTERS.work_mat = (ctx, x0, y0, rand) => {
+  noisyFill(ctx, x0, y0, rand, '#dfe3e8', 0.02);
+  for (let i = 0; i < LP; i++) {
+    px(ctx, x0, y0, i, 0, '#aab3bd'); px(ctx, x0, y0, 0, i, '#aab3bd');
+    px(ctx, x0, y0, i, LP - 1, '#c6ccd3'); px(ctx, x0, y0, LP - 1, i, '#c6ccd3');
+  }
+  for (let i = 0; i < LP; i += 8) {
+    for (let j = 0; j < LP; j++) { px(ctx, x0, y0, i, j, '#c3cad2'); px(ctx, x0, y0, j, i, '#c3cad2'); }
+  }
+};
 
 // Reserve atlas slots for any pack-only tiles (new station faces) so they get a
 // UV; the real art is blitted over the placeholder by applyTexturePack().

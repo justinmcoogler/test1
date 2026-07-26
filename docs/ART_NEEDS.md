@@ -61,6 +61,35 @@ pen/trough/coop, **beehive**.
 - Animal products: rawhide, tanned leather, fur pelts, wool, sinew, bone, antler,
   ivory/tusk, feathers, horn, tallow, raw meat cuts per species
 
+### Learning Mode blocks — 49 tiles (all shipped as procedural placeholders)
+
+Every one of these EXISTS and works today, drawn procedurally in
+`js/gfx/textures.js`. They are listed here because hand-drawn versions would read
+better to a five-year-old, not because anything is missing. All 32×32, opaque,
+must tile — though most are meant to be seen one block at a time rather than as a
+field, so seam-perfection matters less than legibility at arm's length.
+
+- **Alphabet — 26** (`letter_a` … `letter_z`): a bone-coloured card with a bevel
+  and one black capital, three "font pixels" thick. Keep the capital form a child
+  is taught to write; keep the card colour distinct from the numerals below.
+- **Numerals — 10** (`digit_0` … `digit_9`): the same card in **pale blue**, so a
+  child hunting for the 7 can see which shelf it is on before they read anything.
+  Plain oval zero, no slash.
+- **Maths signs — 7** (`sym_plus`, `sym_minus`, `sym_times`, `sym_divide`,
+  `sym_equals`, `sym_less`, `sym_greater`): the same card in **pale green**. These
+  three families are one typeface in three colours — a row of them spells a
+  sentence (`3+2=5`), so the glyphs must sit on a shared baseline and optical size.
+- **Lesson props — 6**:
+  - `nest_egg` — a speckled egg in a scrape of straw. Hunted for in long grass, so
+    it has to be findable against green at a distance and unmistakably an *egg*.
+  - `apple_red`, `apple_green` — one apple each, stem and leaf, on a leafy ground.
+    The pair is sorted by colour, so the two must differ in **value** as well as
+    hue (a colour-blind child sorts them too).
+  - `lantern_lit`, `lantern_dark` — the same lamp, lit and out. The lit one is
+    emissive in-game; the difference has to read in a dim meadow at dusk.
+  - `work_mat` — squared paper you can stand on. Faint grid, low contrast: it sits
+    *under* the child's work and must never compete with it.
+
 ## NICE-TO-HAVE
 - **Fantasy Frontier exile:** a mode toggle/badge; **retain** the existing
   sk_magic/sk_enchanting icons, mana bar and runestone altar behind that
@@ -72,5 +101,7 @@ pen/trough/coop, **beehive**.
 - Non-mob NEW art: **~8 skill icons + ~40 HUD glyphs + ~250 blocks/items** (herbs,
   medicine, strata, stations, crops, foods, fish, products), on top of the 255 already
   in `docs/TEXTURES.md`.
+- Learning Mode: **49 tiles** — already shipped procedurally, so this is a
+  redraw-for-quality list rather than a blocker.
 - Mob art (separate): **~120 animals + ~19 bosses + ~12 livestock** — see
   `docs/MOBS_TO_GENERATE.md`.

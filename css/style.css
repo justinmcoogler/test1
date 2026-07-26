@@ -443,7 +443,13 @@ button:disabled { opacity: 0.45; cursor: default; }
   width: min(620px, 94vw); background: var(--panel); border: 1px solid var(--edge);
   border-radius: 12px; padding: 16px 18px; color: var(--ink); pointer-events: auto;
 }
-#dialogue-name { color: var(--gold); font-weight: 700; margin-bottom: 6px; }
+#dialogue-close {
+  position: absolute; top: 6px; right: 8px; width: 30px; height: 30px; line-height: 1;
+  font-size: 20px; color: var(--ink-dim); background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--edge); border-radius: 8px; padding: 0;
+}
+#dialogue-close:hover { color: var(--gold); border-color: var(--gold); }
+#dialogue-name { color: var(--gold); font-weight: 700; margin-bottom: 6px; padding-right: 34px; }
 #dialogue-text { font-size: calc(14.5px * var(--text-scale)); line-height: 1.55; margin-bottom: 12px; }
 #dialogue-options { display: flex; flex-direction: column; gap: 6px; }
 .dialog-btn { text-align: left; }

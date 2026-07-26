@@ -70,6 +70,31 @@ things and pick them up, counted as a delta from what they were holding when the
 step began — the kit hands out blocks by the dozen, so "do you have three eggs"
 would be true before the hunt started.
 
+### Blocks of its own
+
+Learning Mode used to borrow from the building set: white wool for eggs, yellow
+wool for apples, light grey wool for the mat. That asks a five-year-old to pretend
+a cube is an egg *while* doing the counting, and "sort the red apples from the
+yellow ones" is a harder sentence when both apples are squares of felt. There are
+now **49 education blocks** (`EDUCATION_BLOCKS` + `LETTER_BLOCKS` in
+[`js/world/blocks.js`](../js/world/blocks.js), art in
+[`js/gfx/textures.js`](../js/gfx/textures.js)):
+
+- **26 letters**, **10 numerals** and **7 maths signs** — one typeface in three
+  card colours (bone, pale blue, pale green), so a child can tell which shelf a
+  block is off before they read it. A row of them is read back as a string, which
+  is how `word` checks CAT and `sentence` checks `3+2=5` with the same code.
+- **6 props**: an egg, a red and a green apple, a lit and an unlit lantern (the lit
+  one really emits light), and the work mat itself — squared paper you can stand
+  on, so "make a row of five" starts with the row already drawn.
+
+Letters, numerals and signs are craftable at a workbench like any other block. The
+props are not: an egg is not something you make at a bench, so they are obtained
+inside a lesson — the kit hands out what the steps need and a walked station
+scatters things to find. `tools/audit.mjs` derives that from the curriculum rather
+than exempting a list by name, so a prop block that **no** lesson hands out or
+scatters is still reported unreachable.
+
 That last pair is why ninety lessons can be trusted. The test suite plays every
 step's own solution through the real runner
 ([`tests/unit/lessons.test.mjs`](../tests/unit/lessons.test.mjs)), so a lesson
@@ -127,6 +152,14 @@ ed.completeLesson('demo_math_1', { score: 1 });   // banks minutes, unlocks
    parent/teacher dashboard without changes to game code.
 
 ## Design guardrails
+
+- **No survival furniture in a lesson.** Inside a lesson world the quest tracker
+  hides and NPC dialogue carries no quest offers or turn-ins: Pip is standing in a
+  meadow of her own, so "talk to Maren at the camp" is advice a child cannot take.
+  Talking to Pip re-reads the current step aloud instead of opening a box.
+- **Every dialogue can be closed.** There is a × on the box. The only ways out
+  used to be the Escape key and whatever "Thank you." option a node happened to
+  carry — which on a phone, on a node without one, was a dead end.
 
 - The world simulation is never damaged by locking: the game autosaves at the
   lock moment and the overlay simply sits above a paused-input game.

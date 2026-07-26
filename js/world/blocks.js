@@ -363,6 +363,49 @@ for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
   LETTER_BLOCKS.push(name);
 }
 
+// ---------------------------------------------------------------------------
+// EDUCATION BLOCKS. Same rule as the letters above: appended at the tail,
+// because block ids are assigned in file order and written raw into every save.
+//
+// Learning Mode used to borrow from the building set — white wool for eggs,
+// yellow wool for apples, light grey wool for the work mat. That asks a
+// five-year-old to pretend a cube is an egg while also doing the counting, and
+// "sort the red apples from the yellow ones" is a harder sentence when both
+// apples are squares of felt. These blocks are the pretending taken out.
+// ---------------------------------------------------------------------------
+
+// The numerals, and the signs that go between them. The letters let a child
+// spell CAT; these let them write 3 + 2 = 5, which is the other half of what a
+// primary classroom writes down.
+export const DIGIT_BLOCKS = [];
+for (let d = 0; d <= 9; d++) {
+  const name = `digit_${d}`;
+  def(name, { label: `Number ${d}`, hardness: 0.4, tool: 'axe', tiles: { all: name } });
+  DIGIT_BLOCKS.push(name);
+}
+export const SYMBOL_BLOCKS = [];
+for (const [key, label] of [['plus', 'Plus'], ['minus', 'Minus'], ['times', 'Times'],
+  ['divide', 'Divide'], ['equals', 'Equals'], ['less', 'Less Than'], ['greater', 'Greater Than']]) {
+  const name = `sym_${key}`;
+  def(name, { label: `${label} Sign`, hardness: 0.4, tool: 'axe', tiles: { all: name } });
+  SYMBOL_BLOCKS.push(name);
+}
+
+// Story props for the walked lessons. A lantern that is LIT actually gives light
+// (emissive), so "six are lit and the path needs ten" is a thing a child can see
+// in the dark rather than a colour difference they have to take on trust.
+def('nest_egg', { label: 'Egg', hardness: 0.3, tiles: { all: 'nest_egg' } });
+def('apple_red', { label: 'Red Apple', hardness: 0.3, tiles: { all: 'apple_red' } });
+def('apple_green', { label: 'Green Apple', hardness: 0.3, tiles: { all: 'apple_green' } });
+def('lantern_lit', { label: 'Lit Lantern', hardness: 0.5, emissive: 0.9, tiles: { all: 'lantern_lit' } });
+def('lantern_dark', { label: 'Unlit Lantern', hardness: 0.5, tiles: { all: 'lantern_dark' } });
+// The work surface itself: squared paper you can stand on, so "make a row of
+// five" starts with the row already drawn.
+def('work_mat', { label: 'Work Mat', hardness: 0.4, tiles: { all: 'work_mat' } });
+
+export const EDUCATION_BLOCKS = [...DIGIT_BLOCKS, ...SYMBOL_BLOCKS,
+  'nest_egg', 'apple_red', 'apple_green', 'lantern_lit', 'lantern_dark', 'work_mat'];
+
 export function blockByName(name) { return BLOCKS[B[name]]; }
 export function isSolid(id) { return BLOCKS[id]?.solid === true; }
 export function isOpaque(id) { return BLOCKS[id]?.opaque === true; }

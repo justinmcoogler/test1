@@ -115,6 +115,10 @@
 
 <!-- ===== Dialogue ===== -->
 <div id="dialogue" class="hidden">
+  <!-- Always present, on every dialogue node. The only ways out used to be the
+       Escape key and whatever "Thank you." option a node happened to carry — so
+       a phone (no Escape) on a node with no close option was a dead end. -->
+  <button id="dialogue-close" title="Close (Esc)" aria-label="Close">×</button>
   <div id="dialogue-name"></div>
   <div id="dialogue-text"></div>
   <div id="dialogue-options"></div>
