@@ -267,6 +267,22 @@ try {
   check(talk.inLesson.panel, 'it re-reads the step on the lesson panel instead');
   check(talk.hasCloseButton, 'and every dialogue has a close button');
 
+  // ---- the panel can be got out of the way, and cannot eat the screen -------
+  const panel = await page.evaluate(() => {
+    const el = document.getElementById('lesson-panel');
+    const h = () => el.getBoundingClientRect().height;
+    const open = h();
+    el.querySelector('.lesson-fold').click();
+    const folded = h();
+    el.querySelector('.lesson-fold').click();
+    return { open, folded, back: h(), vh: window.innerHeight,
+      belowWindows: getComputedStyle(el).zIndex };
+  });
+  check(panel.open < panel.vh * 0.5, `the panel is never more than half the screen (${Math.round(panel.open)}px of ${panel.vh})`);
+  check(panel.folded < panel.open * 0.55, `folding it away shrinks it to a strip (${Math.round(panel.open)} → ${Math.round(panel.folded)}px)`);
+  check(panel.back > panel.folded, 'and unfolding brings the words back');
+  check(Number(panel.belowWindows) < 40, `it sits below the menus (z-index ${panel.belowWindows})`);
+
   // ---- and home again -----------------------------------------------------
   await page.evaluate(() => { window.__game.ui.openWindow('lessons'); });
   await page.waitForSelector('[data-leave]', { timeout: 10000 });
@@ -292,6 +308,8 @@ try {
     return { opened, shut: document.getElementById('dialogue').classList.contains('hidden'),
       free: g.dialogueOpen === false };
   });
+  const gone = await page.evaluate(() => !document.getElementById('lesson-panel'));
+  check(gone, 'and the lesson panel does not follow you home');
   const trackerBack = await page.evaluate(() => !document.getElementById('quest-tracker').classList.contains('hidden'));
   check(trackerBack, 'the quest tracker comes back in your own world');
   check(closed.opened, 'a dialogue in your own world still opens');

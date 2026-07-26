@@ -193,10 +193,34 @@ body.classic-cam #crosshair { display: none; }
 /* kids' Learning Mode — big, friendly current-lesson prompt (top centre) */
 #lesson-panel {
   position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
-  width: min(560px, 92vw); z-index: 40; text-align: center; pointer-events: none;
+  width: min(560px, 92vw); z-index: 35; text-align: center; pointer-events: none;
   background: rgba(28, 22, 46, 0.86); border: 2px solid var(--gold); border-radius: 14px;
-  padding: 12px 18px 14px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  padding: 12px 34px 14px 18px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  /* Never more than a bit under half the screen, and scroll inside itself if the
+     story is long. A prompt that covers the world is a prompt a child cannot act
+     on. z-index sits BELOW #window-root (40) too: the panel is appended to body
+     last, so at equal z-index it floated on top of the inventory. */
+  max-height: min(46vh, 360px); overflow-y: auto; overscroll-behavior: contain;
 }
+/* Fold it away to one line. The panel has to persist — it is the instruction —
+   but it must not be in the way, and "read it again" brings the words back. */
+#lesson-panel .lesson-fold {
+  pointer-events: auto; position: absolute; top: 6px; right: 6px;
+  width: 26px; height: 26px; line-height: 1; padding: 0; font-size: 15px;
+  color: var(--ink-dim); background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--gold); border-radius: 7px;
+}
+#lesson-panel .lesson-fold:hover { color: var(--gold); }
+#lesson-panel.folded { max-height: none; padding: 6px 34px 7px 14px; }
+#lesson-panel.folded .lesson-story,
+#lesson-panel.folded .lesson-say,
+#lesson-panel.folded .lesson-guide,
+#lesson-panel.folded .lesson-buttons { display: none; }
+#lesson-panel.folded .lesson-prompt {
+  font-size: calc(13.5px * var(--text-scale)); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+#lesson-panel.folded .lesson-step { margin-top: 2px; }
 #lesson-panel .lesson-guide { color: var(--gold); font-weight: 700; font-size: calc(13px * var(--text-scale)); letter-spacing: 1px; margin-bottom: 4px; }
 #lesson-panel .lesson-prompt { color: var(--ink); font-size: calc(18px * var(--text-scale)); line-height: 1.35; }
 #lesson-panel .lesson-hint {
@@ -215,6 +239,13 @@ body.classic-cam #crosshair { display: none; }
 #lesson-panel .lesson-step { color: var(--gold); font-size: calc(11.5px * var(--text-scale)); letter-spacing: 1px; margin-top: 8px; }
 #lesson-panel .lesson-buttons { display: flex; gap: 8px; justify-content: center; }
 body.in-combat #lesson-panel { display: none !important; }
+/* Phones: tighter, and shorter still — a portrait screen has far less to spare. */
+@media (max-width: 640px), (pointer: coarse) {
+  #lesson-panel { top: 8px; padding: 9px 30px 10px 12px; max-height: 38vh; border-radius: 10px; }
+  #lesson-panel .lesson-story { font-size: calc(12px * var(--text-scale)); }
+  #lesson-panel .lesson-say { font-size: calc(12.5px * var(--text-scale)); }
+  #lesson-panel .lesson-prompt { font-size: calc(15px * var(--text-scale)); }
+}
 
 #hotbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; pointer-events: auto; }
 .hotbar-slot {

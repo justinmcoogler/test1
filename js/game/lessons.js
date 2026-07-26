@@ -387,6 +387,13 @@ export class LessonRunner {
   }
 
   announce(area) {
+    // Only ever inside the lesson's own world. Leaving a lesson KEEPS the child's
+    // place on purpose, so `current[area]` outlives the visit — and resume() after
+    // a load would then paint a big prompt over the overworld for a step whose
+    // plot is thirty thousand blocks away. Unsatisfiable, and (before the collapse
+    // button below) unclosable: exactly the "it covers the screen and never goes
+    // away" that gets reported.
+    if (!this.game.world?.isLessonWorld?.()) { this.game.ui?.showLessonPrompt?.(null); return; }
     this.game.ui?.showLessonPrompt?.(this.view(area));
   }
 
@@ -600,7 +607,9 @@ export class LessonRunner {
       countPlaced, blocksIn, stackAt, tallest, rowAt, runs, words, nameAt, held };
   }
 
-  // Re-show the prompt for any in-progress lesson (called after a save loads).
+  // Re-show the prompt for an in-progress lesson (called after a save loads).
+  // announce() is the one that decides whether there is anything to show: a saved
+  // place is not the same as being in the lesson.
   resume() { for (const area of Object.keys(this.current)) this.announce(area); }
 
   // ---- persistence: {area → currentLessonId} + which step ----------------

@@ -27,6 +27,10 @@ function scenario(lessonId = null) {
   const placed = new Map();
   const world = {
     markers: {},
+    // The runner asks this before painting a prompt. Default true (we are in the
+    // lesson); the leaving test flips it.
+    inLesson: true,
+    isLessonWorld() { return this.inLesson; },
     getBlock: (x, y, z) => placed.get(`${x},${y},${z}`) ?? B.air,
     // A step's setup lays out its starting position through the world, and the
     // runner wipes the mat between steps, so the fake must accept writes.
@@ -36,7 +40,9 @@ function scenario(lessonId = null) {
   const clear = (x, y, z) => { placed.delete(`${x},${y},${z}`); emit('blockBroken', { x, y, z, block: 'air' }); };
   const education = new EducationManager();
   education.setMode('education');
-  const ui = { showLessonPrompt() {}, showLessonSuccess() {}, showLessonHint() {}, showStepSuccess() {}, toast() {} };
+  const shown = [];   // every showLessonPrompt() call, so a test can see the panel
+  const ui = { showLessonPrompt(v) { shown.push(v); }, showLessonSuccess() {},
+    showLessonHint() {}, showStepSuccess() {}, toast() {} };
   // Just enough pack for payReward: a lesson pays the CHARACTER as well as the
   // play-time bank, and a runner with nowhere to put the coins must not throw.
   const bag = new Map();
@@ -63,7 +69,7 @@ function scenario(lessonId = null) {
     if (st) { player.x = st.sx + 0.5; player.y = st.stand; player.z = st.cz + 0.5; }
     lessons.update();
   };
-  return { game, world, education, lessons, put, clear, inventory, player, walkToStep };
+  return { game, world, education, lessons, put, clear, inventory, player, walkToStep, shown };
 }
 
 // Play a shape's own worked solution onto the mat, through the same events the
@@ -291,6 +297,25 @@ test('runner persists {area → lesson, step} across serialize/deserialize', () 
   b.lessons.deserialize(snap);
   assert.equal(b.lessons.current.grade_2, lesson.id, 'resumes the saved lesson');
   assert.equal(b.lessons.step.grade_2, 1, 'and the saved step — a half-done lesson is not restarted');
+});
+
+test('the prompt panel does not follow you home', () => {
+  // Leaving a lesson KEEPS your place on purpose, so `current[area]` outlives the
+  // visit. resume() after a load used to paint the prompt over the overworld for a
+  // step whose plot is thirty thousand blocks away — unsatisfiable, and with no
+  // way to dismiss it. It has to ask where you are, not just what you were doing.
+  const { lessons, world, shown } = scenario(FIRST.id);
+  lessons.startArea('grade_k');
+  assert.ok(shown.at(-1), 'in the lesson, the prompt shows');
+
+  world.inLesson = false;                 // back in your own world
+  lessons.resume();
+  assert.equal(shown.at(-1), null, 'resuming outside a lesson clears the panel instead');
+  assert.equal(lessons.current.grade_k, FIRST.id, 'but your place is still kept');
+
+  world.inLesson = true;                  // and coming back brings it back
+  lessons.resume();
+  assert.ok(shown.at(-1), 'the prompt returns when you are in the lesson again');
 });
 
 test('a saved step past the end of a shortened lesson is clamped, not left dangling', () => {

@@ -440,7 +440,8 @@ export class UI {
       document.body.appendChild(el);
     }
     const guide = NPC_DEFS[view.guide]?.label || 'Pip';
-    el.innerHTML = `${view.story ? '<div class="lesson-story"></div>' : ''}
+    el.innerHTML = `<button class="lesson-fold" title="Fold this away">▲</button>
+      ${view.story ? '<div class="lesson-story"></div>' : ''}
       <div class="lesson-guide"></div>
       ${view.say ? '<div class="lesson-say"></div>' : ''}
       <div class="lesson-prompt"></div>
@@ -449,6 +450,18 @@ export class UI {
         <button class="lesson-hint" data-act="hint">Need a hint?</button>
         <button class="lesson-hint" data-act="again">Read it again</button>
       </div>`;
+    // Folded state survives the step changing: a child who folded the panel away
+    // to see their build did not ask to have it unfolded again five blocks later.
+    el.classList.toggle('folded', !!this._lessonFolded);
+    const fold = el.querySelector('.lesson-fold');
+    fold.textContent = this._lessonFolded ? '▼' : '▲';
+    fold.addEventListener('click', () => {
+      SFX.uiClick();
+      this._lessonFolded = !this._lessonFolded;
+      el.classList.toggle('folded', this._lessonFolded);
+      fold.textContent = this._lessonFolded ? '▼' : '▲';
+      fold.title = this._lessonFolded ? 'Show the whole thing' : 'Fold this away';
+    });
     if (view.story) el.querySelector('.lesson-story').textContent = view.story;
     el.querySelector('.lesson-guide').textContent = `${guide} says`;
     if (view.say) el.querySelector('.lesson-say').textContent = view.say;
