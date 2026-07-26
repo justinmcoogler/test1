@@ -34,7 +34,8 @@ import { registerRemadeMob, preloadMobSkins, mobSkinOverride } from './game/mobr
 import { registerImportedMobs } from './game/mobpack.js';
 import { registerProps } from './game/proppack.js';
 import { EducationManager } from './game/education.js';
-import { LessonRunner, LESSONS_DATA } from './game/lessons.js';
+import { LessonRunner, lessonNeeds } from './game/lessons.js';
+import { setReadAloud } from './game/speech.js';
 import { WAYSTONE_SPACING } from './world/roads.js';
 import {
   WaystoneNet, atWaystone, waystonesNear, waystoneLanding, BEARINGS, WAYSTONE_HEIGHT,
@@ -473,6 +474,9 @@ class Game {
 
   applySettings() {
     const s = this.settings;
+    // Lessons are read aloud by default: the youngest half of the curriculum's
+    // audience cannot read the prompts they are being given.
+    setReadAloud(s.readAloud !== false);
     document.documentElement.style.setProperty('--ui-scale', s.uiScale);
     document.documentElement.style.setProperty('--text-scale', s.textScale);
     document.documentElement.classList.toggle('colorblind', s.colorblind);
@@ -2404,29 +2408,28 @@ class Game {
   }
 
 
-  // Stock the child with the coloured blocks the Numbers Meadow lessons use.
-  // Top the child up with every colour any lesson asks for. Derived from the
-  // lesson data rather than listed here, so adding a lesson that wants orange
-  // cannot leave a six-year-old staring at a prompt with nothing to place.
+  // Put in the pack exactly what the lesson in front of them asks for.
+  //
+  // Derived from the lesson's own steps (lessonNeeds walks every shape and takes
+  // the largest single-step demand of each block), never listed by hand: a step
+  // that wants forty grey blocks or the letter Q cannot leave a child staring at
+  // a prompt with nothing to place. Only the ACTIVE lesson's materials, plus the
+  // four basic colours — twenty-six letters and sixteen wools at once would bury
+  // the pack, and hunting for the C among a hundred slots is not the exercise.
   grantLessonKit() {
-    const want = new Set(['red_wool', 'blue_wool', 'yellow_wool', 'green_wool']);
-    for (const l of LESSONS_DATA) {
-      for (const [item] of l.reward?.items || []) if (item.endsWith('_wool')) want.add(item);
-    }
-    for (const c of want) {
-      const have = this.inventory.count(c);
-      if (have < 10) this.inventory.add(c, 16 - have);
-    }
-    // …and the letters the lesson in front of them actually asks for. Only
-    // those: twenty-six letters at four apiece would bury the pack, and a child
-    // hunting for the C among a hundred slots is doing an inventory exercise.
-    for (const l of LESSONS_DATA) {
-      if (!l.needs || !Object.values(this.lessons?.current || {}).includes(l.id)) continue;
-      for (const ch of new Set(l.needs)) {
-        const item = `letter_${ch.toLowerCase()}`;
-        const have = this.inventory.count(item);
-        if (have < 4) this.inventory.add(item, 6 - have);
+    const want = { red_wool: 16, blue_wool: 16, yellow_wool: 16, green_wool: 16 };
+    for (const id of Object.values(this.lessons?.current || {})) {
+      const lesson = this.lessons?.byId?.get(id);
+      if (!lesson) continue;
+      // A margin over the exact answer, so a miscount is a mistake to fix rather
+      // than a dead end with an empty hand.
+      for (const [block, n] of Object.entries(lessonNeeds(lesson))) {
+        want[block] = Math.max(want[block] || 0, n + 4);
       }
+    }
+    for (const [item, qty] of Object.entries(want)) {
+      const have = this.inventory.count(item);
+      if (have < qty) this.inventory.add(item, qty - have);
     }
   }
 

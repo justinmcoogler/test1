@@ -1,323 +1,55 @@
-// Kids' Learning Mode — Phase 1 lesson engine.
+// Kids' Learning Mode — the lesson engine.
 //
-// A tiny, data-driven runner that rides the dormant education system
-// (js/game/education.js). A lesson is a plain object the child performs by
-// PLACING blocks in the world; the runner watches world events (blockPlaced /
-// blockBroken), re-reads the work mat, and when the build matches the goal it
-// celebrates and banks play-time minutes via education.completeLesson().
+// A data-driven runner that rides the dormant education system
+// (js/game/education.js). A lesson is a STORY told in steps, and the child
+// performs each step by PLACING BLOCKS. The runner watches world events
+// (blockPlaced / blockBroken), re-reads the work mat, and when the build matches
+// the step's shape it celebrates, wipes the mat and moves on. Finish every step
+// and the lesson banks its play-time minutes and pays the character.
 //
-// Nothing here is punitive: a wrong build simply doesn't complete — hints are
-// shown on demand, and the child keeps trying.
+// Nothing here is punitive: a wrong build simply doesn't advance — hints are
+// there for the asking, and the child keeps trying.
 //
-// EACH LESSON HAS ITS OWN ROOM, and starting one puts the child inside it (see
-// js/world/classroom.js). A lesson performed in the overworld is performed in
-// the world they play in — the blocks placed for a counting exercise are real
-// edits to their real save, so the mat starts dirty and anything can wander up
-// to it. Leaving a lesson, or finishing the series, puts them back on the exact
-// block they were standing on when it began.
+// THE CONTENT LIVES IN js/game/curriculum/, ten lessons per grade, K to 8.
 //
-// FINISHING A LESSON PAYS THE CHARACTER, not the world: banked play minutes as
-// before, plus coins and the materials the NEXT lesson asks for. Both live on
-// the character side of the save (js/game/characters.js CHARACTER_KEYS lists
-// `education`, `lessons` and `inventory`), so a child who starts a new world
-// keeps every minute and every coin they earned.
+// EVERY WORD IS READ ALOUD. The audience is five to thirteen years old and four
+// of the ten lessons in each band are about learning to read — a lesson that can
+// only be understood by reading it is a locked door. js/ui/ui.js speaks the
+// story, the step, the hint and the cheer through js/game/speech.js.
+//
+// EACH LESSON HAS ITS OWN ROOM in its own world (js/world/classroom.js), and
+// starting one puts the child inside it. A lesson performed in the overworld is
+// performed in the world they play in — the blocks placed for a counting
+// exercise would be real edits to their real save. Leaving a lesson, or
+// finishing a series, puts them back on the exact block they left from.
+//
+// FINISHING A LESSON PAYS THE CHARACTER, not the world: banked play minutes,
+// plus coins and materials. Both live on the character side of the save
+// (js/game/characters.js CHARACTER_KEYS lists `education`, `lessons` and
+// `inventory`), so a child who starts a new world keeps everything they earned.
 //
 // A lesson:
-//   { id, area, subject, standard, minutes, guide,
-//     prompt, hint, success,
-//     watch: ['blockPlaced', ...],   // world events that re-run check()
-//     setup?(ctx),                    // optional one-time prep
-//     check(ctx) -> bool,             // true when the goal is met
+//   { id, area, grade, subject, standard, minutes, guide, title, story,
+//     steps: [{ say, prompt, hint, success, build }],
+//     watch: ['blockPlaced', ...],             // world events that re-check
 //     reward: { coins, items: [[id, qty]] },   // paid to the CHARACTER on pass
-//     next }                          // id of the lesson that follows (or null)
+//     next }                                   // id of the next lesson, or null
 //
-// ctx helpers: { game, world, mat, countPlaced(blockName, region), lesson }.
+// A step's `build` is a SHAPE (js/game/buildshapes.js) — declarative, so the
+// same sentence produces the check, the worked solution the tests play through,
+// the blocks the child is handed, and a guarantee that the answer fits the mat.
+// A step may instead carry a hand-written check(ctx), but nothing does: a
+// hand-written check cannot be auto-solved, and an unsolvable step is one nobody
+// can prove is finishable.
 import { on, emit } from '../core/events.js';
 import { registerLesson, LESSONS } from './education.js';
 import { B, BLOCKS } from '../world/blocks.js';
 import { ROOM_COUNT, classroomFor } from '../world/classroom.js';
+import { CURRICULUM, GRADES } from './curriculum/index.js';
+import { checkShape, setupShape, shapeNeeds } from './buildshapes.js';
 
-// ---- Numbers Meadow ---------------------------------------------------------
-// Twelve lessons pitched at a six-year-old (US K-1 / UK Year 1), in the order a
-// classroom takes them: count, add, take away, bonds to ten, then compare and
-// measure, then pattern and shape, then the first steps toward multiplication
-// and place value.
-//
-// The ceiling is deliberate. Every one of these is done by PLACING BLOCKS, and
-// what a lesson may ask is bounded by what makeCtx can see — a tally, a tower's
-// height, an unbroken run, a row of colours, and what happened earlier in the
-// attempt. Anything a check cannot express is not a lesson yet, however good it
-// would be on paper.
-export const LESSONS_DATA = [
-  {
-    id: 'nm_count', area: 'numbers_meadow', subject: 'math', standard: 'K.CC.B.5',
-    minutes: 10, guide: 'pip',
-    prompt: 'Place 7 red blocks on the mat — count out loud as you go!',
-    hint: 'Grab red wool from your bag and place them on the mat one at a time: "one… two… three…" all the way to 7.',
-    success: 'Seven! You counted every single one. Fantastic!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => ctx.countPlaced('red_wool', ctx.mat) === 7,
-    reward: { coins: 15, items: [['blue_wool', 12]] },
-    next: 'nm_add',
-  },
-  {
-    id: 'nm_add', area: 'numbers_meadow', subject: 'math', standard: '1.OA.A.1',
-    minutes: 10, guide: 'pip',
-    prompt: 'Place 5 blue blocks… now 3 MORE blue blocks. How many all together?',
-    hint: 'Make a row of 5 blue blocks. Then add 3 more next to them. Count them all — 5 and 3!',
-    success: '5 and 3 make 8! You added them all together!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => ctx.countPlaced('blue_wool', ctx.mat) === 8,
-    reward: { coins: 20, items: [['red_wool', 8], ['yellow_wool', 8]] },
-    next: 'nm_sort',
-  },
-  {
-    id: 'nm_sort', area: 'numbers_meadow', subject: 'math', standard: 'K.MD.B.3',
-    minutes: 10, guide: 'pip',
-    prompt: 'Sorting time! Put every RED block on the LEFT mat and every YELLOW block on the RIGHT mat.',
-    hint: 'Reds go on the left side of the wood line, yellows on the right. Keep each colour on its own side!',
-    success: 'Perfect sorting — reds on the left, yellows on the right. You did it!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => {
-      const rl = ctx.countPlaced('red_wool', ctx.mat.left);
-      const rr = ctx.countPlaced('red_wool', ctx.mat.right);
-      const yl = ctx.countPlaced('yellow_wool', ctx.mat.left);
-      const yr = ctx.countPlaced('yellow_wool', ctx.mat.right);
-      // Sorted = each colour entirely on its OWN side, the two colours on
-      // OPPOSITE sides, at least two of each. Either arrangement counts, so a
-      // child who truly separates the colours succeeds no matter which way they
-      // happen to face the mat (reds-left/yellows-right OR the mirror of it).
-      return (rl >= 2 && yr >= 2 && rr === 0 && yl === 0)
-          || (rr >= 2 && yl >= 2 && rl === 0 && yr === 0);
-    },
-    reward: { coins: 40, items: [['green_wool', 12]] },
-    next: 'nm_take',
-  },
-  {
-    id: 'nm_take', area: 'numbers_meadow', subject: 'math', standard: '1.OA.A.1',
-    minutes: 10, guide: 'pip',
-    prompt: 'Place 9 green blocks. Now BREAK 4 of them. How many are left?',
-    hint: 'Build all 9 first and count them. Then break them one at a time — 4 of them — and count what is still standing.',
-    success: '9 take away 4 leaves 5. That is subtraction!',
-    watch: ['blockPlaced', 'blockBroken'],
-    // The peak is why this is subtraction and not "place 5". A check only ever
-    // sees the mat as it is NOW, so without remembering that nine were once
-    // there, a child could pass by placing five and never taking anything away.
-    check: (ctx) => {
-      const n = ctx.countPlaced('green_wool', ctx.mat);
-      ctx.scratch.peak = Math.max(ctx.scratch.peak || 0, n);
-      return ctx.scratch.peak >= 9 && n === 5;
-    },
-    reward: { coins: 20, items: [['red_wool', 10], ['blue_wool', 10]] },
-    next: 'nm_maketen',
-  },
-  {
-    id: 'nm_maketen', area: 'numbers_meadow', subject: 'math', standard: 'K.OA.A.4',
-    minutes: 10, guide: 'pip',
-    prompt: 'There are 6 red blocks on the mat. Add BLUE blocks until there are 10 altogether.',
-    hint: 'Count the reds: six. Now count on — seven, eight, nine, ten — putting a blue down for each one. How many blues did that take?',
-    success: '6 and 4 make 10! That is a number bond to ten.',
-    watch: ['blockPlaced', 'blockBroken'],
-    setup: (ctx) => {
-      // The six are laid out FOR the child: the exercise is completing a bond,
-      // not building both halves of it.
-      const m = ctx.mat;
-      if (!ctx.world) return;
-      for (let i = 0; i < 6; i++) ctx.world.setBlock(m.x0 + i, m.y0, m.z0, B.red_wool, true);
-    },
-    check: (ctx) => ctx.countPlaced('red_wool', ctx.mat) === 6 && ctx.countPlaced('blue_wool', ctx.mat) === 4,
-    reward: { coins: 25, items: [['green_wool', 12]] },
-    next: 'nm_taller',
-  },
-  {
-    id: 'nm_taller', area: 'numbers_meadow', subject: 'math', standard: 'K.MD.A.2',
-    minutes: 10, guide: 'pip',
-    prompt: 'Build a tower on the LEFT mat and a SHORTER one on the RIGHT. Make the left one taller!',
-    hint: 'Stack blocks on top of each other on the left side of the wood line. Then make a smaller stack on the right. Taller means more blocks!',
-    success: 'The left tower is taller and the right one is shorter. You compared them!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => {
-      const l = ctx.tallest(ctx.mat.left), r = ctx.tallest(ctx.mat.right);
-      return l >= 3 && r >= 1 && l > r;
-    },
-    reward: { coins: 25, items: [['yellow_wool', 12]] },
-    next: 'nm_tower',
-  },
-  {
-    id: 'nm_tower', area: 'numbers_meadow', subject: 'math', standard: '1.MD.A.2',
-    minutes: 10, guide: 'pip',
-    prompt: 'Build ONE tower exactly 5 blocks tall — no taller, no shorter.',
-    hint: 'Put a block down, then another one right on top of it. Count as you climb: one, two, three, four, five. Then stop!',
-    success: 'Exactly five blocks tall. You measured it!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => ctx.tallest(ctx.mat) === 5,
-    reward: { coins: 25, items: [['orange_wool', 12]] },
-    next: 'nm_pattern',
-  },
-  {
-    id: 'nm_pattern', area: 'numbers_meadow', subject: 'math', standard: '1.OA.C.5',
-    minutes: 10, guide: 'pip',
-    prompt: 'Make a pattern in a row: red, blue, red, blue, red, blue.',
-    hint: 'Start with red. Then blue right next to it. Then red again. Keep going — the colours take turns!',
-    success: 'Red, blue, red, blue — a repeating pattern. You can see what comes next now!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => ctx.runs(ctx.mat).some((run) => {
-      if (run.length < 6) return false;
-      const [a, b] = run;
-      if (a === b || (a !== 'red_wool' && a !== 'blue_wool') || (b !== 'red_wool' && b !== 'blue_wool')) return false;
-      return run.every((name, i) => name === (i % 2 === 0 ? a : b));
-    }),
-    reward: { coins: 30, items: [['purple_wool', 12]] },
-    next: 'nm_square',
-  },
-  {
-    id: 'nm_square', area: 'numbers_meadow', subject: 'math', standard: 'K.G.B.5',
-    minutes: 10, guide: 'pip',
-    prompt: 'Build a SQUARE out of yellow blocks — 3 across and 3 back.',
-    hint: 'Make a row of 3. Then another row of 3 behind it. Then one more. A square has the same number of blocks every way you count it.',
-    success: 'Three by three — a perfect square, and 9 blocks altogether!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => {
-      const m = ctx.mat;
-      if (ctx.countPlaced('yellow_wool', m) !== 9) return false;
-      // A 3x3 block anywhere on the mat, not one particular corner of it.
-      for (let x = m.x0; x <= m.x1 - 2; x++) {
-        for (let z = m.z0; z <= m.z1 - 2; z++) {
-          let full = true;
-          for (let dx = 0; dx < 3 && full; dx++) {
-            for (let dz = 0; dz < 3; dz++) {
-              if (ctx.nameAt(x + dx, m.y0, z + dz) !== 'yellow_wool') { full = false; break; }
-            }
-          }
-          if (full) return true;
-        }
-      }
-      return false;
-    },
-    reward: { coins: 30, items: [['light_blue_wool', 12]] },
-    next: 'nm_fives',
-  },
-  {
-    id: 'nm_fives', area: 'numbers_meadow', subject: 'math', standard: '2.OA.C.4',
-    minutes: 12, guide: 'pip',
-    prompt: 'Make 3 rows with 5 blocks in each row. Count by fives: 5, 10, 15!',
-    hint: 'A row of 5. Then another row of 5 behind it. Then one more. Do not count them one at a time — count 5, 10, 15.',
-    success: '3 rows of 5 is 15. That is the beginning of times tables!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => {
-      const rows = ctx.runs(ctx.mat);
-      return rows.length === 3 && rows.every((r) => r.length === 5);
-    },
-    reward: { coins: 35, items: [['pink_wool', 16]] },
-    next: 'nm_tens',
-  },
-  {
-    id: 'nm_tens', area: 'numbers_meadow', subject: 'math', standard: '1.NBT.B.2',
-    minutes: 12, guide: 'pip',
-    prompt: 'Make one row of exactly 10, then a separate little row of 3. That is 13!',
-    hint: 'Ten in a line, all touching. Then leave a gap and put 3 more. Thirteen is one ten and three ones.',
-    success: 'One ten and three ones — thirteen! That is how big numbers are built.',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => {
-      const rows = ctx.runs(ctx.mat).map((r) => r.length).sort((a, b) => b - a);
-      return rows.length === 2 && rows[0] === 10 && rows[1] === 3;
-    },
-    reward: { coins: 40, items: [['green_wool', 16]] },
-    next: 'nm_mirror',
-  },
-  {
-    id: 'nm_mirror', area: 'numbers_meadow', subject: 'math', standard: '1.G.A.1',
-    minutes: 12, guide: 'pip',
-    prompt: 'Build anything you like on the LEFT mat. Then make the RIGHT mat match it, like a mirror.',
-    hint: 'The wood line down the middle is the mirror. However far a block is from the line on one side, put one just as far on the other side.',
-    success: 'Both sides match across the line — that is symmetry!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => {
-      const m = ctx.mat;
-      let pairs = 0;
-      for (let x = m.div + 1; x <= m.x1; x++) {
-        const mirrored = m.div - (x - m.div);
-        if (mirrored < m.x0) continue;
-        for (let y = m.y0; y <= m.y1; y++) {
-          for (let z = m.z0; z <= m.z1; z++) {
-            const a = ctx.nameAt(x, y, z), b = ctx.nameAt(mirrored, y, z);
-            if (a !== b) return false;      // one side has something the other lacks
-            if (a !== 'air') pairs++;
-          }
-        }
-      }
-      return pairs >= 4;                    // and it is a build, not an empty mat
-    },
-    reward: { coins: 50, items: [['hearth_loaf', 4], ['travel_biscuit', 4]] },
-    next: null,
-  },
-
-  // ---- The Spelling Shed: first words ---------------------------------------
-  // The letter blocks (js/world/blocks.js, A-Z) exist for these. Every lesson
-  // above is "place N of a colour" because coloured wool was all a child had to
-  // place, and you cannot spell CAT with it.
-  //
-  // `needs` names the letters the lesson hands out. A spelling lesson that made
-  // a child craft its letters first would be a crafting lesson.
-  {
-    id: 'sp_cat', area: 'spelling_shed', subject: 'reading', standard: 'RF.K.3.A',
-    minutes: 10, guide: 'pip', needs: 'CAT',
-    prompt: 'Spell CAT on the mat — put the letters in a row: C, A, T.',
-    hint: 'Say the word slowly: c… a… t. Place one letter for each sound, left to right, all touching.',
-    success: 'C-A-T spells CAT! You wrote a word!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => ctx.words().includes('CAT'),
-    reward: { coins: 20, items: [['letter_d', 4], ['letter_o', 4], ['letter_g', 4]] },
-    next: 'sp_dog',
-  },
-  {
-    id: 'sp_dog', area: 'spelling_shed', subject: 'reading', standard: 'RF.K.3.A',
-    minutes: 10, guide: 'pip', needs: 'DOG',
-    prompt: 'Now spell DOG.',
-    hint: 'd… o… g. Three sounds, three letters, in a row.',
-    success: 'D-O-G spells DOG! Two words now!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => ctx.words().includes('DOG'),
-    reward: { coins: 20, items: [['letter_h', 4], ['letter_b', 4]] },
-    next: 'sp_rhyme',
-  },
-  {
-    id: 'sp_rhyme', area: 'spelling_shed', subject: 'reading', standard: 'RF.K.2.C',
-    minutes: 12, guide: 'pip', needs: 'CATHB',
-    prompt: 'Rhyming time! Spell CAT, then HAT, then BAT — three rows, all rhyming.',
-    hint: 'They all end in A-T. Only the first letter changes: C, then H, then B.',
-    success: 'CAT, HAT, BAT — they all rhyme because they all end the same way!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => {
-      const w = ctx.words();
-      return w.includes('CAT') && w.includes('HAT') && w.includes('BAT');
-    },
-    reward: { coins: 30, items: [['letter_e', 4], ['letter_i', 4], ['letter_u', 4]] },
-    next: 'sp_vowels',
-  },
-  {
-    id: 'sp_vowels', area: 'spelling_shed', subject: 'reading', standard: 'RF.K.3.B',
-    minutes: 12, guide: 'pip', needs: 'AEIOU',
-    prompt: 'Put the five vowels in a row, in order: A E I O U.',
-    hint: 'Every word needs a vowel. Sing them: A, E, I, O, U.',
-    success: 'A E I O U — every single vowel, in order!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => ctx.words().includes('AEIOU'),
-    reward: { coins: 30, items: [['letter_s', 4], ['letter_n', 4], ['letter_p', 4]] },
-    next: 'sp_abc',
-  },
-  {
-    id: 'sp_abc', area: 'spelling_shed', subject: 'reading', standard: 'RF.K.1.D',
-    minutes: 12, guide: 'pip', needs: 'ABCDEFGH',
-    prompt: 'Put the alphabet in order, as far as H: A B C D E F G H.',
-    hint: 'Sing the alphabet song and place a letter for each one you sing. Keep them all touching.',
-    success: 'A B C D E F G H — the alphabet, in the right order!',
-    watch: ['blockPlaced', 'blockBroken'],
-    check: (ctx) => ctx.words().some((w) => w.startsWith('ABCDEFGH')),
-    reward: { coins: 50, items: [['hearth_loaf', 4], ['travel_biscuit', 4]] },
-    next: null,
-  },
-];
+export const LESSONS_DATA = CURRICULUM;
+export { GRADES };
 
 // Make each lesson a first-class education lesson so completing it banks the
 // lesson's own minutes (not the generic default). Guarded so re-importing the
@@ -325,17 +57,32 @@ export const LESSONS_DATA = [
 for (const l of LESSONS_DATA) {
   if (!LESSONS[l.id]) {
     registerLesson({
-      id: l.id, subject: l.subject, title: l.prompt, minutes: l.minutes,
+      id: l.id, subject: l.subject, title: l.title, minutes: l.minutes,
       minScore: 0, repeatable: true,
-      payload: { area: l.area, standard: l.standard, guide: l.guide },
+      payload: { area: l.area, standard: l.standard, guide: l.guide, grade: l.grade },
     });
   }
+}
+
+// Everything a lesson asks the child to hold, across all of its steps. The mat
+// is wiped between steps, so the most any single step needs is the most they
+// ever need at once — not the sum. main.js tops the pack up from this, which is
+// why adding a step that wants orange wool cannot strand anybody.
+export function lessonNeeds(lesson) {
+  const want = {};
+  for (const step of lesson?.steps || []) {
+    for (const [block, n] of Object.entries(shapeNeeds(step.build))) {
+      want[block] = Math.max(want[block] || 0, n);
+    }
+  }
+  return want;
 }
 
 export class LessonRunner {
   constructor(game) {
     this.game = game;
     this.current = {};                 // area → active lessonId
+    this.step = {};                    // area → index into that lesson's steps
     this.byId = new Map();
     this.byArea = new Map();           // area → [lessons in authored order]
     for (const l of LESSONS_DATA) {
@@ -364,15 +111,21 @@ export class LessonRunner {
     return id ? this.byId.get(id) : null;
   }
 
+  activeStep(area) {
+    const lesson = this.activeLessonFor(area);
+    if (!lesson) return null;
+    return lesson.steps?.[this.step[area] | 0] || null;
+  }
+
   isPassed(id) {
     const attempts = this.game.education?.lessonsDone?.[id];
     return !!attempts && attempts.some((a) => a.passed);
   }
 
-  // Begin (or re-announce) an area's lesson series, resuming at the first
+  // Begin (or re-announce) a grade band's lessons, resuming at the first
   // not-yet-passed lesson so a returning child isn't sent back to the start.
   startArea(area) {
-    if (this.current[area]) { this.announce(this.activeLessonFor(area)); return; }
+    if (this.current[area]) { this.announce(area); return; }
     const list = this.byArea.get(area) || [];
     if (!list.length) return;
     const next = list.find((l) => !this.isPassed(l.id)) || list[0];
@@ -390,49 +143,123 @@ export class LessonRunner {
   // swap into the lesson world happens, and it is pure geometry either way.
   room(id) { return classroomFor(this.roomIndex(id)); }
 
-  setLesson(area, id) {
+  setLesson(area, id, step = 0) {
     this.current[area] = id;
-    const lesson = this.byId.get(id);
-    if (lesson?.setup) { try { lesson.setup(this.makeCtx(lesson)); } catch (e) { console.error('[lesson] setup', e); } }
+    this.step[area] = step;
     // Into its own room. `lessonEnter` carries the arrival cell; main.js banks
     // where the child was standing the FIRST time (not on every advance within a
     // series, or three lessons in a row would overwrite the way home with the
     // previous classroom).
     const room = this.room(id);
     if (room) emit('lessonEnter', { area, id, room });
-    emit('lessonStarted', { area, id, lesson });
-    this.announce(lesson);
+    emit('lessonStarted', { area, id, lesson: this.byId.get(id) });
+    this.beginStep(area);
   }
 
-  // The child asked to stop. Keep the lesson as their place in the series — a
+  // Start (or restart) the current step: wipe the mat, lay out anything the step
+  // pre-places, and say it.
+  //
+  // The wipe is what makes multi-step lessons possible at all. Step two asks for
+  // eight blue blocks; step one left five on the mat. Without a clean page every
+  // step after the first would have to be phrased around the leftovers of the
+  // last one, and the child would spend the lesson tidying.
+  beginStep(area) {
+    const lesson = this.activeLessonFor(area);
+    const step = this.activeStep(area);
+    if (!lesson || !step) return;
+    this.clearMat(area);
+    this._scratch ||= {};
+    this._scratch[this.scratchKey(area)] = {};
+    const mat = this.matFor(area);
+    const ctx = this.makeCtx(lesson, area);
+    if (step.setup) { try { step.setup(ctx); } catch (e) { console.error('[lesson] setup', e); } }
+    if (mat && this.game.world) {
+      for (const op of setupShape(step.build, mat)) {
+        this.game.world.setBlock(op.x, op.y, op.z, B[op.block] ?? B.air, true);
+      }
+    }
+    this.announce(area);
+  }
+
+  // Sweep the buildable volume of the mat back to air. The mat SURFACE is one
+  // block lower (it is laid into the floor), so this never eats the room.
+  clearMat(area) {
+    const m = this.matFor(area);
+    const world = this.game.world;
+    if (!m || !world) return;
+    for (let x = m.x0; x <= m.x1; x++) {
+      for (let y = m.y0; y <= m.y1; y++) {
+        for (let z = m.z0; z <= m.z1; z++) {
+          if (world.getBlock(x, y, z) !== B.air) world.setBlock(x, y, z, B.air, true);
+        }
+      }
+    }
+  }
+
+  // The child asked to stop. Keep the lesson AND the step as their place — a
   // lesson left half-done is resumed, never restarted — and send them home.
   leave(area) {
     if (!this.current[area]) return false;
     emit('lessonExit', { area, id: this.current[area] });
-    this.announce(null);
+    this.game.ui?.showLessonPrompt?.(null);
     return true;
   }
 
-  announce(lesson) {
-    this.game.ui?.showLessonPrompt?.(lesson || null);
+  // What the panel and the voice are given: the lesson, which step of how many,
+  // and the story (only on the first step — a story retold every five minutes
+  // stops being a story).
+  view(area) {
+    const lesson = this.activeLessonFor(area);
+    const step = this.activeStep(area);
+    if (!lesson || !step) return null;
+    const i = this.step[area] | 0;
+    return {
+      area, lesson, step, index: i, total: lesson.steps.length,
+      title: lesson.title, guide: lesson.guide,
+      story: i === 0 ? lesson.story : null,
+      say: step.say, prompt: step.prompt, hint: step.hint,
+    };
+  }
+
+  announce(area) {
+    this.game.ui?.showLessonPrompt?.(this.view(area));
   }
 
   showHint(area) {
-    const lesson = this.activeLessonFor(area);
-    if (lesson) this.game.ui?.showLessonHint?.(lesson);
+    const v = this.view(area);
+    if (v) this.game.ui?.showLessonHint?.(v);
   }
 
-  // A watched world event fired — re-check every area that has a lesson
-  // waiting on that event. A failed check does nothing (gentle, no penalty).
+  // A watched world event fired — re-check every area that has a lesson waiting
+  // on that event. A failed check does nothing (gentle, no penalty).
   onWatch(ev) {
     for (const area of Object.keys(this.current)) {
       const lesson = this.activeLessonFor(area);
-      if (!lesson || !(lesson.watch || []).includes(ev)) continue;
+      const step = this.activeStep(area);
+      if (!lesson || !step || !(lesson.watch || []).includes(ev)) continue;
       let ok = false;
-      try { ok = lesson.check(this.makeCtx(lesson)); }
+      const ctx = this.makeCtx(lesson, area);
+      try { ok = step.check ? !!step.check(ctx) : checkShape(step.build, ctx); }
       catch (e) { console.error('[lesson] check', lesson.id, e); }
-      if (ok) this.complete(area, lesson);
+      if (ok) this.advance(area);
     }
+  }
+
+  // A step landed. Either move on to the next one in the same room, or — if that
+  // was the last — finish the lesson.
+  advance(area) {
+    const lesson = this.activeLessonFor(area);
+    const step = this.activeStep(area);
+    const i = this.step[area] | 0;
+    if (!lesson || !step) return;
+    if (i + 1 < lesson.steps.length) {
+      this.game.ui?.showStepSuccess?.(this.view(area));
+      emit('lessonStep', { area, id: lesson.id, index: i, step });
+      this.step[area] = i + 1;
+      this.beginStep(area);
+      return;
+    }
+    this.complete(area, lesson);
   }
 
   // Pay a lesson's reward into the pack. Separate from the education ledger on
@@ -451,15 +278,17 @@ export class LessonRunner {
   complete(area, lesson) {
     // Bank the minutes through the education ledger, pay the character, then
     // celebrate + advance.
+    const last = lesson.steps[lesson.steps.length - 1];
     const res = this.game.education?.completeLesson?.(lesson.id, { score: 1 });
     const paid = this.payReward(lesson);
-    this.game.ui?.showLessonSuccess?.(lesson, { granted: res?.granted || 0, paid });
+    this.game.ui?.showLessonSuccess?.(lesson, { granted: res?.granted || 0, paid, say: last?.success });
     emit('lessonSucceeded', { area, id: lesson.id, lesson, granted: res?.granted || 0, paid });
     if (lesson.next && this.byId.has(lesson.next)) {
-      this.setLesson(area, lesson.next);   // straight into the next room
+      this.setLesson(area, lesson.next);    // straight into the next room
     } else {
       delete this.current[area];
-      this.announce(null);                 // series finished — clear the prompt
+      delete this.step[area];
+      this.game.ui?.showLessonPrompt?.(null); // band finished — clear the prompt
       emit('lessonExit', { area, id: lesson.id, finished: true });
     }
   }
@@ -476,18 +305,20 @@ export class LessonRunner {
     // `div` comes through too: the mirror lesson measures across it, and a
     // region that quietly dropped it made every distance from the centre NaN.
     const region = { x0: m.x0, x1: m.x1, z0: m.z0, z1: m.z1, y0: m.y0, y1: m.y1, div: m.div };
-    // Sub-regions split by the divider column (for the sorting lesson). The
-    // child stands south of the mat and faces +Z toward it, so their LEFT is the
-    // +X half and their RIGHT is the -X half — label the halves to match the
-    // player's viewpoint, not raw world-X, or "reds on the left" never registers.
+    // Sub-regions split by the divider column. The child stands south of the mat
+    // and faces +Z toward it, so their LEFT is the +X half and their RIGHT is the
+    // -X half — label the halves to match the player's viewpoint, not raw
+    // world-X, or "reds on the left" never registers.
     region.left = { ...region, x0: m.div + 1, x1: m.x1 };  // +X = player's left
     region.right = { ...region, x0: m.x0, x1: m.div - 1 }; // -X = player's right
     return region;
   }
 
-  makeCtx(lesson) {
+  scratchKey(area) { return `${this.current[area]}#${this.step[area] | 0}`; }
+
+  makeCtx(lesson, area = lesson.area) {
     const world = this.game.world;
-    const mat = this.matFor(lesson.area);
+    const mat = this.matFor(area);
     const nameAt = (x, y, z) => BLOCKS[world?.getBlock(x, y, z) ?? 0]?.name || 'air';
 
     // Count placed blocks of a given name inside a mat region.
@@ -506,7 +337,7 @@ export class LessonRunner {
     };
 
     // Everything in a region, as {x, y, z, name}. The general escape hatch: a
-    // lesson that needs a shape rather than a tally reads this.
+    // shape that needs to look at everything reads this.
     const blocksIn = (region) => {
       const out = [];
       if (!region || !world) return out;
@@ -573,36 +404,41 @@ export class LessonRunner {
       return out;
     };
 
-    // Per-lesson scratch that survives between checks. A check runs on every
-    // block placed, so this is how a lesson can ask about something that
-    // HAPPENED — "you made nine and then took four away" — rather than only
-    // about how the mat looks right now.
+    // Per-STEP scratch that survives between checks. A check runs on every block
+    // placed, so this is how a step can ask about something that HAPPENED —
+    // "you made nine and then took four away" — rather than only about how the
+    // mat looks right now. Keyed by step, so the next step starts clean.
     this._scratch ||= {};
-    const scratch = (this._scratch[lesson.id] ||= {});
+    const scratch = (this._scratch[this.scratchKey(area)] ||= {});
 
     // Unbroken runs of LETTER blocks on the mat, read out as words. This is the
-    // whole of what a spelling check needs, and it keeps the lessons themselves
-    // readable: `ctx.words().includes('CAT')` says what it means.
+    // whole of what a spelling check needs, and it keeps the shapes readable:
+    // `words().includes('CAT')` says what it means.
     const words = (region = mat) => runs(region)
-      .map((run) => run.map((n) => (/^letter_[a-z]$/.test(n) ? n.slice(-1).toUpperCase() : '\u0000')).join(''))
-      .filter((w) => w && !w.includes('\u0000'));
+      .map((run) => run.map((n) => (/^letter_[a-z]$/.test(n) ? n.slice(-1).toUpperCase() : ' ')).join(''))
+      .filter((w) => w && !w.includes(' '));
 
     return { game: this.game, world, mat, lesson, scratch,
       countPlaced, blocksIn, stackAt, tallest, rowAt, runs, words, nameAt };
   }
 
   // Re-show the prompt for any in-progress lesson (called after a save loads).
-  resume() {
-    for (const area of Object.keys(this.current)) this.announce(this.activeLessonFor(area));
-  }
+  resume() { for (const area of Object.keys(this.current)) this.announce(area); }
 
-  // ---- persistence: {area → currentLessonId} -----------------------------
-  serialize() { return { current: { ...this.current } }; }
+  // ---- persistence: {area → currentLessonId} + which step ----------------
+  serialize() { return { current: { ...this.current }, step: { ...this.step } }; }
 
   deserialize(d) {
     this.current = {};
+    this.step = {};
     if (d?.current) for (const [area, id] of Object.entries(d.current)) {
-      if (this.byId.has(id)) this.current[area] = id;
+      const lesson = this.byId.get(id);
+      if (!lesson) continue;
+      this.current[area] = id;
+      // Clamp: a save from before a lesson gained or lost a step must not point
+      // past the end of it and leave the child in a room with nothing to do.
+      const s = d.step?.[area] | 0;
+      this.step[area] = Math.min(Math.max(s, 0), lesson.steps.length - 1);
     }
   }
 }

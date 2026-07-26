@@ -1,6 +1,7 @@
 // All DOM UI: HUD, windows, dialogue, shop, chest, combat interface, labels.
 import { ITEMS } from '../game/items.js';
-import { LESSONS_DATA } from '../game/lessons.js';
+import { GRADES } from '../game/lessons.js';
+import { speak, stopSpeaking } from '../game/speech.js';
 import { ENEMY_TYPES } from '../game/enemies.js';
 import { BIOMES } from '../world/worldgen.js';
 import { mobActive, mobRate, mobBiomes, mobDropsFor, setMobConfig, resetMobConfig, saveMobConfig, allMobTypes, exportMobDefaults, mobDeleted, setMobDeleted, setAllMobsActive, deletedMobTypes } from '../game/mobconfig.js';
@@ -417,28 +418,76 @@ export class UI {
     $('gather-label').textContent = label || '';
   }
 
-  // ---- kids' Learning Mode (Phase 1) -------------------------------------
-  // Persistent prompt panel for the current lesson. Passing null clears it.
-  showLessonPrompt(lesson) {
+  // ---- kids' Learning Mode ------------------------------------------------
+  // The panel for the step the child is on. Passing null clears it.
+  //
+  // Everything on it is also SPOKEN. The children this is for are still learning
+  // to read — four of the ten lessons in every grade band are about learning to
+  // read — so a prompt that only exists on screen is a prompt half of them
+  // cannot use. `Read it again` re-speaks the whole step for anyone who missed it.
+  showLessonPrompt(view) {
     let el = $('lesson-panel');
-    if (!lesson) { el?.remove(); return; }
+    if (!view) { el?.remove(); stopSpeaking(); return; }
     if (!el) {
       el = document.createElement('div');
       el.id = 'lesson-panel';
       document.body.appendChild(el);
     }
-    const guide = NPC_DEFS[lesson.guide]?.label || 'Pip';
-    el.innerHTML = `<div class="lesson-guide"></div><div class="lesson-prompt"></div><button class="lesson-hint">Need a hint?</button>`;
+    const guide = NPC_DEFS[view.guide]?.label || 'Pip';
+    el.innerHTML = `${view.story ? '<div class="lesson-story"></div>' : ''}
+      <div class="lesson-guide"></div>
+      ${view.say ? '<div class="lesson-say"></div>' : ''}
+      <div class="lesson-prompt"></div>
+      <div class="lesson-step"></div>
+      <div class="lesson-buttons">
+        <button class="lesson-hint" data-act="hint">Need a hint?</button>
+        <button class="lesson-hint" data-act="again">Read it again</button>
+      </div>`;
+    if (view.story) el.querySelector('.lesson-story').textContent = view.story;
     el.querySelector('.lesson-guide').textContent = `${guide} says`;
-    el.querySelector('.lesson-prompt').textContent = lesson.prompt;
-    el.querySelector('.lesson-hint').addEventListener('click', () => {
+    if (view.say) el.querySelector('.lesson-say').textContent = view.say;
+    el.querySelector('.lesson-prompt').textContent = view.prompt;
+    el.querySelector('.lesson-step').textContent = `${view.title} — step ${view.index + 1} of ${view.total}`;
+    el.querySelector('[data-act="hint"]').addEventListener('click', () => {
       SFX.uiClick();
-      this.game.lessons.showHint(lesson.area);
+      this.game.lessons.showHint(view.area);
     });
+    el.querySelector('[data-act="again"]').addEventListener('click', () => {
+      SFX.uiClick();
+      this.speakLesson(view);
+    });
+    this.speakLesson(view);
   }
 
-  showLessonSuccess(lesson, { granted = 0, paid = null } = {}) {
-    this.toast(lesson.success, 'gold');
+  // Story first (only on the first step), then the step, then what to do.
+  //
+  // Normally a new prompt cuts off whatever was being said — a child who clicks
+  // past a step should not have to wait out the sentence they skipped. The one
+  // exception is a cheer: the next step is announced in the same tick as the
+  // "well done", so it queues behind it instead of clipping it mid-word.
+  speakLesson(view) {
+    speak([view.story, view.say, view.prompt], { interrupt: !this._cheering });
+    this._cheering = false;
+  }
+
+  // A step landed but the lesson is not over.
+  showStepSuccess(view) {
+    this.toast(view.step.success, 'gold');
+    speak(view.step.success);
+    this._cheering = true;              // the next step queues behind this
+    SFX.questDone();
+    const m = this.game.lessons?.matFor?.(view.area);
+    if (m && this.game.renderer?.spawnParticles) {
+      const cx = (m.x0 + m.x1) / 2 + 0.5, cz = (m.z0 + m.z1) / 2 + 0.5;
+      this.game.renderer.spawnParticles(cx, m.y0 + 0.6, cz, [1, 0.85, 0.3], 18, 2, 0.8, 0.1);
+    }
+  }
+
+  showLessonSuccess(lesson, { granted = 0, paid = null, say = null } = {}) {
+    const cheer = say || `${lesson.title} — all done!`;
+    this.toast(cheer, 'gold');
+    speak([cheer, granted > 0 ? `You earned ${granted} minutes of play time!` : null]);
+    this._cheering = true;              // the next lesson queues behind this
     SFX.questDone();
     // What they actually earned, in that order: the minutes are the point of
     // the mode, and the coins are the thing a child cares about.
@@ -447,14 +496,14 @@ export class UI {
     for (const [item, qty] of paid || []) earned.push(`${qty} × ${ITEMS[item]?.name || item}`);
     if (earned.length) this.toast(`You earned ${earned.join(', ')}!`, 'gold');
     // a burst of gold sparkles over the work mat
-    const m = this.game.lessons?.room?.(lesson.id)?.mat || this.game.world?.markers?.learnMat;
+    const m = this.game.lessons?.room?.(lesson.id)?.mat;
     if (m && this.game.renderer?.spawnParticles) {
       const cx = (m.x0 + m.x1) / 2 + 0.5, cz = (m.z0 + m.z1) / 2 + 0.5;
       this.game.renderer.spawnParticles(cx, m.y0 + 0.6, cz, [1, 0.85, 0.3], 30, 3, 1.0, 0.12);
     }
   }
 
-  showLessonHint(lesson) { this.toast(lesson.hint, ''); }
+  showLessonHint(view) { this.toast(view.hint, ''); speak(view.hint); }
 
   drawCompass() {
     // the compass depends only on heading — skip the full clear+redraw when the
@@ -752,20 +801,35 @@ export class UI {
       </div>`;
     }
 
-    for (const l of LESSONS_DATA) {
-      const done = runner.isPassed(l.id);
-      const active = runner.current[l.area] === l.id;
-      const r = l.reward || {};
-      const pay = [`${l.minutes} min`];
-      if (r.coins) pay.push(`${r.coins} coins`);
-      for (const [item, qty] of r.items || []) pay.push(`${qty} × ${ITEMS[item]?.name || item}`);
-      html += `<div class="lesson-row" style="border:1px solid var(--line);border-radius:6px;padding:10px;margin-bottom:8px;${active ? 'border-color:var(--gold)' : ''}">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <div style="font-weight:700">${done ? '✓ ' : ''}${l.prompt}</div>
-          <button class="link-btn" data-start="${l.id}">${active ? 'Resume' : done ? 'Again' : 'Start'}</button>
-        </div>
-        <div style="color:var(--ink-dim);font-size:11px;margin-top:4px">Earns ${pay.join(' · ')}</div>
-      </div>`;
+    // Ninety lessons is far too many to scroll past, so they come folded up by
+    // grade band with the band you are working in open. `open` on a <details>
+    // is the whole of the state — no tab bookkeeping to get out of step.
+    const activeArea = Object.keys(runner.current)[0];
+    for (const g of GRADES) {
+      const list = g.lessons.map((l) => runner.byId.get(l.id)).filter(Boolean);
+      const done = list.filter((l) => runner.isPassed(l.id)).length;
+      const isOpen = activeArea === g.key || (!activeArea && done < list.length && g === GRADES[0]);
+      html += `<details ${isOpen ? 'open' : ''} style="margin-bottom:10px">
+        <summary style="cursor:pointer;color:var(--gold);font-weight:700;padding:6px 0">
+          ${g.label} <span style="color:var(--ink-dim);font-weight:400;font-size:11px">· ages ${g.age} · ${done}/${list.length} done</span>
+        </summary>`;
+      for (const l of list) {
+        const passed = runner.isPassed(l.id);
+        const active = runner.current[l.area] === l.id;
+        const r = l.reward || {};
+        const pay = [`${l.minutes} min`];
+        if (r.coins) pay.push(`${r.coins} coins`);
+        for (const [item, qty] of r.items || []) pay.push(`${qty} × ${ITEMS[item]?.name || item}`);
+        html += `<div class="lesson-row" style="border:1px solid var(--line);border-radius:6px;padding:10px;margin-bottom:8px;${active ? 'border-color:var(--gold)' : ''}">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+            <div style="font-weight:700">${passed ? '✓ ' : ''}${l.title}</div>
+            <button class="link-btn" data-start="${l.id}">${active ? 'Resume' : passed ? 'Again' : 'Start'}</button>
+          </div>
+          <div style="color:var(--ink-dim);font-size:11px;margin-top:4px">${l.subject === 'math' ? 'Maths' : 'Reading'} · ${l.steps.length} steps · read aloud</div>
+          <div style="color:var(--ink-dim);font-size:11px;margin-top:2px">Earns ${pay.join(' · ')}</div>
+        </div>`;
+      }
+      html += '</details>';
     }
     body.innerHTML = html;
 
@@ -1192,6 +1256,7 @@ export class UI {
       ${row('Text size', range('textScale', 0.8, 1.5, 0.05))}
       ${row('Quest trail — guide dots toward your objective', check('questTrail'))}
       ${row('XP popups on skill gains', check('xpToasts'))}
+      ${row('Read lessons aloud (Learning Mode)', check('readAloud'))}
       ${row('Reduced motion', check('reducedMotion'))}
       ${row('Screen shake', check('screenShake'))}
       ${row('Graphics quality', select('graphicsPreset', [['auto', 'Auto (match device)'], ['low', 'Low — fastest, best for phones'], ['medium', 'Medium'], ['high', 'High — gradient sky, sun/moon, fresnel water']]))}

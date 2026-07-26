@@ -1,18 +1,22 @@
-// Kids' Learning Mode — Phase 1 lesson engine.
-// Proves the loop: prompt → child places blocks → runner reads the work mat via
-// blockPlaced/blockBroken → check() passes → education.completeLesson banks
-// minutes → the runner advances to the next lesson. Wrong builds never punish.
+// Kids' Learning Mode — the lesson engine.
+// Proves the loop: story → prompt → child places blocks → runner reads the work
+// mat via blockPlaced/blockBroken → the step's shape matches → next step → the
+// last step banks minutes through education.completeLesson and pays the
+// character. Wrong builds never punish.
+//
+// The load-bearing test is the last one: every step of all ninety lessons is
+// SOLVED AUTOMATICALLY from its own declared shape and played through the real
+// runner. A lesson that cannot be finished cannot reach a child.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LessonRunner, LESSONS_DATA } from '../../js/game/lessons.js';
+import { LessonRunner, LESSONS_DATA, lessonNeeds } from '../../js/game/lessons.js';
+import { GRADES } from '../../js/game/curriculum/index.js';
+import { solveShape, validateShape, shapeNeeds, SHAPE_KINDS } from '../../js/game/buildshapes.js';
 import { EducationManager } from '../../js/game/education.js';
-import { buildStarterStructures } from '../../js/world/structures.js';
-import { B } from '../../js/world/blocks.js';
+import { ITEMS } from '../../js/game/items.js';
+import { B, BLOCKS } from '../../js/world/blocks.js';
+import { ROOM_COUNT } from '../../js/world/classroom.js';
 import { clearAllListeners, emit } from '../../js/core/events.js';
-
-// The real work-mat AABB authored in js/world/structures.js — keeps the test
-// honest against the actual world geometry the child builds on.
-const MARKERS = buildStarterStructures().markers;
 
 // A minimal fake game: a Map-backed world + a real EducationManager, enough for
 // the runner to read blocks and bank play-time. Firing put()/clear() mirrors the
@@ -21,20 +25,19 @@ function scenario() {
   clearAllListeners(); // isolate the bus before the runner subscribes
   const placed = new Map();
   const world = {
-    markers: MARKERS,
+    markers: {},
     getBlock: (x, y, z) => placed.get(`${x},${y},${z}`) ?? B.air,
-    // A lesson's setup() lays out its starting position through the world, so
-    // the fake needs to accept writes or every such lesson silently starts blank.
-    setBlock: (x, y, z, id) => { placed.set(`${x},${y},${z}`, id); },
+    // A step's setup lays out its starting position through the world, and the
+    // runner wipes the mat between steps, so the fake must accept writes.
+    setBlock: (x, y, z, id) => { if (id === B.air) placed.delete(`${x},${y},${z}`); else placed.set(`${x},${y},${z}`, id); },
   };
   const put = (x, y, z, name) => { placed.set(`${x},${y},${z}`, B[name]); emit('blockPlaced', { x, y, z, block: name }); };
   const clear = (x, y, z) => { placed.delete(`${x},${y},${z}`); emit('blockBroken', { x, y, z, block: 'air' }); };
   const education = new EducationManager();
   education.setMode('education');
-  const ui = { showLessonPrompt() {}, showLessonSuccess() {}, showLessonHint() {}, toast() {} };
-  // Just enough pack for payReward: a lesson now pays the CHARACTER as well as
-  // the play-time bank, and a runner with nowhere to put the coins must not
-  // throw — it simply pays nothing.
+  const ui = { showLessonPrompt() {}, showLessonSuccess() {}, showLessonHint() {}, showStepSuccess() {}, toast() {} };
+  // Just enough pack for payReward: a lesson pays the CHARACTER as well as the
+  // play-time bank, and a runner with nowhere to put the coins must not throw.
   const bag = new Map();
   const inventory = { add: (item, qty) => { bag.set(item, (bag.get(item) || 0) + qty); return true; },
     count: (item) => bag.get(item) || 0 };
@@ -44,233 +47,210 @@ function scenario() {
   return { game, world, education, lessons, put, clear, inventory };
 }
 
-// Each lesson is performed in a room of its own out in the Schoolhouse
-// (js/world/classroom.js), so the mat to build on is whichever room the runner
-// has the child in — not the one shared yard it used to be.
-const MAT = (lessons) => lessons.room(lessons.current.numbers_meadow).mat;
+// Play a shape's own worked solution onto the mat, through the same events the
+// game fires when a child places a block.
+function build(ops, put, clear) {
+  for (const op of ops) {
+    if (op.op === 'break') clear(op.x, op.y, op.z);
+    else put(op.x, op.y, op.z, op.block);
+  }
+}
 
-test('nm_count: seven red blocks on the mat completes it and banks 10 minutes', () => {
-  const { lessons, education, put } = scenario();
-  lessons.startArea('numbers_meadow');
-  assert.equal(lessons.current.numbers_meadow, 'nm_count', 'starts on the counting lesson');
-  const y = MAT(lessons).y0, x0 = MAT(lessons).x0, z0 = MAT(lessons).z0;
+const FIRST = LESSONS_DATA[0];
 
-  for (let i = 0; i < 6; i++) put(x0 + i, y, z0, 'red_wool'); // six is not seven
-  assert.equal(lessons.current.numbers_meadow, 'nm_count', 'six reds does not complete it');
-  assert.equal(education.balanceSec, 0, 'no reward before the goal is met');
-
-  put(x0 + 6, y, z0, 'red_wool'); // the seventh
-  assert.equal(lessons.current.numbers_meadow, 'nm_add', 'advances to the addition lesson');
-  assert.equal(Math.round(education.balanceSec / 60), 10, 'banked the lesson\'s 10 minutes');
-  assert.ok(education.lessonsDone.nm_count?.some((a) => a.passed), 'recorded a passing attempt');
-  assert.equal(education.locked, false, 'never locks the child out');
+test('a lesson starts at step one and shows its story', () => {
+  const { lessons } = scenario();
+  lessons.startArea('grade_k');
+  assert.equal(lessons.current.grade_k, FIRST.id, 'starts at the first lesson of the band');
+  const v = lessons.view('grade_k');
+  assert.equal(v.index, 0);
+  assert.equal(v.total, FIRST.steps.length);
+  assert.ok(v.story && v.story.length > 40, 'the story is told on the first step');
+  assert.equal(lessons.view('grade_k').say, FIRST.steps[0].say);
 });
 
-test('nm_add: 5 blue then 3 more (eight total) completes and advances to sorting', () => {
-  const { lessons, education, put } = scenario();
-  lessons.setLesson('numbers_meadow', 'nm_add');
-  const y = MAT(lessons).y0, x0 = MAT(lessons).x0, z0 = MAT(lessons).z0;
-  for (let i = 0; i < 7; i++) put(x0 + i, y, z0, 'blue_wool'); // seven — not yet
-  assert.equal(lessons.current.numbers_meadow, 'nm_add');
-  put(x0 + 7, y, z0, 'blue_wool'); // eighth
-  assert.equal(lessons.current.numbers_meadow, 'nm_sort', 'advances to the sorting lesson');
-  assert.ok(education.balanceSec > 0, 'banked play-time for adding');
-});
-
-test('nm_sort: a mis-sorted red blocks the goal until it is fixed', () => {
+test('finishing step one advances to step two without ending the lesson', () => {
   const { lessons, education, put, clear } = scenario();
-  lessons.setLesson('numbers_meadow', 'nm_sort');
-  const m = MAT(lessons);
-  const leftX = m.x0, rightX = m.x1; // 196 (left of divider), 204 (right)
-
-  // The mat is mis-sorted from the start: a stray red sits on the RIGHT the whole
-  // time, so the goal is never met until it's removed. (The runner re-checks on
-  // every block event, so authoring the mistake up-front is what keeps the mat
-  // out of a fully-correct state — otherwise it would complete the instant the
-  // last correct block lands, before any mistake could be added.)
-  put(m.div + 1, m.y0, m.z0, 'red_wool');     // stray red on the wrong side
-  put(leftX, m.y0, m.z0, 'red_wool');
-  put(leftX + 1, m.y0, m.z0, 'red_wool');     // two reds on the left
-  put(rightX, m.y0, m.z0, 'yellow_wool');
-  put(rightX - 1, m.y0, m.z0, 'yellow_wool'); // two yellows on the right
-  assert.equal(lessons.current.numbers_meadow, 'nm_sort', 'a mis-sorted red keeps it going');
-  assert.equal(education.locked, false, 'wrong placement never locks/penalises');
-
-  clear(m.div + 1, m.y0, m.z0); // fix the mistake — breaking re-checks
-  assert.equal(lessons.current.numbers_meadow, 'nm_take', 'sorting done — on to taking away');
-  assert.ok(education.balanceSec > 0, 'banked play-time for sorting');
+  lessons.startArea('grade_k');
+  const lesson = lessons.activeLessonFor('grade_k');
+  build(solveShape(lesson.steps[0].build, lessons.matFor('grade_k')), put, clear);
+  assert.equal(lessons.step.grade_k, 1, 'moved to the second step');
+  assert.equal(lessons.current.grade_k, lesson.id, 'still the same lesson');
+  assert.equal(education.balanceSec, 0, 'no minutes banked until the whole lesson is done');
 });
 
-test('gentle: an overshot mat (8) does not pass, and breaking one recovers', () => {
-  const { lessons, education, put, clear } = scenario();
-  const y = MAT(lessons).y0, x0 = MAT(lessons).x0, z0 = MAT(lessons).z0;
-  // The child piled on eight reds before the counting lesson is watching (e.g. a
-  // resumed save): the runner ignores placements while no lesson is active, so
-  // the mat starts overshot at eight rather than latching at seven on the way up.
-  for (let i = 0; i < 8; i++) put(x0 + i, y, z0, 'red_wool');
-  lessons.startArea('numbers_meadow');
-  assert.equal(lessons.current.numbers_meadow, 'nm_count', 'eight is not seven — no pass');
+const matBlocks = (world, m) => {
+  let n = 0;
+  for (let x = m.x0; x <= m.x1; x++) {
+    for (let y = m.y0; y <= m.y1; y++) {
+      for (let z = m.z0; z <= m.z1; z++) if (world.getBlock(x, y, z) !== B.air) n++;
+    }
+  }
+  return n;
+};
+
+test('the mat is wiped between steps, so step two starts on a clean page', () => {
+  const { lessons, world, put, clear } = scenario();
+  lessons.startArea('grade_k');
+  const lesson = lessons.activeLessonFor('grade_k');
+  const m = lessons.matFor('grade_k');
+  build(solveShape(lesson.steps[0].build, m), put, clear);
+  assert.equal(matBlocks(world, m), 0, 'step one\'s three eggs were swept away before step two');
+});
+
+test('a step that lays blocks out for the child does so after the wipe', () => {
+  // The lantern lesson's steps are all `bond`: some are already lit, and the
+  // child adds the rest. If setup ran before the wipe there would be nothing
+  // there to count on from.
+  const { lessons, world, put, clear } = scenario();
+  lessons.setLesson('grade_k', 'k_ten');
+  const m = lessons.matFor('grade_k');
+  assert.equal(matBlocks(world, m), 6, 'six lanterns are lit for you on step one');
+  build(solveShape(lessons.activeStep('grade_k').build, m), put, clear);
+  assert.equal(lessons.step.grade_k, 1);
+  assert.equal(matBlocks(world, m), 7, 'and seven for step two — not thirteen');
+});
+
+test('a wrong build never completes, never penalises, and can be corrected', () => {
+  const { lessons, world, education, clear } = scenario();
+  lessons.startArea('grade_k');
+  const m = lessons.matFor('grade_k');
+  // The egg hunt asks for three. Five land at once — written straight into the
+  // world, as a bucket-fill or a resumed save would, so the mat is already wrong
+  // by the time the runner looks. (Placing them one at a time would pass through
+  // three on the way up, and passing through the answer IS the answer.)
+  for (let i = 0; i < 5; i++) world.setBlock(m.x0 + i, m.y0, m.z0, B.white_wool);
+  lessons.onWatch('blockPlaced');
+  assert.equal(lessons.step.grade_k, 0, 'five is not three — no advance');
+  assert.equal(education.locked, false, 'a wrong build never locks the child out');
+  clear(m.x0 + 4, m.y0, m.z0);              // breaking re-checks
+  assert.equal(lessons.step.grade_k, 0, 'four is still not three');
+  clear(m.x0 + 3, m.y0, m.z0);
+  assert.equal(lessons.step.grade_k, 1, 'correcting to three completes the step');
+});
+
+test('finishing the last step banks the lesson\'s minutes and pays the character', () => {
+  const { lessons, education, inventory, put, clear } = scenario();
+  lessons.startArea('grade_k');
+  const lesson = lessons.activeLessonFor('grade_k');
+  for (const step of lesson.steps) build(solveShape(step.build, lessons.matFor('grade_k')), put, clear);
+  assert.ok(lessons.isPassed(lesson.id), 'the lesson is recorded as passed');
+  assert.equal(Math.round(education.balanceSec / 60), lesson.minutes, 'banked the lesson\'s full minutes');
+  assert.equal(inventory.count('coin'), lesson.reward.coins, 'paid the coins into the pack');
+  assert.equal(lessons.current.grade_k, lesson.next, 'walked straight into the next lesson');
   assert.equal(education.locked, false);
-  clear(x0 + 7, y, z0); // break one back down to seven — breaking re-checks
-  assert.equal(lessons.current.numbers_meadow, 'nm_add', 'correcting to seven completes it');
 });
 
-test('countPlaced counts only matching blocks inside the given region', () => {
-  const { lessons, put } = scenario();
-  const mat = lessons.matFor('numbers_meadow');
-  const ctx = lessons.makeCtx(LESSONS_DATA[0]);
-  const y = mat.y0;
-  put(mat.x0, y, mat.z0, 'red_wool');
-  put(mat.x0 + 1, y, mat.z0, 'blue_wool');
-  put(mat.x1 + 5, y, mat.z0, 'red_wool'); // outside the mat AABB
-  assert.equal(ctx.countPlaced('red_wool', mat), 1, 'ignores the red outside the region');
-  assert.equal(ctx.countPlaced('blue_wool', mat), 1);
-  // Left/right sub-regions split at the divider column. Halves are labelled from
-  // the player's viewpoint (they face +Z toward the mat, so their LEFT is +X):
-  // the red at mat.x0 (the low-X / -X end) is therefore the player's RIGHT.
-  assert.equal(ctx.countPlaced('red_wool', mat.right), 1, 'the low-X red is the player’s right of the divider');
-  assert.equal(ctx.countPlaced('red_wool', mat.left), 0);
-});
-
-test('nm_sort completes for correctly sorted colours from the player’s viewpoint', () => {
-  const { lessons, education, put } = scenario();
-  education.setMode('education', {});
-  // setLesson FIRST: the mat is the one in this lesson's room, so asking for it
-  // before the runner knows which lesson is running gets the fallback yard.
-  lessons.setLesson('numbers_meadow', 'nm_sort');
-  const mat = lessons.matFor('numbers_meadow');
-  const y = mat.y0;
-  // Player faces +Z: their LEFT is the +X half (mat.left), RIGHT is -X (mat.right).
-  // Put reds on the +X (left) half and yellows on the -X (right) half.
-  for (let x = mat.left.x0; x <= mat.left.x0 + 2; x++) put(x, y, mat.z0, 'red_wool');
-  for (let x = mat.right.x0; x <= mat.right.x0 + 2; x++) put(x, y, mat.z0, 'yellow_wool');
-  lessons.onWatch('blockPlaced');
-  assert.ok(lessons.isPassed('nm_sort'), 'reds-left / yellows-right (player view) completes the sort');
-});
-
-test('nm_sort also accepts the mirror arrangement (sorting is what matters)', () => {
-  const { lessons, education, put } = scenario();
-  education.setMode('education', {});
-  // setLesson FIRST: the mat is the one in this lesson's room, so asking for it
-  // before the runner knows which lesson is running gets the fallback yard.
-  lessons.setLesson('numbers_meadow', 'nm_sort');
-  const mat = lessons.matFor('numbers_meadow');
-  const y = mat.y0;
-  // Reversed sides — still fully separated, so a child who faced the other way
-  // and sorted correctly is not punished.
-  for (let x = mat.right.x0; x <= mat.right.x0 + 2; x++) put(x, y, mat.z0, 'red_wool');
-  for (let x = mat.left.x0; x <= mat.left.x0 + 2; x++) put(x, y, mat.z0, 'yellow_wool');
-  lessons.onWatch('blockPlaced');
-  assert.ok(lessons.isPassed('nm_sort'), 'mirror arrangement (still sorted) also completes');
-});
-
-test('nm_sort rejects a mixed (unsorted) mat', () => {
-  const { lessons, education, put } = scenario();
-  education.setMode('education', {});
-  // setLesson FIRST: the mat is the one in this lesson's room, so asking for it
-  // before the runner knows which lesson is running gets the fallback yard.
-  lessons.setLesson('numbers_meadow', 'nm_sort');
-  const mat = lessons.matFor('numbers_meadow');
-  const y = mat.y0;
-  // Reds straddle BOTH halves — not sorted, must not pass.
-  put(mat.left.x0, y, mat.z0, 'red_wool');
-  put(mat.left.x0 + 1, y, mat.z0, 'red_wool');
-  put(mat.right.x0, y, mat.z0, 'red_wool');
-  put(mat.right.x0 + 1, y, mat.z0, 'yellow_wool');
-  put(mat.right.x0 + 2, y, mat.z0, 'yellow_wool');
-  lessons.onWatch('blockPlaced');
-  assert.equal(lessons.isPassed('nm_sort'), false, 'reds on both sides is not sorted');
-});
-
-test('runner persists {area → currentLessonId} across serialize/deserialize', () => {
+test('runner persists {area → lesson, step} across serialize/deserialize', () => {
   const a = scenario();
-  a.lessons.setLesson('numbers_meadow', 'nm_add');
+  a.lessons.startArea('grade_2');
+  const lesson = a.lessons.activeLessonFor('grade_2');
+  build(solveShape(lesson.steps[0].build, a.lessons.matFor('grade_2')), a.put, a.clear);
   const snap = JSON.parse(JSON.stringify(a.lessons.serialize()));
   const b = scenario();
   b.lessons.deserialize(snap);
-  assert.equal(b.lessons.current.numbers_meadow, 'nm_add', 'resumes the saved lesson');
+  assert.equal(b.lessons.current.grade_2, lesson.id, 'resumes the saved lesson');
+  assert.equal(b.lessons.step.grade_2, 1, 'and the saved step — a half-done lesson is not restarted');
 });
 
-// ---- every lesson can actually be finished -----------------------------------
-// The one thing a lesson MUST be is completable. A check with a typo in a block
-// name, a shape that does not fit the mat, or a condition no arrangement can
-// satisfy looks perfectly fine in review and leaves a six-year-old stuck in a
-// sealed room with no way to win. Each case below is the solution a child would
-// build, played through the real runner.
-const solve = {
-  nm_count: (m, put) => { for (let i = 0; i < 7; i++) put(m.x0 + i, m.y0, m.z0, 'red_wool'); },
-  nm_add: (m, put) => { for (let i = 0; i < 8; i++) put(m.x0 + i, m.y0, m.z0, 'blue_wool'); },
-  nm_sort: (m, put) => {
-    for (let i = 0; i < 3; i++) put(m.left.x0 + i, m.y0, m.z0, 'red_wool');
-    for (let i = 0; i < 3; i++) put(m.right.x0 + i, m.y0, m.z0, 'yellow_wool');
-  },
-  nm_take: (m, put, clear) => {
-    for (let i = 0; i < 9; i++) put(m.x0 + (i % 9), m.y0, m.z0 + Math.floor(i / 9), 'green_wool');
-    for (let i = 5; i < 9; i++) clear(m.x0 + i, m.y0, m.z0);
-  },
-  // setup lays the 6 reds; the child adds 4 blues
-  nm_maketen: (m, put) => { for (let i = 0; i < 4; i++) put(m.x0 + i, m.y0, m.z0 + 1, 'blue_wool'); },
-  nm_taller: (m, put) => {
-    for (let i = 0; i < 4; i++) put(m.left.x0, m.y0 + i, m.z0, 'red_wool');
-    for (let i = 0; i < 2; i++) put(m.right.x0, m.y0 + i, m.z0, 'blue_wool');
-  },
-  nm_tower: (m, put) => { for (let i = 0; i < 5; i++) put(m.x0, m.y0 + i, m.z0, 'red_wool'); },
-  nm_pattern: (m, put) => {
-    for (let i = 0; i < 6; i++) put(m.x0 + i, m.y0, m.z0, i % 2 ? 'blue_wool' : 'red_wool');
-  },
-  nm_square: (m, put) => {
-    for (let dx = 0; dx < 3; dx++) for (let dz = 0; dz < 3; dz++) put(m.x0 + dx, m.y0, m.z0 + dz, 'yellow_wool');
-  },
-  nm_fives: (m, put) => {
-    for (let r = 0; r < 3; r++) for (let i = 0; i < 5; i++) put(m.x0 + i, m.y0, m.z0 + r, 'red_wool');
-  },
-  nm_tens: (m, put) => {
-    for (let i = 0; i < 10; i++) put(m.x0 + i, m.y0, m.z0, 'red_wool');       // one ten
-    for (let i = 0; i < 3; i++) put(m.x0 + i, m.y0, m.z0 + 1, 'red_wool');    // and three ones
-  },
-  // ---- spelling: a word is an unbroken run of letter blocks ----
-  sp_cat: (m, put) => [...'CAT'].forEach((ch, i) => put(m.x0 + i, m.y0, m.z0, `letter_${ch.toLowerCase()}`)),
-  sp_dog: (m, put) => [...'DOG'].forEach((ch, i) => put(m.x0 + i, m.y0, m.z0, `letter_${ch.toLowerCase()}`)),
-  sp_rhyme: (m, put) => ['CAT', 'HAT', 'BAT'].forEach((w, row) =>
-    [...w].forEach((ch, i) => put(m.x0 + i, m.y0, m.z0 + row, `letter_${ch.toLowerCase()}`))),
-  sp_vowels: (m, put) => [...'AEIOU'].forEach((ch, i) => put(m.x0 + i, m.y0, m.z0, `letter_${ch.toLowerCase()}`)),
-  sp_abc: (m, put) => [...'ABCDEFGH'].forEach((ch, i) => put(m.x0 + i, m.y0, m.z0, `letter_${ch.toLowerCase()}`)),
+test('a saved step past the end of a shortened lesson is clamped, not left dangling', () => {
+  const { lessons } = scenario();
+  lessons.deserialize({ current: { grade_k: FIRST.id }, step: { grade_k: 99 } });
+  assert.equal(lessons.step.grade_k, FIRST.steps.length - 1, 'clamped to the last real step');
+  assert.ok(lessons.activeStep('grade_k'), 'and there is still a step to do');
+});
 
-  nm_mirror: (m, put) => {
-    for (let i = 1; i <= 2; i++) {
-      put(m.div + i, m.y0, m.z0, 'red_wool');
-      put(m.div - i, m.y0, m.z0, 'red_wool');
-      put(m.div + i, m.y0, m.z0 + 1, 'blue_wool');
-      put(m.div - i, m.y0, m.z0 + 1, 'blue_wool');
+// ---- the curriculum itself ---------------------------------------------------
+test('ninety lessons: ten per grade band, K through 8', () => {
+  assert.equal(GRADES.length, 9, 'nine bands');
+  for (const g of GRADES) assert.equal(g.lessons.length, 10, `${g.label} has ten lessons`);
+  assert.equal(LESSONS_DATA.length, 90);
+  assert.ok(LESSONS_DATA.length <= ROOM_COUNT, 'every lesson has a classroom of its own');
+});
+
+test('every lesson has a story, five-plus steps, thirty minutes and a real reward', () => {
+  const ids = new Set();
+  for (const l of LESSONS_DATA) {
+    assert.ok(!ids.has(l.id), `duplicate lesson id ${l.id}`);
+    ids.add(l.id);
+    assert.ok(l.title, `${l.id} has no title`);
+    assert.ok((l.story || '').length > 80, `${l.id}: the story is too thin to be a story`);
+    assert.ok(l.steps.length >= 5, `${l.id} has only ${l.steps.length} steps — that is not half an hour`);
+    assert.ok(l.minutes >= 30, `${l.id} banks ${l.minutes} minutes, not thirty`);
+    assert.ok(l.reward.coins > 0, `${l.id} pays no coins`);
+    for (const [item] of l.reward.items || []) assert.ok(ITEMS[item], `${l.id} rewards unknown item "${item}"`);
+    for (const step of l.steps) {
+      for (const field of ['say', 'prompt', 'hint', 'success']) {
+        assert.ok(step[field], `${l.id}: a step is missing its ${field} (it has to be spoken)`);
+      }
+      assert.ok(step.build, `${l.id}: a step has nothing to build`);
     }
-  },
-};
-
-test('every lesson can be finished by building its answer', () => {
-  for (const lesson of LESSONS_DATA) {
-    const { lessons, put, clear } = scenario();
-    lessons.setLesson(lesson.area, lesson.id);
-    const m = lessons.matFor(lesson.area);
-    const build = solve[lesson.id];
-    assert.ok(build, `${lesson.id} has no worked solution in this test`);
-    build(m, put, clear);
-    lessons.onWatch('blockPlaced');
-    assert.ok(lessons.isPassed(lesson.id), `${lesson.id} cannot be completed: "${lesson.prompt}"`);
   }
 });
 
-test('a lesson is not passed by an empty mat or a wrong answer', () => {
-  // The mirror lesson is the one at real risk of this: "both sides match" is
-  // trivially true of a mat with nothing on it.
-  const { lessons } = scenario();
-  lessons.setLesson('numbers_meadow', 'nm_mirror');
-  lessons.onWatch('blockPlaced');
-  assert.equal(lessons.isPassed('nm_mirror'), false, 'an empty mat is not symmetry');
+test('every band chains to its own last lesson and stops there', () => {
+  for (const g of GRADES) {
+    for (let i = 0; i < g.lessons.length; i++) {
+      const l = LESSONS_DATA.find((x) => x.id === g.lessons[i].id);
+      const want = g.lessons[i + 1]?.id ?? null;
+      assert.equal(l.next, want, `${l.id} should be followed by ${want}`);
+      assert.equal(l.area, g.key);
+    }
+  }
+});
 
-  const s2 = scenario();
-  s2.lessons.setLesson('numbers_meadow', 'nm_tower');
-  const m = s2.lessons.matFor('numbers_meadow');
-  for (let i = 0; i < 3; i++) s2.put(m.x0, m.y0 + i, m.z0, 'red_wool');
-  s2.lessons.onWatch('blockPlaced');
-  assert.equal(s2.lessons.isPassed('nm_tower'), false, 'three is not five');
+test('every shape fits the mat and names blocks that exist', () => {
+  const used = new Set();
+  for (const l of LESSONS_DATA) {
+    for (const [i, step] of l.steps.entries()) {
+      used.add(step.build.kind);
+      const err = validateShape(step.build);
+      assert.equal(err, null, `${l.id} step ${i + 1}: ${err}`);
+    }
+  }
+  // Not a coverage target for its own sake: a kind with no lesson using it is a
+  // kind nothing has ever proved works, and it should be deleted or used.
+  for (const kind of SHAPE_KINDS) assert.ok(used.has(kind), `shape kind "${kind}" is used by no lesson`);
+});
+
+test('the kit a lesson hands out covers every block it asks for', () => {
+  for (const l of LESSONS_DATA) {
+    const kit = lessonNeeds(l);
+    for (const step of l.steps) {
+      for (const [block, n] of Object.entries(shapeNeeds(step.build))) {
+        assert.ok(kit[block] >= n, `${l.id}: needs ${n} × ${block} but the kit lists ${kit[block] || 0}`);
+        assert.ok(BLOCKS[B[block]], `${l.id}: "${block}" is not a block`);
+      }
+    }
+  }
+});
+
+// ---- the one that matters ----------------------------------------------------
+test('every step of every lesson can actually be finished by building its answer', () => {
+  for (const lesson of LESSONS_DATA) {
+    const { lessons, put, clear } = scenario();
+    lessons.setLesson(lesson.area, lesson.id);
+    for (const [i, step] of lesson.steps.entries()) {
+      assert.equal(lessons.step[lesson.area], i,
+        `${lesson.id}: expected to be on step ${i + 1} — a previous step did not complete`);
+      const ops = solveShape(step.build, lessons.matFor(lesson.area));
+      assert.ok(ops.length, `${lesson.id} step ${i + 1}: no solution for a ${step.build.kind}`);
+      build(ops, put, clear);
+      const advanced = i + 1 < lesson.steps.length
+        ? lessons.step[lesson.area] === i + 1
+        : lessons.isPassed(lesson.id);
+      assert.ok(advanced, `${lesson.id} step ${i + 1} cannot be completed: "${step.prompt}"`);
+    }
+  }
+});
+
+test('an empty mat completes nothing, in any lesson', () => {
+  // The mirror steps are the ones at real risk: "both sides match" is trivially
+  // true of a mat with nothing on it.
+  for (const lesson of LESSONS_DATA) {
+    const { lessons } = scenario();
+    lessons.setLesson(lesson.area, lesson.id);
+    lessons.onWatch('blockPlaced');
+    assert.equal(lessons.step[lesson.area], 0, `${lesson.id}: an empty mat passed its first step`);
+  }
 });

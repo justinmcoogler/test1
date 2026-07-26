@@ -205,6 +205,15 @@ body.classic-cam #crosshair { display: none; }
   padding: 5px 16px; font-size: calc(12.5px * var(--text-scale));
 }
 #lesson-panel .lesson-hint:hover { background: rgba(226, 177, 60, 0.2); }
+/* A lesson is a story in five steps: the story is told once, at the top, and
+   the step line under it says where you are in it. */
+#lesson-panel .lesson-story {
+  color: var(--ink-dim); font-size: calc(13.5px * var(--text-scale)); line-height: 1.45;
+  margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(226, 177, 60, 0.3);
+}
+#lesson-panel .lesson-say { color: var(--ink-dim); font-size: calc(14px * var(--text-scale)); line-height: 1.4; margin-bottom: 6px; }
+#lesson-panel .lesson-step { color: var(--gold); font-size: calc(11.5px * var(--text-scale)); letter-spacing: 1px; margin-top: 8px; }
+#lesson-panel .lesson-buttons { display: flex; gap: 8px; justify-content: center; }
 body.in-combat #lesson-panel { display: none !important; }
 
 #hotbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; pointer-events: auto; }

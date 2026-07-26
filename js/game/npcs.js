@@ -206,18 +206,18 @@ export const DIALOGUES = {
 
   pip_root: {
     speaker: 'pip',
-    text: () => `Hi hi! I'm Pip, and this is Numbers Meadow! We learn by BUILDING. Put blocks on the soft mat and we'll count them together. Ready to play with numbers?`,
+    text: () => `Hi hi! I'm Pip, and I teach in the Schoolhouse! Every lesson is a story, and we do it by BUILDING — you put the blocks down and I'll read it all out to you. Finish one and you've earned yourself half an hour of playing. Shall we?`,
     options: [
-      { label: 'Yes! Give me a lesson.', action: 'startLesson:numbers_meadow', cls: 'quest-offer' },
+      { label: 'Yes! Give me a lesson.', action: 'startLesson:grade_k', cls: 'quest-offer' },
       { label: 'How does it work?', next: 'pip_how' },
       { label: 'Maybe later.', action: 'close' },
     ],
   },
   pip_how: {
     speaker: 'pip',
-    text: () => `Easy peasy! I'll ask for some blocks — like "place 7 red blocks." Pick the blocks from your bag and place them right on the mat. When you get it, we celebrate and you earn more play time! Wrong guess? No worries — just try again.`,
+    text: () => `Easy peasy! Each lesson has its own room, and I take you straight there. I tell you a bit of the story, then ask for something — like "place seven red blocks" — and you build it on the mat. Five little steps and the lesson's done. Wrong guess? No worries, nothing bad happens, just try again.`,
     options: [
-      { label: "Okay, let's go!", action: 'startLesson:numbers_meadow', cls: 'quest-offer' },
+      { label: "Okay, let's go!", action: 'startLesson:grade_k', cls: 'quest-offer' },
       { label: 'Got it.', action: 'close' },
     ],
   },

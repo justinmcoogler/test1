@@ -54,14 +54,14 @@ try {
   const lessonCount = await page.evaluate(() => window.__game.lessons.byId.size);
   check(menu.rows === lessonCount, `listing every lesson (${menu.rows} of ${lessonCount})`);
 
-  await page.click('[data-start="nm_count"]');
+  await page.click('[data-start="k_count"]');
   await page.waitForTimeout(900);
 
   const entered = await page.evaluate(() => {
     const g = window.__game;
-    const room = g.lessons.room(g.lessons.current.numbers_meadow);
+    const room = g.lessons.room(g.lessons.current.grade_k);
     return {
-      lesson: g.lessons.current.numbers_meadow,
+      lesson: g.lessons.current.grade_k,
       at: [Math.round(g.player.x), Math.round(g.player.y), Math.round(g.player.z)],
       roomAt: room ? [room.cx, room.stand, room.cz] : null,
       // A DIFFERENT WORLD, not a far corner of this one: a lesson World is
@@ -81,7 +81,7 @@ try {
       })(),
     };
   });
-  check(entered.lesson === 'nm_count', `the first lesson started (${entered.lesson})`);
+  check(entered.lesson === 'k_count', `the first lesson started (${entered.lesson})`);
   check(entered.at[0] > 29000, `and it took you out of the world entirely (x=${entered.at[0]})`);
   check(Math.abs(entered.at[0] - entered.roomAt[0]) <= 1 && Math.abs(entered.at[2] - entered.roomAt[2]) <= 6,
     'you are standing in this lesson\'s own room');
@@ -92,27 +92,39 @@ try {
   check(entered.ceiling !== 0, 'under a roof');
 
   // ---- do the lesson -----------------------------------------------------
-  const done = await page.evaluate(() => {
+  // All five steps of it, each one solved from its own declared shape — the
+  // same solver the unit tests use, driven through the real game's world.
+  const done = await page.evaluate(async () => {
     const g = window.__game;
-    const mat = g.lessons.room('nm_count').mat;
-    for (let i = 0; i < 7; i++) {
-      g.world.setBlock(mat.x0 + i, mat.y0, mat.z0, window.__blocks.B.red_wool, true);
+    const { solveShape } = await import('/js/game/buildshapes.js');
+    const B = window.__blocks.B;
+    const lesson = g.lessons.activeLessonFor('grade_k');
+    const rooms = [];
+    for (let i = 0; i < lesson.steps.length; i++) {
+      const step = g.lessons.activeStep('grade_k');
+      const mat = g.lessons.matFor('grade_k');
+      rooms.push(g.lessons.step.grade_k);
+      for (const op of solveShape(step.build, mat)) {
+        g.world.setBlock(op.x, op.y, op.z, op.op === 'break' ? B.air : B[op.block], true);
+        // The runner's own re-check entry point, which is what a real
+        // blockPlaced event calls — the event bus is not exposed on window.
+        g.lessons.onWatch(op.op === 'break' ? 'blockBroken' : 'blockPlaced');
+      }
     }
-    // The runner's own re-check entry point, which is what a real blockPlaced
-    // event calls — the event bus is not exposed on window.
-    g.lessons.onWatch('blockPlaced');
     return {
-      next: g.lessons.current.numbers_meadow,
+      steps: rooms,
+      next: g.lessons.current.grade_k,
       coins: g.inventory.count('coin'),
-      blue: g.inventory.count('blue_wool'),
+      kit: g.inventory.count('red_wool'),
       bank: g.education.balanceSec,
       at: [Math.round(g.player.x), Math.round(g.player.z)],
     };
   });
-  check(done.next === 'nm_add', `seven reds finished it and moved you on (${done.next})`);
-  check(done.bank - before.bank >= 9 * 60, `and banked the play minutes (${Math.round((done.bank - before.bank) / 60)} min)`);
-  check(done.coins - before.coins === 15, `paid 15 coins onto the character (${done.coins - before.coins})`);
-  check(done.blue >= 12, `and the blue wool the NEXT lesson needs (${done.blue})`);
+  check(done.steps.join(',') === '0,1,2,3,4', `it ran as five steps, in order (${done.steps.join(',')})`);
+  check(done.next === 'k_more', `finishing every step moved you on (${done.next})`);
+  check(done.bank - before.bank >= 29 * 60, `and banked the half-hour (${Math.round((done.bank - before.bank) / 60)} min)`);
+  check(done.coins - before.coins === 30, `paid 30 coins onto the character (${done.coins - before.coins})`);
+  check(done.kit >= 8, `and stocked the blocks the NEXT lesson needs (${done.kit} red)`);
   check(done.at[0] > 29000, 'the next lesson moved you to ITS room, not back to the world');
 
   // ---- and home again, also through the menu ------------------------------
@@ -123,14 +135,14 @@ try {
   const home = await page.evaluate(() => {
     const g = window.__game;
     return {
-      x: g.player.x, z: g.player.z, still: g.lessons.current.numbers_meadow,
+      x: g.player.x, z: g.player.z, still: g.lessons.current.grade_k,
       backInWorld: g.world.lessonRoom,
       campfire: g.world.getBlock(4, 65, 4),
     };
   });
   check(Math.hypot(home.x - before.x, home.z - before.z) < 2,
     `leaving puts you back where you started (${Math.hypot(home.x - before.x, home.z - before.z).toFixed(1)} blocks off)`);
-  check(home.still === 'nm_add', 'and keeps your place in the series');
+  check(home.still === 'k_more', 'and keeps your place in the series');
   check(home.backInWorld === null, 'you are back in your own world');
   check(home.campfire !== 0, 'with your camp still standing in it');
 

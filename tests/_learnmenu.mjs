@@ -1,6 +1,11 @@
 // Verifies the title-screen "Learning Mode" button: clicking it should boot a
-// fresh world straight into education mode, drop the child at Numbers Meadow,
-// and stock the lesson kit — no console hook required.
+// fresh world straight into education mode, open the Lessons menu and stock the
+// starter kit — no console hook required.
+//
+// It used to check the child had been teleported to Numbers Meadow. There is no
+// meadow to walk to any more: a lesson is PICKED FROM THE MENU and puts you in
+// its own room in its own world, so the thing to prove here is that the menu is
+// open and full of lessons the moment the mode starts.
 import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
 
@@ -19,19 +24,19 @@ if (!label.includes('learning')) { console.log('FAIL: button missing its label:'
 
 await page.click('#learning-mode-btn');
 await page.waitForSelector('#hud:not(.hidden)', { timeout: 60000 });
-// let enterLearningMode() + the meadow teleport settle
-await page.waitForTimeout(400);
+// let enterLearningMode() open the menu
+await page.waitForTimeout(600);
 
 const r = await page.evaluate(() => {
   const g = window.__game;
-  const m = g.world.markers.learnMeadow;
-  const near = m ? (Math.abs(g.player.x - (m[0] + 0.5)) < 3 && Math.abs(g.player.z - (m[2] + 0.5)) < 3) : false;
   const kit = ['red_wool', 'blue_wool', 'yellow_wool'].map((c) => g.inventory.count(c));
   return {
     isEducation: g.education.isEducation,
     bankMin: g.education.balanceMinutes(),
-    atMeadow: near,
-    marker: m ? [m[0], m[1], m[2]] : null,
+    window: g.ui.currentWindow,
+    menuOpen: !document.getElementById('window-root')?.classList.contains('hidden'),
+    lessonsListed: document.querySelectorAll('[data-start]').length,
+    bands: document.querySelectorAll('#window-body details').length,
     player: [Math.round(g.player.x), Math.round(g.player.y), Math.round(g.player.z)],
     kit,
     savedMode: (JSON.parse(localStorage.getItem('sproutlands_slot_1') || '{}').meta || {}).mode,
@@ -39,7 +44,8 @@ const r = await page.evaluate(() => {
 });
 console.log(JSON.stringify(r, null, 2));
 
-const ok = r.isEducation && r.atMeadow && r.kit.every((n) => n >= 10) && r.savedMode === 'education';
+const ok = r.isEducation && r.menuOpen && r.window === 'lessons' && r.lessonsListed === 90
+  && r.bands === 9 && r.kit.every((n) => n >= 10) && r.savedMode === 'education';
 console.log(ok ? 'PASS: Learning Mode launches from the main menu' : 'FAIL');
 await browser.close();
 server.kill();
