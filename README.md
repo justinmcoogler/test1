@@ -88,16 +88,26 @@ What the server owns, and what it doesn't:
   everyone, and the others are told who did it. Minecraft asks for a majority in
   bed, which is a sensible rule among strangers and a miserable one for a family
   — it means four children have to find four beds before anybody gets a morning.
+- **The people.** Pack, skills, quests, mounts, recipes, the bed you sleep in
+  and where you were standing — kept by the server, keyed by name. Play on the
+  iPad, put it down, pick up the laptop, and you are the same person with the
+  same things. Nothing about a character is written to the browser while you are
+  connected; one copy, or it is not really saved.
 - **Not your movement.** Clients say where they are and the server believes them.
   Positions are bounds-checked so a bad value can't hurt the server, but there is
   no anti-cheat: the line is "can't break other people", not "can't advantage
   yourself". For a family in one house that is the right trade.
 
-**It saves.** The world is written to `saves/<seed>.json` — every minute while
-anything has changed, when the last player leaves, and on Ctrl-C. Blocks, chests,
-crops, mined nodes, what has been killed and when it comes back, and where each
-player was standing. Start the server again and everyone picks up where they
-left off, at the spot they logged out from.
+**It saves everything.** One file, `saves/<seed>.json`, written every minute
+while anything has changed, when the last player leaves, and on Ctrl-C. Blocks,
+chests, crops, mined nodes, what has been killed and when it comes back, the
+time of day — and every child who has played: their pack, their twenty-one skill
+totals, their quest log, their mounts and pets, the recipes they have worked out,
+their lesson progress and where they were standing. Start the server again and
+everyone picks up exactly where they left off, as exactly who they were.
+
+A name is the whole identity, so "Ada" on the tablet and "Ada" on the laptop are
+the same child. Two names are two people, with two packs.
 
 Writes are atomic (write, then rename), so a crash or a closed laptop lid during
 a save leaves the previous one intact rather than half a file. A save that will
@@ -115,9 +125,14 @@ npm run server -- --time 300           # start the clock partway through the day
 A day is 480 seconds, so `--time 300` opens in the middle of the night. A save's
 own clock always wins over this.
 
-No accounts and no passwords — a name is the whole identity. Characters
-(inventory, skills) still live in each device's own browser storage; the server
-owns the world, not your pockets. Don't port-forward it.
+No accounts and no passwords — a name is the whole identity, which is the right
+trade for one family in one house and the reason not to port-forward it: anyone
+who can reach the port can type anyone's name. On your own wifi that is a
+household, not the internet.
+
+What stays on the device is what belongs to the device: text scale, a left-handed
+mobile layout, camera sensitivity, and the name in the join box. Those are
+properties of the screen in front of you, not of the child.
 
 ### Install it as an app
 
@@ -257,6 +272,12 @@ npm run test:e2e   # Playwright: smoke, gameplay loop, boss fight, mobile touch,
 `tests/pwa.mjs` is the one that proves the install story: it registers the
 service worker, pulls the network, reloads, and asserts the game — modules and
 all, not just the HTML shell — still comes up.
+
+`tests/mpchar.mjs` is the one that proves the save story: it plays as a child in
+one browser context, closes it, and joins from a *second context with its own
+storage* — a different tablet, not the same one again — then asserts she arrives
+with the same levels, the same pack and the same coordinates. Then it stops the
+server, reads the save file, and starts it again.
 
 `tests/coop.mjs` proves the *world* is shared; `tests/mpbody.mjs` proves the
 *people* in it. The second exists because all three of the ways remote players

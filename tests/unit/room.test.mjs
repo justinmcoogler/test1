@@ -317,3 +317,142 @@ test('the world clock survives a save and reload', () => {
   // suddenly hundreds of seconds in the future.
   assert.equal(Math.round(fresh.world.time), 372);
 });
+
+// ---- the room keeps your character -----------------------------------------
+
+const charBlob = (over = {}) => ({
+  player: { hp: 14, maxHp: 30 },
+  inventory: { slots: [], coins: 99 },
+  skills: { mining: 4200, strength: 500 },
+  quests: { active: [] },
+  ...over,
+});
+
+test('a character is handed back to the name that saved it', () => {
+  const room = newRoom();
+  const a = seat(room, 'a', 'Ada');
+  room.handle('a', encode({ t: C.SAVE, data: charBlob() }));
+  room.leave('a');
+
+  // A DIFFERENT connection, which is the whole point — this stands in for the
+  // laptop after the iPad was put down.
+  const back = seat(room, 'b', 'Ada');
+  const w = back.conn.last(S.WELCOME);
+  assert.equal(w.character.skills.mining, 4200, 'her levels came with her');
+  assert.equal(w.character.inventory.coins, 99);
+});
+
+test('a different name is a different person', () => {
+  const room = newRoom();
+  seat(room, 'a', 'Ada');
+  room.handle('a', encode({ t: C.SAVE, data: charBlob() }));
+  const bea = seat(room, 'b', 'Bea');
+  assert.equal(bea.conn.last(S.WELCOME).character, null, 'Bea starts with nothing of Ada’s');
+});
+
+test('the room reads the gear it is asked to fight with', () => {
+  const room = newRoom();
+  const a = seat(room, 'a', 'Ada');
+  assert.equal(a.p.skills.xp.strength, 0, 'precondition: level one');
+  room.handle('a', encode({ t: C.SAVE, data: charBlob() }));
+  // Without this the server swings for unarmed damage at level one no matter
+  // what a child is holding, because its copy of them was always empty.
+  assert.equal(a.p.skills.xp.strength, 500, 'the server’s copy of her skills is hers');
+  assert.equal(a.p.skills.xp.mining, 4200);
+  assert.equal(a.p.inventory.coins, 99, 'and her pack is her pack');
+});
+
+test('combat XP earned server-side comes back as whole points', () => {
+  const room = newRoom();
+  const a = seat(room, 'a', 'Ada');
+  room.snapshot();                         // establish the baseline
+  a.conn.sent.length = 0;
+
+  a.p.skills.addXp('strength', 37);
+  room.snapshot();
+  const ev = a.conn.last(S.COMBAT)?.events?.find((e) => e.k === 'xp');
+  assert.ok(ev, 'the gain is sent');
+  assert.equal(ev.gains.strength, 37);
+
+  // Not sent twice — the client has it now, and its next upload carries the
+  // total back, so a resend would double it.
+  a.conn.sent.length = 0;
+  room.snapshot();
+  assert.equal(a.conn.last(S.COMBAT), null, 'and not again');
+});
+
+test('fractional XP is held until it is worth a point, not rounded away', () => {
+  const room = newRoom();
+  const a = seat(room, 'a', 'Ada');
+  room.snapshot();
+  a.conn.sent.length = 0;
+
+  // Skills.addXp rounds its argument, so drive the totals the way combat's
+  // accumulated fractions actually arrive.
+  a.p.skills.xp.defense += 0.4;
+  room.snapshot();
+  assert.equal(a.conn.last(S.COMBAT), null, 'four tenths of a point is not a point');
+
+  a.p.skills.xp.defense += 0.7;
+  room.snapshot();
+  const ev = a.conn.last(S.COMBAT)?.events?.find((e) => e.k === 'xp');
+  // The old shape of this rounded each award on its own, so a stream of small
+  // hits scored nothing at all, forever.
+  assert.equal(ev?.gains?.defense, 1, 'but together they are');
+});
+
+test('an upload resets the XP baseline instead of replaying it as a gain', () => {
+  const room = newRoom();
+  const a = seat(room, 'a', 'Ada');
+  room.snapshot();
+  a.conn.sent.length = 0;
+  room.handle('a', encode({ t: C.SAVE, data: charBlob() }));
+  room.snapshot();
+  const ev = a.conn.last(S.COMBAT)?.events?.find((e) => e.k === 'xp');
+  assert.equal(ev, undefined, 'her own 4200 Mining is not handed back to her as freshly earned');
+});
+
+test('a character that will not fit is refused, and the old one survives', () => {
+  const room = newRoom();
+  seat(room, 'a', 'Ada');
+  room.handle('a', encode({ t: C.SAVE, data: charBlob() }));
+  room.handle('a', encode({ t: C.SAVE, data: { junk: 'x'.repeat(300000) } }));
+  assert.equal(room.characters.get('Ada').data.skills.mining, 4200, 'the good one is still there');
+  room.handle('a', encode({ t: C.SAVE, data: 'not an object' }));
+  room.handle('a', encode({ t: C.SAVE }));
+  assert.equal(room.characters.get('Ada').data.skills.mining, 4200);
+});
+
+test('characters go in the save file and come back out of it', () => {
+  const room = newRoom();
+  seat(room, 'a', 'Ada');
+  room.handle('a', encode({ t: C.SAVE, data: charBlob() }));
+  const data = JSON.parse(JSON.stringify(room.serialize()));
+  assert.equal(data.characters.Ada.data.skills.mining, 4200);
+
+  const fresh = newRoom();
+  fresh.deserialize(data);
+  const back = seat(fresh, 'z', 'Ada');
+  assert.equal(back.conn.last(S.WELCOME).character.skills.mining, 4200,
+    'so stopping the server for lunch does not cost anybody their afternoon');
+});
+
+test('the room forgets the oldest character rather than growing forever', () => {
+  const room = newRoom();
+  const conn = stubConn();
+  for (let i = 0; i < 70; i++) room._remember(`kid${i}`, { n: i });
+  assert.ok(room.characters.size <= 64, `bounded (${room.characters.size})`);
+  assert.ok(!room.characters.has('kid0'), 'the first one in is the first one out');
+  assert.ok(room.characters.has('kid69'), 'and the newest is kept');
+  assert.equal(conn.sent.length, 0);
+});
+
+test('a save file with a hand-edited character does not poison the room', () => {
+  const room = newRoom();
+  room.deserialize({
+    seed: 'roomtest', world: null, enemies: null, players: {},
+    characters: { Ada: { at: 0, data: 'not an object' }, Bea: { at: 1, data: { skills: { mining: 5 } } } },
+  });
+  assert.equal(room.characters.has('Ada'), false, 'the bad one is dropped');
+  assert.equal(room.characters.get('Bea').data.skills.mining, 5, 'the good one is kept');
+});

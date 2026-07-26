@@ -2855,7 +2855,12 @@ class Game {
       else if (ev.k === 'log') this.ui.rsLog?.(ev.text);
       else if (ev.k === 'banner') this.ui.toast(ev.text, 'gold');
       else if (ev.k === 'died' && ev.by) this.ui.toast(`${ev.by} defeated something.`, 'gold');
-      else if (ev.k === 'loot') {
+      // The server resolves online fights, so it is the server's copy of your
+      // skills that earns the XP. Without this coming back, every kill online
+      // was worth nothing at all.
+      else if (ev.k === 'xp') {
+        for (const [skill, amount] of Object.entries(ev.gains || {})) this.skills.addXp(skill, amount);
+      } else if (ev.k === 'loot') {
         for (const l of ev.loot || []) this.inventory.add(l.item, l.qty ?? 1);
         if (ev.coins) this.inventory.coins += ev.coins;
       }
@@ -3124,6 +3129,21 @@ class Game {
       // load (js/game/waystones.js), so they can never drift from their stone.
       waystones: this.waystones.serialize(),
     };
+    // ON A SERVER, THE SERVER IS THE ONLY STORE. Not "as well as" — the browser
+    // is not written at all. Two copies of a character that each believe they
+    // are current is how a child loses an afternoon: play on the laptop, then
+    // pick up the iPad, and the iPad's stale copy is what gets uploaded next.
+    // One place, or it is not really saved.
+    //
+    // Everything except the world and the creatures, which the room already
+    // owns — so between this and the room's own save, nothing is left in a
+    // browser at all.
+    if (this.net?.live) {
+      const { world: _w, enemies: _e, ...mine } = data;
+      if (this.net.sendSave(mine)) return;
+      // The socket is down. Fall through and write to disk rather than throw the
+      // save away; a reconnect will hand the room a character again.
+    }
     // Two files, not one (js/game/characters.js). The character goes to its own
     // key so it can be carried into another world; the slot keeps the world and
     // a note of who was last in it. `characterId` is set when the game starts,
@@ -3131,6 +3151,15 @@ class Game {
     const { character, world } = splitSave(data, { id: this.characterId, name: this.characterName });
     saveCharacter(character);
     saveSlot(this.slot, { meta: { ...data.meta, characterId: character.id, characterName: character.name, version: 2 }, ...world });
+  }
+
+  // Put this body down where the SERVER says it belongs, and mark it seated so
+  // init() does not then walk it back to the world spawn. Without the second
+  // half the room can tell you exactly where you logged out and the browser
+  // ignores it, which is what used to happen.
+  seatAt(x, y, z) {
+    this.player.x = x; this.player.y = y; this.player.z = z;
+    this._restored = true;
   }
 
   restore(d) {
@@ -3360,8 +3389,10 @@ async function joinMultiplayer(name) {
     return;
   }
   // The seed is the server's, not this browser's — that is what makes it the
-  // same world rather than two worlds that happen to look alike.
-  await startGame(0, true, { net, seedText: net.seed, name: net.name });
+  // same world rather than two worlds that happen to look alike. The character
+  // is the server's too: whatever this name was carrying when it last played,
+  // on whichever device it played on.
+  await startGame(0, true, { net, seedText: net.seed, name: net.name, netSave: net.character });
 }
 
 async function startGame(slot, isNew, opts = {}) {
@@ -3393,11 +3424,15 @@ async function startGame(slot, isNew, opts = {}) {
   // The payload the game actually restores from: this character's things, in
   // this world. A character new to a world contributes no position, and main
   // then seats them at that world's spawn.
-  const saveData = (world || !isNew) || opts.character
+  // A character handed back by a server is already a whole payload — the game
+  // wrote it, minus the world and the creatures the room owns — so it is used
+  // as-is rather than being reassembled from a local character and a local
+  // world, neither of which is authoritative once you are connected.
+  const saveData = opts.netSave || ((world || !isNew) || opts.character
     ? joinSave(character, world, { seedText })
-    : joinSave(character, null, { seedText });
+    : joinSave(character, null, { seedText }));
   // A brand-new character in a brand-new world has nothing to restore.
-  const fresh = isNew && !opts.character && !character.skills;
+  const fresh = !opts.netSave && isNew && !opts.character && !character.skills;
   $('title-screen').classList.add('hidden');
   $('loading-screen').classList.remove('hidden');
 
@@ -3414,11 +3449,10 @@ async function startGame(slot, isNew, opts = {}) {
   if (opts.net) {
     game.attachNet(opts.net);
     opts.net.on.edits(opts.net._welcomeEdits || []);
-    if (opts.net.spawn) {
-      game.player.x = opts.net.spawn.x;
-      game.player.y = opts.net.spawn.y;
-      game.player.z = opts.net.spawn.z;
-    }
+    // The room's idea of where you are beats the character's, because it is
+    // updated from your movement ten times a second and the character blob only
+    // when the game saves.
+    if (opts.net.spawn) game.seatAt(opts.net.spawn.x, opts.net.spawn.y, opts.net.spawn.z);
   }
   window.__game = game; // for automated tests & debugging
   window.__net = opts.net || null;

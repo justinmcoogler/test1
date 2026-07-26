@@ -285,3 +285,28 @@ test('a body’s beat is stable across reconnects, not re-rolled', async () => {
   b.sock.deliver(one);
   assert.equal(a.net.players.get('zed').phase, b.net.players.get('zed').phase);
 });
+
+// ---- the character comes from the room --------------------------------------
+
+test('the welcome carries this name’s character, and null means new', async () => {
+  const a = await joined({ character: { skills: { mining: 4200 } } });
+  assert.equal(a.net.character.skills.mining, 4200);
+  const b = await joined();
+  assert.equal(b.net.character, null, 'a name nobody has used yet');
+});
+
+test('saving hands the character to the room', async () => {
+  const { net, sock } = await joined();
+  const okSent = net.sendSave({ skills: { mining: 1 } });
+  assert.equal(okSent, true);
+  const m = sock.msgs(C.SAVE)[0];
+  assert.equal(m.data.skills.mining, 1);
+});
+
+test('a save with nowhere to go says so, so the caller can use the disk', async () => {
+  const { net, sock } = await joined();
+  sock.readyState = 3;                       // socket gone
+  // The alternative is a save silently thrown away, which is somebody's
+  // afternoon.
+  assert.equal(net.sendSave({ skills: {} }), false);
+});

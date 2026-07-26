@@ -14,7 +14,8 @@
 // server rather than take the world down for everyone else.
 
 // 2 added SLEEP/SLEPT and made the world clock the server's.
-export const PROTOCOL_VERSION = 2;
+// 3 added SAVE — the room stores each player's character, not the browser.
+export const PROTOCOL_VERSION = 3;
 
 // client -> server
 export const C = {
@@ -25,6 +26,7 @@ export const C = {
   DISENGAGE: 'disengage',
   CHAT: 'chat',
   SLEEP: 'sleep',       // "I got into a bed" — the ROOM decides whether night ends
+  SAVE: 'save',         // this is my character; keep it for me
 };
 
 // server -> client
@@ -119,4 +121,25 @@ export function cleanEdit(m) {
 
 export function cleanId(v) {
   return typeof v === 'string' && v.length > 0 && v.length <= 64 ? v : null;
+}
+
+// The cap on one player's stored character, encoded. A real one is a few
+// kilobytes — an inventory, twenty-one skill totals, a quest log and a list of
+// waystones. A quarter of a megabyte is far past anything the game produces and
+// well short of anything that would hurt a laptop holding four of them.
+export const MAX_SAVE = 262144;
+
+// A character blob on its way to the room. It is opaque: the server stores it
+// and hands it back to the same player, and only the game that wrote it knows
+// what the fields mean. So the checks here are about SIZE and SHAPE, not
+// content — the one thing the server must not do is let a child with the
+// devtools console open push a forty-megabyte string into everyone's save file.
+export function cleanSave(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+  let text;
+  try { text = JSON.stringify(data); } catch { return null; }   // cyclic, or a BigInt
+  if (!text || text.length > MAX_SAVE) return null;
+  // Re-parsed rather than kept: what gets stored is then provably plain JSON,
+  // and cannot share a reference with anything the caller still holds.
+  try { return JSON.parse(text); } catch { return null; }
 }

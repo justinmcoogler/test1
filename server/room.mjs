@@ -31,7 +31,7 @@ import { Player } from '../js/player/player.js';
 import { BLOCKS, isSolid } from '../js/world/blocks.js';
 import {
   C, S, PROTOCOL_VERSION, encode, decode,
-  cleanName, cleanChat, cleanEdit, cleanInput, cleanId,
+  cleanName, cleanChat, cleanEdit, cleanInput, cleanId, cleanSave,
 } from '../js/net/protocol.js';
 
 const CHUNK = 16;
@@ -45,6 +45,11 @@ const SIM_RADIUS_CHUNKS = 4;
 // Mobs are only described to a player who could plausibly see them. Well beyond
 // render distance, so nothing pops in at the edge of vision.
 const MOB_VIEW = 64;
+
+// How many characters the room will remember. Far past a household; a bound at
+// all is what stops an afternoon of invented names growing the save file until
+// it will not load.
+const MAX_CHARACTERS = 64;
 
 export const SIM_HZ = 20;      // physics/AI steps per second
 export const SNAP_HZ = 10;     // snapshots per second
@@ -75,6 +80,13 @@ export class Room {
     // here — a name is the whole identity — so a child who comes back tomorrow
     // reappears where they left off rather than at the spawn point.
     this.lastSeen = new Map();
+    // …and WHO they are, keyed the same way: pack, skills, quests, mounts,
+    // recipes, lesson progress. The room owns this now. It used to live in each
+    // browser's localStorage, which meant a child who played on the iPad and
+    // then the laptop arrived with empty pockets — the world was shared and the
+    // person in it was not. Values are { at, data }; `at` is world time, used
+    // only to decide who to forget first if this ever fills up.
+    this.characters = new Map();
     // Set by anything worth writing to disk. The autosave skips a quiet world
     // rather than rewriting an identical file every minute.
     this.dirty = false;
@@ -89,6 +101,10 @@ export class Room {
     for (const p of this.players.values()) {
       if (p.joined) players[p.name] = { x: r2(p.x), y: r2(p.y), z: r2(p.z) };
     }
+    // Live players' characters are whatever they last uploaded; the stored copy
+    // is already that, because _onSave writes straight through.
+    const characters = {};
+    for (const [name, rec] of this.characters) characters[name] = rec;
     return {
       version: 1,
       seed: this.seed,
@@ -96,6 +112,7 @@ export class Room {
       world: this.world.serialize(),
       enemies: this.enemyMgr.serialize(),
       players,
+      characters,
     };
   }
 
@@ -111,6 +128,14 @@ export class Room {
       if (at && Number.isFinite(at.x) && Number.isFinite(at.y) && Number.isFinite(at.z)) {
         this.lastSeen.set(name, { x: at.x, y: at.y, z: at.z });
       }
+    }
+    // A save written before the room kept characters simply has none, and every
+    // child starts fresh once. Run through the same sanitiser as the wire, so a
+    // hand-edited save file cannot do what a hand-typed message cannot.
+    this.characters.clear();
+    for (const [name, rec] of Object.entries(data.characters || {})) {
+      const clean = cleanSave(rec?.data);
+      if (clean) this.characters.set(name, { at: Number(rec.at) || 0, data: clean });
     }
   }
 
@@ -184,7 +209,82 @@ export class Room {
       case C.DISENGAGE: return this._onDisengage(p);
       case C.CHAT: return this._onChat(p, m);
       case C.SLEEP: return this._onSleep(p);
+      case C.SAVE: return this._onSave(p, m);
     }
+  }
+
+  // ---- characters -----------------------------------------------------------
+  // THE ROOM IS THE ONLY STORE. A connected client does not write its character
+  // to the browser at all; it sends it here, and this is what ends up in the
+  // save file beside the world. That is the whole point — one place a child's
+  // hundred hours of Mining lives, rather than one copy per device that each
+  // think they are right.
+  //
+  // The blob is OPAQUE to the server. It is written by the game and read back by
+  // the game; nothing here knows what a quest log looks like, and nothing here
+  // should, or the room becomes a second implementation of the save format that
+  // drifts from the first. What the room does know is size (cleanSave) and, for
+  // the two systems combat actually needs, how to read them (_hydrate).
+  _onSave(p, m) {
+    const data = cleanSave(m.data);
+    if (!data) return;
+    this._remember(p.name, data);
+    this._hydrate(p, data);
+    this.dirty = true;
+  }
+
+  _remember(name, data) {
+    if (!this.characters.has(name) && this.characters.size >= MAX_CHARACTERS) {
+      // A family will never reach this. A save file that grows without limit
+      // will, given enough invented names, so the oldest one goes — and it is
+      // logged, because silently forgetting somebody's character is exactly the
+      // kind of thing that should never happen quietly.
+      let oldest = null, oldestAt = Infinity;
+      for (const [n, rec] of this.characters) if (rec.at < oldestAt) { oldest = n; oldestAt = rec.at; }
+      if (oldest) { this.characters.delete(oldest); this.onLog(`forgot the character "${oldest}" — ${MAX_CHARACTERS} is the limit`); }
+    }
+    this.characters.set(name, { at: Math.round(this.world.time), data });
+  }
+
+  // Teach the server's copy of this player what the client says they are.
+  //
+  // ONLY TWO SYSTEMS, and both because combat reads them: without the inventory
+  // the server swings for unarmed damage no matter what a child is holding, and
+  // without the skills it swings at level one. Everything else in the blob is
+  // the client's business and is passed back untouched.
+  _hydrate(p, data) {
+    try { p.inventory.deserialize(data.inventory); } catch (err) { this.onLog(`inventory for ${p.name}: ${err.message}`); }
+    try { p.skills.deserialize(data.skills); } catch (err) { this.onLog(`skills for ${p.name}: ${err.message}`); }
+    try {
+      if (data.player) {
+        const { x, y, z } = p;                 // the live position outranks a saved one
+        p.deserialize(data.player);
+        p.x = x; p.y = y; p.z = z;
+      }
+    } catch (err) { this.onLog(`stats for ${p.name}: ${err.message}`); }
+    // Whatever the client just told us is the new baseline, or the next snapshot
+    // would report the difference between two totals as freshly earned XP.
+    p._xpSeen = { ...p.skills.xp };
+  }
+
+  // COMBAT XP IS EARNED BY THE SERVER'S COPY OF YOUR SKILLS, since the server is
+  // what resolves an online fight — so it has to come back, or fighting online
+  // levels nothing at all and every kill is wasted.
+  //
+  // Sent as WHOLE points and tracked against what has been SENT rather than what
+  // the server holds: Skills.addXp rounds, so a stream of fractional awards
+  // would round to nothing on the client every time and the fractions would be
+  // lost forever. Held here until they add up to a point, they are not.
+  _xpDelta(p) {
+    const seen = p._xpSeen || (p._xpSeen = {});
+    const gains = {};
+    let any = false;
+    for (const [skill, total] of Object.entries(p.skills.xp)) {
+      if (seen[skill] === undefined) { seen[skill] = total; continue; }
+      const whole = Math.floor(total - seen[skill]);
+      if (whole >= 1) { gains[skill] = whole; seen[skill] += whole; any = true; }
+    }
+    return any ? gains : null;
   }
 
   _onJoin(p, m) {
@@ -199,6 +299,10 @@ export class Room {
     }
     p.name = this._uniqueName(cleanName(m.name));
     p.joined = true;
+    // WHO YOU ARE COMES BACK BEFORE WHERE YOU ARE, because the character carries
+    // the health and the gear that the position is then dropped on top of.
+    const stored = this.characters.get(p.name)?.data || null;
+    if (stored) this._hydrate(p, stored);
     const home = this.lastSeen.get(p.name);
     const spawn = home || this.world.structure?.spawnPoint || { x: 0, y: 80, z: 0 };
     p.x = spawn.x; p.y = spawn.y; p.z = spawn.z;
@@ -210,6 +314,9 @@ export class Room {
       seed: this.seed,
       time: this.world.time,
       spawn: { x: p.x, y: p.y, z: p.z },
+      // Everything this child had when they last played, from whichever device
+      // they played on. Null the first time anyone uses a name.
+      character: stored,
       // The whole edit set, once. Everything after this is a delta.
       edits: this._allEdits(),
       players: [...this.players.values()].filter((o) => o.joined && o !== p).map(pubPlayer),
@@ -406,6 +513,8 @@ export class Room {
         mobs,
       }));
       if (edits) p.conn.send(encode({ t: S.EDITS, list: edits }));
+      const gains = this._xpDelta(p);
+      if (gains) this._combatEvent(p.id, { k: 'xp', gains });
       const events = this.combatOut.get(p.id);
       if (events && events.length) {
         p.conn.send(encode({ t: S.COMBAT, events }));

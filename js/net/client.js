@@ -53,6 +53,7 @@ export class NetClient {
     this.players = new Map();
     this.mobs = new Map();
 
+    this.character = null;    // set from the welcome; see _onWelcome
     this.chatLog = [];
     this.on = {
       welcome: opts.onWelcome || (() => {}),
@@ -170,6 +171,11 @@ export class NetClient {
   // Asks; does not tell. Whether the night actually passes is the room's call.
   sendSleep() { return this._send({ t: C.SLEEP }); }
 
+  // Hand this character to the room, which is where it lives while connected.
+  // Returns false if the socket is not up, so the caller can fall back to disk
+  // rather than quietly dropping somebody's afternoon.
+  sendSave(data) { return this._send({ t: C.SAVE, data }); }
+
   // ---- inbound --------------------------------------------------------------
   _onWelcome(m) {
     this.status = 'live';
@@ -179,6 +185,10 @@ export class NetClient {
     this.spawn = m.spawn;
     this.snapHz = m.snapHz || 10;
     if (Number.isFinite(m.time)) this.serverTime = m.time;
+    // This name's character, as the room last had it — from whichever device
+    // last played. Null the first time anybody uses the name. Held rather than
+    // delivered for the same reason as the edits: there is no game yet.
+    this.character = m.character || null;
     // Held rather than delivered, because the game does not exist yet: the seed
     // in this same message is what it will be built from, and the edits have to
     // be applied to that world once it does.

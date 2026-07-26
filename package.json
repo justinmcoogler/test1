@@ -6,7 +6,7 @@
   "scripts": {
     "serve": "node tests/server.mjs 8080",
     "test": "node --test tests/unit/*.test.mjs",
-    "test:e2e": "node tests/smoke.mjs && node tests/gameplay.mjs && node tests/boss.mjs && node tests/mobile.mjs && node tests/rscombat.mjs && node tests/classicview.mjs && node tests/mobformat.mjs && node tests/features.mjs && node tests/multiplayer.mjs && node tests/coop.mjs && node tests/mpbody.mjs && node tests/persist.mjs && node tests/pwa.mjs && node tests/exe.mjs",
+    "test:e2e": "node tests/smoke.mjs && node tests/gameplay.mjs && node tests/boss.mjs && node tests/mobile.mjs && node tests/rscombat.mjs && node tests/classicview.mjs && node tests/mobformat.mjs && node tests/features.mjs && node tests/multiplayer.mjs && node tests/coop.mjs && node tests/mpbody.mjs && node tests/mpchar.mjs && node tests/persist.mjs && node tests/pwa.mjs && node tests/exe.mjs",
     "test:all": "npm test && npm run test:e2e",
     "build": "node tools/build-single.mjs",
     "server": "node server/server.mjs",
