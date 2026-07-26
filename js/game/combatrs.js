@@ -33,6 +33,15 @@ const MELEE_RANGE = 2.4;
 export class CombatRS {
   constructor(game) {
     this.game = game;
+    // THE EMITTER IS INJECTABLE, and only the server needs that. Single player
+    // has exactly one CombatRS and the module-global bus (js/core/events.js) is
+    // the right place for its events to land. The multiplayer server runs ONE
+    // INSTANCE PER CONNECTED PLAYER against a shared world, and on a global bus
+    // every one of those instances would shout into the same room — one child's
+    // hitsplats would arrive on everybody's screen and every 'combatEnd' would
+    // fire N times. So a caller may pass its own `emit`, and the server passes
+    // one bound to the player whose fight it is.
+    this.emit = game.emit || emit;
     this.engaged = new Map();     // entityId → state {entity, nextAtk, telegraph, phase}
     this.target = null;           // entity the player is attacking
     this.playerNextAtk = 0;
@@ -74,14 +83,14 @@ export class CombatRS {
     if (!this.engaged.has(entity.id)) {
       this.engaged.set(entity.id, { entity, nextAtk: this.time + 0.8 + Math.random() * 0.6 });
       entity.rsEngaged = true;
-      if (this.engaged.size === 1) emit('rsEngaged', { entity });
-      if (entity.def.boss) emit('combatBanner', `${entity.def.label} awakens!`);
+      if (this.engaged.size === 1) this.emit('rsEngaged', { entity });
+      if (entity.def.boss) this.emit('combatBanner', `${entity.def.label} awakens!`);
     }
     if (byPlayer || !this.target || this.target.hp <= 0) {
       this.target = entity;
       this.playerNextAtk = Math.max(this.playerNextAtk, this.time + 0.35);
     }
-    emit('rsUpdate');
+    this.emit('rsUpdate');
   }
 
   despawnSummons() {
@@ -103,8 +112,8 @@ export class CombatRS {
     this.target = null;
     this.queuedSpecial = null;
     this.despawnSummons();
-    emit('rsUpdate');
-    emit('rsCombatOver');
+    this.emit('rsUpdate');
+    this.emit('rsCombatOver');
   }
 
   // ---------------------------------------------------------------- update
@@ -134,7 +143,7 @@ export class CombatRS {
         this.engaged.delete(id);
         if (this.target === e) this.target = null;
         if (e.def.boss) this.despawnSummons();
-        emit('rsLog', `${e.def.label} loses interest.`);
+        this.emit('rsLog', `${e.def.label} loses interest.`);
         continue;
       }
 
@@ -164,7 +173,7 @@ export class CombatRS {
         if (pd <= t.radius + 0.4 && Math.abs(player.y - t.cy) < 3) {
           this.hitPlayer(e, t.power, 'the crashing slam');
         } else {
-          emit('rsLog', `You step clear of ${e.def.label}'s slam!`);
+          this.emit('rsLog', `You step clear of ${e.def.label}'s slam!`);
         }
       }
 
@@ -187,7 +196,7 @@ export class CombatRS {
         if (style.kind !== 'melee' && !this.hasLOS(this.target)) {
           if (this.time - this.lastLosWarn > 3) {
             this.lastLosWarn = this.time;
-            emit('rsLog', 'No clear line of sight!');
+            this.emit('rsLog', 'No clear line of sight!');
           }
         } else {
           const interval = style.kind === 'magic' ? 3.0 : style.kind === 'ranged' ? 2.7 : 2.4 - (weapon?.spd || 0) * 0.12;
@@ -196,7 +205,7 @@ export class CombatRS {
         }
       }
     }
-    emit('rsTick');
+    this.emit('rsTick');
   }
 
   updateBoss(e, st, dist, dt) {
@@ -205,7 +214,7 @@ export class CombatRS {
     if (phase && !st.phase && e.hp <= e.def.hp * (phase.at ?? 0.5)) {
       st.phase = 1;
       e.enraged = true;
-      if (phase.banner) emit('combatBanner', phase.banner);
+      if (phase.banner) this.emit('combatBanner', phase.banner);
       for (const type of phase.summon || []) {
         const def = ENEMY_TYPES[type];
         if (!def) continue;
@@ -232,7 +241,7 @@ export class CombatRS {
         cx: Math.floor(p.x), cy: Math.round(p.y), cz: Math.floor(p.z),
         radius: 1.6, power: 1.7,
       };
-      emit('rsLog', 'A crushing blow is coming — MOVE!');
+      this.emit('rsLog', 'A crushing blow is coming — MOVE!');
     }
   }
 
@@ -262,7 +271,7 @@ export class CombatRS {
     const { skills, player, inventory } = this.game;
     const stats = this.playerStats(style, weapon);
     if (stats.mana) {
-      if (player.mana < stats.mana) { emit('rsLog', 'Out of mana — you jab with the staff instead.'); stats.max *= 0.4; }
+      if (player.mana < stats.mana) { this.emit('rsLog', 'Out of mana — you jab with the staff instead.'); stats.max *= 0.4; }
       else player.mana -= stats.mana;
     }
     const targets = special?.aoe
@@ -273,7 +282,7 @@ export class CombatRS {
       let splat, color;
       if (Math.random() * 100 > acc) {
         splat = '0'; color = '#7aa7e8';
-        emit('rsLog', `You miss the ${t.def.label}.`);
+        this.emit('rsLog', `You miss the ${t.def.label}.`);
       } else {
         let dmg = stats.max * (style.dmg || 1) * (special?.power || 1);
         const el = special?.element;
@@ -303,7 +312,7 @@ export class CombatRS {
       if (t.hp <= 0) this.kill(t);
     }
     inventory.damageEquipped(stats.slot, 1);
-    emit('rsAttack', { style: style.kind });
+    this.emit('rsAttack', { style: style.kind });
   }
 
   enemyAttack(e) {
@@ -318,12 +327,12 @@ export class CombatRS {
     if (!this.target) this.target = e; // auto-retaliate
     if (Math.random() * 100 > acc) {
       this.game.addHitsplat(player.x, player.y + 2.0, player.z, '0', '#7aa7e8');
-      emit('rsLog', `${e.def.label} misses you.`);
+      this.emit('rsLog', `${e.def.label} misses you.`);
       if (defensive) skills.addXp('defense', 4);
       return;
     }
     if (est.block && Math.random() * 100 < est.block) {
-      emit('rsLog', `You block ${e.def.label}'s attack!`);
+      this.emit('rsLog', `You block ${e.def.label}'s attack!`);
       skills.addXp('defense', 6);
       return;
     }
@@ -339,7 +348,7 @@ export class CombatRS {
     dmg *= 0.7 + Math.random() * 0.6;
     dmg = Math.max(1, Math.round(dmg));
     player.damage(dmg, sourceLabel);
-    emit('rsPlayerHit', { dmg });
+    this.emit('rsPlayerHit', { dmg });
     skills.addXp('defense', dmg * (this.style === 'defensive' ? 1.2 : 0.4));
     this.maybeBleed(e, armor);
   }
@@ -356,14 +365,14 @@ export class CombatRS {
     const con = skills.level('vitality');
     const seconds = clamp(6 - con * 0.03, 3, 6);
     player.applyBleed(seconds, 1 + Math.floor(e.def.tier || 0));   // deeper on tougher beasts
-    emit('rsLog', `${e.def.label} tears a bleeding wound — bandage it!`);
+    this.emit('rsLog', `${e.def.label} tears a bleeding wound — bandage it!`);
   }
 
   kill(entity) {
     const { skills, inventory, enemyMgr } = this.game;
     const def = entity.def;
     const shinyMult = entity.shiny ? 2 : 1;
-    emit('rsLog', entity.shiny ? `You fell the SHINY ${def.label} — what a prize!` : `You defeat the ${def.label}!`);
+    this.emit('rsLog', entity.shiny ? `You fell the SHINY ${def.label} — what a prize!` : `You defeat the ${def.label}!`);
     // kill bonus xp to the active style
     const bonus = (def.xp || 10) * 0.6 * shinyMult;
     const stats = this.playerStats(RS_STYLES[this.style], null);
@@ -391,9 +400,9 @@ export class CombatRS {
     }
     if (entity.transient) enemyMgr.entities.delete(entity.id);
     else enemyMgr.markKilled(entity);
-    emit('combatEnd', { result: 'won', types: [entity.type], ids: [entity.id], rs: true, loot, coins });
-    if (!this.active) emit('rsCombatOver');
-    emit('rsUpdate');
+    this.emit('combatEnd', { result: 'won', types: [entity.type], ids: [entity.id], rs: true, loot, coins });
+    if (!this.active) this.emit('rsCombatOver');
+    this.emit('rsUpdate');
   }
 
   // ---------------------------------------------------------------- specials
@@ -403,8 +412,8 @@ export class CombatRS {
     if (!sp) return false;
     if (sp.frontier) return false;                     // no magic specials in real-world play
     if ((this.cooldowns[id] || 0) > this.time) return false;
-    if (sp.energy && player.energy < sp.energy) { emit('rsLog', 'Not enough energy.'); return false; }
-    if (sp.mana && player.mana < sp.mana) { emit('rsLog', 'Not enough mana.'); return false; }
+    if (sp.energy && player.energy < sp.energy) { this.emit('rsLog', 'Not enough energy.'); return false; }
+    if (sp.mana && player.mana < sp.mana) { this.emit('rsLog', 'Not enough mana.'); return false; }
 
     if (sp.kind === 'heal') {
       if (sp.energy) player.energy = Math.max(0, player.energy - sp.energy);
@@ -415,27 +424,27 @@ export class CombatRS {
       let xp = heal * 1.2;
       if (player.bleeding > 0) {
         player.stopBleeding();
-        emit('rsLog', 'You bind the wound — the bleeding stops.');
+        this.emit('rsLog', 'You bind the wound — the bleeding stops.');
         xp += 15; // treating an active wound teaches more Medicine
       }
       skills.addXp('healing', xp);
       this.game.addHitsplat(player.x, player.y + 2.0, player.z, `+${heal}`, '#6cbf5a');
       this.cooldowns[id] = this.time + sp.cd;
-      emit('rsUpdate');
+      this.emit('rsUpdate');
       return true;
     }
-    if (!this.target || this.target.hp <= 0) { emit('rsLog', 'No target.'); return false; }
+    if (!this.target || this.target.hp <= 0) { this.emit('rsLog', 'No target.'); return false; }
     const style = RS_STYLES[this.style];
-    if (sp.kind !== style.kind) { emit('rsLog', `Switch to a ${sp.kind} style first.`); return false; }
+    if (sp.kind !== style.kind) { this.emit('rsLog', `Switch to a ${sp.kind} style first.`); return false; }
     const weapon = inventory.weapon(style.kind === 'melee' ? 'melee' : style.kind);
     const range = style.kind === 'melee' ? MELEE_RANGE : (weapon?.range || 6) + 0.5;
     const dist = Math.hypot(this.target.x - player.x, this.target.z - player.z);
-    if (dist > range) { emit('rsLog', 'Too far away!'); return false; }
+    if (dist > range) { this.emit('rsLog', 'Too far away!'); return false; }
     if (sp.energy) player.energy -= sp.energy;
     this.cooldowns[id] = this.time + sp.cd;
     this.playerAttack(this.target, weapon, style, sp);
     this.playerNextAtk = this.time + 1.2;
-    emit('rsUpdate');
+    this.emit('rsUpdate');
     return true;
   }
 
