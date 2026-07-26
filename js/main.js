@@ -2,6 +2,7 @@
 import { buildAtlas } from './gfx/textures.js';
 import { Renderer } from './gfx/renderer.js';
 import { World, initSlabSet, DAY_LEN } from './world/world.js';
+import { LESSON_SEED } from './world/classroom.js';
 import { Weather } from './world/weather.js';
 import { CHUNK, WORLD_H, SEA } from './world/worldgen.js';
 import { B, BLOCKS } from './world/blocks.js';
@@ -306,22 +307,8 @@ class Game {
     // Bank where they were standing only on the FIRST enter of a series — three
     // lessons in a row would otherwise overwrite the way home with the previous
     // classroom, and "back to the world" would mean "back to room two".
-    on('lessonEnter', ({ room }) => {
-      if (!room) return;
-      if (!this._lessonReturn) {
-        const p = this.player;
-        this._lessonReturn = { x: p.x, y: p.y, z: p.z, yaw: p.yaw };
-      }
-      this.warpTo(room.entry[0] + 0.5, room.entry[1], room.entry[2] + 0.5);
-      this.grantLessonKit();
-    });
-    on('lessonExit', ({ finished }) => {
-      const r = this._lessonReturn;
-      this._lessonReturn = null;
-      if (r) this.warpTo(r.x, r.y, r.z, r.yaw);
-      this.ui.toast(finished ? 'Lessons all done — back to the world!' : 'Back to the world.', 'gold');
-      this.saveGame();
-    });
+    on('lessonEnter', ({ room }) => { if (room) this.enterLessonWorld(room); });
+    on('lessonExit', ({ finished }) => this.exitLessonWorld(finished));
     on('playtimeExhausted', () => {
       this.playtimeLocked = true;
       this.controls.enabled = false;
@@ -2360,6 +2347,56 @@ class Game {
     this.touch?.show();
   }
 
+  // ---- Lesson worlds ------------------------------------------------------
+  // A lesson does NOT happen in a corner of the player's world. It happens in a
+  // DIFFERENT WORLD: a separate World object holding one classroom in an
+  // otherwise empty void, with its own chunks, its own edits and its own clock.
+  // Nothing a child does in there can touch the world they play in, and nothing
+  // from that world — no creature, no weather, no night — can reach them.
+  //
+  // The overworld is set aside whole and put back untouched. The player, their
+  // pack, their skills and the education ledger are NOT part of the swap: those
+  // belong to the character, which is why the minutes and coins a lesson pays
+  // survive the trip home (js/game/characters.js).
+  enterLessonWorld(room) {
+    if (!this._overworld) {
+      const p = this.player;
+      this._overworld = {
+        world: this.world,
+        weather: this.weather,
+        pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
+        enemies: this.enemyMgr.serialize(),
+      };
+    }
+    // Every chunk mesh on the GPU belongs to the old world. Chunk keys are
+    // coordinates, so leaving them would have the lesson world rendering the
+    // overworld's geometry at the same coordinates.
+    for (const key of [...this.renderer.chunkMeshes.keys()]) this.renderer.dropChunk(key);
+    this.world = new World(LESSON_SEED + room.index, { lessonRoom: room.index });
+    this.world.time = 8 * 3600;               // permanent mid-morning: no night in a lesson
+    this.enemyMgr.world = this.world;
+    this.enemyMgr.entities.clear();
+    this.enemyMgr.killed.clear();
+    this.petEntity = null;
+    this.warpTo(room.entry[0] + 0.5, room.entry[1], room.entry[2] + 0.5);
+    this.grantLessonKit();
+  }
+
+  exitLessonWorld(finished) {
+    const o = this._overworld;
+    this._overworld = null;
+    if (!o) return;
+    for (const key of [...this.renderer.chunkMeshes.keys()]) this.renderer.dropChunk(key);
+    this.world = o.world;
+    this.weather = o.weather;
+    this.enemyMgr.world = this.world;
+    this.enemyMgr.entities.clear();
+    this.enemyMgr.deserialize?.(o.enemies);
+    this.warpTo(o.pos.x, o.pos.y, o.pos.z, o.pos.yaw);
+    this.ui.toast(finished ? 'Lessons all done — back to your world!' : 'Back to your world.', 'gold');
+    this.saveGame();
+  }
+
   // Teleport to the Numbers Meadow classroom pad. The meadow is now the lobby —
   // Pip stands here and hands out the lessons, and each lesson takes the child
   // to a room of its own (js/world/classroom.js).
@@ -2795,6 +2832,13 @@ class Game {
 
   // ---------------------------------------------------------------- save
   saveGame() {
+    // A lesson world is scratch: it is regenerated from its index every time and
+    // holds nothing worth keeping. Saving while inside one must write the
+    // OVERWORLD that was set aside, or finishing a lesson would overwrite a
+    // child's real world with an empty classroom.
+    const saveWorld = this._overworld ? this._overworld.world : this.world;
+    const savePos = this._overworld ? this._overworld.pos : null;
+    const saveEnemies = this._overworld ? this._overworld.enemies : this.enemyMgr.serialize();
     const data = {
       meta: {
         seedText: this.seedText,
@@ -2804,12 +2848,12 @@ class Game {
         mode: this.education.mode, // 'free' | 'education' — lets the title screen resume Learning Mode
         version: 1,
       },
-      world: this.world.serialize(),
-      player: this.player.serialize(),
+      world: saveWorld.serialize(),
+      player: savePos ? { ...this.player.serialize(), ...savePos } : this.player.serialize(),
       inventory: this.inventory.serialize(),
       skills: this.skills.serialize(),
       quests: this.quests.serialize(),
-      enemies: this.enemyMgr.serialize(),
+      enemies: saveEnemies,
       stable: this.stable.serialize(),
       // Where you wake up. Null until you have slept somewhere, which is what
       // makes the world spawn the fallback rather than a special case.

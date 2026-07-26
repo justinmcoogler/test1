@@ -25,6 +25,9 @@ import { B } from './blocks.js';
 export const LESSON_REALM = { x: 30000, z: 30000, y: 420 };
 export const ROOM_SPACING = 40;   // no two rooms can see each other
 export const ROOM_COUNT = 8;      // room per lesson; add lessons, not plumbing
+// Each lesson world is seeded off this. The seed does nothing to the terrain —
+// there is no terrain — but a World needs one and two lessons should not share.
+export const LESSON_SEED = 0x1e550;
 
 const HALF_X = 7;   // 15 wide
 const HALF_Z = 6;   // 13 deep
@@ -55,7 +58,11 @@ export function classroomFor(index) {
 // Stamp every room. `put(x, y, z, id)` writes ONE block at real coordinates —
 // the caller supplies it so this module never has to know how a chunk is built.
 export function buildClassrooms(put, npcs) {
-  for (let i = 0; i < ROOM_COUNT; i++) {
+  for (let i = 0; i < ROOM_COUNT; i++) buildOneClassroom(put, npcs, i);
+}
+
+export function buildOneClassroom(put, npcs, i) {
+  {
     const r = classroomFor(i);
     const { cx, cz, floor, stand } = r;
     const x0 = cx - HALF_X, x1 = cx + HALF_X, z0 = cz - HALF_Z, z1 = cz + HALF_Z;
@@ -103,6 +110,21 @@ export function buildClassrooms(put, npcs) {
     // than world population.
     npcs.push({ id: 'pip', room: i, x: cx, y: stand, z: cz - 4 });
   }
+}
+
+// A whole world's worth of hand-built content for a lesson world: one room and
+// nothing else. Shaped exactly like buildStarterStructures()'s return so World
+// can consume either without caring which it got.
+export function lessonStructure(index) {
+  const edits = new Map();
+  const npcs = [];
+  const put = (x, y, z, id) => edits.set(`${x},${y},${z}`, id);
+  buildOneClassroom(put, npcs, index);
+  const r = classroomFor(index);
+  return {
+    edits, npcs, nodes: [], spawns: [], chests: [], facings: [],
+    markers: { spawn: r.entry, classrooms: classroomMarkers() },
+  };
 }
 
 // Every room's mat, for the lesson runner. Index matches classroomFor(index).

@@ -2,6 +2,7 @@
 // node lifecycle (deplete/respawn), chest storage, raycasting, persistence.
 import { B, BLOCKS, isSolid, SHAPE_COLLISION } from './blocks.js';
 import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, LEARN_MEADOW, BIOMES, WorldGen, newBlend, ringAt, undergroundNodeCandidates } from './worldgen.js';
+import { lessonStructure } from './classroom.js';
 import { buildStarterStructures, indexEditsByChunk, stampChunkStructures, structureClaims } from './structures.js';
 import { carveRoads } from './roads.js';
 import { NODE_TYPES, PROP_NODE_TYPES, nodeBlocks, nodeCells } from '../game/nodes.js';
@@ -40,7 +41,14 @@ export const cellKey = (x, y, z) => `${x},${y},${z}`;
 const lidx = (lx, y, lz) => (y * CHUNK + lz) * CHUNK + lx;
 
 export class World {
-  constructor(seed) {
+  // `opts.lessonRoom` makes a LESSON WORLD: an empty void containing exactly one
+  // classroom and nothing else. Not a far corner of the overworld — a different
+  // World object, with its own chunks, its own edits and its own clock, so a
+  // child doing a counting exercise cannot touch the world they play in and
+  // nothing from that world can reach them. js/main.js swaps `game.world` for
+  // one of these while a lesson runs and swaps the real one back afterwards.
+  constructor(seed, opts = {}) {
+    this.lessonRoom = opts.lessonRoom ?? null;
     this.seed = seed >>> 0;
     this.gen = new WorldGen(this.seed);
     this.chunks = new Map();          // key → chunk
@@ -59,7 +67,7 @@ export class World {
     this.time = 0;                    // world-time seconds, persisted
     this.dirtyChunks = new Set();     // chunk keys needing remesh
 
-    const s = buildStarterStructures();
+    const s = this.lessonRoom == null ? buildStarterStructures() : lessonStructure(this.lessonRoom);
     this.structure = s;
     this.structEditsByChunk = indexEditsByChunk(s.edits, CHUNK);
     this.markers = s.markers;
@@ -85,6 +93,23 @@ export class World {
   generateChunk(cx, cz) {
     const blocks = new Uint16Array(CHUNK * CHUNK * WORLD_H); // 16-bit: >256 block ids (colored families, shapes)
     const chunk = { cx, cz, blocks, nodes: [], spawns: [], surfaceH: new Int16Array(CHUNK * CHUNK) };
+    // A lesson world is VOID plus one room. Skipping the whole pipeline is the
+    // point rather than an optimisation: no terrain, no caves, no roads, no
+    // settlements, no ore, no creatures — there is nothing in this world to
+    // find, break or be frightened by except the exercise.
+    if (this.lessonRoom != null) {
+      const structOnly = this.structEditsByChunk.get(chunkKey(cx, cz));
+      let top = 1;
+      if (structOnly) {
+        for (const [x, y, z, id] of structOnly) {
+          blocks[lidx(x - cx * CHUNK, y, z - cz * CHUNK)] = id;
+          if (id !== B.air && y + 1 > top) top = y + 1;
+        }
+      }
+      chunk.contentTop = top;
+      chunk.surfaceH.fill(0);
+      return chunk;
+    }
     const setLocal = (lx, y, lz, id) => { blocks[lidx(lx, y, lz)] = id; };
     const gen = this.gen;
 

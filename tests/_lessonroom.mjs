@@ -47,6 +47,11 @@ try {
       lesson: g.lessons.current.numbers_meadow,
       at: [Math.round(g.player.x), Math.round(g.player.y), Math.round(g.player.z)],
       roomAt: room ? [room.cx, room.stand, room.cz] : null,
+      // A DIFFERENT WORLD, not a far corner of this one: a lesson World is
+      // flagged, and the overworld's camp simply does not exist inside it.
+      isLessonWorld: g.world.lessonRoom,
+      campfireHere: g.world.getBlock(4, 65, 4),
+      groundHere: g.world.getBlock(0, 64, 0),
       // Standing on something solid, with a roof: it is a room, not a void.
       floor: g.world.getBlock(Math.floor(g.player.x), Math.floor(g.player.y) - 1, Math.floor(g.player.z)),
       // Scan up rather than guessing the exact course: the point is that the
@@ -63,6 +68,9 @@ try {
   check(entered.at[0] > 29000, `and it took you out of the world entirely (x=${entered.at[0]})`);
   check(Math.abs(entered.at[0] - entered.roomAt[0]) <= 1 && Math.abs(entered.at[2] - entered.roomAt[2]) <= 6,
     'you are standing in this lesson\'s own room');
+  check(entered.isLessonWorld === 0, `and it is a separate world, not a corner of yours (lessonRoom=${entered.isLessonWorld})`);
+  check(entered.campfireHere === 0, 'your camp does not exist in it');
+  check(entered.groundHere === 0, 'nor does the ground your world is made of');
   check(entered.floor !== 0, 'on a floor');
   check(entered.ceiling !== 0, 'under a roof');
 
@@ -94,11 +102,17 @@ try {
   const home = await page.evaluate(() => {
     const g = window.__game;
     g.lessons.leave('numbers_meadow');
-    return { x: g.player.x, z: g.player.z, still: g.lessons.current.numbers_meadow };
+    return {
+      x: g.player.x, z: g.player.z, still: g.lessons.current.numbers_meadow,
+      backInWorld: g.world.lessonRoom,
+      campfire: g.world.getBlock(4, 65, 4),
+    };
   });
   check(Math.hypot(home.x - before.x, home.z - before.z) < 2,
     `leaving puts you back where you started (${Math.hypot(home.x - before.x, home.z - before.z).toFixed(1)} blocks off)`);
   check(home.still === 'nm_add', 'and keeps your place in the series');
+  check(home.backInWorld === null, 'you are back in your own world');
+  check(home.campfire !== 0, 'with your camp still standing in it');
 
   check(errors.length === 0, `no console errors${errors.length ? `: ${errors[0]}` : ''}`);
   await page.screenshot({ path: 'tests/screenshots/lessonroom.png' });

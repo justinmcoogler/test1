@@ -35,7 +35,7 @@
 import { on, emit } from '../core/events.js';
 import { registerLesson, LESSONS } from './education.js';
 import { B } from '../world/blocks.js';
-import { ROOM_COUNT } from '../world/classroom.js';
+import { ROOM_COUNT, classroomFor } from '../world/classroom.js';
 
 // ---- Numbers Meadow: three first-grade math lessons -------------------------
 export const LESSONS_DATA = [
@@ -152,10 +152,9 @@ export class LessonRunner {
     return i < 0 ? 0 : i % ROOM_COUNT;
   }
 
-  room(id) {
-    const rooms = this.game.world?.markers?.classrooms;
-    return rooms ? rooms[this.roomIndex(id)] : null;
-  }
+  // Computed, not looked up in the world: the room has to be known BEFORE the
+  // swap into the lesson world happens, and it is pure geometry either way.
+  room(id) { return classroomFor(this.roomIndex(id)); }
 
   setLesson(area, id) {
     this.current[area] = id;

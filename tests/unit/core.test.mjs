@@ -14,7 +14,7 @@ import { ITEMS } from '../../js/game/items.js';
 import { ENEMY_TYPES } from '../../js/game/enemies.js';
 import { ABILITIES } from '../../js/game/combat.js';
 import { buildStarterStructures } from '../../js/world/structures.js';
-import { ROOM_COUNT, classroomFor } from '../../js/world/classroom.js';
+import { lessonStructure, classroomFor } from '../../js/world/classroom.js';
 import { QUESTS } from '../../js/game/quests.js';
 import { NPC_DEFS, DIALOGUES } from '../../js/game/npcs.js';
 
@@ -290,16 +290,14 @@ test('starter structures: chests/npcs/nodes/spawns are valid', () => {
   // is no town any more and so no townsfolk — everyone else you meet is grown
   // by js/world/settlements.js out on the roads.
   //
-  // The Schoolhouse guides are counted separately and deliberately: they stand
-  // one to a room in sealed classrooms thirty thousand blocks away, which is
-  // nowhere a player walks, so they are furniture rather than population.
-  const guides = s.npcs.filter((n) => n.room !== undefined);
-  const world = s.npcs.filter((n) => n.room === undefined);
-  assert.equal(world.length, 3);
-  assert.ok(world.some((n) => n.id === 'maren'));
-  assert.ok(world.some((n) => n.id === 'sylla'));
-  assert.ok(world.some((n) => n.id === 'pip'));
-  assert.equal(guides.length, ROOM_COUNT, 'one guide per classroom');
+  // And no classroom guides: a lesson runs in a WORLD of its own, so the
+  // overworld carries no classrooms and nobody standing in one.
+  assert.equal(s.npcs.length, 3);
+  assert.ok(s.npcs.some((n) => n.id === 'maren'));
+  assert.ok(s.npcs.some((n) => n.id === 'sylla'));
+  assert.ok(s.npcs.some((n) => n.id === 'pip'));
+  assert.equal(s.npcs.filter((n) => n.room !== undefined).length, 0,
+    'the Schoolhouse is not part of the world you play in');
   // The camp: one bedroll, one fire, one footlocker. If any of these stops being
   // placed the opening stops working — you cannot sleep, cook or stash anything.
   const at = (bx, by, bz) => s.edits.get(`${bx},${by},${bz}`);
@@ -393,4 +391,22 @@ test('nothing the world scatters is left hanging over a cave mouth', () => {
 
   assert.ok(checked > 500, `too few placements sampled to mean anything (${checked})`);
   assert.deepEqual(orphans.slice(0, 8), [], `${orphans.length}/${checked} placements have no ground under them`);
+});
+
+test('a lesson world is a world of its own — one room, and nothing else in it', () => {
+  const s = lessonStructure(1);
+  const r = classroomFor(1);
+  assert.ok(s.edits.size > 500, 'the room is built');
+  assert.equal(s.nodes.length, 0, 'nothing to harvest');
+  assert.equal(s.spawns.length, 0, 'and nothing to fight');
+  assert.equal(s.npcs.length, 1, 'just the guide');
+  assert.deepEqual(s.markers.spawn, r.entry, 'you arrive in the room');
+  // Every block it contains is inside that one room's footprint — no camp, no
+  // mine, no dungeon, no Frostwatch. This is the assertion that keeps a lesson
+  // world a lesson world if somebody is ever tempted to "just add" something.
+  for (const k of s.edits.keys()) {
+    const [x, , z] = k.split(',').map(Number);
+    assert.ok(Math.abs(x - r.cx) <= 8 && Math.abs(z - r.cz) <= 7,
+      `a lesson world should hold nothing outside its room, found a block at ${k}`);
+  }
 });
