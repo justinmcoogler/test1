@@ -14,7 +14,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { LessonRunner, LESSONS_DATA, lessonNeeds, pathPlan, isWalked } from '../../js/game/lessons.js';
-import { pathStructure, STATION_GAP } from '../../js/world/lessonpath.js';
+import { pathStructure, pathFor, STATION_GAP } from '../../js/world/lessonpath.js';
 import { GRADES } from '../../js/game/curriculum/index.js';
 import { validateShape, shapeNeeds } from '../../js/game/buildshapes.js';
 import { EducationManager } from '../../js/game/education.js';
@@ -429,84 +429,131 @@ test('a saved step past the end of a shortened lesson is clamped, not left dangl
   assert.ok(lessons.activeStep(AREA), 'and there is still a stop to do');
 });
 
-// ---- the lesson itself -------------------------------------------------------
-test('one lesson, one band, and the menu knows about it', () => {
-  assert.equal(GRADES.length, 1);
-  assert.equal(LESSONS_DATA.length, 1, 'one lesson, done properly');
-  assert.equal(GRADES[0].lessons.length, 1);
-  assert.equal(GRADES[0].key, AREA, 'the band and the lesson agree on the area');
-  assert.equal(LESSON.next, null, 'and it chains to nothing — there is nothing yet to chain to');
-});
-
-test('the lesson is a story you walk, spoken aloud, and half an hour long', () => {
-  assert.ok(LESSON.walk, 'it is walked');
-  assert.ok(LESSON.title);
-  assert.ok(LESSON.story.length > 200, 'the story is a story, not a sentence');
-  assert.ok(LESSON.steps.length >= 5, `${LESSON.steps.length} stops is not half an hour`);
-  assert.ok(LESSON.minutes >= 30, `banks ${LESSON.minutes} minutes, not thirty`);
-  assert.ok(LESSON.reward.coins > 0, 'it pays coins');
-  for (const [item] of LESSON.reward.items || []) assert.ok(ITEMS[item], `rewards unknown item "${item}"`);
-  assert.ok(NPC_DEFS[LESSON.guide], `the guide "${LESSON.guide}" is not somebody who exists`);
-  // Every step is READ ALOUD, so every step needs all four spoken parts: where to
-  // go, what the place is, what to do, and what happened when it was done.
-  const KINDS = new Set();
-  for (const [i, step] of LESSON.steps.entries()) {
-    for (const field of ['travel', 'say', 'prompt', 'hint', 'success']) {
-      assert.ok(step[field], `stop ${i + 1} is missing its ${field} (it has to be spoken)`);
-    }
-    assert.ok(step.build, `stop ${i + 1} has nothing to do`);
-    assert.ok(step.station?.kind, `stop ${i + 1} is nowhere in particular`);
-    KINDS.add(step.station.kind);
-  }
-  // Six stops that are all the same place is a corridor, not a farm.
-  assert.equal(KINDS.size, LESSON.steps.length, 'every stop is a different kind of place');
-});
-
-test('every shape fits its plot and names blocks that exist', () => {
-  for (const [i, step] of LESSON.steps.entries()) {
-    const err = validateShape(step.build);
-    assert.equal(err, null, `stop ${i + 1}: ${err}`);
+// ---- the curriculum ----------------------------------------------------------
+// Everything above this line exercises the ENGINE and does it on one lesson,
+// which is enough — the runner does not care which morning it is walking. What
+// follows is about the CONTENT, and every word of it has to hold for every lesson
+// in the game or the next one written is the one that slips through.
+test('one band, three mornings, and the menu knows about them', () => {
+  assert.equal(GRADES.length, 1, 'one band: it is one valley and one age');
+  assert.equal(GRADES[0].key, AREA, 'the band and the lessons agree on the area');
+  assert.equal(GRADES[0].lessons.length, LESSONS_DATA.length);
+  assert.ok(LESSONS_DATA.length >= 3, `${LESSONS_DATA.length} lesson(s) is not a curriculum`);
+  const ids = LESSONS_DATA.map((l) => l.id);
+  assert.equal(new Set(ids).size, ids.length, 'two lessons share an id');
+  for (const l of LESSONS_DATA) {
+    // Nothing chains. Each morning ends with "off you go and play" and hands the
+    // child back their day; the next is waiting in the menu when they want it.
+    assert.equal(l.next, null, `${l.id} rolls straight into another lesson`);
   }
 });
 
-test('the kit a lesson hands out covers every block it asks for', () => {
-  const kit = lessonNeeds(LESSON);
-  for (const step of LESSON.steps) {
-    for (const [block, n] of Object.entries(shapeNeeds(step.build))) {
-      assert.ok(kit[block] >= n, `needs ${n} × ${block} but the kit lists ${kit[block] || 0}`);
-      assert.ok(BLOCKS[B[block]], `"${block}" is not a block`);
+test('every lesson is somewhere of its own, not the same lane repainted', () => {
+  const themes = new Set(LESSONS_DATA.map((l) => l.theme || 'farm'));
+  assert.equal(themes.size, LESSONS_DATA.length,
+    `${LESSONS_DATA.length} lessons share ${themes.size} setting(s) — they would look identical`);
+  // …and no two lessons reuse a building. Three mornings that all happen at the
+  // same hen house is the ninety generated lessons over again.
+  const seen = new Map();
+  for (const l of LESSONS_DATA) {
+    for (const step of l.steps) {
+      const prev = seen.get(step.station.kind);
+      assert.equal(prev, undefined,
+        `"${step.station.kind}" is in both ${prev} and ${l.id}`);
+      seen.set(step.station.kind, l.id);
     }
   }
 });
 
-// ---- the one that matters ----------------------------------------------------
-test('every stop can actually be finished by walking there and doing its answer', () => {
-  const s = scenario(LESSON.id);
-  const { lessons } = s;
-  lessons.setLesson(AREA, LESSON.id);
-  for (const [i, step] of LESSON.steps.entries()) {
-    assert.equal(lessons.step[AREA], i,
-      `expected to be on stop ${i + 1} — a previous stop did not complete`);
-    // Walk there first. That is half the step, and a solution played from the
-    // wrong end of the lane is no proof of anything.
-    s.walkToStep(AREA);
-    assert.equal(lessons.phase[AREA], 'work',
-      `stop ${i + 1}: arriving did not start the work`);
-    const ops = playSolution(lessons, s, AREA);
-    assert.ok(ops.length, `stop ${i + 1}: no solution for a ${step.build.kind}`);
-    const advanced = i + 1 < LESSON.steps.length
-      ? lessons.step[AREA] === i + 1
-      : lessons.isPassed(LESSON.id);
-    assert.ok(advanced, `stop ${i + 1} cannot be completed: "${step.prompt}"`);
-  }
-});
+for (const LSN of LESSONS_DATA) {
+  test(`${LSN.id}: a story you walk, spoken aloud, and half an hour long`, () => {
+    assert.ok(LSN.walk, 'it is walked');
+    assert.ok(LSN.title);
+    assert.ok(LSN.story.length > 200, 'the story is a story, not a sentence');
+    assert.ok(LSN.steps.length >= 5, `${LSN.steps.length} stops is not half an hour`);
+    assert.ok(LSN.minutes >= 30, `banks ${LSN.minutes} minutes, not thirty`);
+    assert.ok(LSN.reward.coins > 0, 'it pays coins');
+    for (const [item] of LSN.reward.items || []) assert.ok(ITEMS[item], `rewards unknown item "${item}"`);
+    assert.ok(NPC_DEFS[LSN.guide], `the guide "${LSN.guide}" is not somebody who exists`);
+    // Every step is READ ALOUD, so every step needs all four spoken parts: where
+    // to go, what the place is, what to do, and what happened when it was done.
+    const KINDS = new Set();
+    for (const [i, step] of LSN.steps.entries()) {
+      for (const field of ['travel', 'say', 'prompt', 'hint', 'success']) {
+        assert.ok(step[field], `stop ${i + 1} is missing its ${field} (it has to be spoken)`);
+      }
+      assert.ok(step.build, `stop ${i + 1} has nothing to do`);
+      assert.ok(step.station?.kind, `stop ${i + 1} is nowhere in particular`);
+      KINDS.add(step.station.kind);
+    }
+    // Six stops that are all the same place is a corridor, not a farm.
+    assert.equal(KINDS.size, LSN.steps.length, 'every stop is a different kind of place');
+  });
 
-test('an empty plot completes nothing, at any stop', () => {
-  for (let i = 0; i < LESSON.steps.length; i++) {
-    const s = scenario(LESSON.id);
-    s.lessons.setLesson(AREA, LESSON.id, i);
-    s.walkToStep(AREA);
-    s.lessons.onWatch('blockPlaced');
-    assert.equal(s.lessons.step[AREA], i, `stop ${i + 1} passed with nothing done`);
-  }
-});
+  test(`${LSN.id}: every shape fits its plot and names blocks that exist`, () => {
+    for (const [i, step] of LSN.steps.entries()) {
+      const err = validateShape(step.build);
+      assert.equal(err, null, `stop ${i + 1}: ${err}`);
+    }
+  });
+
+  test(`${LSN.id}: the kit it hands out covers every block it asks for`, () => {
+    const kit = lessonNeeds(LSN);
+    for (const step of LSN.steps) {
+      for (const [block, n] of Object.entries(shapeNeeds(step.build))) {
+        assert.ok(kit[block] >= n, `needs ${n} × ${block} but the kit lists ${kit[block] || 0}`);
+        assert.ok(BLOCKS[B[block]], `"${block}" is not a block`);
+      }
+    }
+  });
+
+  // ---- the one that matters --------------------------------------------------
+  test(`${LSN.id}: every stop can be finished by walking there and doing its answer`, () => {
+    const s = scenario(LSN.id);
+    const { lessons } = s;
+    lessons.setLesson(AREA, LSN.id);
+    for (const [i, step] of LSN.steps.entries()) {
+      assert.equal(lessons.step[AREA], i,
+        `expected to be on stop ${i + 1} — a previous stop did not complete`);
+      // Walk there first. That is half the step, and a solution played from the
+      // wrong end of the lane is no proof of anything.
+      s.walkToStep(AREA);
+      assert.equal(lessons.phase[AREA], 'work',
+        `stop ${i + 1}: arriving did not start the work`);
+      const ops = playSolution(lessons, s, AREA);
+      assert.ok(ops.length, `stop ${i + 1}: no solution for a ${step.build.kind}`);
+      const advanced = i + 1 < LSN.steps.length
+        ? lessons.step[AREA] === i + 1
+        : lessons.isPassed(LSN.id);
+      assert.ok(advanced, `stop ${i + 1} cannot be completed: "${step.prompt}"`);
+    }
+  });
+
+  test(`${LSN.id}: an empty plot completes nothing, at any stop`, () => {
+    for (let i = 0; i < LSN.steps.length; i++) {
+      const s = scenario(LSN.id);
+      s.lessons.setLesson(AREA, LSN.id, i);
+      s.walkToStep(AREA);
+      s.lessons.onWatch('blockPlaced');
+      assert.equal(s.lessons.step[AREA], i, `stop ${i + 1} passed with nothing done`);
+    }
+  });
+
+  test(`${LSN.id}: the whole place is built, and it is walled all the way round`, () => {
+    const { edits } = pathStructure(pathPlan(LSN));
+    assert.ok(edits.size > 8000, `${edits.size} blocks is not a place`);
+    const path = pathFor(pathPlan(LSN));
+    // The boundary is the only thing between a five-year-old and a very long
+    // fall, so it is checked as a ring rather than trusted.
+    for (const x of [path.bounds.x0, path.bounds.x1]) {
+      for (let z = path.bounds.z0; z <= path.bounds.z1; z++) {
+        assert.ok(edits.has(`${x},${path.stations[0].stand},${z}`), `a hole in the wall at ${x},${z}`);
+      }
+    }
+    for (const z of [path.bounds.z0, path.bounds.z1]) {
+      for (let x = path.bounds.x0; x <= path.bounds.x1; x++) {
+        assert.ok(edits.has(`${x},${path.stations[0].stand},${z}`), `a hole in the wall at ${x},${z}`);
+      }
+    }
+  });
+}

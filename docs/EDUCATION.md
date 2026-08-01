@@ -11,10 +11,27 @@ are run by [`js/game/lessons.js`](../js/game/lessons.js).
 
 ## The curriculum
 
-**One lesson, done properly.** There were ninety, one story each, told over five
-prompts on a work mat in a sealed room. They were rejected for what they were: a
-worksheet with a skybox. What replaced them is a single lesson built the way all
-the others will be, and nothing ships until it is that good.
+**Three lessons, done properly.** There were ninety, one story each, told over
+five prompts on a work mat in a sealed room. They were rejected for what they
+were: a worksheet with a skybox. What replaced them is built one at a time, and
+nothing ships until it is as good as the first.
+
+All three are for the same child — **four to six, still being read to** — and all
+three happen in one valley with the same guide, because a four-year-old who has
+spent a morning with Nan Willow should not arrive at the mill and be handed to a
+stranger. Each is a different **place**, not the same lane repainted: its own
+ground underfoot, its own walls, and eighteen buildings between them that exist
+nowhere else.
+
+| Morning | The question behind it | What it covers |
+|---|---|---|
+| Before the Bell | how many are there | matching, counting, sorting, adding |
+| The Mill on Marrow Brook | how many are **left** | taking away, number bonds, comparing |
+| Market Day at Thistlewick | how they are **arranged** | pattern, equal groups, shape, symmetry |
+
+Nothing chains. Each morning ends with "off you go and play" and means it —
+finishing banks half an hour and hands the child back their day. The next one is
+waiting in the menu when they want it.
 
 ### Before the Bell — the morning round at Honeywood Farm
 
@@ -31,9 +48,41 @@ animals in it that need something, ending at the bell.
 | 5 | Top field | find the lamb that got out through the wall | searching a real place |
 | 6 | The bell | write `3 + 4 = 7` in number blocks | writing the arithmetic down |
 
-Every step is READ ALOUD, one instruction at a time, and every number in it is
-said out loud rather than only shown. The lesson banks **30 minutes** of play and
-pays 40 coins, two loaves and six eggs.
+### The Mill on Marrow Brook — taking away
+
+Tobin the miller has gone to market and the baker wants ten sacks at noon. A
+damp stone towpath along the leat, walled in drystone.
+
+| Stop | Place | What is asked | What it teaches |
+|---|---|---|---|
+| 1 | Reed bed | find five duck eggs in the rushes | counting a set you have to look for |
+| 2 | Footbridge | ten planks to deck it (and it opens) | counting to ten, and an obstacle |
+| 3 | Sack store | stack ten, then take three off for the carter | **subtraction, watched happening** |
+| 4 | Weigh beam | a tower of 5 and a tower of 2 | comparing without counting |
+| 5 | Granary | four pale sacks are in; add dark ones to make ten | number bonds — how many *more* |
+| 6 | Tally board | write `10 - 3 = 7` | writing it down |
+
+Stop 3 is the one the lesson exists for. A check only ever sees the mat as it is
+now, so it remembers the peak: a child cannot pass by placing seven, the ten has
+to be built and then broken into. You cannot see seven by looking at ten.
+
+### Market Day at Thistlewick — how things are arranged
+
+The market opens when the hall bell rings at nine, it is half past seven, and not
+one stall is ready. Cobbles, a stone town wall, striped awnings.
+
+| Stop | Place | What is asked | What it teaches |
+|---|---|---|---|
+| 1 | Bunting poles | red, white, red, white — ten flags | a repeating pattern |
+| 2 | Fruit stall | three baskets of three, with gaps | equal groups, and why gaps matter |
+| 3 | Crate stack | fill three crates to 2, 5 and 3 | bar heights you read at a glance |
+| 4 | Duck pen | a fence 5 × 3, hollow (and the way opens) | going *round* a shape, not filling it |
+| 5 | Toy stall | the same both sides of the middle line | symmetry |
+| 6 | Market hall | write `5 + 5 = 10` | writing it down |
+
+Every step of every lesson is READ ALOUD, one instruction at a time, and every
+number in it is said out loud rather than only shown. Each banks **30 minutes**
+of play and pays coins and supplies.
 
 - **You walk it.** ([`js/world/lessonpath.js`](../js/world/lessonpath.js).) A
   gravel lane through a hedged farm, a stop every twenty blocks. Each step has two

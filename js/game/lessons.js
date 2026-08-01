@@ -62,7 +62,14 @@ export function isWalked(lesson) { return !!lesson?.walk; }
 // station kinds, what to scatter at each, and which ones bar the way — no
 // arithmetic, no prompts, nothing js/world/ has any business reading.
 export function pathPlan(lesson) {
-  return { id: lesson.id, stations: (lesson.steps || []).map((s) => s.station || { kind: 'henhouse' }) };
+  return {
+    id: lesson.id,
+    // Which valley this morning happens in — farm, mill or market town. The world
+    // layer turns it into ground, path and walls; nothing here knows what any of
+    // those are made of.
+    theme: lesson.theme || 'farm',
+    stations: (lesson.steps || []).map((s) => s.station || { kind: 'henhouse' }),
+  };
 }
 
 export const LESSONS_DATA = CURRICULUM;

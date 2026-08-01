@@ -56,6 +56,52 @@ const PEN_NEAR = PLOT_NEAR + PLOT_DEPTH;      // pen begins right behind the plo
 const PEN_DEPTH = 7;
 const BUILD_NEAR = PEN_NEAR + PEN_DEPTH;      // and the shed behind the pen
 
+// WHAT THE PLACE IS MADE OF. Three lessons down one identical green lane would
+// be the ninety generated lessons all over again — same worksheet, different
+// numbers — so a lesson names a theme and the ground, the path underfoot and the
+// thing that keeps a child from walking off the edge all change with it.
+//
+// The shape of the place does not change: one lane, stops every twenty blocks, a
+// plot at each. That shape is what the runner, the shapes and the guide dots are
+// all built on, and it is not the part that gets boring.
+const EDGES = {
+  // A field hedge on a log footing.
+  hedge: (put, x, stand, z) => {
+    put(x, stand - 1, z, B.oak_log);
+    put(x, stand, z, B.oak_leaves);
+    put(x, stand + 1, z, B.oak_leaves);
+  },
+  // Drystone, the way a mill leat is walled. Mossy on the low course, where the
+  // water would reach.
+  drystone: (put, x, stand, z) => {
+    put(x, stand - 1, z, B.mossy_cobble);
+    put(x, stand, z, B.cobble);
+    put(x, stand + 1, z, B.mossy_cobble);
+  },
+  // A town wall: dressed stone with a course of brick along the top.
+  townwall: (put, x, stand, z) => {
+    put(x, stand - 1, z, B.stone_brick);
+    put(x, stand, z, B.stone_brick);
+    put(x, stand + 1, z, B.brick);
+  },
+};
+
+const THEMES = {
+  farm: { lane: B.gravel, ground: B.grass, edge: 'hedge',
+    verge: [B.tall_grass, B.wildflower, B.orange_tulip, B.white_tulip, B.pink_tulip, B.oxeye_daisy] },
+  // A damp stone towpath along the leat, with reeds and rushes in the wet grass.
+  // Planks were tried and the whole foreground read as an indoor floor — a lane
+  // is underfoot in every frame, so its texture is most of what a place looks
+  // like, and wood at that scale is a room rather than a path.
+  mill: { lane: B.mossy_cobble, ground: B.grass, edge: 'drystone',
+    verge: [B.tall_grass, B.reed, B.reed, B.wildflower] },
+  // Cobbles, swept: a market square is a place people have trodden flat.
+  market: { lane: B.cobble, ground: B.grass, edge: 'townwall',
+    verge: [B.tall_grass, B.oxeye_daisy, B.cobble, B.wildflower] },
+};
+
+const themeOf = (plan) => THEMES[plan?.theme] || THEMES.farm;
+
 export function pathFor(plan) {
   const stations = (plan?.stations || []);
   const cz = PATH_REALM.z;
@@ -129,6 +175,8 @@ export function buildPath(put, npcs, plan, spawn = () => {}) {
   const path = pathFor(plan);
   const { bounds, stations } = path;
   const floor = PATH_REALM.y, stand = floor + 1, cz = PATH_REALM.z;
+  const theme = themeOf(plan);
+  const edge = EDGES[theme.edge] || EDGES.hedge;
 
   // ---- the ground -------------------------------------------------------
   // Three courses. A child who digs through the top two would otherwise be
@@ -136,19 +184,19 @@ export function buildPath(put, npcs, plan, spawn = () => {}) {
   for (let x = bounds.x0; x <= bounds.x1; x++) {
     for (let z = bounds.z0; z <= bounds.z1; z++) {
       const onLane = z >= cz - 1 && z <= cz + 1;
-      put(x, floor, z, onLane ? B.gravel : B.grass);
+      put(x, floor, z, onLane ? theme.lane : theme.ground);
       put(x, floor - 1, z, B.dirt);
       put(x, floor - 2, z, B.stone);
     }
   }
-  // ---- the hedge --------------------------------------------------------
-  // Two tall, all the way round, on a log footing. This is the only thing
-  // between a five-year-old and a very long fall, so it is unbroken.
+  // ---- the boundary -----------------------------------------------------
+  // Two tall, all the way round. This is the only thing between a five-year-old
+  // and a very long fall, so it is unbroken whatever it is made of.
   for (let x = bounds.x0; x <= bounds.x1; x++) {
-    for (const z of [bounds.z0, bounds.z1]) hedge(put, x, stand, z);
+    for (const z of [bounds.z0, bounds.z1]) edge(put, x, stand, z);
   }
   for (let z = bounds.z0; z <= bounds.z1; z++) {
-    for (const x of [bounds.x0, bounds.x1]) hedge(put, x, stand, z);
+    for (const x of [bounds.x0, bounds.x1]) edge(put, x, stand, z);
   }
   // ---- the verges -------------------------------------------------------
   // Long grass and flowers, kept off the lane and off the plots. Deterministic:
@@ -163,9 +211,7 @@ export function buildPath(put, npcs, plan, spawn = () => {}) {
       // The pens keep theirs: long grass and flowers in a paddock are what a
       // paddock looks like, and a bare mud rectangle behind every plot is not.
       const r = rnd();
-      if (r < 0.18) put(x, stand, z, B.tall_grass);
-      else if (r < 0.22) put(x, stand, z, B.wildflower);
-      else if (r < 0.245) put(x, stand, z, [B.orange_tulip, B.white_tulip, B.pink_tulip, B.oxeye_daisy][(x + z) & 3]);
+      if (r < 0.245) put(x, stand, z, theme.verge[Math.floor(r * theme.verge.length * 4.08) % theme.verge.length]);
     }
   }
 
@@ -185,12 +231,6 @@ export function buildPath(put, npcs, plan, spawn = () => {}) {
     npcs.push({ id: 'nan', station: st.index, x: st.sx - 8, y: stand, z: cz + 4 });
   }
   return path;
-}
-
-function hedge(put, x, stand, z) {
-  put(x, stand - 1, z, B.oak_log);
-  put(x, stand, z, B.oak_leaves);
-  put(x, stand + 1, z, B.oak_leaves);
 }
 
 // The work plot: squared paper laid flush into the ground so it is comfortable to
@@ -346,6 +386,166 @@ const STATIONS = {
     signpost(put, st.sx - 9, st.stand, st.cz - 2);
   },
 
+  // ---- The Mill on Marrow Brook ---------------------------------------------
+
+  // The reed bed: a pool of standing water at the back of the stop with rushes
+  // round it, and a little plank jetty out into it. The eggs to be found are
+  // scattered in the verge by `scatter`, not here — this is only the place.
+  reedbed: (put, st) => {
+    const pz = st.cz + BUILD_NEAR - 2;
+    for (let x = st.sx - 7; x <= st.sx + 7; x++) {
+      for (let z = pz; z <= pz + 4; z++) {
+        // Sunk one course, so it reads as a pool rather than a sheet of water
+        // lying on the grass.
+        put(x, st.floor, z, B.water);
+        put(x, st.stand, z, B.air);
+      }
+    }
+    for (const [dx, dz] of [[-8, 0], [-8, 2], [8, 1], [8, 3], [-6, -1], [3, -1], [6, -1]]) {
+      put(st.sx + dx, st.stand, pz + dz, B.reed);
+    }
+    for (let z = pz - 2; z <= pz + 1; z++) put(st.sx, st.stand - 1, z, B.planks);   // the jetty
+    put(st.sx, st.stand, pz - 2, B.lantern_lit);
+  },
+
+  // The footbridge stop: the trestle is up and the planking is not. A stack of
+  // timber and a sawhorse, so the place looks like a job half done.
+  footbridge: (put, st) => {
+    for (let i = 0; i < 4; i++) put(st.sx + 6, st.stand + i, st.cz - 3, B.oak_log);
+    for (const dx of [4, 5, 7, 8]) put(st.sx + dx, st.stand, st.cz - 3, B.planks);
+    put(st.sx + 7, st.stand, st.cz - 4, B.workbench);
+    signpost(put, st.sx - 8, st.stand, st.cz - 2);
+  },
+
+  // The sack store: an open-fronted shed with sacks stacked up the back wall.
+  sackstore: (put, st) => {
+    const hx = st.sx - 5, hz = st.cz + BUILD_NEAR, top = st.stand + 3;
+    for (let x = hx; x <= hx + 10; x++) {
+      for (let z = hz; z <= hz + 3; z++) {
+        const back = z === hz + 3, side = x === hx || x === hx + 10;
+        for (let y = st.stand; y < top; y++) put(x, y, z, (back || side) ? B.planks : B.air);
+        put(x, top, z, B.thatch);
+      }
+    }
+    for (let x = hx + 2; x <= hx + 8; x += 3) {              // sacks against the wall
+      for (let y = 0; y < 2; y++) put(x, st.stand + y, hz + 2, B.thatch);
+    }
+  },
+
+  // The weigh beam: two posts and a crossbar with a pan hanging either side of
+  // the plank line, so the two towers the child builds are visibly a comparison.
+  weighbeam: (put, st) => {
+    const wz = st.cz + PEN_NEAR + 1;
+    for (let y = 0; y < 5; y++) put(st.sx, st.stand + y, wz, B.oak_log);
+    for (let x = st.sx - 4; x <= st.sx + 4; x++) put(x, st.stand + 5, wz, B.planks);
+    for (const dx of [-4, 4]) {
+      put(st.sx + dx, st.stand + 4, wz, B.planks_fence);
+      put(st.sx + dx, st.stand + 3, wz, B.stone_brick);
+    }
+    put(st.sx + 6, st.stand, wz, B.anvil_block);
+  },
+
+  // The granary: a round stone bin with a course of brick every two up, so a
+  // child filling it to "the sixth mark" has real marks to count.
+  granary: (put, st) => {
+    const gx = st.sx - 2, gz = st.cz + BUILD_NEAR;
+    for (let x = gx; x <= gx + 5; x++) {
+      for (let z = gz; z <= gz + 4; z++) {
+        const wall = x === gx || x === gx + 5 || z === gz || z === gz + 4;
+        if (!wall) continue;
+        for (let y = 0; y < 7; y++) put(x, st.stand + y, z, (y % 2 === 1) ? B.brick : B.stone_brick);
+      }
+    }
+    put(gx + 2, st.stand, gz, B.air);                        // the door
+    put(gx + 2, st.stand + 1, gz, B.air);
+    for (const dx of [-5, 8]) put(st.sx + dx, st.stand, gz + 1, B.thatch);
+  },
+
+  // The tally board: a big board on two posts where the mill's numbers get
+  // written up, with the miller's cottage behind it.
+  tallyboard: (put, st) => {
+    const bz = st.cz + PEN_NEAR + 2, bx = st.sx - 3;
+    for (const x of [bx, bx + 7]) for (let y = 0; y < 4; y++) put(x, st.stand + y, bz, B.oak_log);
+    for (let x = bx; x <= bx + 7; x++) {
+      for (let y = 2; y < 4; y++) put(x, st.stand + y, bz, B.planks);
+    }
+    cottage(put, st, st.sx + 4, st.cz + BUILD_NEAR);
+    for (const x of [st.sx - 6, st.sx + 3]) put(x, st.stand, st.plot.z0 - 1, B.lantern_lit);
+  },
+
+  // ---- Market Day at Thistlewick --------------------------------------------
+
+  // The bunting line: two tall poles with a rope between them, waiting to be
+  // dressed. The pattern the child lays on the plot is the bunting.
+  buntingline: (put, st) => {
+    const bz = st.cz + PEN_NEAR;
+    for (const dx of [-7, 7]) {
+      for (let y = 0; y < 6; y++) put(st.sx + dx, st.stand + y, bz, B.oak_log);
+    }
+    for (let x = st.sx - 7; x <= st.sx + 7; x++) put(x, st.stand + 6, bz, B.planks_fence);
+    put(st.sx - 9, st.stand, st.cz - 3, B.workbench);
+    signpost(put, st.sx + 9, st.stand, st.cz - 2);
+  },
+
+  // A market stall: four posts, a striped awning, a plank counter.
+  fruitstall: (put, st) => stall(put, st, B.red_wool, B.white_wool),
+
+  // The crate stack: empty crates waiting to be filled to their marks.
+  cratestack: (put, st) => {
+    const cz0 = st.cz + PEN_NEAR + 1;
+    for (const dx of [-7, -4, 5]) {
+      for (let x = st.sx + dx; x <= st.sx + dx + 1; x++) {
+        for (let z = cz0; z <= cz0 + 1; z++) {
+          put(x, st.stand, z, B.planks);
+          put(x, st.stand + 1, z, B.planks_fence);
+        }
+      }
+    }
+    put(st.sx + 8, st.stand, cz0, B.workbench);
+  },
+
+  // The duck seller's pen: a run of hurdles already up behind the stop, with the
+  // birds loose in front of it. Named for the shape, not the bird — the game has
+  // ducks and no geese, and a lesson that says "geese" over a creature labelled
+  // DUCK is the game lying to a child who cannot yet read but can certainly see.
+  goosepen: (put, st) => {
+    const pz = st.cz + PEN_NEAR + 2;
+    for (let x = st.sx - 6; x <= st.sx + 6; x++) put(x, st.stand, pz + 4, B.planks_fence);
+    for (let z = pz; z <= pz + 4; z++) {
+      put(st.sx - 6, st.stand, z, B.planks_fence);
+      put(st.sx + 6, st.stand, z, B.planks_fence);
+    }
+    put(st.sx - 9, st.stand, st.cz - 3, B.thatch);
+  },
+
+  // The toy stall: a blue-and-white awning and a rocking horse on the counter.
+  toystall: (put, st) => {
+    stall(put, st, B.light_blue_wool, B.white_wool);
+    const tz = st.cz + PEN_NEAR + 1;
+    put(st.sx - 1, st.stand + 1, tz, B.oak_log);
+    put(st.sx, st.stand + 1, tz, B.oak_log);
+    put(st.sx, st.stand + 2, tz, B.planks);
+  },
+
+  // The market hall: the end of the morning. A pillared front, the bell above
+  // the door, and the board the day's numbers go up on.
+  markethall: (put, st) => {
+    const hx = st.sx - 4, hz = st.cz + BUILD_NEAR, top = st.stand + 4;
+    for (let x = hx; x <= hx + 9; x++) {
+      for (let z = hz; z <= hz + 5; z++) {
+        const wall = x === hx || x === hx + 9 || z === hz || z === hz + 5;
+        const pillar = z === hz && (x - hx) % 3 === 0;
+        for (let y = st.stand; y < top; y++) {
+          put(x, y, z, pillar ? B.stone_brick : (wall && z !== hz) ? B.timber_wall : B.air);
+        }
+        put(x, top, z, B.thatch);
+        put(x, top + 1, z, (x > hx && x < hx + 9 && z > hz && z < hz + 5) ? B.thatch : B.air);
+      }
+    }
+    put(hx + 4, st.stand + 4, hz, B.gold_block);             // the bell over the door
+    for (const x of [st.sx - 7, st.sx + 6]) put(x, st.stand, st.plot.z0 - 1, B.lantern_lit);
+  },
+
   // The bell: the end of the round. A frame, a brass bell, and the farmhouse.
   bell: (put, st) => {
     const bx = st.sx - 1, bz = st.cz + PEN_NEAR + 2;
@@ -376,6 +576,36 @@ function signpost(put, x, stand, z) {
   put(x, stand + 1, z, B.planks);
 }
 
+// A market stall: four corner posts, a plank counter, and a striped awning over
+// it in the stall's own two colours. Behind the pen line, like every other prop,
+// so a child can always see their own work from where they stand.
+function stall(put, st, a, b) {
+  const sz = st.cz + PEN_NEAR + 1, x0 = st.sx - 5, x1 = st.sx + 5;
+  for (const x of [x0, x1]) {
+    for (let y = 0; y < 4; y++) { put(x, st.stand + y, sz, B.oak_log); put(x, st.stand + y, sz + 3, B.oak_log); }
+  }
+  for (let x = x0; x <= x1; x++) {
+    put(x, st.stand + 1, sz + 3, B.planks);                       // the counter
+    for (let z = sz; z <= sz + 3; z++) put(x, st.stand + 4, z, ((x - x0) % 2 === 0) ? a : b);
+  }
+}
+
+// A small tiled cottage, used wherever a lesson needs somebody to live nearby.
+function cottage(put, st, hx, hz) {
+  const top = st.stand + 3;
+  for (let x = hx; x <= hx + 6; x++) {
+    for (let z = hz; z <= hz + 4; z++) {
+      const wall = x === hx || x === hx + 6 || z === hz || z === hz + 4;
+      for (let y = st.stand; y < top; y++) put(x, y, z, wall ? B.timber_wall : B.air);
+      put(x, top, z, B.thatch);
+      put(x, top + 1, z, (x > hx && x < hx + 6 && z > hz && z < hz + 4) ? B.thatch : B.air);
+    }
+  }
+  put(hx + 3, st.stand, hz, B.oak_door);
+  put(hx + 3, st.stand + 1, hz, B.oak_door_top);
+  for (const x of [hx + 1, hx + 5]) put(x, st.stand + 1, hz, B.glasspane);
+}
+
 // A fence across the whole farm, two tall, with a gate post either side of the
 // lane so it reads as a gate rather than a wall.
 function gate(put, st) {
@@ -397,8 +627,14 @@ function scatter(put, st, rnd) {
   const id = B[st.scatter.block];
   if (id === undefined) return;
   const spots = [];
+  // WHERE THE CHILD IS LOOKING. A stop with a plot has its work in front, so the
+  // things to find go in the verge behind — turn round and hunt. A stop with no
+  // plot has nothing in front but open ground, and that is where a child arriving
+  // is already facing, so the hunt goes there instead. Scattering behind them at
+  // a plotless stop meant the answer was the one place they could not see.
+  const [z0, z1] = st.plot ? [st.cz - 4, st.cz - 2] : [st.cz + 3, st.cz + 11];
   for (let x = st.sx - 7; x <= st.sx + 7; x += 2) {
-    for (let z = st.cz - 4; z <= st.cz - 2; z++) spots.push([x, z]);
+    for (let z = z0; z <= z1; z++) spots.push([x, z]);
   }
   for (let i = spots.length - 1; i > 0; i--) {
     const j = Math.floor(rnd() * (i + 1));
