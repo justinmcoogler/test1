@@ -307,7 +307,10 @@ export class UI {
       if (!eb) {
         eb = document.createElement('div');
         eb.id = 'env-badge';
-        $('hud').appendChild(eb);
+        // into the right-hand column, between the minimap and the quest tracker
+        // — the column stacks itself, so the badge has no offset of its own to
+        // get wrong when the UI scale changes.
+        $('hud-right').insertBefore(eb, $('quest-tracker'));
       }
       const wd = wsys.def();
       const dot = wd.tint ? `rgb(${wd.tint.map((v) => Math.round(v * 255)).join(',')})` : '#ffd98a';
@@ -380,6 +383,24 @@ export class UI {
       }
       el.innerHTML = html;
     }
+    this.layoutBottomBar();
+  }
+
+  // The hotbar is centred on the bottom edge and the menu buttons are pinned to
+  // the corner. Whether the two fit side by side depends on the window width AND
+  // on the UI scale — and a media query can only see one of those, which is why
+  // the menu sat on top of the hotbar at 1100px and swallowed it whole at scale
+  // 1.4. So measure the two boxes and lift the menu clear when they collide.
+  layoutBottomBar() {
+    const bar = $('hotbar'), menu = $('menu-buttons');
+    if (!bar || !menu) return;
+    menu.style.bottom = '';                       // measure the CSS position first
+    // On phones the menu row is docked to the TOP instead; nothing to solve.
+    if (getComputedStyle(menu).bottom === 'auto') return;
+    const a = bar.getBoundingClientRect(), b = menu.getBoundingClientRect();
+    if (!a.width || !b.width) return;
+    const overlaps = b.left < a.right + 8 && b.right > a.left - 8 && b.top < a.bottom && b.bottom > a.top;
+    if (overlaps) menu.style.bottom = `${Math.round(window.innerHeight - a.top + 8)}px`;
   }
 
   toast(text, cls = '') {

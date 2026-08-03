@@ -433,7 +433,7 @@ class Game {
       if (this.combat.active || !this.settings.classicCamera) return;
       this.onClassicClick(e.clientX, e.clientY, true);
     });
-    window.addEventListener('resize', () => this.renderer.resize());
+    window.addEventListener('resize', () => { this.renderer.resize(); this.ui.layoutBottomBar(); });
     $('respawn-btn').addEventListener('click', () => this.respawn());
   }
 
@@ -480,6 +480,7 @@ class Game {
     setReadAloud(s.readAloud !== false);
     document.documentElement.style.setProperty('--ui-scale', s.uiScale);
     document.documentElement.style.setProperty('--text-scale', s.textScale);
+    this.ui?.layoutBottomBar();   // both scales move the hotbar and the menu row
     document.documentElement.classList.toggle('colorblind', s.colorblind);
     document.documentElement.classList.toggle('reduced-motion', s.reducedMotion);
     document.documentElement.classList.toggle('left-handed', s.leftHanded);

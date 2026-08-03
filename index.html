@@ -77,17 +77,26 @@
 <div id="hud" class="hidden">
   <div id="crosshair">+</div>
 
-  <div id="vitals">
-    <div class="vital-bar hp"><div class="vital-fill" id="hp-fill"></div><span id="hp-text"></span></div>
-    <div class="vital-bar energy"><div class="vital-fill" id="energy-fill"></div><span id="energy-text"></span></div>
-    <div class="vital-bar mana"><div class="vital-fill" id="mana-fill"></div><span id="mana-text"></span></div>
+  <!-- The two edge columns STACK. They used to be loose boxes at hard-coded top
+       offsets, which can only ever be right for one window size at one UI scale;
+       every other combination put the weather badge inside the minimap or the
+       FPS chip across the compass. -->
+  <div id="hud-left">
+    <div id="vitals">
+      <div class="vital-bar hp"><div class="vital-fill" id="hp-fill"></div><span id="hp-text"></span></div>
+      <div class="vital-bar energy"><div class="vital-fill" id="energy-fill"></div><span id="energy-text"></span></div>
+      <div class="vital-bar mana"><div class="vital-fill" id="mana-fill"></div><span id="mana-text"></span></div>
+    </div>
+    <div id="fps-badge"></div>
   </div>
 
   <div id="compass-wrap"><canvas id="compass" width="260" height="26"></canvas></div>
-  <div id="fps-badge"></div>
-  <canvas id="minimap" width="140" height="140"></canvas>
 
-  <div id="quest-tracker"></div>
+  <div id="hud-right">
+    <canvas id="minimap" width="140" height="140"></canvas>
+    <!-- #env-badge is inserted here by js/ui/ui.js -->
+    <div id="quest-tracker"></div>
+  </div>
   <div id="interact-prompt" class="hidden"></div>
   <div id="gather-progress" class="hidden"><div id="gather-fill"></div><span id="gather-label"></span></div>
   <div id="toasts"></div>
