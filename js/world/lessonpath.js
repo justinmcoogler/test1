@@ -401,8 +401,11 @@ const STATIONS = {
         put(x, st.stand, z, B.air);
       }
     }
+    // Rushes round the edge, two segments tall with a fronded crown — the same
+    // canes that grow along any waterline, so the place matches the world.
     for (const [dx, dz] of [[-8, 0], [-8, 2], [8, 1], [8, 3], [-6, -1], [3, -1], [6, -1]]) {
       put(st.sx + dx, st.stand, pz + dz, B.reed);
+      put(st.sx + dx, st.stand + 1, pz + dz, B.reed_top);
     }
     for (let z = pz - 2; z <= pz + 1; z++) put(st.sx, st.stand - 1, z, B.planks);   // the jetty
     put(st.sx, st.stand, pz - 2, B.lantern_lit);

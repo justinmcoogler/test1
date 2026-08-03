@@ -241,7 +241,8 @@ export function buildStarterStructures() {
       set(x, GROUND, z, B.air); set(x, F, z, B.air);
       // reeds root right where the ledge meets the water (a basin cell beside it)
       const byWater = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => Math.hypot(x + dx, (z + dz) - 18) <= 4.2);
-      if (byWater && (x * 7 + z * 13) % 3 === 0) set(x, GROUND, z, B.reed);
+      // two segments and a crown — canes, the same as everywhere else
+      if (byWater && (x * 7 + z * 13) % 3 === 0) { set(x, GROUND, z, B.reed); set(x, F, z, B.reed_top); }
     } else if (d <= 6.5) {
       // plateau lip you step down from — dry, so grass tufts rather than reeds
       set(x, GROUND, z, B.sand);

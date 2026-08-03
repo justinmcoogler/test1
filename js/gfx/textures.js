@@ -7,7 +7,7 @@ import { TEXPACK_TILES } from './texpack.js';
 
 export const TILE = 32;
 export const ATLAS_COLS = 16;
-export const ATLAS_ROWS = 26; // headroom for wood/ore/mineral + tinted families + schematic-import blocks
+export const ATLAS_ROWS = 28; // headroom for wood/ore/mineral + tinted families + schematic-import blocks
 const G = 1; // grain: logical pixel size
 const LP = TILE / G; // 32 logical pixels per side
 
@@ -23,9 +23,18 @@ function px(ctx, x0, y0, lx, ly, color) {
 }
 
 function shade(hex, amt) {
-  // hex '#rrggbb', amt -1..1
-  const n = parseInt(hex.slice(1), 16);
-  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  // amt -1..1. Takes '#rrggbb' OR the 'rgb(r,g,b)' this function itself returns
+  // — deriving a colour and then shading it again is the obvious thing to write,
+  // and when only the hex form parsed it yielded 'rgb(NaN,NaN,NaN)', which
+  // canvas ignores, so the pixel silently kept whatever fillStyle came before.
+  // A whole crop painted itself black that way.
+  let r, g, b;
+  if (hex[0] !== '#') {
+    [r, g, b] = hex.slice(hex.indexOf('(') + 1, -1).split(',').map(Number);
+  } else {
+    const n = parseInt(hex.slice(1), 16);
+    r = (n >> 16) & 255; g = (n >> 8) & 255; b = n & 255;
+  }
   r = Math.max(0, Math.min(255, Math.round(r + amt * 255)));
   g = Math.max(0, Math.min(255, Math.round(g + amt * 255)));
   b = Math.max(0, Math.min(255, Math.round(b + amt * 255)));
@@ -147,6 +156,96 @@ function cross(ctx, x0, y0, rand, painter) {
   painter();
 }
 
+// One wheat stage, 0 (just sown) to 7 (ready). Painted as a ROW of stalks stood
+// at fixed columns rather than scattered blades — the tile is a flat pane in the
+// crop hash, so this art IS the crop seen edge-on, and a field is planted in
+// rows. The stalks lengthen, green drains to straw, and ears only appear once
+// the plant has the height to carry them.
+function wheatStage(ctx, x0, y0, rand, k) {
+  ctx.clearRect(x0, y0, TILE, TILE);
+  const t = k / 7;
+  // Stalks are three logical pixels wide, not one. A one-pixel line on a 32px
+  // tile survives the near view and dissolves in the mipmaps, which is what
+  // turned a field seen from across the valley into a grey haze.
+  // Ripening is a HUE change, not a brightening — a pale green is not a summer
+  // field. Squared, so the crop stays green a while and then turns.
+  const green = t * t;
+  const stem = mix('#4c8c37', '#c3a34c', green);     // green → straw
+  const stemLite = shade(stem, 0.09), stemDark = shade(stem, -0.10);
+  const leaf = mix('#6cae51', '#cbb463', green), leafDark = shade(leaf, -0.09);
+  const ear = k >= 5 ? '#d3b24e' : null;
+  const earLite = '#efdb8d', earDark = '#9d7f2c';
+  const h = Math.round(6 + t * 23);                  // 6px at sowing, 29px ripe
+  for (const cx of [3, 11, 19, 27]) {
+    const top = Math.max(3, LP - h - Math.floor(rand() * 3));
+    const lean = rand() < 0.5 ? -1 : 1;
+    for (let ly = LP - 1; ly >= top; ly--) {
+      const bend = k >= 3 && ly < top + 3 ? lean : 0; // the head bows over
+      px(ctx, x0, y0, cx + bend, ly, stemDark);
+      px(ctx, x0, y0, cx + bend + 1, ly, stemLite);
+      px(ctx, x0, y0, cx + bend + 2, ly, ly % 6 === 0 ? stemDark : stem);
+    }
+    if (k >= 2) {                                    // blades peeling off the stalk
+      for (const [f, dir] of [[0.34, -1], [0.62, 1]]) {
+        const ly = Math.min(LP - 2, top + Math.round(h * f));
+        for (let i = 1; i <= 3; i++) {
+          const lx = dir < 0 ? cx - i : cx + 2 + i;
+          if (lx < 0 || lx >= LP) continue;
+          px(ctx, x0, y0, lx, Math.max(0, ly - (i > 1 ? 1 : 0)), i === 3 ? leafDark : leaf);
+        }
+      }
+    }
+    if (!ear) continue;
+    // The grain head: kernels in two staggered files up the top third of the
+    // stalk, only as wide as the stalk plus one, so it reads as an ear of wheat
+    // rather than a cob of corn.
+    const ex = cx + (k >= 3 ? lean : 0);
+    const eh = k === 7 ? 13 : 9;
+    for (let i = 0; i < eh; i++) {
+      const ey = top + i;
+      if (ey >= LP) break;
+      const odd = i % 2;
+      px(ctx, x0, y0, ex, ey, odd ? earDark : ear);
+      px(ctx, x0, y0, ex + 1, ey, odd ? earLite : ear);
+      px(ctx, x0, y0, ex + 2, ey, odd ? ear : earDark);
+      if (i % 3 === 1) px(ctx, x0, y0, ex + (odd ? 3 : -1), ey, earDark); // kernels alternating out
+    }
+    if (k === 7) {                                   // awns on the ripe ear only
+      for (let i = 1; i <= 3; i++) {
+        px(ctx, x0, y0, ex, Math.max(0, top - i), earLite);
+        if (i < 3) px(ctx, x0, y0, ex + 2, Math.max(0, top - i - 1), ear);
+      }
+    }
+  }
+}
+
+// A reed cane seen edge-on: three jointed stalks, shaded on one side so they
+// read as round. `tip` is where they stop (0 = they run off the top of the tile
+// and the segment above continues them); `fronds` crowns them with leaves.
+function reedCane(ctx, x0, y0, rand, tip, fronds) {
+  ctx.clearRect(x0, y0, TILE, TILE);
+  const body = '#7ba552', lite = '#9bc673', dark = '#5b8340', joint = '#4d7135';
+  for (const cx of [6, 15, 24]) {
+    const t0 = Math.max(0, tip + (tip ? Math.floor(rand() * 4) - 1 : 0));
+    for (let ly = LP - 1; ly >= t0; ly--) {
+      px(ctx, x0, y0, cx - 1, ly, dark);
+      px(ctx, x0, y0, cx, ly, shade(body, (rand() - 0.5) * 0.07));
+      px(ctx, x0, y0, cx + 1, ly, lite);
+    }
+    for (let ly = LP - 5; ly >= t0 + 2; ly -= 7) {   // the joints between segments
+      for (let d = -1; d <= 1; d++) px(ctx, x0, y0, cx + d, ly, joint);
+    }
+    if (!fronds) continue;
+    for (const dir of [-1, 1]) {
+      for (let i = 1; i <= 5; i++) {
+        const lx = cx + dir * i, ly = t0 + 2 - Math.round(i * 0.8);
+        if (lx < 0 || lx >= LP || ly < 0) continue;
+        px(ctx, x0, y0, lx, ly, i > 3 ? dark : lite);
+      }
+    }
+  }
+}
+
 function plantStalk(ctx, x0, y0, rand, stem, headColor, headY = 4) {
   const sx = LP / 2 + Math.floor(rand() * 3) - 1;
   for (let y = headY; y < LP; y++) px(ctx, x0, y0, sx, y, shade(stem, (rand() - 0.5) * 0.1));
@@ -266,15 +365,25 @@ const PAINTERS = {
       if (sx >= 0 && sx < LP && sy >= 0) { px(c, x, y, sx, sy, spot); if (r() < 0.5) px(c, x, y, sx + 1, sy, spot); }
     }
   }),
-  reed: (c, x, y, r) => cross(c, x, y, r, () => { blades(c, x, y, r, '#7ba05a', 6); plantStalk(c, x, y, r, '#8fae62', null); plantStalk(c, x, y, r, '#7ba05a', '#c9b458', 3); }),
+  reed: (c, x, y, r) => reedCane(c, x, y, r, 0, false),
+  reed_top: (c, x, y, r) => reedCane(c, x, y, r, 9, true),
   cactus_flesh: (c, x, y, r) => { noisyFill(c, x, y, r, '#4e8a44', 0.05); for (let i = 0; i < 8; i++) px(c, x, y, Math.floor(r() * LP), Math.floor(r() * LP), '#dfe8c8'); },
   dig_mound: (c, x, y, r) => noisyFill(c, x, y, r, '#8a6f4d', 0.07, { chance: 0.1, color: '#a5854f' }),
   farmland: (c, x, y, r) => {
     noisyFill(c, x, y, r, '#5c4128', 0.05);
     for (let ly = 1; ly < LP; ly += 4) for (let lx = 0; lx < LP; lx++) px(c, x, y, lx, ly, shade('#4a3420', (r() - 0.5) * 0.06));
   },
-  crop_young: (c, x, y, r) => cross(c, x, y, r, () => blades(c, x, y, r, '#7fb95d', 10)),
-  crop_ripe: (c, x, y, r) => cross(c, x, y, r, () => { blades(c, x, y, r, '#c9b458', 14); plantStalk(c, x, y, r, '#c9b458', '#e2cf6b', 3); }),
+  // Wheat's eight stages. crop_young/crop_ripe are the ends of the same ladder
+  // (see WHEAT_STAGES in js/world/blocks.js) — named for their block ids, which
+  // predate the middle six and cannot be renamed without moving save data.
+  crop_young: (c, x, y, r) => wheatStage(c, x, y, r, 0),
+  wheat_1: (c, x, y, r) => wheatStage(c, x, y, r, 1),
+  wheat_2: (c, x, y, r) => wheatStage(c, x, y, r, 2),
+  wheat_3: (c, x, y, r) => wheatStage(c, x, y, r, 3),
+  wheat_4: (c, x, y, r) => wheatStage(c, x, y, r, 4),
+  wheat_5: (c, x, y, r) => wheatStage(c, x, y, r, 5),
+  wheat_6: (c, x, y, r) => wheatStage(c, x, y, r, 6),
+  crop_ripe: (c, x, y, r) => wheatStage(c, x, y, r, 7),
 
   planks: (c, x, y, r) => {
     noisyFill(c, x, y, r, '#a5814f', 0.04);

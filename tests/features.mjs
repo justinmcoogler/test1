@@ -95,8 +95,8 @@ try {
     game.world.setBlock(x, y, z, B.farmland, true);
     game.world.plantCrop(x, y + 1, z);
     const young = game.world.getBlock(x, y + 1, z) === B.crop_young;
-    game.world.time += 130; // past ripen time
-    game.world.update(1.2); // force the crop tick
+    // Eight stages, one per tick — ripening is a walk now, not a flip.
+    for (let i = 0; i < 8; i++) { game.world.time += 20; game.world.update(1.2); }
     const ripe = game.world.getBlock(x, y + 1, z) === B.crop_ripe;
     const before = game.inventory.count('grainsheaf');
     game.breakBlock(x, y + 1, z, window.__blocks.BLOCKS[B.crop_ripe]);

@@ -702,14 +702,16 @@ art) is specified in its own section at the end.
 |---|---|---|---|
 | `block_berry_bush.png` | Berry bush | green bush dotted with red berries | no |
 | `block_berry_bush_bare.png` | Berry bush (picked) | same bush, green leaves, no berries | no |
-| `block_crop_young.png` | Young crop | green sprouts in tilled rows | no |
-| `block_crop_ripe.png` | Ripe crop | golden grain, heavy heads | no |
+| `block_crop_young.png` | Wheat, stage 0 | two-pixel green sprouts, bottom fifth only | no |
+| `block_wheat_1.png` … `block_wheat_6.png` | Wheat, stages 1–6 | one ladder: stalks lengthen, green drains to straw, ears from stage 5 | no |
+| `block_crop_ripe.png` | Wheat, stage 7 | full-height straw stalks, heavy golden ears with awns | no |
 | `block_herb_patch.png` | Herb patch | leafy green cluster with small flowers | no |
 | `block_herb_patch_cut.png` | Herb patch (cut) | trimmed low stubs in soil | no |
 | `block_wildflower.png` | Wildflowers | mixed colourful blooms in grass | no |
 | `block_mushroom_cap.png` | Mushroom cap | large round cap, spotted | no |
 | `block_cactus_flesh.png` | Cactus flesh | ridged green cactus interior | no |
-| `block_reed.png` | Reeds | tall green riverside reeds | no |
+| `block_reed.png` | Reed cane (middle) | jointed green canes running the full tile, no top — these stack | no |
+| `block_reed_top.png` | Reed cane (crown) | the same canes ending a third down, crowned with fronds | no |
 | `block_crystal_cluster.png` | Crystal cluster | translucent glowing gem crystals | no |
 | `block_dig_mound.png` | Dig mound | loose dirt mound, pebbles, dig spot | no |
 

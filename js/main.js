@@ -5,7 +5,7 @@ import { World, initSlabSet, DAY_LEN, DAWN } from './world/world.js';
 import { LESSON_SEED } from './world/lessonpath.js';
 import { Weather, altitudeChill } from './world/weather.js';
 import { CHUNK, WORLD_H, SEA } from './world/worldgen.js';
-import { B, BLOCKS } from './world/blocks.js';
+import { B, BLOCKS, cropStage, CROP_RIPE_STAGE } from './world/blocks.js';
 import { NODE_TYPES, rollNodeDrops } from './game/nodes.js';
 import { Player } from './player/player.js';
 import { Controls } from './player/controls.js';
@@ -1137,8 +1137,9 @@ class Game {
       return;
     }
     const bdef = BLOCKS[hit.id];
-    // planted crops harvest on a plain click, like nodes
-    if (bdef && (bdef.name === 'crop_ripe' || bdef.name === 'crop_young') && !isBreak) {
+    // planted crops harvest on a plain click, like nodes — at any of the eight
+    // stages, since pulling one early is how you get the seed back
+    if (bdef && cropStage(hit.id) >= 0 && !isBreak) {
       this.pendingInteract = { kind: 'break', x: hit.x, y: hit.y, z: hit.z, range: 3.2 };
       this.walkTo(hit.x + 0.5, hit.z + 0.5, 12);
       return;
@@ -1818,10 +1819,12 @@ class Game {
     this.renderer.spawnParticles(x + 0.5, y + 0.5, z + 0.5, [0.5, 0.45, 0.4], 10, 3, 0.6);
     SFX.breakBlock();
     if (def.drops) this.inventory.add(def.drops, 1);
-    // player-planted crops: harvest (ripe) or recover the seed (young)
-    if (def.name === 'crop_ripe' || def.name === 'crop_young') {
+    // player-planted crops: harvest (ripe) or recover the seed (any stage before
+    // that — pulling wheat at stage 6 gets you the seed back, not the grain)
+    const stage = cropStage(def.id);
+    if (stage >= 0) {
       this.world.crops.delete(`${x},${y},${z}`);
-      if (def.name === 'crop_ripe') {
+      if (stage >= CROP_RIPE_STAGE) {
         this.inventory.add('grainsheaf', 1 + (Math.random() < 0.5 ? 1 : 0));
         if (Math.random() < 0.65) this.inventory.add('grain_seeds', 1 + (Math.random() < 0.3 ? 1 : 0));
         if (Math.random() < 0.03) this.inventory.add('golden_grain', 1);

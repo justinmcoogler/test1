@@ -10,6 +10,11 @@ import { emitShape, CONNECTS } from './shapes.js';
 // a solid block beneath it (no floating flowers, grass, mushrooms or reeds).
 const CROSS_NO_SUPPORT = new Set(['glow_lichen', 'cobweb', 'warped_roots', 'sea_pickle', 'nether_portal', 'ladder']);
 
+// Reeds are canes, not tufts: a stand is 1–3 segments stacked, so each segment
+// above the first stands on another reed rather than on solid ground. Name →
+// the block it is also allowed to sit on.
+const STACKS_ON = { reed: 'reed', reed_top: 'reed' };
+
 // Non-cube shapes routed through js/gfx/shapes.js (slab stays on the fast cube
 // path below). Panes/glass render in the cutout pass; the rest are solid.
 const CUSTOM_SHAPES = new Set(['slab', 'stairs', 'wall', 'fence', 'gate', 'pane', 'carpet', 'panel', 'door', 'sign', 'button', 'pot', 'bed']);
@@ -170,11 +175,16 @@ export function meshChunk(world, cx, cz) {
         // marker: an invisible forage pick-target — the prop's 3D model draws in
         // the entity pass, so the block itself contributes no chunk geometry.
         if (def.shape === 'marker') continue;
-        if (def.shape === 'cross') {
+        if (def.shape === 'cross' || def.shape === 'crop') {
           // Ground foliage needs something solid underneath — a plant hanging in
-          // mid-air reads as a bug. Wall/ceiling decals are exempt.
-          if (!CROSS_NO_SUPPORT.has(def.name) && (y <= 0 || !isSolid(get(x, y - 1, z)))) continue;
-          addCross(cutout, def, wx, y, wz, skyAt(x, y, z), Math.max(blockAt(x, y, z), def.emissive));
+          // mid-air reads as a bug. Wall/ceiling decals are exempt, and a cane
+          // may stand on the cane below it.
+          if (!CROSS_NO_SUPPORT.has(def.name)) {
+            const below = y > 0 ? get(x, y - 1, z) : B.air;
+            if (!isSolid(below) && BLOCKS[below]?.name !== STACKS_ON[def.name]) continue;
+          }
+          const draw = def.shape === 'crop' ? addCrop : addCross;
+          draw(cutout, def, wx, y, wz, skyAt(x, y, z), Math.max(blockAt(x, y, z), def.emissive));
           continue;
         }
         if (CUSTOM_SHAPES.has(def.shape)) {
@@ -333,6 +343,29 @@ function addCross(builder, def, x, y, z, sky, blk) {
     [[x + a, y, z + a], [x + b, y, z + b], [x + b, y + 1, z + b], [x + a, y + 1, z + a]],
     [[x + a, y, z + b], [x + b, y, z + a], [x + b, y + 1, z + a], [x + a, y + 1, z + b]],
   ];
+  for (const q of quads) {
+    builder.quad(q, [[uv.u0, uv.v1], [uv.u1, uv.v1], [uv.u1, uv.v0], [uv.u0, uv.v0]], light);
+  }
+}
+
+// A crop is a hash (#), not an X. Two panes across each axis, quartered into the
+// cell, sunk a sixteenth into the soil and stopping a sixteenth below the top —
+// which is what makes a tilled field read as ROWS you can walk between. The
+// diagonal cross used for grass and flowers reads as a scattered tuft from every
+// angle, and a field of tufts is exactly what wheat did not look like.
+const CROP_IN = 0.25, CROP_SINK = 1 / 16, CROP_TOP = 15 / 16;
+function addCrop(builder, def, x, y, z, sky, blk) {
+  const uv = faceUV(def, 'side');
+  const l = Math.max(0.12, sky * (0.9 + def.emissive));
+  const bl = Math.max(blk, def.emissive);
+  const light = [[l, bl, l], [l, bl, l], [l, bl, l], [l, bl, l]];
+  const y0 = y - CROP_SINK, y1 = y + CROP_TOP;
+  const quads = [];
+  for (const o of [CROP_IN, 1 - CROP_IN]) {
+    // pane facing ±X (spans z), then pane facing ±Z (spans x)
+    quads.push([[x + o, y0, z], [x + o, y0, z + 1], [x + o, y1, z + 1], [x + o, y1, z]]);
+    quads.push([[x, y0, z + o], [x + 1, y0, z + o], [x + 1, y1, z + o], [x, y1, z + o]]);
+  }
   for (const q of quads) {
     builder.quad(q, [[uv.u0, uv.v1], [uv.u1, uv.v1], [uv.u1, uv.v0], [uv.u0, uv.v0]], light);
   }

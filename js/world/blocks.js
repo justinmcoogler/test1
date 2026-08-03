@@ -75,12 +75,17 @@ def('herb_patch_cut', { shape: 'cross', solid: false, opaque: false, hardness: 0
 def('berry_bush', { opaque: false, hardness: 0.8, drops: null });
 def('berry_bush_bare', { opaque: false, hardness: 0.8, drops: null });
 def('mushroom_cap', { shape: 'cross', solid: false, opaque: false, hardness: 0.2, drops: null });
+// A cane segment. Reeds stack (see `reed_top` at the foot of this file), so this
+// is the piece that repeats — no fronds, so a stack reads as one plant.
 def('reed', { shape: 'cross', solid: false, opaque: false, hardness: 0.3, drops: null });
 def('cactus_flesh', { label: 'Spinebloom', hardness: 0.9, drops: null, opaque: false });
 def('dig_mound', { shape: 'slab', hardness: 1.4, tool: 'shovel', drops: null, tiles: { all: 'dig_mound' } });
 def('farmland', { hardness: 0.8, tool: 'shovel', drops: 'dirt', tiles: { top: 'farmland', side: 'dirt' } });
-def('crop_young', { shape: 'cross', solid: false, opaque: false, hardness: 0.1, drops: null });
-def('crop_ripe', { shape: 'cross', solid: false, opaque: false, hardness: 0.1, drops: null });
+// The first and last of eight wheat stages. The six between are appended at the
+// foot of this file (ids may never be inserted mid-registry — saves store them
+// as numbers), and WHEAT_STAGES down there is the ordered list.
+def('crop_young', { shape: 'crop', solid: false, opaque: false, hardness: 0.1, drops: null });
+def('crop_ripe', { shape: 'crop', solid: false, opaque: false, hardness: 0.1, drops: null });
 
 // Building materials
 def('planks', { hardness: 1.8, tool: 'axe' });
@@ -405,6 +410,33 @@ def('work_mat', { label: 'Work Mat', hardness: 0.4, tiles: { all: 'work_mat' } }
 
 export const EDUCATION_BLOCKS = [...DIGIT_BLOCKS, ...SYMBOL_BLOCKS,
   'nest_egg', 'apple_red', 'apple_green', 'lantern_lit', 'lantern_dark', 'work_mat'];
+
+// ---- Wheat, stage by stage --------------------------------------------------
+// Grain that is only ever "young" or "ripe" is a switch, not a crop. Eight
+// stages — Minecraft's count — turn a field into something you walk past and
+// watch change, which is the whole appeal of planting it. `crop_young` and
+// `crop_ripe` are the first and last (their ids are old and must not move); the
+// six in between are appended here.
+for (let s = 1; s <= 6; s++) {
+  def(`wheat_${s}`, { label: 'Wheat', shape: 'crop', solid: false, opaque: false, hardness: 0.1, drops: null });
+}
+export const WHEAT_STAGES = ['crop_young', 'wheat_1', 'wheat_2', 'wheat_3',
+  'wheat_4', 'wheat_5', 'wheat_6', 'crop_ripe'];
+export const WHEAT_IDS = WHEAT_STAGES.map((n) => B[n]);
+export const CROP_RIPE_STAGE = WHEAT_STAGES.length - 1;
+const WHEAT_STAGE_BY_ID = new Map(WHEAT_IDS.map((id, i) => [id, i]));
+// 0..7 for a wheat block, -1 for anything else. The one place that decides
+// whether a cell is a crop, so growth, harvesting and click-to-gather cannot
+// drift apart over which blocks count.
+export function cropStage(id) {
+  const s = WHEAT_STAGE_BY_ID.get(id);
+  return s === undefined ? -1 : s;
+}
+
+// The crown of a reed stack: the same cane, ending in fronds. Split from `reed`
+// so a three-tall stand has one head rather than three.
+def('reed_top', { label: 'Reeds', shape: 'cross', solid: false, opaque: false, hardness: 0.3, drops: null });
+export const REED_IDS = [B.reed, B.reed_top];
 
 export function blockByName(name) { return BLOCKS[B[name]]; }
 export function isSolid(id) { return BLOCKS[id]?.solid === true; }

@@ -1,6 +1,6 @@
 // Chunked voxel world: generation, block access, player edits, resource
 // node lifecycle (deplete/respawn), chest storage, raycasting, persistence.
-import { B, BLOCKS, isSolid, SHAPE_COLLISION } from './blocks.js';
+import { B, BLOCKS, isSolid, SHAPE_COLLISION, WHEAT_IDS, CROP_RIPE_STAGE, cropStage } from './blocks.js';
 import { CHUNK, WORLD_H, SEA, FROST_CAMP, MANOR_PAD, LEARN_MEADOW, BIOMES, WorldGen, newBlend, ringAt, undergroundNodeCandidates } from './worldgen.js';
 import { pathStructure } from './lessonpath.js';
 import { buildStarterStructures, indexEditsByChunk, stampChunkStructures, structureClaims } from './structures.js';
@@ -26,6 +26,11 @@ export function initSlabSet() {
 }
 
 export const DAY_LEN = 480; // seconds per full day/night cycle
+
+// Sowing to harvest, unchanged from when wheat had two stages — the field just
+// shows its working now. Seven steps get you from stage 0 to stage 7.
+export const CROP_RIPEN_SECS = 120;
+export const CROP_STAGE_SECS = CROP_RIPEN_SECS / CROP_RIPE_STAGE;
 
 // The day phase the sun comes up at, matching daylight()'s curve below. Sleeping
 // advances to the next occurrence of this, so you always wake at the same hour.
@@ -225,6 +230,12 @@ export class World {
         // trees also root on the bare ground of their biomes (highland ash/hickory
         // on stone, badlands teak on sand) — else those woods would never spawn.
         const treeGround = grassy || surfId === B.stone || surfId === B.sand;
+        // Reeds root on the dry course level with the water — and column() lays
+        // SAND, not grass, over everything within two blocks of the waterline.
+        // The old rule asked for grass at or below sea level, which is a set the
+        // generator never produces, so reeds have never once grown in the wild:
+        // every reed anyone has seen was hand-placed at the camp pond.
+        const waterline = onGround && h <= SEA + 1 && (grassy || surfId === B.sand);
 
         // trees (kept ≥2 from chunk edge so canopies stay chunk-local). One roll
         // walks every candidate's species in turn, each scaled by its weight, so
@@ -245,18 +256,30 @@ export class World {
           }
         }
         // small plants (pure decoration). Reeds are the exception: they only
-        // sprout on grass right at the waterline with a water block beside them.
-        if (grassy && above === B.air) {
+        // sprout on the waterline course with a water block beside them, which
+        // includes the beach sand every shore is topped with.
+        if ((grassy || waterline) && above === B.air) {
           let planted = false;
           // Each candidate rolls on its own hash stream (the `i` salt), so two
           // biomes offering the same plant add up instead of shadowing one another.
           for (let i = 0; i < blend.n && !planted; i++) {
             for (const p of blend.b[i].plants) {
               if (hash2(this.seed + 903 + B[p.block] + i * BLEND_SALT_STEP, wx, wz) >= p.d * blend.w[i]) continue;
-              if (p.block === 'reed') {
-                if (h > SEA) continue; // above the shoreline — no water to root beside
+              if (p.block !== 'reed') {
+                if (!grassy) continue; // tufts and flowers don't grow on beach sand
+              } else {
+                if (!waterline) continue; // too far above the water to root beside it
                 const beside = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => gen.heightAt(wx + dx, wz + dz) < h);
                 if (!beside) continue; // no submerged neighbour → not next to water
+                // Canes, not tufts: a stand comes up 1–3 segments with the top
+                // one crowned, so a waterline reads as a reed bed from a boat's
+                // distance instead of a smear of grass.
+                let tall = 1 + Math.floor(hash2(this.seed + 921, wx, wz) * 3);
+                while (tall > 1 && (h + tall >= WORLD_H || blocks[lidx(lx, h + tall, lz)] !== B.air)) tall--;
+                for (let s = 0; s < tall; s++) {
+                  setLocal(lx, h + 1 + s, lz, s === tall - 1 ? B.reed_top : B.reed);
+                }
+                bumpTop(h + tall); planted = true; break;
               }
               setLocal(lx, h + 1, lz, B[p.block]); bumpTop(h + 1); planted = true; break;
             }
@@ -737,23 +760,29 @@ export class World {
 
   // ---- Player farming ----------------------------------------------------
   plantCrop(x, y, z) {
-    this.setBlock(x, y, z, B.crop_young, true);
-    this.crops.set(cellKey(x, y, z), this.time + 120); // ~2 min to ripen
+    this.setBlock(x, y, z, WHEAT_IDS[0], true);
+    this.crops.set(cellKey(x, y, z), this.time + CROP_STAGE_SECS);
   }
 
   update(dt) {
     this.time += dt;
-    // planted crops ripen on a slow tick
+    // planted crops climb a stage at a time on a slow tick. The map holds when
+    // the NEXT stage is due, not when the crop ripens, so a field shows every
+    // step of the eight rather than flipping from sprout to harvest.
     if ((this._cropTick = (this._cropTick || 0) + dt) > 1) {
       this._cropTick = 0;
-      for (const [k, ripeAt] of this.crops) {
-        if (ripeAt > this.time) continue;
+      for (const [k, dueAt] of this.crops) {
+        if (dueAt > this.time) continue;
         const [x, y, z] = k.split(',').map(Number);
-        if (this.getBlock(x, y, z) === B.crop_young) {
-          this.setBlock(x, y, z, B.crop_ripe, true);
+        const stage = cropStage(this.getBlock(x, y, z));
+        if (stage < 0 || stage >= CROP_RIPE_STAGE) { this.crops.delete(k); continue; }
+        this.setBlock(x, y, z, WHEAT_IDS[stage + 1], true);
+        if (stage + 1 >= CROP_RIPE_STAGE) {
           emit('cropRipened', { x, y, z });
+          this.crops.delete(k);           // fully grown — nothing left to time
+        } else {
+          this.crops.set(k, this.time + CROP_STAGE_SECS);
         }
-        this.crops.delete(k); // grown (or was broken early) — either way done
       }
     }
     if (this.depletedWatch.size) {
@@ -812,7 +841,7 @@ export class World {
         const def = BLOCKS[id];
         const node = this.nodeAt(x, y, z);
         // marker cells are invisible but pickable (a forage prop's node lives there)
-        if (def.solid || def.shape === 'cross' || def.shape === 'marker' || (hitWaterNodes && node)) {
+        if (def.solid || def.shape === 'cross' || def.shape === 'crop' || def.shape === 'marker' || (hitWaterNodes && node)) {
           return { x, y, z, id, face, dist: t, node };
         }
       }
