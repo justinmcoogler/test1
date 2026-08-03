@@ -340,6 +340,81 @@ export class LessonRunner {
     return solveShape(step.build, this.matFor(area), this.stationFor(area));
   }
 
+  // The band whose lesson is running. There is one at a time, and the render
+  // path needs to name it without knowing the curriculum's key.
+  currentArea() { return Object.keys(this.current)[0] || null; }
+
+  // WHERE THE BLOCK GOES, glowing on the ground.
+  //
+  // A four-year-old cannot read the prompt and is being told it out loud once. "A
+  // fence five across and three back, hollow in the middle" is a sentence an adult
+  // parses and a child of four simply cannot hold — they know what a fence is and
+  // they have no idea which squares. So the squares light up.
+  //
+  // Derived from the step's own declared shape rather than authored per step,
+  // which is the whole reason the shapes are declarative: solveShape already knows
+  // the exact cells, so the guide cannot disagree with the check. A step nobody
+  // wrote a hint for still gets a correct one.
+  //
+  // It SHRINKS AS THEY WORK. Only cells that are still wrong are lit, so what is
+  // left glowing is what is left to do — which is also the feedback that a block
+  // just placed was the right one, without a word being said.
+  //
+  //   gold  put one here
+  //   red   take this one away
+  //
+  // Sequenced, not both at once: the reds only appear once the golds are gone, so
+  // the subtraction step reads "build ten" and then "now take three off" instead
+  // of showing thirteen instructions at the same time.
+  guideCells(area) {
+    if (!area) return [];
+    const step = this.activeStep(area);
+    if (!step || this.phase[area] !== 'work') return [];
+    // The searching activities are never guided. Lighting up the corner the lamb
+    // is hiding in, or the grass the eggs are in, IS the activity — done for them.
+    if (step.build?.kind === 'reach' || step.build?.kind === 'gather') return [];
+    const world = this.game.world;
+    if (!world) return [];
+    const mat = this.matFor(area);
+    if (!mat) return [];
+    let ops;
+    try { ops = solveShape(step.build, mat, this.stationFor(area)); }
+    catch { return []; }
+    const nameAt = (x, y, z) => BLOCKS[world.getBlock(x, y, z)]?.name || 'air';
+    const done = (op) => (op.op === 'break'
+      ? nameAt(op.x, op.y, op.z) === 'air'
+      : nameAt(op.x, op.y, op.z) === op.block);
+
+    // A SEQUENCE, NOT A SET, and progress through it only ever goes forwards.
+    //
+    // Taking away is why. The subtraction stop places ten and then breaks three
+    // of the same cells, so the moment a child broke one, "is that cell holding
+    // its block?" was false again and the square lit back up GOLD — the guide
+    // told them to put back the block it had just told them to take. Walking the
+    // list in order and remembering how far we got means a step that has moved on
+    // to taking away cannot be dragged back to putting down.
+    this._scratch ||= {};
+    const scratch = (this._scratch[this.scratchKey(area)] ||= {});
+    let at = scratch.__guideAt || 0;
+    while (at < ops.length && done(ops[at])) at++;
+    scratch.__guideAt = at;
+    if (at >= ops.length) return [];
+
+    // Everything of the same KIND from here on: all the remaining places, or all
+    // the remaining breaks. Never both — thirteen instructions at once is not an
+    // instruction, and the child is four.
+    const kind = ops[at].op;
+    const show = [];
+    for (let i = at; i < ops.length && ops[i].op === kind; i++) {
+      if (!done(ops[i])) show.push(ops[i]);
+    }
+    // `op` and `block` come along because the colour is presentation and a caller
+    // must not have to decode it: the same coordinate can be both a place and a
+    // break, so position alone cannot say which is meant.
+    const color = kind === 'break' ? [1, 0.3, 0.24] : [1, 0.82, 0.25];
+    return show.map((o) => ({ x: o.x, y: o.y, z: o.z, op: o.op, block: o.block, color }));
+  }
+
   // Generate (and mark for remesh) every chunk a region touches. A fake world in
   // a test has no chunks at all, which is fine — nothing to ensure.
   ensureRegion(m) {

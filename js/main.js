@@ -844,6 +844,10 @@ class Game {
       : [
         ...this.combatRS.telegraphTiles(),
         ...(this.destMarker ? [{ x: this.destMarker.x, y: this.destMarker.y, z: this.destMarker.z, color: [1, 0.85, 0.3] }] : []),
+        // Learning Mode: the squares a block goes on, lit up. The child this is
+        // for cannot read the prompt and heard it once.
+        ...(this.settings.lessonGuides !== false && this.world.isLessonWorld?.()
+          ? this.lessons.guideCells(this.lessons.currentArea()) : []),
       ];
     this.renderer.draw(this.world, {
       dt,

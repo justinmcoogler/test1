@@ -557,3 +557,91 @@ for (const LSN of LESSONS_DATA) {
     }
   });
 }
+
+// ---- showing a four-year-old where the block goes ----------------------------
+// The child cannot read the prompt and heard it once. "A fence five across and
+// three back, hollow in the middle" is a sentence they simply cannot hold, so the
+// squares light up. Derived from the step's own shape, never authored — which is
+// what makes it impossible for the guide and the check to disagree.
+
+test('every buildable stop can say where its blocks go', () => {
+  for (const LSN of LESSONS_DATA) {
+    const s = scenario(LSN.id);
+    for (let i = 0; i < LSN.steps.length; i++) {
+      s.lessons.setLesson(AREA, LSN.id, i);
+      s.walkToStep(AREA);
+      const kind = LSN.steps[i].build.kind;
+      const cells = s.lessons.guideCells(AREA);
+      // The two SEARCHING activities are never guided: lighting up the corner the
+      // lamb hides in, or the grass the eggs are in, is the activity done for them.
+      if (kind === 'reach' || kind === 'gather') {
+        assert.equal(cells.length, 0, `${LSN.id} stop ${i + 1}: a ${kind} must not be given away`);
+      } else {
+        assert.ok(cells.length > 0, `${LSN.id} stop ${i + 1} (${kind}) shows nowhere to put anything`);
+        for (const c of cells) {
+          assert.ok(Number.isFinite(c.x) && Number.isFinite(c.y) && Number.isFinite(c.z), 'a cell with no place');
+          assert.equal(c.color.length, 3);
+        }
+      }
+    }
+  }
+});
+
+test('the guide is exactly the answer, so following it completes the step', () => {
+  // If a child put a block on every lit square and that did NOT finish the stop,
+  // the game would have lied to them in the most demoralising way available.
+  for (const LSN of LESSONS_DATA) {
+    for (let i = 0; i < LSN.steps.length; i++) {
+      const kind = LSN.steps[i].build.kind;
+      if (kind === 'reach' || kind === 'gather') continue;
+      const s = scenario(LSN.id);
+      s.lessons.setLesson(AREA, LSN.id, i);
+      s.walkToStep(AREA);
+      // Follow the lights, re-asking after each block — the set shrinks as it goes.
+      for (let guard = 0; guard < 80; guard++) {
+        const cells = s.lessons.guideCells(AREA);
+        if (!cells.length) break;
+        const c = cells[0];
+        // The cell says which it is. Looking the op up by COORDINATE cannot work:
+        // the subtraction stop breaks cells it also placed, so a position matches
+        // both a place and a break.
+        if (c.op === 'break') s.clear(c.x, c.y, c.z);
+        else s.put(c.x, c.y, c.z, c.block);
+        if (s.lessons.step[AREA] !== i) break;      // it completed
+      }
+      const done = i + 1 < LSN.steps.length ? s.lessons.step[AREA] === i + 1 : s.lessons.isPassed(LSN.id);
+      assert.ok(done, `${LSN.id} stop ${i + 1} (${kind}): following the lights did not finish it`);
+    }
+  }
+});
+
+test('the lights go out as the work gets done', () => {
+  const LSN = LESSONS_DATA[0];
+  const s = scenario(LSN.id);
+  s.lessons.setLesson(AREA, LSN.id, 0);
+  s.walkToStep(AREA);
+  const before = s.lessons.guideCells(AREA).length;
+  const c = s.lessons.guideCells(AREA)[0];
+  s.put(c.x, c.y, c.z, c.block);
+  // What is still lit is what is still to do — which is also how a child learns
+  // the block they just put down was the right one, with nothing said.
+  assert.equal(s.lessons.guideCells(AREA).length, before - 1, 'a placed block stops glowing');
+});
+
+test('taking away is lit in a different colour from putting down', () => {
+  // The subtraction stop asks for ten and then for three of them back. Showing
+  // thirteen instructions at once would be unreadable, so the reds only appear
+  // once the golds are gone.
+  const mill = LESSONS_DATA.find((l) => l.steps.some((st) => st.build.kind === 'subtract'));
+  assert.ok(mill, 'a lesson teaches taking away');
+  const i = mill.steps.findIndex((st) => st.build.kind === 'subtract');
+  const s = scenario(mill.id);
+  s.lessons.setLesson(AREA, mill.id, i);
+  s.walkToStep(AREA);
+  const gold = s.lessons.guideCells(AREA);
+  assert.ok(gold.every((c) => c.color[1] > 0.5), 'while there is building to do, the lights are gold');
+  for (const op of s.lessons.solveStep(AREA)) if (op.op === 'place') s.put(op.x, op.y, op.z, op.block);
+  const red = s.lessons.guideCells(AREA);
+  assert.ok(red.length > 0 && red.every((c) => c.color[1] < 0.5),
+    'once the ten are down, the three to take away are lit red');
+});

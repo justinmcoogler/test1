@@ -1279,6 +1279,7 @@ export class UI {
       ${row('Quest trail — guide dots toward your objective', check('questTrail'))}
       ${row('XP popups on skill gains', check('xpToasts'))}
       ${row('Read lessons aloud (Learning Mode)', check('readAloud'))}
+      ${row('Show where blocks go (Learning Mode)', check('lessonGuides'))}
       ${row('Reduced motion', check('reducedMotion'))}
       ${row('Screen shake', check('screenShake'))}
       ${row('Graphics quality', select('graphicsPreset', [['auto', 'Auto (match device)'], ['low', 'Low — fastest, best for phones'], ['medium', 'Medium'], ['high', 'High — gradient sky, sun/moon, fresnel water']]))}

@@ -53,12 +53,16 @@ try {
     for (let i = 0; i < l.n; i++) {
       // Stand on the lane in front of stop i, looking at it — the view a child
       // gets on arriving.
-      const ok = await page.evaluate((idx) => {
+      const ok = await page.evaluate(([idx, id]) => {
         const g = window.__game;
-        g.lessons.step.farm = idx;
+        // Through setLesson, not by poking `step` — that is what starts the WORK
+        // phase, and the placement guides only light while there is work to do.
+        g.lessons.setLesson('farm', id, idx);
         const st = g.lessons.stationFor('farm');
         if (!st) return false;
-        g.player.x = st.sx + 0.5; g.player.y = st.stand; g.player.z = st.cz - 2.5;
+        g.player.x = st.sx + 0.5; g.player.y = st.stand; g.player.z = st.cz + 0.5;
+        g.lessons.update();
+        g.player.z = st.cz - 2.5;
         g.player.yaw = Math.PI; g.player.pitch = -0.12;      // +Z, square on to the work
         g.camYaw = Math.PI;
         for (let cx = (st.sx - 24) >> 4; cx <= (st.sx + 24) >> 4; cx++) {
@@ -67,7 +71,7 @@ try {
           }
         }
         return st.kind;
-      }, i);
+      }, [i, l.id]);
       await page.waitForTimeout(700);
       await page.screenshot({ path: `${OUT}/${l.id}-${i + 1}-${ok}.png` });
       console.log(`  ${l.id} stop ${i + 1}: ${ok}`);

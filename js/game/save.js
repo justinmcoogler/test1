@@ -21,6 +21,11 @@ export const DEFAULT_SETTINGS = {
   questTrail: true,      // guide dots on the ground toward the tracked objective
   xpToasts: true,        // "+12 Mining XP" popups
   readAloud: true,       // Learning Mode speaks every lesson (the audience can't all read yet)
+  // Learning Mode lights the squares a block goes on. On by default: a child of
+  // four heard the instruction once and cannot read it back. Worth turning off
+  // once they can hold the sentence themselves — then the prompt is the whole of
+  // the task again, which is harder and is the point.
+  lessonGuides: true,
   sfxVolume: 0.7,
   musicVolume: 0.35,
   shadows: true,
