@@ -3,7 +3,7 @@ import { buildAtlas } from './gfx/textures.js';
 import { Renderer, modelYawFromLook } from './gfx/renderer.js';
 import { World, initSlabSet, DAY_LEN, DAWN } from './world/world.js';
 import { LESSON_SEED } from './world/lessonpath.js';
-import { Weather } from './world/weather.js';
+import { Weather, altitudeChill } from './world/weather.js';
 import { CHUNK, WORLD_H, SEA } from './world/worldgen.js';
 import { B, BLOCKS } from './world/blocks.js';
 import { NODE_TYPES, rollNodeDrops } from './game/nodes.js';
@@ -810,7 +810,7 @@ class Game {
         felt = btemp // cached biome temperature (same 4 Hz sample as the weather front)
           + this.weather.tempOffset()
           - (1 - this.world.daylight()) * 0.10
-          - Math.max(0, (p.y - SEA) / 220);
+          - altitudeChill(p.y);
         if (p.inWater) felt -= 0.08;
         if (p.sprinting) felt += 0.02;
         felt += this._fireWarmth || 0;

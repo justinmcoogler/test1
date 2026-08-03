@@ -4,7 +4,27 @@
 // Drives mood (sky/fog tint, daylight), precipitation, and the felt-temperature
 // offset the body-temperature system consumes.
 import { DAY_LEN } from './world.js';
+import { SEA } from './worldgen.js';
 import { clamp } from '../core/math.js';
+
+// How much colder it is up there — the other half of felt temperature, and it
+// lives here beside the seasons because it is the same kind of thing: a climate
+// term the body-temperature system consumes.
+//
+// This was inline in main.js as `(y - SEA) / 220`, a lapse of 0.0045 felt-units
+// per block, and at that rate AN ORDINARY HILL ninety blocks up was full
+// hypothermia on a clear spring day. The world is five hundred blocks tall and
+// terrain reaches those heights routinely, so what read as "the weather is
+// broken" was really "you walked uphill".
+//
+// It is also CAPPED. Uncapped, the sky archipelago (y≈372, three hundred above
+// the sea) came out at −1.4 — clamped to absolute zero, unsurvivable whatever
+// anyone wore, in every season. Capped, a summit is cold enough to want clothes
+// and a fire and dangerous at night or in a storm, which is all altitude should
+// ever do.
+export const LAPSE_PER_BLOCK = 1 / 600;
+export const LAPSE_MAX = 0.30;
+export const altitudeChill = (y) => Math.min(LAPSE_MAX, Math.max(0, (y - SEA) * LAPSE_PER_BLOCK));
 
 const DAYS_PER_SEASON = 3;
 export const SEASON_LEN = DAY_LEN * DAYS_PER_SEASON;
@@ -53,8 +73,18 @@ export class Weather {
   seasonIndex() { return Math.floor(this.yearPhase() * 4) % 4; }
   get season() { return SEASONS[this.seasonIndex()]; }
 
-  // −0.12 (deep winter) … +0.12 (peak summer), smooth
-  seasonTempOffset() { return -Math.cos(this.yearPhase() * Math.PI * 2) * 0.12; }
+  // −0.12 (deep winter) … +0.12 (peak summer), smooth.
+  //
+  // THE QUARTER-YEAR THIS IS SHIFTED BY IS LOAD-BEARING. Seasons are quarters of
+  // the year starting at phase 0 — Spring [0, ¼), Summer [¼, ½), Autumn [½, ¾),
+  // Winter [¾, 1) — so the warmest moment has to be the MIDDLE of summer (⅜) and
+  // the coldest the middle of winter (⅞), not the boundaries.
+  //
+  // Without the shift this read `-cos(phase · 2π)`, which put the annual minimum
+  // at phase 0 — the first second of Spring, and the first second of a new world.
+  // A child started their game at the coldest point of the year, most of Winter
+  // was warmer than early Spring, and Autumn came out as the warmest season.
+  seasonTempOffset() { return Math.sin((this.yearPhase() - 0.125) * Math.PI * 2) * 0.12; }
 
   // the archetype the current front + local climate + season is trending toward
   targetWeather() {
