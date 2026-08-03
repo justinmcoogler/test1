@@ -175,6 +175,26 @@ body.classic-cam #crosshair { display: none; }
   background: rgba(0, 0, 0, 0.45); border-left: 3px solid var(--gold);
   padding: 10px 12px; border-radius: 4px; font-size: calc(12.5px * var(--text-scale));
 }
+/* ---- Learning Mode strips the HUD back to the lesson ----------------------
+   A lesson world has no night, no weather, no distance and no danger, so the
+   compass, the minimap, the FPS chip and the vitals all measure things that
+   cannot happen — and a red health bar and a minimap that is a black square of
+   void are worse than clutter to a four-year-old. The menu buttons go the same
+   way except the two a child (or the adult beside them) has a use for: what is
+   in the pack, and the settings that make the text bigger or read it aloud. */
+body.in-lesson #compass-wrap,
+body.in-lesson #minimap,
+body.in-lesson #fps-badge,
+body.in-lesson #env-badge,
+body.in-lesson #vitals,
+body.in-lesson .menu-btn[data-win="skills"],
+body.in-lesson .menu-btn[data-win="crafting"],
+body.in-lesson .menu-btn[data-win="quests"],
+body.in-lesson .menu-btn[data-win="map"] { display: none !important; }
+/* The crosshair and the camera toggle STAY. The crosshair is how you know what
+   you are pointing at, and the camera mode is the difference between a child
+   who can play and one who cannot — hiding the switch could strand them in the
+   one they can't work. */
 #quest-tracker .qt-name { color: var(--gold); font-weight: 600; margin-bottom: 3px; }
 #quest-tracker .qt-obj { color: var(--ink); }
 #quest-tracker .qt-progress { color: var(--ink-dim); }

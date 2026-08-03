@@ -2458,7 +2458,7 @@ class Game {
     // The tracker only redraws when a quest changes, so entering a lesson would
     // otherwise leave "talk to Maren at the camp" sitting on screen in a world
     // that has no Maren and no camp.
-    this.ui.renderQuestTracker();
+    this.ui.renderQuestTracker();   // …which also strips the HUD back to the lesson
   }
 
   exitLessonWorld(finished) {
@@ -2503,6 +2503,12 @@ class Game {
       const have = this.inventory.count(item);
       if (have < qty) this.inventory.add(item, qty - have);
     }
+    // Put a BLOCK in their hand, not the hatchet. Slot 1 is the hatchet in every
+    // saved character, it is what the hotbar selects on arrival, and a
+    // four-year-old's first act in a new place is to click on it — which chopped
+    // a hole in the work mat before they had read anything.
+    const first = this.inventory.slots.findIndex((s) => s && ITEMS[s.item]?.block);
+    if (first >= 0) { this.inventory.selected = first; this.ui.renderHotbar(); }
   }
 
   // "Go to Lessons" from the play-time lock screen: lift the lock enough to move
@@ -3082,6 +3088,10 @@ class Game {
           color: known ? '#a9dcff' : '#9aa6b0',
         });
       }
+      // Nothing in a lesson can be fought, so nothing in a lesson needs a threat
+      // read-out under its name. "HARMLESS" over every hen is combat vocabulary
+      // offered to a four-year-old who was asked to count them.
+      const inLesson = this.world.isLessonWorld();
       for (const e of this.enemyMgr.entities.values()) {
         const d = Math.hypot(e.x - this.player.x, e.z - this.player.z);
         if (d > 18) continue;
@@ -3090,8 +3100,8 @@ class Game {
         labels.push({
           x: e.x, y: e.y + 1.6, z: e.z,
           name: `${isTarget ? '> ' : ''}${e.shiny ? 'Shiny ' : ''}${e.def.label}`,
-          sub: e.rsEngaged ? 'fighting you' : e.def.behavior === 'aggressive' ? 'hostile' : e.def.behavior === 'defensive' ? 'wary' : 'harmless',
-          hpFrac: e.hp < e.def.hp || e.rsEngaged ? e.hp / e.def.hp : null,
+          sub: inLesson ? '' : e.rsEngaged ? 'fighting you' : e.def.behavior === 'aggressive' ? 'hostile' : e.def.behavior === 'defensive' ? 'wary' : 'harmless',
+          hpFrac: inLesson || !(e.hp < e.def.hp || e.rsEngaged) ? null : e.hp / e.def.hp,
           color: e.shiny ? '#ffd76a' : e.def.boss ? '#e2b13c' : e.def.behavior === 'aggressive' || e.rsEngaged ? '#ff9a8a' : '#d8e2c8',
         });
       }
@@ -3480,6 +3490,7 @@ async function startGame(slot, isNew, opts = {}) {
   const crafting = await import('./game/crafting.js');
   window.__crafting = crafting;
   window.__blocks = await import('./world/blocks.js');
+  window.__items = await import('./game/items.js');
   window.__enemies = await import('./game/enemies.js');
   window.__mobloader = await import('./game/mobloader.js');
   window.__schematic = await import('./world/schematic.js');

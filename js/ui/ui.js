@@ -413,12 +413,32 @@ export class UI {
     if (cls === 'xp') SFX.xp();
   }
 
+  // A lesson world has no night, no weather, no distance, no danger and no
+  // hunger, so every readout that measures one of those is noise a four-year-old
+  // has to look past to find the thing they were asked to do. Worse than noise,
+  // in the case of a red health bar and a black minimap of a void.
+  //
+  // One class on the body rather than a hidden flag per element: whatever else
+  // gets added to the HUD later, the rule for what a lesson shows lives in one
+  // place, in the stylesheet, next to everything it is competing with.
+  setLessonChrome(on) {
+    document.body.classList.toggle('in-lesson', !!on);
+    this.layoutBottomBar();
+  }
+
   renderQuestTracker() {
     const el = $('quest-tracker');
     // No quests in a lesson world. "Talk to Maren at the camp" is advice a child
     // cannot take from inside a sealed meadow, and the tracker is screen space
     // the lesson needs.
-    if (this.game.world?.isLessonWorld?.()) { el.classList.add('hidden'); return; }
+    //
+    // This runs at every transition into and out of a lesson AND after a load,
+    // so it is also where the rest of the lesson chrome is settled — a child who
+    // closes the tab mid-lesson comes back into one, and setting the class only
+    // on the way in would leave them the full survival HUD.
+    const inLesson = !!this.game.world?.isLessonWorld?.();
+    this.setLessonChrome(inLesson);
+    if (inLesson) { el.classList.add('hidden'); return; }
     el.classList.remove('hidden');
     const act = this.game.quests.active();
     if (!act.length) { el.innerHTML = '<div class="qt-name">No active quest</div><div class="qt-progress">Talk to Maren at the camp</div>'; return; }
