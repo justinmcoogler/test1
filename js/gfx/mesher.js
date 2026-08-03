@@ -17,7 +17,7 @@ const STACKS_ON = { reed: 'reed', reed_top: 'reed' };
 
 // Non-cube shapes routed through js/gfx/shapes.js (slab stays on the fast cube
 // path below). Panes/glass render in the cutout pass; the rest are solid.
-const CUSTOM_SHAPES = new Set(['slab', 'stairs', 'wall', 'fence', 'gate', 'pane', 'carpet', 'panel', 'door', 'sign', 'button', 'pot', 'bed']);
+const CUSTOM_SHAPES = new Set(['slab', 'stairs', 'wall', 'fence', 'gate', 'pane', 'carpet', 'panel', 'door', 'sign', 'button', 'pot', 'bed', 'mushroom']);
 
 // face: [nx,ny,nz, corners(4× [x,y,z] in block space), brightness]
 const FACES = [
@@ -188,6 +188,8 @@ export function meshChunk(world, cx, cz) {
           continue;
         }
         if (CUSTOM_SHAPES.has(def.shape)) {
+          // a mushroom is ground foliage like any other — it may not hang
+          if (def.shape === 'mushroom' && (y <= 0 || !isSolid(get(x, y - 1, z)))) continue;
           const facing = world.facingAt(wx, y, wz); // dir (bits 0-1) + top-half (bit 2) + trapdoor-open (bit 3)
           const light = { sky: skyAt(x, y + 1, z), blk: Math.max(blockAt(x, y, z), def.emissive) };
           const target = def.transparent ? cutout : opaque;

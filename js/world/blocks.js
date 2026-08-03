@@ -74,7 +74,14 @@ def('herb_patch', { shape: 'cross', solid: false, opaque: false, hardness: 0.4, 
 def('herb_patch_cut', { shape: 'cross', solid: false, opaque: false, hardness: 0.4, drops: null });
 def('berry_bush', { opaque: false, hardness: 0.8, drops: null });
 def('berry_bush_bare', { opaque: false, hardness: 0.8, drops: null });
-def('mushroom_cap', { shape: 'cross', solid: false, opaque: false, hardness: 0.2, drops: null });
+// A mushroom is mostly cap, and a cap painted on the two crossing planes every
+// other plant uses reads as two stickers intersecting. This one is real boxes —
+// stalk, cap, crown — so it holds up from any angle. `mushroom_brown` is its
+// squat woodland cousin, appended at the foot of this file.
+def('mushroom_cap', {
+  label: 'Redcap', shape: 'mushroom', solid: false, opaque: false, hardness: 0.2, drops: null,
+  tiles: { top: 'mushroom_cap', side: 'mushroom_cap_side', bottom: 'mushroom_gills', stem: 'mushroom_stem' },
+});
 // A cane segment. Reeds stack (see `reed_top` at the foot of this file), so this
 // is the piece that repeats — no fronds, so a stack reads as one plant.
 def('reed', { shape: 'cross', solid: false, opaque: false, hardness: 0.3, drops: null });
@@ -437,6 +444,14 @@ export function cropStage(id) {
 // so a three-tall stand has one head rather than three.
 def('reed_top', { label: 'Reeds', shape: 'cross', solid: false, opaque: false, hardness: 0.3, drops: null });
 export const REED_IDS = [B.reed, B.reed_top];
+
+// The other mushroom. One species over a whole world's forest floor reads as
+// wallpaper; a squat brown cap beside the red one reads as undergrowth.
+def('mushroom_brown', {
+  label: 'Buttoncap', shape: 'mushroom', solid: false, opaque: false, hardness: 0.2, drops: null,
+  tiles: { top: 'mushroom_brown', side: 'mushroom_brown_side', bottom: 'mushroom_gills', stem: 'mushroom_stem' },
+});
+export const MUSHROOMS = ['mushroom_cap', 'mushroom_brown'];
 
 export function blockByName(name) { return BLOCKS[B[name]]; }
 export function isSolid(id) { return BLOCKS[id]?.solid === true; }

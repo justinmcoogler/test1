@@ -542,6 +542,11 @@ panes**; the sign face is an **opaque** tile. Trapdoor and button reuse
 `block_planks.png`, and the flower pot reuses `block_terracotta.png`, so those
 three need **no** extra art.
 
+Flowers share one rule, learned the hard way: **nothing thinner than two logical
+pixels.** A one-pixel stem holds up at arm's length and dissolves into a grey
+haze in the mipmaps, which is what made every flower here look wrong. Stem
+rooted at the bottom edge, real leaves, and a bloom wide enough to read as one.
+
 | filename | what it is | style hint | transparent |
 |---|---|---|---|
 | `block_allium.png` | Allium — round purple pom-pom bloom on a green stalk | single tall flower, cross cutout | yes |
@@ -708,7 +713,12 @@ art) is specified in its own section at the end.
 | `block_herb_patch.png` | Herb patch | leafy green cluster with small flowers | no |
 | `block_herb_patch_cut.png` | Herb patch (cut) | trimmed low stubs in soil | no |
 | `block_wildflower.png` | Wildflowers | mixed colourful blooms in grass | no |
-| `block_mushroom_cap.png` | Mushroom cap | large round cap, spotted | no |
+| `block_mushroom_cap.png` | Redcap, cap top | MATERIAL, not a picture of a mushroom — red skin, lit centre, pale freckles | no |
+| `block_mushroom_cap_side.png` | Redcap, cap flank | same red, rim darkening toward the bottom edge | no |
+| `block_mushroom_brown.png` | Buttoncap, cap top | as above in woodland brown | no |
+| `block_mushroom_brown_side.png` | Buttoncap, cap flank | as above in woodland brown | no |
+| `block_mushroom_gills.png` | Cap underside | cream gills radiating from a central stalk scar | no |
+| `block_mushroom_stem.png` | Mushroom stalk | cream, fibrous, shaded down one flank | no |
 | `block_cactus_flesh.png` | Cactus flesh | ridged green cactus interior | no |
 | `block_reed.png` | Reed cane (middle) | jointed green canes running the full tile, no top — these stack | no |
 | `block_reed_top.png` | Reed cane (crown) | the same canes ending a third down, crowned with fronds | no |

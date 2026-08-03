@@ -60,6 +60,26 @@ function blades(ctx, x0, y0, rand, color, count = 14) {
   }
 }
 
+// A clump of grass: two-pixel blades of real height, leaning off a common root.
+// Every blade is drawn from the bottom edge upward, so the tuft is planted in
+// the ground instead of hovering in the middle of a transparent tile.
+function tuft(ctx, x0, y0, rand, color, count, maxH) {
+  const lite = shade(color, 0.11), dark = shade(color, -0.12);
+  for (let i = 0; i < count; i++) {
+    const bx = Math.floor(rand() * (LP - 2));
+    const h = 4 + Math.floor(rand() * maxH);
+    const lean = rand() < 0.5 ? -1 : 1;
+    for (let j = 0; j < h; j++) {
+      const ly = LP - 1 - j;
+      const off = j > h * 0.65 ? lean : 0;            // blades curl over at the tip
+      const lx = bx + off;
+      if (lx < 0 || lx + 1 >= LP) continue;
+      px(ctx, x0, y0, lx, ly, shade(dark, (rand() - 0.5) * 0.06));
+      px(ctx, x0, y0, lx + 1, ly, j > h - 3 ? lite : shade(color, (rand() - 0.5) * 0.08));
+    }
+  }
+}
+
 function oreBlobs(ctx, x0, y0, rand, color, glint, blobCount = 4) {
   for (let i = 0; i < blobCount; i++) {
     const bx = 2 + Math.floor(rand() * (LP - 5));
@@ -246,6 +266,34 @@ function reedCane(ctx, x0, y0, rand, tip, fronds) {
   }
 }
 
+// The top of a mushroom cap: a domed disc, lit from the crown outward, freckled.
+function capTop(ctx, x0, y0, rand, base, lite, spot) {
+  const c = LP / 2 - 0.5;
+  for (let ly = 0; ly < LP; ly++) {
+    for (let lx = 0; lx < LP; lx++) {
+      const d = Math.hypot(lx - c, ly - c) / (LP / 2);
+      px(ctx, x0, y0, lx, ly, shade(d < 0.45 ? lite : base, (rand() - 0.5) * 0.06 - d * 0.10));
+    }
+  }
+  for (let i = 0; i < 9; i++) {                       // freckles
+    const sx = 3 + Math.floor(rand() * (LP - 6)), sy = 3 + Math.floor(rand() * (LP - 6));
+    for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) px(ctx, x0, y0, sx + dx, sy + dy, spot);
+  }
+}
+
+// The flank of a cap: base colour with the rim darkening toward the bottom, and
+// the same freckles wrapping round.
+function capSide(ctx, x0, y0, rand, base, rim, spot) {
+  for (let ly = 0; ly < LP; ly++) {
+    const t = ly / (LP - 1);
+    for (let lx = 0; lx < LP; lx++) px(ctx, x0, y0, lx, ly, shade(t > 0.7 ? rim : base, (rand() - 0.5) * 0.06 - t * 0.06));
+  }
+  for (let i = 0; i < 5; i++) {
+    const sx = 2 + Math.floor(rand() * (LP - 5)), sy = 2 + Math.floor(rand() * (LP - 12));
+    for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) px(ctx, x0, y0, sx + dx, sy + dy, spot);
+  }
+}
+
 function plantStalk(ctx, x0, y0, rand, stem, headColor, headY = 4) {
   const sx = LP / 2 + Math.floor(rand() * 3) - 1;
   for (let y = headY; y < LP; y++) px(ctx, x0, y0, sx, y, shade(stem, (rand() - 0.5) * 0.1));
@@ -319,10 +367,17 @@ const PAINTERS = {
   },
   depleted_rock: (c, x, y, r) => noisyFill(c, x, y, r, '#5f6266', 0.05, { chance: 0.12, color: '#4c4f53' }),
 
-  tall_grass: (c, x, y, r) => cross(c, x, y, r, () => { blades(c, x, y, r, '#69a850', 22); blades(c, x, y, r, '#7fbd63', 12); }),
+  // `blades` draws one-pixel stubs 1–3 tall, which is a lawn, not tall grass —
+  // it barely showed at arm's length and vanished at ten paces. `tuft` is the
+  // same idea at a height and width you can actually see.
+  tall_grass: (c, x, y, r) => cross(c, x, y, r, () => tuft(c, x, y, r, '#69a850', 11, 20)),
   wildflower: (c, x, y, r) => cross(c, x, y, r, () => {
-    blades(c, x, y, r, '#69a850', 8);
-    plantStalk(c, x, y, r, '#4d7d3b', r() < 0.5 ? '#e2b13c' : '#c76a92', 5);
+    tuft(c, x, y, r, '#5f9c47', 7, 13);
+    // three blooms at different heights, so a verge reads as a mixed patch
+    for (const [bx, by, col] of [[6, 12, '#e2b13c'], [16, 8, '#c76a92'], [25, 14, '#e8e2c0']]) {
+      for (let ly = by; ly < LP; ly++) px(c, x, y, bx, ly, shade('#4d7d3b', (r() - 0.5) * 0.1));
+      bloom(c, x, y, bx, by, [[-1, 1], [0, 2], [1, 1]], col, shade(col, 0.14), shade(col, -0.16));
+    }
   }),
   herb_patch: (c, x, y, r) => cross(c, x, y, r, () => {
     blades(c, x, y, r, '#3f7d4f', 10);
@@ -335,36 +390,36 @@ const PAINTERS = {
     for (let i = 0; i < 8; i++) px(c, x, y, Math.floor(r() * LP), Math.floor(r() * LP), '#c94a6b');
   },
   berry_bush_bare: (c, x, y, r) => leaves(c, x, y, r, '#4b6b42', '#5d7a52', 0.02),
-  mushroom_cap: (c, x, y, r) => cross(c, x, y, r, () => {
-    const cx = Math.floor(LP / 2);
-    const cap = '#c23a2b', capLite = '#d9543f', capDark = '#9a2c20';
-    const stem = '#ece0c8', stemSh = '#cdba98', gill = '#b7986f', spot = '#f2ead6';
-    // stem: a cream stalk with a shaded right edge, sitting on the ground
-    const stemTop = LP - 10;
-    for (let yy = LP - 1; yy >= stemTop; yy--)
-      for (let dx = -1; dx <= 1; dx++) px(c, x, y, cx + dx, yy, dx === 1 ? stemSh : stem);
-    // gill line under the cap
-    for (let dx = -8; dx <= 8; dx++) px(c, x, y, cx + dx, stemTop, gill);
-    // domed cap: rows widen toward the base, with a lit crown
-    const rows = [[stemTop - 7, 2], [stemTop - 6, 4], [stemTop - 5, 6], [stemTop - 4, 7],
-                  [stemTop - 3, 8], [stemTop - 2, 8], [stemTop - 1, 9]];
-    for (const [yy, w] of rows) {
-      for (let dx = -w; dx <= w; dx++) {
-        const lx = cx + dx;
-        if (lx < 0 || lx >= LP) continue;
-        let col = cap;
-        if (yy <= stemTop - 5 && Math.abs(dx) < w - 1) col = capLite;   // crown sheen
-        else if (yy >= stemTop - 2 && Math.abs(dx) > w - 2) col = capDark; // shaded rim
-        px(c, x, y, lx, yy, col);
+  // Mushrooms are boxes now (js/gfx/shapes.js), so these are MATERIAL tiles that
+  // wrap a solid cap — not a picture of a mushroom on a flat plane.
+  mushroom_cap: (c, x, y, r) => capTop(c, x, y, r, '#c23a2b', '#d9543f', '#f2ead6'),
+  mushroom_cap_side: (c, x, y, r) => capSide(c, x, y, r, '#c23a2b', '#9a2c20', '#f2ead6'),
+  mushroom_brown: (c, x, y, r) => capTop(c, x, y, r, '#8a6242', '#a5794f', '#c8a87e'),
+  mushroom_brown_side: (c, x, y, r) => capSide(c, x, y, r, '#8a6242', '#6d4c32', '#c8a87e'),
+  mushroom_gills: (c, x, y, r) => {
+    noisyFill(c, x, y, r, '#e2d2b0', 0.03);
+    // gills radiating from the stalk: spokes, not stripes, so the underside
+    // reads as a mushroom when you crouch under one
+    const cx = LP / 2 - 0.5, cy = LP / 2 - 0.5;
+    for (let a = 0; a < 28; a++) {
+      const ang = (a / 28) * Math.PI * 2 + 0.1;
+      for (let d = 3; d < LP / 2; d++) {
+        px(c, x, y, Math.round(cx + Math.cos(ang) * d), Math.round(cy + Math.sin(ang) * d), '#b7986f');
       }
     }
-    // pale spots freckling the cap
-    for (let i = 0; i < 7; i++) {
-      const sx = cx + Math.floor((r() - 0.5) * 15);
-      const sy = stemTop - 1 - Math.floor(r() * 6);
-      if (sx >= 0 && sx < LP && sy >= 0) { px(c, x, y, sx, sy, spot); if (r() < 0.5) px(c, x, y, sx + 1, sy, spot); }
+    for (let d = -2; d <= 2; d++) for (let e = -2; e <= 2; e++) px(c, x, y, Math.round(cx + d), Math.round(cy + e), '#ece0c8');
+  },
+  mushroom_stem: (c, x, y, r) => {
+    noisyFill(c, x, y, r, '#ece0c8', 0.03);
+    for (let ly = 0; ly < LP; ly++) {                 // a shaded flank, so it's round
+      for (let lx = LP - 8; lx < LP; lx++) px(c, x, y, lx, ly, shade('#cdba98', (r() - 0.5) * 0.04));
+      for (let lx = 0; lx < 3; lx++) px(c, x, y, lx, ly, shade('#dccdae', (r() - 0.5) * 0.04));
     }
-  }),
+    for (let i = 0; i < 10; i++) {                     // fibrous streaks up the stalk
+      const lx = 3 + Math.floor(r() * (LP - 10)), y0 = Math.floor(r() * LP), h = 3 + Math.floor(r() * 7);
+      for (let k = 0; k < h && y0 + k < LP; k++) px(c, x, y, lx, y0 + k, '#dccdae');
+    }
+  },
   reed: (c, x, y, r) => reedCane(c, x, y, r, 0, false),
   reed_top: (c, x, y, r) => reedCane(c, x, y, r, 9, true),
   cactus_flesh: (c, x, y, r) => { noisyFill(c, x, y, r, '#4e8a44', 0.05); for (let i = 0; i < 8; i++) px(c, x, y, Math.floor(r() * LP), Math.floor(r() * LP), '#dfe8c8'); },
@@ -719,53 +774,101 @@ for (const [id, hex] of COLORS) {
 PAINTERS.terracotta ??= COLOR_PAINTERS.terracotta('#9a6045'); // plain fired clay
 
 // ---- Decorative town blocks (schematic-import equivalents) ------------------
-// Transparent cross-cutout flowers: a green stem + leaves and a coloured bloom.
+// Transparent cross-cutout flowers. Every one of these used to be a single
+// one-pixel line with a five-pixel bloom perched near the TOP of the tile: too
+// thin to survive the mipmaps, and floating a third of a block above the ground
+// with nothing visibly holding it up. The rule here is a two-pixel stem rooted
+// at the bottom edge, real leaves, and a bloom wide enough to be a flower.
 function flowerStem(c, x, y, r, sx, stem, fromY) {
-  for (let yy = fromY; yy < LP; yy++) px(c, x, y, sx, yy, shade(stem, (r() - 0.5) * 0.12));
-  px(c, x, y, sx - 2, fromY + 4, stem); px(c, x, y, sx - 3, fromY + 4, shade(stem, -0.08));
-  px(c, x, y, sx + 2, fromY + 7, stem); px(c, x, y, sx + 3, fromY + 7, shade(stem, -0.08));
+  const lite = shade(stem, 0.10), dark = shade(stem, -0.11);
+  for (let yy = fromY; yy < LP; yy++) {
+    px(c, x, y, sx, yy, shade(dark, (r() - 0.5) * 0.05));
+    px(c, x, y, sx + 1, yy, shade(lite, (r() - 0.5) * 0.05));
+  }
+  // two leaves, one each side, angled up and out from the stalk
+  for (const [ly, dir] of [[fromY + 6, -1], [fromY + 11, 1]]) {
+    if (ly >= LP) continue;
+    for (let i = 1; i <= 4; i++) {
+      const lx = dir < 0 ? sx - i : sx + 1 + i;
+      const yy = Math.min(LP - 1, ly - (i >= 2 ? 1 : 0) - (i >= 4 ? 1 : 0));
+      if (lx < 0 || lx >= LP) continue;
+      px(c, x, y, lx, yy, i === 4 ? dark : stem);
+      if (i < 4) px(c, x, y, lx, yy + 1, dark);
+    }
+  }
+}
+// A bloom drawn as rows of half-widths about (sx, cy) — the shape of the head is
+// the only thing that separates one species from another at this size.
+function bloom(c, x, y, sx, cy, rows, petal, hi, lo) {
+  rows.forEach(([dy, w], i) => {
+    for (let dx = -w; dx <= w; dx++) {
+      const lx = sx + dx, ly = cy + dy;
+      if (lx < 0 || lx >= LP || ly < 0 || ly >= LP) continue;
+      px(c, x, y, lx, ly, Math.abs(dx) === w ? lo : (i < rows.length / 2 && Math.abs(dx) < 2 ? hi : petal));
+    }
+  });
 }
 function tulipPainter(petal) {
   return (c, x, y, r) => cross(c, x, y, r, () => {
-    const sx = LP / 2, hi = shade(petal, 0.13), lo = shade(petal, -0.15);
-    flowerStem(c, x, y, r, sx, '#4d7d3b', 12);
-    for (let dx = -2; dx <= 2; dx++) px(c, x, y, sx + dx, 11, petal);
-    for (let dx = -2; dx <= 2; dx++) px(c, x, y, sx + dx, 10, dx === 0 ? hi : petal);
-    px(c, x, y, sx - 2, 9, petal); px(c, x, y, sx + 2, 9, petal); px(c, x, y, sx, 8, hi);
-    px(c, x, y, sx - 1, 12, lo); px(c, x, y, sx + 1, 12, lo);
+    const sx = LP / 2 - 1, hi = shade(petal, 0.13), lo = shade(petal, -0.16);
+    flowerStem(c, x, y, r, sx, '#4d7d3b', 11);
+    // a closed cup: narrow at the throat, flaring to three points at the lip
+    bloom(c, x, y, sx, 8, [[-3, 1], [-2, 3], [-1, 4], [0, 4], [1, 4], [2, 3], [3, 2]], petal, hi, lo);
+    px(c, x, y, sx - 3, 6, petal); px(c, x, y, sx + 4, 6, petal);   // the two outer points
   });
 }
 PAINTERS.orange_tulip = tulipPainter('#e07a1f');
 PAINTERS.pink_tulip = tulipPainter('#e58fb8');
 PAINTERS.white_tulip = tulipPainter('#eef0ef');
 PAINTERS.allium = (c, x, y, r) => cross(c, x, y, r, () => {
-  const sx = LP / 2, col = '#9a5fc4';
-  flowerStem(c, x, y, r, sx, '#4d7d3b', 13);
-  for (let i = 0; i < 26; i++) {
-    const a = r() * Math.PI * 2, rad = r() * 3.4;
-    px(c, x, y, Math.round(sx + Math.cos(a) * rad), Math.round(7 + Math.sin(a) * rad), shade(col, (r() - 0.5) * 0.3));
+  const sx = LP / 2 - 1, col = '#9a5fc4';
+  flowerStem(c, x, y, r, sx, '#4d7d3b', 12);
+  // a globe of tiny florets — dense in the middle, ragged at the edge
+  for (let i = 0; i < 150; i++) {
+    const a = r() * Math.PI * 2, rad = Math.sqrt(r()) * 6.2;
+    const lx = Math.round(sx + Math.cos(a) * rad), ly = Math.round(7 + Math.sin(a) * rad * 0.92);
+    if (lx < 0 || lx >= LP || ly < 0) continue;
+    px(c, x, y, lx, ly, shade(col, rad < 3 ? 0.12 : (r() - 0.5) * 0.22));
   }
-  px(c, x, y, sx, 6, '#c9a8e6');
 });
 PAINTERS.blue_orchid = (c, x, y, r) => cross(c, x, y, r, () => {
-  const sx = LP / 2, col = '#2f8fd6';
+  const sx = LP / 2 - 1, col = '#2f8fd6';
   flowerStem(c, x, y, r, sx, '#3f7d5a', 12);
-  for (const [dx, dy] of [[0, 8], [-2, 9], [2, 9], [-1, 7], [1, 7], [0, 10]]) px(c, x, y, sx + dx, dy, col);
-  px(c, x, y, sx, 8, '#7fc4ee'); px(c, x, y, sx, 9, '#e8d24a'); // highlight + yellow throat
+  bloom(c, x, y, sx, 7, [[-2, 2], [-1, 4], [0, 5], [1, 4], [2, 2]], col, '#7fc4ee', shade(col, -0.16));
+  px(c, x, y, sx, 7, '#e8d24a'); px(c, x, y, sx + 1, 7, '#f0e07a');   // yellow throat
+  px(c, x, y, sx - 4, 5, col); px(c, x, y, sx + 5, 5, col);           // side petals
 });
 PAINTERS.oxeye_daisy = (c, x, y, r) => cross(c, x, y, r, () => {
-  const sx = LP / 2, petal = '#f2f4f0';
-  flowerStem(c, x, y, r, sx, '#4d7d3b', 12);
-  for (const [dx, dy] of [[0, 6], [0, 10], [-2, 8], [2, 8], [-2, 6], [2, 6], [-2, 10], [2, 10]]) px(c, x, y, sx + dx, dy, petal);
-  px(c, x, y, sx, 8, '#e6c437'); px(c, x, y, sx - 1, 8, '#e6c437'); px(c, x, y, sx, 7, '#f2d658'); // yellow disc
+  const sx = LP / 2 - 1, petal = '#f2f4f0', shadow = '#cfd6cd';
+  flowerStem(c, x, y, r, sx, '#4d7d3b', 11);
+  // eight petals radiating off a yellow disc
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    for (let d = 2; d <= 5; d++) {
+      const lx = Math.round(sx + 0.5 + Math.cos(a) * d), ly = Math.round(7 + Math.sin(a) * d);
+      if (lx < 0 || lx >= LP || ly < 0) continue;
+      px(c, x, y, lx, ly, d >= 5 ? shadow : petal);
+    }
+  }
+  for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [0, -1], [2, 1], [1, 2]]) {
+    px(c, x, y, sx + dx, 7 + dy, dx + dy > 1 ? '#e6c437' : '#f2d658');
+  }
 });
 PAINTERS.rose_bush = (c, x, y, r) => cross(c, x, y, r, () => {
-  const sx = LP / 2;
-  blades(c, x, y, r, '#3d6f35', 16);
-  for (let yy = 6; yy < LP; yy++) px(c, x, y, sx, yy, shade('#3d6f35', (r() - 0.5) * 0.1));
-  for (const [cx, cy] of [[sx - 3, 8], [sx + 4, 12]]) {
-    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) px(c, x, y, cx + dx, cy + dy, shade('#c0303a', (r() - 0.5) * 0.2));
-    px(c, x, y, cx, cy, '#e0555c');
+  // an actual bush: a mound of foliage with the blooms sitting IN it, rather
+  // than two red squares floating beside a stick
+  const leaf = '#3d6f35', leafLite = '#548a45', leafDark = '#2d5427';
+  for (let ly = 8; ly < LP; ly++) {
+    const w = Math.round(Math.min(15, 4 + (ly - 8) * 1.5));
+    for (let dx = -w; dx <= w; dx++) {
+      const lx = LP / 2 + dx;
+      if (lx < 0 || lx >= LP) continue;
+      if (r() < 0.16) continue;                      // ragged edge, not a blob
+      px(c, x, y, lx, ly, r() < 0.3 ? leafLite : (Math.abs(dx) > w - 3 ? leafDark : leaf));
+    }
+  }
+  for (const [cx, cy] of [[10, 12], [21, 17], [15, 22]]) {
+    bloom(c, x, y, cx, cy, [[-2, 1], [-1, 2], [0, 3], [1, 2], [2, 1]], '#c0303a', '#e0555c', '#8d2028');
   }
 });
 // Iron bars — transparent grey metal grille (vertical bars, top/bottom rails).

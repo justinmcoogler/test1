@@ -841,7 +841,8 @@ export class World {
         const def = BLOCKS[id];
         const node = this.nodeAt(x, y, z);
         // marker cells are invisible but pickable (a forage prop's node lives there)
-        if (def.solid || def.shape === 'cross' || def.shape === 'crop' || def.shape === 'marker' || (hitWaterNodes && node)) {
+        if (def.solid || def.shape === 'cross' || def.shape === 'crop' || def.shape === 'mushroom'
+            || def.shape === 'marker' || (hitWaterNodes && node)) {
           return { x, y, z, id, face, dist: t, node };
         }
       }

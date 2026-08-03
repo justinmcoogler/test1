@@ -223,6 +223,21 @@ export function emitShape(target, def, wx, y, wz, light, facing, sides) {
       break;
     }
 
+    // A mushroom: a stalk with a cap stepped out over it, in three courses so
+    // the cap reads as domed. Drawn as real boxes rather than the two crossing
+    // cutouts every other plant uses — a big painted cap on a flat X looks like
+    // two stickers passing through each other from any angle but dead-on, which
+    // is exactly what a mushroom cannot afford, being mostly cap.
+    case 'mushroom': {
+      const stalk = { name: def.name, emissive: def.emissive, tiles: { all: def.tiles.stem } };
+      const cap = { name: def.name, emissive: def.emissive, tiles: def.tiles };
+      const s = 6 / 16, t = 10 / 16;                       // stalk footprint
+      box(target, stalk, wx, y, wz, s, 0, s, t, 8 / 16, t, light, 0);
+      box(target, cap, wx, y, wz, 2 / 16, 7 / 16, 2 / 16, 14 / 16, 11 / 16, 14 / 16, light, 0);
+      box(target, cap, wx, y, wz, 4 / 16, 11 / 16, 4 / 16, 12 / 16, 13 / 16, 12 / 16, light, 0);
+      break;
+    }
+
     default:
       box(target, def, wx, y, wz, 0, 0, 0, 1, 1, 1, light, facing); // safety: full cube
   }
