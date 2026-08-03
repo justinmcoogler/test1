@@ -22,7 +22,7 @@ livestock, one rat, and eight goblins.
 | horse | quadruped | tall, arched neck, long head |
 | chicken | pecker | plump hen, comb + wattle |
 | duck | pecker | boat body, flat bill |
-| rabbit | scamper | hunched, tall ears, big hind feet |
+| rabbit | hopper | hunched, tall ears, big hind feet — it BOUNDS |
 | rat | scamper | low, grey, mostly tail |
 | practice_dummy | sway | straw sack lashed to a cross-post |
 | scrap_goblin | biped | warty green, stolen rags, pot helm |

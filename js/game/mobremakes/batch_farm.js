@@ -468,10 +468,14 @@ export const FARM = {
 
   // --------------------------------------------------------------------------
   // rabbit — brown coney: hunched body, long upright ears with pink inners, a
-  // twitchy pink nose, big hind haunches/feet and a white cotton tail. (scamper)
+  // twitchy pink nose, big hind haunches/feet and a white cotton tail. (hopper)
+  //
+  // It scampered until now, which for a legless rig meant sliding along with a
+  // gentle sideways sway. A rabbit does not scurry, it BOUNDS, and the hop is
+  // most of what makes one recognisable at twenty paces.
   // --------------------------------------------------------------------------
   rabbit: {
-    texW: 64, texH: 64, rig: 'scamper',
+    texW: 64, texH: 64, rig: 'hopper',
     paint(ctx, P) {
       const fur = '#8a6a48', furDk = '#634826', belly = '#d8c8b0', pink = '#d98f8a';
       const ear = '#7a5a3c', tail = '#f4f0e6';

@@ -26,13 +26,36 @@ const RIGS = {
 const cx = (b) => b.x + b.w / 2;
 const cz = (b) => b.z + b.d / 2;
 
-// triangle-wave keyframes: value swings a → -a → a over `len` seconds
-const swing = (len, ax, ay = 0, az = 0) => [
-  [0, [ax, ay, az]], [len / 2, [-ax, -ay, -az]], [len, [ax, ay, az]],
-];
-const swingT = (len, x, y, z) => [
-  [0, [x, y, z]], [len / 2, [-x, -y, -z]], [len, [x, y, z]],
-];
+// A limb swinging a → -a → a over `len` seconds, sampled as a COSINE.
+//
+// This was three keyframes, and keyframes interpolate linearly — so a leg swung
+// at a constant speed and reversed instantly at the ends of its arc. That is a
+// scissor, not a stride; it is most of why the animals read as clockwork. Eight
+// segments of a cosine is enough that the linear interpolation between them is
+// invisible, and the limb now eases into and out of each end the way a real one
+// loads and unloads.
+const STEPS = 16;
+const swing = (len, ax, ay = 0, az = 0) => {
+  const keys = [];
+  for (let i = 0; i <= STEPS; i++) {
+    const c = Math.cos((i / STEPS) * Math.PI * 2);
+    keys.push([+(len * i / STEPS).toFixed(4), [ax * c, ay * c, az * c]]);
+  }
+  return keys;
+};
+const swingT = (len, x, y, z) => swing(len, x, y, z);
+// A limb swinging from `a` about the midpoint `mid` — for parts that rest at an
+// angle (a tucked hind leg, a raised tail) rather than at zero.
+const swingAbout = (len, mid, ax) => swing(len, ax).map(([t, v]) => [t, [v[0] + mid, v[1], v[2]]]);
+// Twice-per-cycle bob: a body rises on each footfall, so it peaks twice per
+// stride, not once.
+const bob = (len, h) => {
+  const keys = [];
+  for (let i = 0; i <= STEPS; i++) {
+    keys.push([+(len * i / STEPS).toFixed(4), [0, h * (0.5 - 0.5 * Math.cos((i / STEPS) * Math.PI * 4)), 0]]);
+  }
+  return keys;
+};
 
 export function buildRig(type, def) {
   const rig = RIGS[type];
@@ -74,7 +97,7 @@ export function buildRig(type, def) {
       const phase = (fore === left) ? 1 : -1; // diagonal pairs move together
       const id = `leg${i}`;
       parts.push({ id, pivot: [cx(b), b.y + b.h, cz(b)], boxes: [b], tex: def.skin });
-      A(id, 'walk', 'rotate', phase > 0 ? swing(0.7, 24) : swing(0.7, -24));
+      A(id, 'walk', 'rotate', swing(0.7, phase * 24));
     });
     if (head.length || snout.length) {
       const hb = head[0] || snout[0];
@@ -92,7 +115,7 @@ export function buildRig(type, def) {
       A('tail', 'walk', 'rotate', swing(0.7, 0, 18));
     }
     A('body', 'idle', 'translate', swingT(3.2, 0, 0.015, 0));
-    A('body', 'walk', 'translate', [[0, [0, 0.03, 0]], [0.18, [0, 0, 0]], [0.35, [0, 0.03, 0]], [0.52, [0, 0, 0]], [0.7, [0, 0.03, 0]]]);
+    A('body', 'walk', 'translate', bob(0.7, 0.03));
     A('body', 'attack', 'translate', [[0, [0, 0, 0]], [0.15, [0, 0.02, 0.14]], [0.5, [0, 0, 0]]]);
   } else if (rig === 'biped') {
     const arms = take((b) => Math.abs(cx(b)) >= 0.35 && b.h >= 0.28 && b.w <= 0.55 && b.y > 0.05);
@@ -104,13 +127,13 @@ export function buildRig(type, def) {
       const id = `arm${i}`, left = cx(b) < 0;
       parts.push({ id, pivot: [cx(b), b.y + b.h, cz(b)], boxes: [b], tex: def.skin });
       A(id, 'idle', 'rotate', swing(3.2, left ? 2.5 : -2.5));
-      A(id, 'walk', 'rotate', left ? swing(0.7, 18) : swing(0.7, -18));
+      A(id, 'walk', 'rotate', swing(0.7, left ? 18 : -18));
       A(id, 'attack', 'rotate', [[0, [0, 0, 0]], [0.12, [-100, 0, 0]], [0.3, [30, 0, 0]], [0.5, [0, 0, 0]]]);
     });
     legs.forEach((b, i) => {
       const id = `bleg${i}`, left = cx(b) < 0;
       parts.push({ id, pivot: [cx(b), b.y + b.h, cz(b)], boxes: [b], tex: def.skin });
-      A(id, 'walk', 'rotate', left ? swing(0.7, 22) : swing(0.7, -22));
+      A(id, 'walk', 'rotate', swing(0.7, left ? -22 : 22)); // opposite the same-side arm
     });
     if (head.length) {
       const hb = head[0];
@@ -176,7 +199,7 @@ export function buildRig(type, def) {
     A('body', 'idle', 'translate', swingT(3.6, 0, 0.02, 0));
     anims.idle.length = 3.6;
     A('body', 'walk', 'rotate', swing(0.9, 0, 0, 6));
-    A('body', 'walk', 'translate', [[0, [0, 0.03, 0]], [0.22, [0, 0, 0]], [0.45, [0, 0.03, 0]], [0.68, [0, 0, 0]], [0.9, [0, 0.03, 0]]]);
+    A('body', 'walk', 'translate', bob(0.9, 0.03));
     anims.walk.length = 0.9;
     A('body', 'attack', 'rotate', [[0, [0, 0, 0]], [0.16, [22, 0, 0]], [0.5, [0, 0, 0]]]);
   } else if (rig === 'sway') {
@@ -189,6 +212,60 @@ export function buildRig(type, def) {
 
   if (!parts.length) return null;
   return { parts, animations: anims };
+}
+
+// ---- gait ------------------------------------------------------------------
+// A walk cycle keyed to the CLOCK swings at the same rate whether a creature is
+// ambling or bolting, so its feet slide over the ground. That skate is the
+// single loudest tell that something is not really walking, and every animal in
+// the game had it. Keying the cycle to DISTANCE COVERED instead keeps a footfall
+// on the same patch of ground at any speed — which is what Minecraft does, and
+// most of why its mobs read as walking rather than sliding.
+//
+// One stride per STRIDE blocks. The amplitude follows speed (smoothed), so the
+// swing grows into a run and dies away as the creature stops rather than
+// snapping on and off with the clip.
+export const STRIDE = 1.15;      // blocks of ground per full leg cycle
+export const GAIT_FULL = 3.2;    // blocks/sec at which the swing reaches full size
+const GAIT_EASE = 7;             // how fast the amplitude follows the speed
+const GAIT_FLOOR = 0.35;         // a creature being nudged is still walking
+
+// `state` is anything we may hang four numbers on — a creature, the player, a
+// remote player. Returns the phase through the cycle (0..1) and how big the
+// swing should be (0..1).
+export function gaitOf(state, dt, x = state.x, z = state.z) {
+  const step = state._gaitX === undefined ? 0 : Math.hypot(x - state._gaitX, z - state._gaitZ);
+  state._gaitX = x; state._gaitZ = z;
+  state._gaitDist = (state._gaitDist || 0) + step;
+  const speed = dt > 0 ? step / dt : 0;
+  const prev = state._gaitAmt || 0;
+  state._gaitAmt = prev + (Math.min(1, speed / GAIT_FULL) - prev) * Math.min(1, (dt || 0) * GAIT_EASE);
+  return {
+    phase: (state._gaitDist / STRIDE) % 1,
+    amount: Math.max(GAIT_FLOOR, state._gaitAmt),
+  };
+}
+
+// ---- which limb is where ---------------------------------------------------
+// The part's NAME is the author's intent and comes first; the pivot is only a
+// fallback. It has to be that way round, because a rig may legitimately put both
+// hips on the centreline — the goblins do, since a leg hangs from the inner edge
+// of its box and a leg's inner edge IS the centreline. Reading the side off the
+// pivot therefore said both legs were the same side, and every goblin in the
+// game walked with both feet swinging forward together.
+function limbSide(p, i) {
+  if (/(L|_l|Left|_left)$/.test(p.id)) return -1;
+  if (/(R|_r|Right|_right)$/.test(p.id)) return 1;
+  const px = p.pivot?.[0] || 0;
+  if (Math.abs(px) > 1e-4) return px < 0 ? -1 : 1;
+  const n = /(\d+)$/.exec(p.id);
+  if (n) return Number(n[1]) % 2 ? 1 : -1;
+  return i % 2 ? 1 : -1;                       // last resort: alternate them
+}
+function limbFore(p) {
+  if (/F(L|R)?$/.test(p.id) || /front/i.test(p.id)) return true;
+  if (/B(L|R)?$/.test(p.id) || /(back|hind|rear)/i.test(p.id)) return false;
+  return (p.pivot?.[2] || 0) > 0;
 }
 
 // ---- explicit-parts rigs (mob remakes) -------------------------------------
@@ -208,10 +285,12 @@ export function buildPartAnimations(style, parts, overrides = null) {
   const head = ids.has('head'), tail = ids.has('tail');
 
   if (style === 'quadruped' || style === 'pecker') {
-    legs.forEach((p) => {
-      const fore = (p.pivot?.[2] || 0) > 0, left = (p.pivot?.[0] || 0) < 0;
-      const phase = (fore === left) ? 1 : -1; // diagonal pairs together
-      A(p.id, 'walk', 'rotate', phase > 0 ? swing(0.7, 24) : swing(0.7, -24));
+    legs.forEach((p, i) => {
+      // Diagonal pairs move together — a trot. Two-legged birds have both feet
+      // at the same z, so `fore` is the same for both and the sides alternate,
+      // which is what a bird does anyway.
+      const phase = (limbFore(p) === (limbSide(p, i) < 0)) ? 1 : -1;
+      A(p.id, 'walk', 'rotate', swing(0.7, phase * 24));
     });
     if (head) {
       A('head', 'idle', 'rotate', [[0, [0, -10, 0]], [1.6, [0, 10, 0]], [3.2, [0, -10, 0]]]);
@@ -225,18 +304,21 @@ export function buildPartAnimations(style, parts, overrides = null) {
       A('tail', 'walk', 'rotate', swing(0.7, 0, 18));
     }
     A('body', 'idle', 'translate', swingT(3.2, 0, 0.015, 0));
-    A('body', 'walk', 'translate', [[0, [0, 0.03, 0]], [0.18, [0, 0, 0]], [0.35, [0, 0.03, 0]], [0.52, [0, 0, 0]], [0.7, [0, 0.03, 0]]]);
+    A('body', 'walk', 'translate', bob(0.7, 0.03));   // rises on each footfall
     A('body', 'attack', 'translate', [[0, [0, 0, 0]], [0.15, [0, 0.02, 0.14]], [0.5, [0, 0, 0]]]);
   } else if (style === 'biped') {
-    arms.forEach((p) => {
-      const left = (p.pivot?.[0] || 0) < 0;
+    arms.forEach((p, i) => {
+      const left = limbSide(p, i) < 0;
       A(p.id, 'idle', 'rotate', swing(3.2, left ? 2.5 : -2.5));
-      A(p.id, 'walk', 'rotate', left ? swing(0.7, 18) : swing(0.7, -18));
+      A(p.id, 'walk', 'rotate', swing(0.7, left ? 18 : -18));
       A(p.id, 'attack', 'rotate', [[0, [0, 0, 0]], [0.12, [-100, 0, 0]], [0.3, [30, 0, 0]], [0.5, [0, 0, 0]]]);
     });
-    legs.forEach((p) => {
-      const left = (p.pivot?.[0] || 0) < 0;
-      A(p.id, 'walk', 'rotate', left ? swing(0.7, 22) : swing(0.7, -22));
+    legs.forEach((p, i) => {
+      const left = limbSide(p, i) < 0;
+      // OPPOSITE the arm on the same side. These used to share a sign, so a
+      // goblin walked with its left arm and left leg going forward together —
+      // the gait of a toy soldier, and the loudest thing wrong with them.
+      A(p.id, 'walk', 'rotate', swing(0.7, left ? -22 : 22));
     });
     if (head) {
       A('head', 'idle', 'rotate', [[0, [0, -8, 0]], [1.6, [0, 8, 0]], [3.2, [0, -8, 0]]]);
@@ -244,7 +326,7 @@ export function buildPartAnimations(style, parts, overrides = null) {
     }
     A('body', 'idle', 'translate', swingT(3.2, 0, 0.02, 0));
     A('body', 'walk', 'rotate', swing(0.7, 0, 0, 3));
-    A('body', 'walk', 'translate', [[0, [0, 0.035, 0]], [0.18, [0, 0, 0]], [0.35, [0, 0.035, 0]], [0.52, [0, 0, 0]], [0.7, [0, 0.035, 0]]]);
+    A('body', 'walk', 'translate', bob(0.7, 0.035));
     A('body', 'attack', 'translate', [[0, [0, 0, 0]], [0.15, [0, 0, 0.12]], [0.5, [0, 0, 0]]]);
   } else if (style === 'floater') {
     A('body', 'idle', 'translate', swingT(2.6, 0, 0.07, 0));
@@ -256,10 +338,24 @@ export function buildPartAnimations(style, parts, overrides = null) {
     anims.walk.length = 1.1;
     if (head) A('head', 'idle', 'rotate', [[0, [0, -12, 0]], [1.3, [0, 12, 0]], [2.6, [0, -12, 0]]]);
   } else if (style === 'hopper') {
-    if (head) A('head', 'idle', 'rotate', [[0, [0, -10, 0]], [1.6, [0, 10, 0]], [3.2, [0, -10, 0]]]);
+    // A bound, not a walk: gather, launch, tuck, land. The body arc is asymmetric
+    // on purpose — up fast, hang, down — because a hop that rises and falls at
+    // the same rate reads as a bouncing ball.
+    if (head) {
+      A('head', 'idle', 'rotate', [[0, [0, -10, 0]], [1.6, [0, 10, 0]], [3.2, [0, -10, 0]]]);
+      A('head', 'walk', 'rotate', [[0, [8, 0, 0]], [0.1, [-14, 0, 0]], [0.32, [-6, 0, 0]], [0.5, [8, 0, 0]]]);
+    }
     A('body', 'idle', 'translate', swingT(3.2, 0, 0.015, 0));
-    A('body', 'walk', 'translate', [[0, [0, 0, 0]], [0.25, [0, 0.14, 0]], [0.5, [0, 0, 0]]]);
-    A('body', 'walk', 'rotate', [[0, [4, 0, 0]], [0.25, [-6, 0, 0]], [0.5, [4, 0, 0]]]);
+    A('body', 'walk', 'translate', [[0, [0, 0, 0]], [0.1, [0, 0.17, 0]], [0.22, [0, 0.2, 0]], [0.4, [0, 0.04, 0]], [0.5, [0, 0, 0]]]);
+    A('body', 'walk', 'rotate', [[0, [10, 0, 0]], [0.1, [-16, 0, 0]], [0.3, [-4, 0, 0]], [0.42, [14, 0, 0]], [0.5, [10, 0, 0]]]);
+    // hind legs tuck at the top of the arc and reach again for the landing
+    legs.forEach((p) => {
+      const fore = limbFore(p);
+      A(p.id, 'walk', 'rotate', fore
+        ? [[0, [-30, 0, 0]], [0.12, [40, 0, 0]], [0.34, [30, 0, 0]], [0.5, [-30, 0, 0]]]
+        : [[0, [34, 0, 0]], [0.14, [-46, 0, 0]], [0.36, [-20, 0, 0]], [0.5, [34, 0, 0]]]);
+    });
+    if (tail) A('tail', 'walk', 'rotate', [[0, [-12, 0, 0]], [0.22, [16, 0, 0]], [0.5, [-12, 0, 0]]]);
     anims.walk.length = 0.5;
     A('body', 'attack', 'translate', [[0, [0, 0, 0]], [0.13, [0, 0.1, 0.25]], [0.5, [0, 0, 0]]]);
   } else if (style === 'scamper' || style === 'slither') {
@@ -271,9 +367,15 @@ export function buildPartAnimations(style, parts, overrides = null) {
       A('tail', 'idle', 'rotate', [[0, [0, -20, 0]], [1.6, [0, 20, 0]], [3.2, [0, -20, 0]]]);
       A('tail', 'walk', 'rotate', swing(0.45, 0, 26));
     }
+    // Legs. This style never touched them, so the rat — which HAS four — crossed
+    // the floor with its feet held perfectly still. Same diagonal trot as a cow,
+    // quicker and shallower, because the legs are short and it is scurrying.
+    legs.forEach((p, i) => {
+      A(p.id, 'walk', 'rotate', swing(0.45, ((limbFore(p) === (limbSide(p, i) < 0)) ? 1 : -1) * 32));
+    });
     const sway = style === 'slither' ? 12 : 6;
     A('body', 'walk', 'rotate', swing(0.45, 0, sway));
-    A('body', 'walk', 'translate', swingT(0.45, 0.02, 0.01, 0));
+    A('body', 'walk', 'translate', legs.length ? bob(0.45, 0.014) : swingT(0.45, 0.02, 0.01, 0));
     anims.walk.length = 0.45;
     A('body', 'idle', 'rotate', swing(3.2, 0, style === 'slither' ? 6 : 2));
     A('body', 'attack', 'translate', [[0, [0, 0, 0]], [0.12, [0, 0.04, 0.3]], [0.5, [0, 0, 0]]]);
@@ -281,7 +383,7 @@ export function buildPartAnimations(style, parts, overrides = null) {
     A('body', 'idle', 'translate', swingT(3.6, 0, 0.02, 0));
     anims.idle.length = 3.6;
     A('body', 'walk', 'rotate', swing(0.9, 0, 0, 6));
-    A('body', 'walk', 'translate', [[0, [0, 0.03, 0]], [0.22, [0, 0, 0]], [0.45, [0, 0.03, 0]], [0.68, [0, 0, 0]], [0.9, [0, 0.03, 0]]]);
+    A('body', 'walk', 'translate', bob(0.9, 0.03));
     anims.walk.length = 0.9;
     A('body', 'attack', 'rotate', [[0, [0, 0, 0]], [0.16, [22, 0, 0]], [0.5, [0, 0, 0]]]);
     if (head) A('head', 'attack', 'rotate', [[0, [0, 0, 0]], [0.14, [-26, 0, 0]], [0.34, [16, 0, 0]], [0.5, [0, 0, 0]]]);
@@ -326,7 +428,7 @@ export function playerAnimations() {
         leg_r: { rotate: swing(0.66, -30) },
         arm_l: { rotate: swing(0.66, -24) },
         arm_r: { rotate: swing(0.66, 24) },
-        body: { translate: [[0, [0, 0.02, 0]], [0.165, [0, 0, 0]], [0.33, [0, 0.02, 0]], [0.5, [0, 0, 0]], [0.66, [0, 0.02, 0]]] },
+        body: { translate: bob(0.66, 0.02) },
       },
     },
     attack: {

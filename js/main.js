@@ -27,7 +27,7 @@ import { registerMob, injectSpawnRules, fetchMobFiles, evaluatePose } from './ga
 import { findPath } from './game/pathfind.js';
 import { icon as pixelIcon } from './gfx/icons.js';
 import { applyTexturePack } from './gfx/textures.js';
-import { buildRig, playerAnimations } from './game/rigs.js';
+import { buildRig, playerAnimations, gaitOf } from './game/rigs.js';
 import { buildPlayerSkinCanvas, partBoxUV, swatchUV, preloadPlayerSkins } from './gfx/playerskin.js';
 import { MOB_REMAKES } from './game/mobremakes/index.js';
 import { registerRemadeMob, preloadMobSkins, mobSkinOverride } from './game/mobremake.js';
@@ -2682,7 +2682,7 @@ class Game {
   }
 
   // animation state → pose matrices for the player's rigged model
-  playerPose(model) {
+  playerPose(model, dt = 0) {
     if (!model?.animated) return null;
     const t = this.world.time;
     if ((this.playerAttackT || 0) > 0 && model.animations.attack) {
@@ -2693,7 +2693,11 @@ class Game {
     }
     const speed = Math.hypot(this.player.vx, this.player.vz);
     if (this.player.inWater && speed > 0.5 && model.animations.swim) return evaluatePose(model, 'swim', t);
-    if (speed > 0.7 && model.animations.walk) return evaluatePose(model, 'walk', t);
+    if (speed > 0.7 && model.animations.walk) {
+      // your own legs skate worst of all, because you watch them constantly
+      const g = gaitOf(this.player, dt);
+      return evaluatePose(model, 'walk', g.phase * model.animations.walk.length, g.amount);
+    }
     return evaluatePose(model, 'idle', t);
   }
 
@@ -2719,7 +2723,7 @@ class Game {
   // rather than blanking the body, and a one-shot clip is played from the moment
   // that body last changed what it was doing instead of from world time, which
   // would leave the swing frozen on its final frame.
-  remotePose(model, rp) {
+  remotePose(model, rp, dt = 0) {
     if (!model?.animated) return null;
     const clip = model.animations[rp.anim] ? rp.anim : 'idle';
     const def = model.animations[clip];
@@ -2728,6 +2732,13 @@ class Game {
       // and again. evaluatePose CLAMPS a non-looping clip, so feeding it world
       // time would leave the body standing there frozen mid-swing forever.
       return evaluatePose(model, clip, (netClock() - (rp.animAt || 0)) % def.length);
+    }
+    // Their legs are driven by the ground they actually cover, same as everyone
+    // else's — position updates are all we get over the wire, and they are
+    // exactly what the gait needs.
+    if (clip === 'walk') {
+      const g = gaitOf(rp, dt);
+      return evaluatePose(model, clip, g.phase * def.length + (rp.phase || 0), g.amount);
     }
     return evaluatePose(model, clip, this.world.time + (rp.phase || 0));
   }
@@ -2760,7 +2771,8 @@ class Game {
     }
     if (e.movingT > 0 && model.animations.walk) {
       e._ambT = null; e._ambPlay = 0;   // moving cancels any ambient in progress
-      return evaluatePose(model, 'walk', this.world.time + offset);
+      const g = gaitOf(e, dt);
+      return evaluatePose(model, 'walk', g.phase * model.animations.walk.length + offset, g.amount);
     }
     // Ambient clips — a wolf howling, a cow grazing, a hen pecking. They fire on
     // a per-creature timer while it's standing around, play once, and hand back
@@ -2920,7 +2932,7 @@ class Game {
           model: this.playerModelName,
           x: this.player.x, y: this.player.y, z: this.player.z,
           yaw: this.modelYaw, tint: [0, 0, 0],
-          pose: this.playerPose(this.renderer.modelCache.get(this.playerModelName)),
+          pose: this.playerPose(this.renderer.modelCache.get(this.playerModelName), dt),
         });
       }
     }
@@ -2937,7 +2949,7 @@ class Game {
           // remote player faced exactly backwards.
           yaw: modelYawFromLook(rp.yaw),
           tint: [0, 0, 0],
-          pose: this.remotePose(model, rp),
+          pose: this.remotePose(model, rp, dt),
           label: rp.name,
         });
       }

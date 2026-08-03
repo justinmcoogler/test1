@@ -271,7 +271,13 @@ function poseMatrix(pivot, rotDeg, trans) {
 }
 
 // Evaluate an animation at time t → { partId: mat4 } with parent chains applied.
-export function evaluatePose(model, animName, t) {
+//
+// `amount` scales how far the clip is played, 0 = rest pose, 1 = full. A walk
+// cycle at a fixed size looks the same whether a creature is drifting or
+// bolting; scaled by speed, the swing grows into the run and dies away as it
+// stops, which is what stops the legs from snapping on and off. It multiplies
+// only the ANIMATED delta — a part's rest rotation is the model, not the motion.
+export function evaluatePose(model, animName, t, amount = 1) {
   const anim = model.animations[animName] || model.animations.idle || null;
   // with no animation we still emit a rest pose so any static part rotations
   // (Blockbench bone/cube rotations) show; parts without one collapse to identity.
@@ -279,10 +285,15 @@ export function evaluatePose(model, animName, t) {
   if (!anim && !hasStatic) return null;
   const local = {};
   const tt = anim ? (anim.loop === false ? Math.min(t, anim.length) : t % anim.length) : 0;
+  const k = amount >= 1 ? 1 : Math.max(0, amount);
   for (const part of model.parts) {
     const ch = anim?.parts?.[part.id];
-    const rot = sampleChannel(ch?.rotate, tt, [0, 0, 0]);
-    const trans = sampleChannel(ch?.translate, tt, [0, 0, 0]);
+    let rot = sampleChannel(ch?.rotate, tt, [0, 0, 0]);
+    let trans = sampleChannel(ch?.translate, tt, [0, 0, 0]);
+    if (k !== 1) {
+      rot = [rot[0] * k, rot[1] * k, rot[2] * k];
+      trans = [trans[0] * k, trans[1] * k, trans[2] * k];
+    }
     // a part's rest rotation (from Blockbench bones / baked cube rotations) is
     // added to the animated rotation, matching Blockbench's additive semantics
     const base = part.rotation;
