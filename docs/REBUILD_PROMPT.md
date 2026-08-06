@@ -30,7 +30,7 @@ These are not preferences. They shape every decision below.
 
    When a system needs a fantasy element to work, that is a signal the system is
    wrong, not a licence to add one. The two places this bites hardest are called
-   out where they arise (the hostile roster in Milestone 5, and vertical
+   out where they arise (the hostile roster in Milestone 6, and vertical
    progression in Milestone 7); both have real answers that are better than the
    invented ones.
 
